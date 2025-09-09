@@ -9,7 +9,7 @@ export class ProductEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: false })
   name: string
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   description: string
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
