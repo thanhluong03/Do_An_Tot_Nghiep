@@ -1,25 +1,20 @@
 import {
-    PrimaryGeneratedColumn,
-    CreateDateColumn,
-    UpdateDateColumn,
-    DeleteDateColumn,
-  } from 'typeorm'
-  
-  export abstract class BaseEntity {
-    @PrimaryGeneratedColumn('increment')
-    id: number
-  
-    @CreateDateColumn({ type: 'datetime', default: () => 'GETDATE()' })
-    created_at: Date
-  
-    @UpdateDateColumn({
-      type: 'datetime',
-      default: () => 'GETDATE()',
-      onUpdate: 'GETDATE()',
-    })
-    updated_at: Date
-  
-    @DeleteDateColumn({ type: 'datetime', nullable: true })
-    deleted_at: Date | null
-  }
-  
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+} from 'typeorm'
+
+export abstract class BaseEntity {
+  @PrimaryGeneratedColumn('increment')
+  id: number
+
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date
+
+  @UpdateDateColumn({ type: 'timestamptz', nullable: true })
+  updated_at: Date | null
+
+  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
+  deleted_at: Date | null
+}
