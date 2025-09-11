@@ -1,42 +1,35 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { config } from 'dotenv';
+config();
+
 import { DatabaseService } from './database.service';
-import {
-  ProductEntity,
+import { ProductEntity } from './entities';
+import { ProductRepository } from './repositories';
 
-
-} from './entities'
-import {
-  ProductRepository,
-
-} from './repositories'
-import { config } from 'dotenv'
-
-const postgresRepositories = [
-  ProductRepository,
-
-]
-const postgresEntities = [
-  ProductEntity,
-
-]
+const postgresRepositories = [ProductRepository];
+const postgresEntities = [ProductEntity];
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT || 5432),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_DATABASE || 'pottery',
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      entities: postgresEntities,
       schema: 'public',
-      synchronize: process.env.NODE_ENV !== 'production', // Chỉ sync trong development
+      synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl:
+        process.env.NODE_ENV === 'production'
+          ? { rejectUnauthorized: false }
+          : false,
     }),
+    TypeOrmModule.forFeature(postgresEntities),
   ],
-  providers: [DatabaseService],
-  exports: [DatabaseService, TypeOrmModule],
+  providers: [DatabaseService, ...postgresRepositories],
+  exports: [DatabaseService, TypeOrmModule, ...postgresRepositories],
 })
 export class DatabaseModule { }

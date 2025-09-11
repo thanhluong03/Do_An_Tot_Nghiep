@@ -1,9 +1,7 @@
-
 import { Expose } from 'class-transformer'
 import {
   IsOptional,
   IsString,
-  IsEnum,
   IsNumber,
   IsPositive,
 } from 'class-validator'
@@ -11,29 +9,63 @@ import {
 export class CreateProductDto {
   @Expose()
   @IsString()
-  email: string
+  name: string
 
   @Expose()
   @IsOptional()
   @IsString()
-  password?: string
+  description?: string
 
-  
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  price?: number
+
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  quantity?: number
+
+  @Expose()
+  @IsOptional()
+  @IsString()
+  image_url?: string
+
+  @Expose()
+  @IsNumber()
+  supplier_id: number
 }
 
 export class UpdateProductDto {
   @Expose()
   @IsOptional()
   @IsString()
-  email?: string
+  name?: string
 
   @Expose()
   @IsOptional()
   @IsString()
-  password?: string
+  description?: string
 
-  
-  
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  price?: number
+
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  quantity?: number
+
+  @Expose()
+  @IsOptional()
+  @IsString()
+  image_url?: string
+
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  supplier_id?: number
 }
 
 export class ProductResponseDto {
@@ -41,15 +73,28 @@ export class ProductResponseDto {
   id: number
 
   @Expose()
-  email: string
+  name: string
 
-  
+  @Expose()
+  description?: string
+
+  @Expose()
+  price?: number
+
+  @Expose()
+  quantity?: number
+
+  @Expose()
+  image_url?: string
+
+  @Expose()
+  supplier_id: number
 
   @Expose()
   created_at: Date
 
   @Expose()
-  updated_at: Date
+  updated_at: Date | null
 }
 
 export class ListProductRequestDto {
