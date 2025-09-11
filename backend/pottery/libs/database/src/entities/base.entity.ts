@@ -1,24 +1,20 @@
 import {
-    PrimaryGeneratedColumn,
-    CreateDateColumn,
-    UpdateDateColumn,
-    DeleteDateColumn,
-  } from 'typeorm'
-  
-  export abstract class BaseEntity {
-    @PrimaryGeneratedColumn('increment')
-    id: number
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+} from 'typeorm'
 
-    // @CreateDateColumn sẽ tự động thêm timestamp khi bản ghi được tạo
-    @CreateDateColumn({ type: 'timestamptz' })
-    created_at: Date
+export abstract class BaseEntity {
+  @PrimaryGeneratedColumn('increment')
+  id: number
 
-    // @UpdateDateColumn sẽ tự động cập nhật timestamp mỗi khi bản ghi được lưu
-    @UpdateDateColumn({ type: 'timestamptz' })
-    updated_at: Date
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date
 
-    // @DeleteDateColumn cho phép đánh dấu bản ghi đã xóa mềm (soft delete)
-    @DeleteDateColumn({ type: 'timestamptz', nullable: true })
-    deleted_at: Date | null
-  }
-  
+  @UpdateDateColumn({ type: 'timestamptz', nullable: true })
+  updated_at: Date | null
+
+  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
+  deleted_at: Date | null
+}

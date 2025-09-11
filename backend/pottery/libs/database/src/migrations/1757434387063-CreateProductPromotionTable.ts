@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
 
-export class CreateProductTable1757434387060 implements MigrationInterface {
+export class CreateProductPromotionTable1757434387063 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'products',
+                name: 'product_promotions',
                 columns: [
                     {
                         name: 'id',
@@ -14,12 +14,8 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'supplier_id', type: 'int', isNullable: false },
-                    { name: 'name', type: 'varchar', length: '255', isNullable: false, isUnique: true },
-                    { name: 'description', type: 'varchar', isNullable: true },
-                    { name: 'price', type: 'decimal', precision: 10, scale: 2, isNullable: true },
-                    { name: 'quantity', type: 'int', isNullable: true },
-                    { name: 'image_url', type: 'varchar', length: '255', isNullable: true },
+                    { name: 'product_id', type: 'int', isNullable: false },
+                    { name: 'promotion_id', type: 'int', isNullable: false },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },
@@ -27,10 +23,19 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
             }),
         )
         await queryRunner.createForeignKey(
-            'products',
+            'product_promotions',
             new TableForeignKey({
-                columnNames: ['supplier_id'],
-                referencedTableName: 'suppliers',
+                columnNames: ['product_id'],
+                referencedTableName: 'products',
+                referencedColumnNames: ['id'],
+                onDelete: 'SET NULL',
+            }),
+        )
+        await queryRunner.createForeignKey(
+            'product_promotions',
+            new TableForeignKey({
+                columnNames: ['promotion_id'],
+                referencedTableName: 'promotions',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
@@ -38,7 +43,7 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('products')
+        await queryRunner.dropTable('product_promotions')
     }
 
 }

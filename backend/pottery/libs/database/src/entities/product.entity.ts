@@ -6,22 +6,21 @@ import { BaseEntity } from './base.entity'
 @Entity('products')
 export class ProductEntity extends BaseEntity {
 
+  @Column({ type: 'integer', nullable: false })
+  supplier_id: number
+  
   @Column({ type: 'varchar', length: 255, nullable: false })
   name: string
 
   @Column({ type: 'varchar', nullable: true })
   description: string
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price: number
 
-  @Column({ type: 'integer', nullable: false })
+  @Column({ type: 'integer', nullable: true })
   quantity: number
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   image_url: string
-
-  @Column({ type: 'integer', nullable: true })
-  supplier_id: number
-
 }
