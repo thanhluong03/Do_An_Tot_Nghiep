@@ -8,6 +8,7 @@ const typeOrmConfig = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
+  schema: 'public',
   synchronize: false,
   logging: true,
   migrations: ['libs/database/src/migrations/*.ts'],

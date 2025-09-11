@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
 
-export class CreateProductTable1757434387060 implements MigrationInterface {
+export class CreateDeliveryProofTable1757434387069 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'products',
+                name: 'delivery_proofs',
                 columns: [
                     {
                         name: 'id',
@@ -14,12 +14,9 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'supplier_id', type: 'int', isNullable: false },
-                    { name: 'name', type: 'varchar', length: '255', isNullable: false, isUnique: true },
-                    { name: 'description', type: 'varchar', isNullable: true },
-                    { name: 'price', type: 'decimal', precision: 10, scale: 2, isNullable: true },
-                    { name: 'quantity', type: 'int', isNullable: true },
+                    { name: 'order_id', type: 'int', isNullable: false },
                     { name: 'image_url', type: 'varchar', length: '255', isNullable: true },
+                    { name: 'captured_at', type: 'timestamptz' },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },
@@ -27,10 +24,10 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
             }),
         )
         await queryRunner.createForeignKey(
-            'products',
+            'delivery_proofs',
             new TableForeignKey({
-                columnNames: ['supplier_id'],
-                referencedTableName: 'suppliers',
+                columnNames: ['order_id'],
+                referencedTableName: 'orders',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
@@ -38,7 +35,7 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('products')
+        await queryRunner.dropTable('delivery_proofs')
     }
 
 }
