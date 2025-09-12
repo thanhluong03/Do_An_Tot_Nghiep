@@ -34,6 +34,15 @@
         "tsConfigPath": "libs/product/tsconfig.lib.json"
       }
     },
+    "role": {
+      "type": "library",
+      "root": "libs/role",
+      "entryFile": "index",
+      "sourceRoot": "libs/role/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/role/tsconfig.lib.json"
+      }
+    },
     "supplier": {
       "type": "library",
       "root": "libs/supplier",

@@ -6,6 +6,8 @@ import { ProductModule } from '@app/product';
 import { ConfigModule } from '@nestjs/config';
 import { SupplierController } from './supplier/supplier.controller';
 import { SupplierModule } from '@app/supplier';
+import { RoleController } from './role/role.controller';
+import { RoleModule } from '@app/role';
 
 @Module({
   imports: [
@@ -14,8 +16,9 @@ import { SupplierModule } from '@app/supplier';
     }),
     ProductModule,
     SupplierModule,
+    RoleModule,
   ],
-  controllers: [AppController, ProductController, SupplierController],
+  controllers: [AppController, ProductController, SupplierController, RoleController],
   providers: [AppService],
 })
 export class AppModule { }
