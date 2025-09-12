@@ -84,7 +84,8 @@
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
       "^@app/product(|/.*)$": "<rootDir>/libs/product/src/$1",
-      "^y/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1"
+      "^@app/role(|/.*)$": "<rootDir>/libs/role/src/$1",
+      "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1"
     }
   }
 }

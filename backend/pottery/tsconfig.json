@@ -45,6 +45,12 @@
       ],
       "@app/supplier/*": [
         "libs/supplier/src/*"
+      ],
+      "@app/role": [
+        "libs/role/src"
+      ],
+      "@app/role/*": [
+        "libs/role/src/*"
       ]
     }
   }
