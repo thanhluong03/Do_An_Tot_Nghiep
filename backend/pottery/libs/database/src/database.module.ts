@@ -4,11 +4,11 @@ import { config } from 'dotenv';
 config();
 
 import { DatabaseService } from './database.service';
-import { ProductEntity } from './entities';
-import { ProductRepository } from './repositories';
+import { ProductEntity, ProductImageEntity } from './entities';
+import { ProductRepository, ProductImageRepository } from './repositories';
 
-const postgresRepositories = [ProductRepository];
-const postgresEntities = [ProductEntity];
+const postgresRepositories = [ProductRepository, ProductImageRepository];
+const postgresEntities = [ProductEntity, ProductImageEntity];
 @Module({
   imports: [
     TypeOrmModule.forRoot({

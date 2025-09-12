@@ -19,7 +19,6 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
                     { name: 'description', type: 'varchar', isNullable: true },
                     { name: 'price', type: 'decimal', precision: 10, scale: 2, isNullable: true },
                     { name: 'quantity', type: 'int', isNullable: true },
-                    { name: 'image_url', type: 'varchar', length: '255', isNullable: true },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },

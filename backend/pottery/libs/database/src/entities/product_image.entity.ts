@@ -1,18 +1,24 @@
-import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
-import { BaseEntity } from './base.entity'
+import { Entity, Column, JoinColumn, ManyToOne } from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { ProductEntity } from './product.entity';
 
 @Entity('product_images')
 export class ProductImageEntity extends BaseEntity {
-
     @Column({ type: 'integer', nullable: false })
     product_id: number
 
-    @Column({ type: 'boolean', default: true })
+    @Column({ type: 'boolean', default: false })
     is_main_image: boolean;
 
     @Column({ type: 'integer', nullable: true })
     priority: number
 
-    @Column({ type: 'varchar', length: 255, nullable: true })
-    image_url: string
+    @Column({ type: 'bytea', nullable: true })
+    image_data: Buffer
+
+    @ManyToOne(() => ProductEntity, (product) => product.images, {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn({ name: 'product_id' })
+    product: ProductEntity;
 }
