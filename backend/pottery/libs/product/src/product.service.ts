@@ -1,60 +1,137 @@
-import { ProductEntity, ProductRepository } from '@app/database';
+import { ProductEntity, ProductRepository, ProductImageRepository } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateProduct, IListProduct, IUpdateProduct } from './product.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
 
 @Injectable()
 export class ProductService {
-    findById(id: number) {
-        throw new Error('Method not implemented.');
-    }
-    constructor(
-        private readonly productRepository: ProductRepository
-    ) {}
+  findById(id: number) {
+    throw new Error('Method not implemented.');
+  }
+  constructor(
+    private readonly productRepository: ProductRepository,
+    private readonly productImageRepository: ProductImageRepository,
+  ) { }
 
-      async create(data: ICreateProduct) {
-        const product = await this.productRepository.create({
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          quantity: data.quantity,
-          image_url: data.image_url,
-          supplier_id: data.supplier_id,
-          
-        })
-        return product
+  async create(data: ICreateProduct) {
+    try {
+      console.log('Creating product with data:', {
+        name: data.name,
+        supplier_id: data.supplier_id,
+        imagesCount: data.images?.length || 0
+      });
+
+      const product = await this.productRepository.create({
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        quantity: data.quantity,
+        supplier_id: data.supplier_id,
+      });
+
+      console.log('Product created with ID:', product.id);
+
+      if (data.images && data.images.length > 0) {
+        console.log('Creating', data.images.length, 'product images');
+
+        const productImages = data.images.map((image, index) => ({
+          product_id: product.id,
+          image_data: image.image_data,
+          is_main_image: index === 0,
+          priority: index + 1,
+        }));
+
+        await this.productImageRepository.createMany(productImages);
+        console.log('Product images created successfully');
       }
-    
-      async findAll(params: IListProduct) {
-        return this.productRepository.findAll({
-          ...params,
-          size: params.size || DEFAULT_PAGE_SIZE,
-          page: params.page || DEFAULT_PAGE,
-        })
-      }
-    
-      async findOne(id: number) {
-        const product = await this.productRepository.findById(id)
-        if (!product) throw new NotFoundException('product not found')
-        return product
-      }
-    
-      async update(id: number, data: IUpdateProduct) {
-        const product = {
-            name: data.name,
-            description: data.description,
-            price: data.price,
-            quantity: data.quantity,
-            image_url: data.image_url,
-            supplier_id: data.supplier_id,
-        } as Partial<ProductEntity>
-    
-        return await this.productRepository.update(id, product)
-      }
-    
-      async softDelete(id: number) {
-        const product = await this.productRepository.findById(id)
-        if (!product) throw new NotFoundException('product not found')
-        return this.productRepository.softDelete(id)
-      }
+
+      return product;
+    } catch (error) {
+      console.error('Error in ProductService.create:', error);
+      throw error;
+    }
+  }
+
+  async findAll(params: IListProduct) {
+    const products = await this.productRepository.findAll({
+      ...params,
+      size: params.size || DEFAULT_PAGE_SIZE,
+      page: params.page || DEFAULT_PAGE,
+    });
+
+    const productsWithImages = await Promise.all(
+      products.map(async (product) => {
+        const images = await this.productImageRepository.findByProductId(product.id);
+        const processedImages = images.map((image) => ({
+          id: image.id,
+          image_data: image.image_data ? image.image_data.toString('base64') : null,
+          is_main_image: image.is_main_image,
+          priority: image.priority,
+        }));
+
+        return {
+          ...product,
+          images: processedImages,
+          main_image: processedImages.find((img) => img.is_main_image) || null,
+        };
+      })
+    );
+
+    return productsWithImages;
+  }
+
+  async findOne(id: number) {
+    const product = await this.productRepository.findById(id);
+    if (!product) throw new NotFoundException('product not found');
+
+    const images = await this.productImageRepository.findByProductId(id);
+    const processedImages = images.map((image) => ({
+      id: image.id,
+      image_data: image.image_data ? image.image_data.toString('base64') : null,
+      is_main_image: image.is_main_image,
+      priority: image.priority,
+    }));
+
+    return {
+      ...product,
+      images: processedImages,
+      main_image: processedImages.find((img) => img.is_main_image) || null,
+    };
+  }
+
+  async update(id: number, data: IUpdateProduct) {
+    const product = {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      quantity: data.quantity,
+      supplier_id: data.supplier_id,
+    } as Partial<ProductEntity>;
+
+    await this.productRepository.update(id, product);
+
+    if (data.images && data.images.length > 0) {
+      await this.productImageRepository.deleteByProductId(id);
+
+      const productImages = data.images.map((image, index) => ({
+        product_id: id,
+        image_data: image.image_data,
+        is_main_image: index === 0,
+        priority: index + 1,
+      }));
+
+      await this.productImageRepository.createMany(productImages);
+    }
+
+    return await this.findOne(id);
+  }
+
+  async softDelete(id: number) {
+    const product = await this.productRepository.findById(id);
+    if (!product) throw new NotFoundException('product not found');
+
+    await this.productImageRepository.deleteByProductId(id);
+
+    return this.productRepository.softDelete(id);
+  }
 }

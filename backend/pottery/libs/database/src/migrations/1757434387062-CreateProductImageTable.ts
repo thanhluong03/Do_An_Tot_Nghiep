@@ -17,7 +17,7 @@ export class CreateProductImageTable1757434387062 implements MigrationInterface 
                     { name: 'product_id', type: 'int', isNullable: false },
                     { name: 'is_main_image', type: 'boolean', isNullable: true },
                     { name: 'priority', type: 'int', isNullable: true },
-                    { name: 'image_url', type: 'varchar', length: '255', isNullable: true },
+                    { name: 'image_data', type: 'bytea', isNullable: true },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },

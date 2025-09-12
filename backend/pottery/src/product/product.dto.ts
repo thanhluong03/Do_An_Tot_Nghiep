@@ -1,100 +1,114 @@
-import { Expose } from 'class-transformer'
+import { Expose, Type } from 'class-transformer';
 import {
   IsOptional,
   IsString,
   IsNumber,
   IsPositive,
-} from 'class-validator'
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
+
+export class ProductImageDto {
+  @Expose()
+  image_data: Buffer;
+}
 
 export class CreateProductDto {
   @Expose()
   @IsString()
-  name: string
+  name: string;
 
   @Expose()
   @IsOptional()
   @IsString()
-  description?: string
+  description?: string;
 
   @Expose()
   @IsOptional()
   @IsNumber()
-  price?: number
+  price?: number;
 
   @Expose()
   @IsOptional()
   @IsNumber()
-  quantity?: number
-
-  @Expose()
-  @IsOptional()
-  @IsString()
-  image_url?: string
+  quantity?: number;
 
   @Expose()
   @IsNumber()
-  supplier_id: number
+  supplier_id: number;
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductImageDto)
+  images?: ProductImageDto[];
 }
 
 export class UpdateProductDto {
   @Expose()
   @IsOptional()
   @IsString()
-  name?: string
+  name?: string;
 
   @Expose()
   @IsOptional()
   @IsString()
-  description?: string
+  description?: string;
 
   @Expose()
   @IsOptional()
   @IsNumber()
-  price?: number
+  price?: number;
 
   @Expose()
   @IsOptional()
   @IsNumber()
-  quantity?: number
-
-  @Expose()
-  @IsOptional()
-  @IsString()
-  image_url?: string
+  quantity?: number;
 
   @Expose()
   @IsOptional()
   @IsNumber()
-  supplier_id?: number
+  supplier_id?: number;
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductImageDto)
+  images?: ProductImageDto[];
 }
 
 export class ProductResponseDto {
   @Expose()
-  id: number
+  id: number;
 
   @Expose()
-  name: string
+  name: string;
 
   @Expose()
-  description?: string
+  description?: string;
 
   @Expose()
-  price?: number
+  price?: number;
 
   @Expose()
-  quantity?: number
+  quantity?: number;
 
   @Expose()
-  image_url?: string
+  supplier_id: number;
 
   @Expose()
-  supplier_id: number
+  created_at: Date;
 
   @Expose()
-  created_at: Date
+  updated_at: Date | null;
 
   @Expose()
-  updated_at: Date | null
+  images?: any[];
+
+  @Expose()
+  main_image?: any;
 }
 
 export class ListProductRequestDto {
