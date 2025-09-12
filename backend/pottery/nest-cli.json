@@ -33,6 +33,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/product/tsconfig.lib.json"
       }
+    },
+    "supplier": {
+      "type": "library",
+      "root": "libs/supplier",
+      "entryFile": "index",
+      "sourceRoot": "libs/supplier/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/supplier/tsconfig.lib.json"
+      }
     }
   }
 }

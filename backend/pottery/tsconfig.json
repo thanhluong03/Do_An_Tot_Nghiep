@@ -39,6 +39,12 @@
       ],
       "@app/product/*": [
         "libs/product/src/*"
+      ],
+      "@app/supplier": [
+        "libs/supplier/src"
+      ],
+      "@app/supplier/*": [
+        "libs/supplier/src/*"
       ]
     }
   }
