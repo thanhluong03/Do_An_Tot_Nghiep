@@ -25,6 +25,15 @@
         "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     },
+    "permission": {
+      "type": "library",
+      "root": "libs/permission",
+      "entryFile": "index",
+      "sourceRoot": "libs/permission/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/permission/tsconfig.lib.json"
+      }
+    },
     "product": {
       "type": "library",
       "root": "libs/product",

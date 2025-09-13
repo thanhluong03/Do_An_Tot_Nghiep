@@ -1,5 +1,6 @@
-import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
+import { Entity, Column, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { PermissionEntity } from './permission.entity'
 
 @Entity('roles')
 export class RoleEntity extends BaseEntity {
@@ -9,4 +10,7 @@ export class RoleEntity extends BaseEntity {
 
     @Column({ type: 'text', nullable: true })
     description: string
+
+    @OneToMany(() => PermissionEntity, permission => permission.role)
+    permissions: PermissionEntity[]
 }

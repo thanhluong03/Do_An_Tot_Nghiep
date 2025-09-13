@@ -40,17 +40,23 @@
       "@app/product/*": [
         "libs/product/src/*"
       ],
+      "@app/role": [
+        "libs/role/src"
+      ],
+      "@app/role/*": [
+        "libs/role/src/*"
+      ],
       "@app/supplier": [
         "libs/supplier/src"
       ],
       "@app/supplier/*": [
         "libs/supplier/src/*"
       ],
-      "@app/role": [
-        "libs/role/src"
+      "@app/permission": [
+        "libs/permission/src"
       ],
-      "@app/role/*": [
-        "libs/role/src/*"
+      "@app/permission/*": [
+        "libs/permission/src/*"
       ]
     }
   }
