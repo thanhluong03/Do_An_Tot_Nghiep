@@ -17,7 +17,15 @@ export class RoleRepository {
     async findById(id: number): Promise<RoleEntity | null> {
         return this.repository.findOne({
             where: { id, deleted_at: IsNull() },
-        })
+            relations: ['permissions']
+        });
+    }
+
+    async findByIdWithPermissions(id: number): Promise<RoleEntity | null> {
+        return this.repository.findOne({
+            where: { id, deleted_at: IsNull() },
+            relations: ['permissions']
+        });
     }
 
     async findAll(p0: { size: number; page: number; key?: string }): Promise<RoleEntity[]> {

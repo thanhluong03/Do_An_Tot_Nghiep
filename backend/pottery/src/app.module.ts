@@ -8,6 +8,8 @@ import { SupplierController } from './supplier/supplier.controller';
 import { SupplierModule } from '@app/supplier';
 import { RoleController } from './role/role.controller';
 import { RoleModule } from '@app/role';
+import { PermissionController } from './permission/permission.controller';
+import { PermissionModule } from '@app/permission';
 
 @Module({
   imports: [
@@ -17,8 +19,9 @@ import { RoleModule } from '@app/role';
     ProductModule,
     SupplierModule,
     RoleModule,
+    PermissionModule,
   ],
-  controllers: [AppController, ProductController, SupplierController, RoleController],
+  controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController],
   providers: [AppService],
 })
 export class AppModule { }
