@@ -16,6 +16,8 @@ import { UserController } from './user/user.controller';
 import { UserModule } from '@app/user';
 import { ReviewController } from './review/review.controller';
 import { ReviewModule } from '@app/review';
+import { PromotionController } from './promotion/promotion.controller';
+import { PromotionModule } from '@app/promotion';
 
 @Module({
   imports: [
@@ -29,9 +31,10 @@ import { ReviewModule } from '@app/review';
     StoreModule,
     UserModule,
     ReviewModule,
+    PromotionModule,
   ],
   controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController,
+    UserController, ReviewController, PromotionController,
   ],
   providers: [AppService],
 })
