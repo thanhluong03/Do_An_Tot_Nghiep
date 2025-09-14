@@ -34,6 +34,12 @@
       "@app/database/*": [
         "libs/database/src/*"
       ],
+      "@app/permission": [
+        "libs/permission/src"
+      ],
+      "@app/permission/*": [
+        "libs/permission/src/*"
+      ],
       "@app/product": [
         "libs/product/src"
       ],
@@ -52,11 +58,11 @@
       "@app/supplier/*": [
         "libs/supplier/src/*"
       ],
-      "@app/permission": [
-        "libs/permission/src"
+      "@app/store": [
+        "libs/store/src"
       ],
-      "@app/permission/*": [
-        "libs/permission/src/*"
+      "@app/store/*": [
+        "libs/store/src/*"
       ]
     }
   }
