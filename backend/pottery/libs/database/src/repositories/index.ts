@@ -4,3 +4,4 @@ export * from './supplier.repository';
 export * from './role.repository';
 export * from './permission.repository';
 export * from './store.repository';
+export * from './user.repository';

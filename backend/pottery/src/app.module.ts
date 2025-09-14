@@ -12,6 +12,8 @@ import { PermissionController } from './permission/permission.controller';
 import { PermissionModule } from '@app/permission';
 import { StoreController } from './store/store.controller';
 import { StoreModule } from '@app/store';
+import { UserController } from './user/user.controller';
+import { UserModule } from '@app/user';
 
 @Module({
   imports: [
@@ -23,8 +25,11 @@ import { StoreModule } from '@app/store';
     RoleModule,
     PermissionModule,
     StoreModule,
+    UserModule,
   ],
-  controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController],
+  controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController, 
+    UserController
+  ],
   providers: [AppService],
 })
 export class AppModule { }
