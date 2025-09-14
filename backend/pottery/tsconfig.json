@@ -52,17 +52,23 @@
       "@app/role/*": [
         "libs/role/src/*"
       ],
+      "@app/store": [
+        "libs/store/src"
+      ],
+      "@app/store/*": [
+        "libs/store/src/*"
+      ],
       "@app/supplier": [
         "libs/supplier/src"
       ],
       "@app/supplier/*": [
         "libs/supplier/src/*"
       ],
-      "@app/store": [
-        "libs/store/src"
+      "@app/user": [
+        "libs/user/src"
       ],
-      "@app/store/*": [
-        "libs/store/src/*"
+      "@app/user/*": [
+        "libs/user/src/*"
       ]
     }
   }

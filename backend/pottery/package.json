@@ -29,6 +29,8 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@types/bcrypt": "^6.0.0",
+    "bcrypt": "^6.0.0",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
@@ -86,8 +88,10 @@
       "^@app/permission(|/.*)$": "<rootDir>/libs/permission/src/$1",
       "^@app/product(|/.*)$": "<rootDir>/libs/product/src/$1",
       "^@app/role(|/.*)$": "<rootDir>/libs/role/src/$1",
+      "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1",
       "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1",
-      "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1"
+      "^@app/permission(|/.*)$": "<rootDir>/libs/permission/src/$1",
+      "^@app/user(|/.*)$": "<rootDir>/libs/user/src/$1"
     }
   }
 }
