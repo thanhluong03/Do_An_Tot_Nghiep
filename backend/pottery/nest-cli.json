@@ -43,6 +43,15 @@
         "tsConfigPath": "libs/product/tsconfig.lib.json"
       }
     },
+    "promotion": {
+      "type": "library",
+      "root": "libs/promotion",
+      "entryFile": "index",
+      "sourceRoot": "libs/promotion/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/promotion/tsconfig.lib.json"
+      }
+    },
     "review": {
       "type": "library",
       "root": "libs/review",

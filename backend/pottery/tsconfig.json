@@ -46,6 +46,12 @@
       "@app/product/*": [
         "libs/product/src/*"
       ],
+      "@app/review": [
+        "libs/review/src"
+      ],
+      "@app/review/*": [
+        "libs/review/src/*"
+      ],
       "@app/role": [
         "libs/role/src"
       ],
@@ -70,11 +76,11 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "@app/review": [
-        "libs/review/src"
+      "@app/promotion": [
+        "libs/promotion/src"
       ],
-      "@app/review/*": [
-        "libs/review/src/*"
+      "@app/promotion/*": [
+        "libs/promotion/src/*"
       ]
     }
   }
