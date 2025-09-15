@@ -6,6 +6,7 @@ export class ICreateFlashSale {
     effective_period_begins?: Date;
     effective_period_ends?: Date;
     flash_sale_price?: number;
+    quantity?: number;
 }
 export interface IUpdateFlashSale {
     name?: string;
@@ -15,6 +16,7 @@ export interface IUpdateFlashSale {
     effective_period_begins?: Date;
     effective_period_ends?: Date;
     flash_sale_price?: number;
+    quantity?: number;
 }
 export interface IListFlashSale {
     page?: number

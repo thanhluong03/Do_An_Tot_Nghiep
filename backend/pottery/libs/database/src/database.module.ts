@@ -4,11 +4,11 @@ import { config } from 'dotenv';
 config();
 
 import { DatabaseService } from './database.service';
-import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity } from './entities';
-import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository } from './repositories';
+import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleProductEntity } from './entities';
+import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleProductRepository } from './repositories';
 
-const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository];
-const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity];
+const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleProductRepository];
+const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleProductEntity];
 @Module({
   imports: [
     TypeOrmModule.forRoot({

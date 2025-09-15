@@ -23,4 +23,7 @@ export class FlashSaleEntity extends BaseEntity {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
     flash_sale_price: number;
+
+    @Column({ type: 'integer', default: 0, nullable: false })
+    quantity: number;
 }

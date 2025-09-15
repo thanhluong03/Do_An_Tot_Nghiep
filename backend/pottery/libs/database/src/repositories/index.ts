@@ -9,3 +9,4 @@ export * from './review.repository';
 export * from './promotion.repository';
 export * from './product_promotion.repository';
 export * from './flashsale.repository';
+export * from './flash_sale_product.repository';
