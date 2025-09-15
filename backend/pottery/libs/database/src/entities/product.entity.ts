@@ -1,4 +1,5 @@
 import { Entity, Column, OneToMany } from 'typeorm'
+import { ProductPromotionEntity } from './product_promotion.entity';
 import { BaseEntity } from './base.entity'
 import { ProductImageEntity } from './product_image.entity';
 
@@ -26,4 +27,6 @@ export class ProductEntity extends BaseEntity {
     eager: false,
   })
   images: ProductImageEntity[];
+  @OneToMany(() => ProductPromotionEntity, (productPromotion) => productPromotion.product)
+  productPromotions: ProductPromotionEntity[];
 }

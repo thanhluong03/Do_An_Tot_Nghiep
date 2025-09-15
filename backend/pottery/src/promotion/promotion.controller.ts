@@ -14,6 +14,7 @@ import {
     UpdatePromotionDto,
     ListPromotionRequestDto,
     PromotionResponseDto,
+    AssignPromotionToProductsDto,
 } from './promotion.dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -38,6 +39,7 @@ export class PromotionController {
 
     @Get('listpromotion')
     async findAll(@Query() query: ListPromotionRequestDto): Promise<PromotionResponseDto[]> {
+        await this.promotionService.softDeleteExpiredPromotions();
         const result = await this.promotionService.findAll(query);
         return result.promotions.map(promotion =>
             plainToInstance(PromotionResponseDto, promotion, {
@@ -75,4 +77,15 @@ export class PromotionController {
         const result = await this.promotionService.softDelete(Number(id));
         return [result];
     }
+
+    @Get('listproductpromotions')
+    async getProductPromotions() {
+        return await this.promotionService.getAllProductPromotions();
+    }
+
+    @Post('setproductpromotion')
+    async setProductPromotion(@Body() body: { assignments: { productId: number, promotionId: number }[] }): Promise<{ message: string }> {
+        return await this.promotionService.setProductPromotion(body.assignments);
+    }
+
 }
