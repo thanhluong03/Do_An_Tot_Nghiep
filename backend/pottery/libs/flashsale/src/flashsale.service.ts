@@ -1,24 +1,16 @@
-import { FlashSaleEntity, FlashSaleRepository } from '@app/database';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { FlashSaleEntity, FlashSaleRepository, FlashSaleProductEntity, FlashSaleProductRepository } from '@app/database';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ICreateFlashSale, IListFlashSale, IUpdateFlashSale } from './flashsale.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
+import { DataSource } from 'typeorm';
+import { FlashSaleProductStatus } from '@app/database/entities/flash_sale_product.entity';
 
 @Injectable()
 export class FlashSaleService {
-    async softDeleteExpiredFlashSales(): Promise<{ message: string, count: number }> {
-        const now = new Date();
-        const flashSales = await this.flashSaleRepository.findAll({ size: 1000, page: 1 });
-        let count = 0;
-        for (const flashSale of flashSales) {
-            if (flashSale.effective_period_ends && new Date(flashSale.effective_period_ends) < now) {
-                await this.flashSaleRepository.softDelete(flashSale.id);
-                count++;
-            }
-        }
-        return { message: `Đã xóa mềm ${count} flash sale hết hạn!`, count };
-    }
     constructor(
         private readonly flashSaleRepository: FlashSaleRepository,
+        private readonly flashSaleProductRepository: FlashSaleProductRepository,
+        private readonly dataSource: DataSource,
     ) { }
 
     async create(data: ICreateFlashSale): Promise<{ message: string, flashSale: FlashSaleEntity | null }> {
@@ -80,5 +72,62 @@ export class FlashSaleService {
         if (!flashSale) throw new NotFoundException('Flash sale not found');
         await this.flashSaleRepository.softDelete(id);
         return { message: 'Flash sale deleted successfully' };
+    }
+
+    async updateFlashSaleUser(userId: number, flashSaleId: number): Promise<{ message: string; flashSaleProduct?: FlashSaleProductEntity }> {
+        return await this.dataSource.transaction(async (manager) => {
+            const flashSale = await manager.findOne(FlashSaleEntity, {
+                where: { id: flashSaleId },
+            });
+
+            if (!flashSale) {
+                throw new NotFoundException('Flash sale not found');
+            }
+
+            if (flashSale.quantity <= 0) {
+                throw new BadRequestException('Flash sale is out of stock');
+            }
+
+            const existingFlashSaleProduct = await manager.findOne(FlashSaleProductEntity, {
+                where: {
+                    user_id: userId,
+                    flash_sale_id: flashSaleId,
+                },
+            });
+
+            if (existingFlashSaleProduct) {
+                throw new BadRequestException('User already has this flashsale');
+            }
+
+            await manager.update(FlashSaleEntity, flashSaleId, {
+                quantity: flashSale.quantity - 1,
+            });
+
+            const flashSaleProduct = manager.create(FlashSaleProductEntity, {
+                user_id: userId,
+                flash_sale_id: flashSaleId,
+                status: FlashSaleProductStatus.CREATED,
+            });
+
+            const savedFlashSaleProduct = await manager.save(flashSaleProduct);
+
+            return {
+                message: 'Received flash sale successfully',
+                flashSaleProduct: savedFlashSaleProduct,
+            };
+        });
+    }
+
+    async softDeleteExpiredFlashSales(): Promise<{ message: string, count: number }> {
+        const now = new Date();
+        const flashSales = await this.flashSaleRepository.findAll({ size: 1000, page: 1 });
+        let count = 0;
+        for (const flashSale of flashSales) {
+            if (flashSale.effective_period_ends && new Date(flashSale.effective_period_ends) < now) {
+                await this.flashSaleRepository.softDelete(flashSale.id);
+                count++;
+            }
+        }
+        return { message: `Đã xóa mềm ${count} flash sale hết hạn!`, count };
     }
 }

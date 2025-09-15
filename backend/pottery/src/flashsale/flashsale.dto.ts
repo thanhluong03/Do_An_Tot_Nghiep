@@ -130,3 +130,15 @@ export class ListFlashSaleRequestDto {
     @IsString()
     key?: string
 }
+
+export class FlashSaleUserDto {
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    flash_sale_id: number;
+
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    user_id: number;
+}
