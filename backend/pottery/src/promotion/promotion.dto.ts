@@ -1,4 +1,5 @@
-import { Expose, Type } from 'class-transformer';
+
+import { Expose } from 'class-transformer';
 import {
     IsOptional,
     IsString,
@@ -9,6 +10,19 @@ import {
     IsDate,
     IsBoolean,
 } from 'class-validator';
+
+export class AssignPromotionToProductsDto {
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    promotionId: number;
+
+    @Expose()
+    @IsArray()
+    @IsNumber({}, { each: true })
+    @IsPositive({ each: true })
+    productIds: number[];
+}
 
 export class CreatePromotionDto {
     @Expose()

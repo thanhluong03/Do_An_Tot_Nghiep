@@ -1,5 +1,6 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { ProductPromotionEntity } from './product_promotion.entity';
 
 @Entity('promotions')
 export class PromotionEntity extends BaseEntity {
@@ -23,5 +24,7 @@ export class PromotionEntity extends BaseEntity {
     end_date: Date
 
     @Column({ type: 'boolean', default: true })
-    is_active: boolean
+    is_active: boolean;
+    @OneToMany(() => ProductPromotionEntity, (productPromotion) => productPromotion.promotion)
+    productPromotions: ProductPromotionEntity[];
 }
