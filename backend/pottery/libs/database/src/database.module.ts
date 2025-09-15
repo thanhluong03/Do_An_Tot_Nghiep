@@ -4,11 +4,11 @@ import { config } from 'dotenv';
 config();
 
 import { DatabaseService } from './database.service';
-import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity } from './entities';
-import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository } from './repositories';
+import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity } from './entities';
+import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository } from './repositories';
 
-const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository];
-const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity];
+const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository];
+const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity];
 @Module({
   imports: [
     TypeOrmModule.forRoot({

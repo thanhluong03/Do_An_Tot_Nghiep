@@ -8,3 +8,4 @@ export * from './user.repository';
 export * from './review.repository';
 export * from './promotion.repository';
 export * from './product_promotion.repository';
+export * from './flashsale.repository';

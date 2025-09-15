@@ -18,7 +18,8 @@ import { ReviewController } from './review/review.controller';
 import { ReviewModule } from '@app/review';
 import { PromotionController } from './promotion/promotion.controller';
 import { PromotionModule } from '@app/promotion';
-
+import { FlashSaleController } from './flashsale/flashsale.controller';
+import { FlashSaleModule } from '@app/flashsale';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -32,9 +33,10 @@ import { PromotionModule } from '@app/promotion';
     UserModule,
     ReviewModule,
     PromotionModule,
+    FlashSaleModule,
   ],
   controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController,
+    UserController, ReviewController, PromotionController, FlashSaleController,
   ],
   providers: [AppService],
 })
