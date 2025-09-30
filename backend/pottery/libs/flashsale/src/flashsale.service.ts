@@ -1,15 +1,15 @@
-import { FlashSaleEntity, FlashSaleRepository, FlashSaleProductEntity, FlashSaleProductRepository } from '@app/database';
+import { FlashSaleEntity, FlashSaleRepository, FlashSaleCustomerEntity, FlashSaleCustomerRepository } from '@app/database';
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ICreateFlashSale, IListFlashSale, IUpdateFlashSale } from './flashsale.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
 import { DataSource } from 'typeorm';
-import { FlashSaleProductStatus } from '@app/database/entities/flash_sale_product.entity';
+import { FlashSaleCustomerStatus } from '@app/database/entities/flash_sale_customer.entity';
 
 @Injectable()
 export class FlashSaleService {
     constructor(
         private readonly flashSaleRepository: FlashSaleRepository,
-        private readonly flashSaleProductRepository: FlashSaleProductRepository,
+        private readonly flashSaleCustomerRepository: FlashSaleCustomerRepository,
         private readonly dataSource: DataSource,
     ) { }
 
@@ -74,7 +74,7 @@ export class FlashSaleService {
         return { message: 'Flash sale deleted successfully' };
     }
 
-    async updateFlashSaleUser(userId: number, flashSaleId: number): Promise<{ message: string; flashSaleProduct?: FlashSaleProductEntity }> {
+    async updateFlashSaleCustomer(customerId: number, flashSaleId: number): Promise<{ message: string; flashSaleCustomer?: FlashSaleCustomerEntity }> {
         return await this.dataSource.transaction(async (manager) => {
             const flashSale = await manager.findOne(FlashSaleEntity, {
                 where: { id: flashSaleId },
@@ -88,32 +88,32 @@ export class FlashSaleService {
                 throw new BadRequestException('Flash sale is out of stock');
             }
 
-            const existingFlashSaleProduct = await manager.findOne(FlashSaleProductEntity, {
+            const existingFlashSaleCustomer = await manager.findOne(FlashSaleCustomerEntity, {
                 where: {
-                    user_id: userId,
+                    customer_id: customerId,
                     flash_sale_id: flashSaleId,
                 },
             });
 
-            if (existingFlashSaleProduct) {
-                throw new BadRequestException('User already has this flashsale');
+            if (existingFlashSaleCustomer) {
+                throw new BadRequestException('Customer already has this flashsale');
             }
 
             await manager.update(FlashSaleEntity, flashSaleId, {
                 quantity: flashSale.quantity - 1,
             });
 
-            const flashSaleProduct = manager.create(FlashSaleProductEntity, {
-                user_id: userId,
+            const flashSaleCustomer = manager.create(FlashSaleCustomerEntity, {
+                customer_id: customerId,
                 flash_sale_id: flashSaleId,
-                status: FlashSaleProductStatus.CREATED,
+                status: FlashSaleCustomerStatus.CREATED,
             });
 
-            const savedFlashSaleProduct = await manager.save(flashSaleProduct);
+            const savedFlashSaleCustomer = await manager.save(flashSaleCustomer);
 
             return {
                 message: 'Received flash sale successfully',
-                flashSaleProduct: savedFlashSaleProduct,
+                flashSaleCustomer: savedFlashSaleCustomer,
             };
         });
     }

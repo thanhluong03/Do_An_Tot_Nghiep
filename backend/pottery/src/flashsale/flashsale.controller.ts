@@ -14,7 +14,7 @@ import {
     UpdateFlashSaleDto,
     ListFlashSaleRequestDto,
     FlashSaleResponseDto,
-    FlashSaleUserDto,
+    FlashSaleCustomerDto,
 } from './flashsale.dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -78,11 +78,11 @@ export class FlashSaleController {
         return [result];
     }
 
-    @Post('updateflashsaleuser')
-    async updateFlashSaleUser(@Body() flashSaleUserDto: FlashSaleUserDto): Promise<{ message: string, flashSaleProduct?: any }> {
-        return await this.flashSaleService.updateFlashSaleUser(
-            flashSaleUserDto.user_id,
-            flashSaleUserDto.flash_sale_id
+    @Post('updateflashsalecustomer')
+    async updateFlashSaleCustomer(@Body() flashSaleCustomerDto: FlashSaleCustomerDto): Promise<{ message: string, flashSaleCustomer?: any }> {
+        return await this.flashSaleService.updateFlashSaleCustomer(
+            flashSaleCustomerDto.customer_id,
+            flashSaleCustomerDto.flash_sale_id
         );
     }
 }

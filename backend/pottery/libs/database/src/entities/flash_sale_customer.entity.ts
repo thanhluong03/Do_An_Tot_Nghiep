@@ -1,36 +1,36 @@
 import { Entity, Column, JoinColumn, ManyToOne, Unique, Index } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { FlashSaleEntity } from './flash_sale.entity';
-import { UserEntity } from './user.entity';
+import { CustomerEntity } from './customer.entity';
 
-export enum FlashSaleProductStatus {
+export enum FlashSaleCustomerStatus {
     CREATED = 'CREATED',
     PENDING = 'PENDING',
     USED = 'USED',
 }
 
-@Entity('flash_sale_products')
-@Unique(['flash_sale_id', 'user_id'])
-@Index(['flash_sale_id', 'user_id'])
-export class FlashSaleProductEntity extends BaseEntity {
+@Entity('flash_sale_customer')
+@Unique(['flash_sale_id', 'customer_id'])
+@Index(['flash_sale_id', 'customer_id'])
+export class FlashSaleCustomerEntity extends BaseEntity {
     @Column({ type: 'integer', nullable: false })
     flash_sale_id: number;
 
     @Column({ type: 'integer', nullable: false })
-    user_id: number;
+    customer_id: number;
 
     @Column({
         type: 'enum',
-        enum: FlashSaleProductStatus,
-        default: FlashSaleProductStatus.CREATED,
+        enum: FlashSaleCustomerStatus,
+        default: FlashSaleCustomerStatus.CREATED,
     })
-    status: FlashSaleProductStatus;
+    status: FlashSaleCustomerStatus;
 
     @ManyToOne(() => FlashSaleEntity, { eager: true })
     @JoinColumn({ name: 'flash_sale_id' })
     flash_sale: FlashSaleEntity;
 
-    @ManyToOne(() => UserEntity, { eager: true })
-    @JoinColumn({ name: 'user_id' })
-    user: UserEntity;
+    @ManyToOne(() => CustomerEntity, { eager: true })
+    @JoinColumn({ name: 'customer_id' })
+    customer: CustomerEntity;
 }

@@ -55,6 +55,6 @@ export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInter
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('flash_sale_products')
+        await queryRunner.dropTable('flash_sale_customer')
     }
 }
