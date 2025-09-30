@@ -85,6 +85,7 @@
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
+      "^@app/flashsale(|/.*)$": "<rootDir>/libs/flashsale/src/$1",
       "^@app/permission(|/.*)$": "<rootDir>/libs/permission/src/$1",
       "^@app/product(|/.*)$": "<rootDir>/libs/product/src/$1",
       "^@app/promotion(|/.*)$": "<rootDir>/libs/promotion/src/$1",
@@ -93,7 +94,7 @@
       "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1",
       "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1",
       "^@app/user(|/.*)$": "<rootDir>/libs/user/src/$1",
-      "^@app/flashsale(|/.*)$": "<rootDir>/libs/flashsale/src/$1"
+      "^@app/customer(|/.*)$": "<rootDir>/libs/customer/src/$1"
     }
   }
 }

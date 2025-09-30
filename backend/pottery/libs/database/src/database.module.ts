@@ -4,11 +4,11 @@ import { config } from 'dotenv';
 config();
 
 import { DatabaseService } from './database.service';
-import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleProductEntity } from './entities';
-import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleProductRepository } from './repositories';
+import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleCustomerEntity, CustomerEntity } from './entities';
+import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleCustomerRepository, CustomerRepository } from './repositories';
 
-const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleProductRepository];
-const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleProductEntity];
+const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleCustomerRepository, CustomerRepository];
+const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleCustomerEntity, CustomerEntity];
 @Module({
   imports: [
     TypeOrmModule.forRoot({

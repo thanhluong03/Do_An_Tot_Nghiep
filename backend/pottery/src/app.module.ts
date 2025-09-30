@@ -20,6 +20,8 @@ import { PromotionController } from './promotion/promotion.controller';
 import { PromotionModule } from '@app/promotion';
 import { FlashSaleController } from './flashsale/flashsale.controller';
 import { FlashSaleModule } from '@app/flashsale';
+import { CustomerController } from './customer/customer.controller';
+import { CustomerModule } from '@app/customer';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -34,9 +36,10 @@ import { FlashSaleModule } from '@app/flashsale';
     ReviewModule,
     PromotionModule,
     FlashSaleModule,
+    CustomerModule,
   ],
   controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController, FlashSaleController,
+    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController,
   ],
   providers: [AppService],
 })
