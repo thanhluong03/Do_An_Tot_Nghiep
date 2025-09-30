@@ -131,7 +131,7 @@ export class ListFlashSaleRequestDto {
     key?: string
 }
 
-export class FlashSaleUserDto {
+export class FlashSaleCustomerDto {
     @Expose()
     @IsNumber()
     @IsPositive()
@@ -140,5 +140,5 @@ export class FlashSaleUserDto {
     @Expose()
     @IsNumber()
     @IsPositive()
-    user_id: number;
+    customer_id: number;
 }
