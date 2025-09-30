@@ -5,7 +5,7 @@ import { BaseEntity } from './base.entity'
 export class ReviewEntity extends BaseEntity {
 
     @Column({ type: 'integer', nullable: false })
-    user_id: number
+    customer_id: number
 
     @Column({ type: 'integer', nullable: false })
     product_id: number
