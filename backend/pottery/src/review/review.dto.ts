@@ -22,7 +22,7 @@ export class CreateReviewDto {
     @Expose()
     @IsOptional()
     @IsPositive()
-    user_id?: number;
+    customer_id?: number;
 
     @Expose()
     @IsOptional()
@@ -43,7 +43,7 @@ export class UpdateReviewDto {
     @Expose()
     @IsPositive()
     @IsNumber()
-    user_id?: number;
+    customer_id?: number;
 
     @Expose()
     @IsPositive()
@@ -62,7 +62,7 @@ export class ReviewResponseDto {
     comment?: string;
 
     @Expose()
-    user_id?: number;
+    customer_id?: number;
 
     @Expose()
     product_id?: number;

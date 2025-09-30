@@ -16,7 +16,6 @@ import {
     ReviewResponseDto,
 } from './review.dto';
 import { plainToInstance } from 'class-transformer';
-import { ListSupplierRequestDto, SupplierResponseDto, UpdateSupplierDto } from 'src/supplier/supplier.dto';
 
 @Controller('reviews')
 export class ReviewController {

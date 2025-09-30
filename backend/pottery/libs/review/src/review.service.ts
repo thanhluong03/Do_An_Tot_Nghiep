@@ -14,7 +14,7 @@ export class ReviewService {
             const review = await this.reviewRepository.create({
                 rating: data.rating,
                 comment: data.comment,
-                user_id: data.user_id,
+                customer_id: data.customer_id,
                 product_id: data.product_id,
             });
             return {

@@ -1,13 +1,13 @@
 export class ICreateReview {
     rating?: number
     comment?: string
-    user_id?: number
+    customer_id?: number
     product_id?: number
 }
 export interface IUpdateReview {
     rating?: number
     comment?: string
-    user_id?: number
+    customer_id?: number
     product_id?: number
 }
 export interface IListReview {
