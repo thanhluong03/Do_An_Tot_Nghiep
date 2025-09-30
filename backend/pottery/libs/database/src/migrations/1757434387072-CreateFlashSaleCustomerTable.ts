@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
 
-export class CreateProductTable1757434387060 implements MigrationInterface {
+export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'products',
+                name: 'flash_sale_customer',
                 columns: [
                     {
                         name: 'id',
@@ -14,12 +14,9 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'supplier_id', type: 'int', isNullable: false },
-                    { name: 'store_id', type: 'int', isNullable: false },
-                    { name: 'name', type: 'varchar', length: '255', isNullable: false, isUnique: true },
-                    { name: 'description', type: 'varchar', isNullable: true },
-                    { name: 'price', type: 'decimal', precision: 10, scale: 2, isNullable: true },
-                    { name: 'quantity', type: 'int', isNullable: true },
+                    { name: 'flash_sale_id', type: 'int', isNullable: false },
+                    { name: 'customer_id', type: 'int', isNullable: false },
+                    { name: 'product_id', type: 'int', isNullable: false },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },
@@ -27,19 +24,30 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
             }),
         )
         await queryRunner.createForeignKey(
-            'products',
+            'flash_sale_customer',
             new TableForeignKey({
-                columnNames: ['supplier_id'],
-                referencedTableName: 'suppliers',
+                columnNames: ['flash_sale_id'],
+                referencedTableName: 'flash_sales',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
         )
+
         await queryRunner.createForeignKey(
-            'products',
+            'flash_sale_customer',
             new TableForeignKey({
-                columnNames: ['store_id'],
-                referencedTableName: 'stores',
+                columnNames: ['customer_id'],
+                referencedTableName: 'customers',
+                referencedColumnNames: ['id'],
+                onDelete: 'SET NULL',
+            }),
+        )
+
+        await queryRunner.createForeignKey(
+            'flash_sale_customer',
+            new TableForeignKey({
+                columnNames: ['product_id'],
+                referencedTableName: 'products',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
@@ -47,7 +55,6 @@ export class CreateProductTable1757434387060 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('products')
+        await queryRunner.dropTable('flash_sale_products')
     }
-
 }

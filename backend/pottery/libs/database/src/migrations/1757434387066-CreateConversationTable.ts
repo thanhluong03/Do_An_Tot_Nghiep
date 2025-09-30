@@ -14,8 +14,8 @@ export class CreateConversationTable1757434387066 implements MigrationInterface 
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
+                    { name: 'customer_id', type: 'int', isNullable: false },
                     { name: 'user_id', type: 'int', isNullable: false },
-                    { name: 'store_id', type: 'int', isNullable: false },
                     { name: 'started_at', type: 'timestamptz' },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
@@ -35,8 +35,8 @@ export class CreateConversationTable1757434387066 implements MigrationInterface 
         await queryRunner.createForeignKey(
             'conversations',
             new TableForeignKey({
-                columnNames: ['store_id'],
-                referencedTableName: 'stores',
+                columnNames: ['customer_id'],
+                referencedTableName: 'customers',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),

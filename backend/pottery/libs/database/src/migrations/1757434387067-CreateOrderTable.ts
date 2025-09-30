@@ -14,7 +14,7 @@ export class CreateOrderTable1757434387067 implements MigrationInterface {
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'user_id', type: 'int', isNullable: false },
+                    { name: 'customer_id', type: 'int', isNullable: false },
                     { name: 'driver_id', type: 'int', isNullable: false },
                     { name: 'order_date', type: 'timestamptz' },
                     { name: 'total_amount', type: 'decimal', precision: 10, scale: 2, isNullable: true },
@@ -32,8 +32,8 @@ export class CreateOrderTable1757434387067 implements MigrationInterface {
         await queryRunner.createForeignKey(
             'orders',
             new TableForeignKey({
-                columnNames: ['user_id'],
-                referencedTableName: 'users',
+                columnNames: ['customer_id'],
+                referencedTableName: 'customers',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
