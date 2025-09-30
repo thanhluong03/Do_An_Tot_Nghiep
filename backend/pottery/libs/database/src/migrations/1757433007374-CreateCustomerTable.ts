@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
 
-export class CreateCartItemTable1757434387064 implements MigrationInterface {
+export class CreateCustomerTable1757433007374 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'cart_items',
+                name: 'customers',
                 columns: [
                     {
                         name: 'id',
@@ -14,29 +14,24 @@ export class CreateCartItemTable1757434387064 implements MigrationInterface {
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'customer_id', type: 'int', isNullable: false },
-                    { name: 'product_id', type: 'int', isNullable: false },
-                    { name: 'quantity', type: 'int', isNullable: true },
-                    { name: 'total_amount', type: 'decimal', precision: 10, scale: 2, isNullable: true },
+                    { name: 'username', type: 'varchar', length: '100', isNullable: false, isUnique: true },
+                    { name: 'password_hash', type: 'varchar', length: '100', isNullable: false },
+                    { name: 'email', type: 'varchar', length: '255', isNullable: true },
+                    { name: 'full_name', type: 'varchar', length: '100', isNullable: true },
+                    { name: 'phone_number', type: 'varchar', length: '12', isNullable: false },
+                    { name: 'address', type: 'text', isNullable: false },
+                    { name: 'avatar_url', type: 'varchar', length: '255', isNullable: true },
+                    { name: 'is_active', type: 'boolean', isNullable: true },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },
                 ],
             }),
         )
-        await queryRunner.createForeignKey(
-            'cart_items',
-            new TableForeignKey({
-                columnNames: ['customer_id'],
-                referencedTableName: 'customers',
-                referencedColumnNames: ['id'],
-                onDelete: 'SET NULL',
-            }),
-        )
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('cart_items')
+        await queryRunner.dropTable('customers')
     }
 
 }

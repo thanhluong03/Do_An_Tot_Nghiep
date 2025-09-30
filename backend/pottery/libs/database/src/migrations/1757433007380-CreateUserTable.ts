@@ -15,6 +15,7 @@ export class CreateUserTable1757433007380 implements MigrationInterface {
                         generationStrategy: 'increment',
                     },
                     { name: 'role_id', type: 'int', isNullable: false },
+                    { name: 'store_id', type: 'int', isNullable: false },
                     { name: 'username', type: 'varchar', length: '100', isNullable: false, isUnique: true },
                     { name: 'password_hash', type: 'varchar', length: '100', isNullable: false },
                     { name: 'email', type: 'varchar', length: '255', isNullable: true },
@@ -34,6 +35,15 @@ export class CreateUserTable1757433007380 implements MigrationInterface {
             new TableForeignKey({
                 columnNames: ['role_id'],
                 referencedTableName: 'roles',
+                referencedColumnNames: ['id'],
+                onDelete: 'SET NULL',
+            }),
+        )
+        await queryRunner.createForeignKey(
+            'users',
+            new TableForeignKey({
+                columnNames: ['store_id'],
+                referencedTableName: 'stores',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),

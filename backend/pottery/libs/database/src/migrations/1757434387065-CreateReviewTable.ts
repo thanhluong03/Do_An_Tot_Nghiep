@@ -14,7 +14,7 @@ export class CreateReviewTable1757434387065 implements MigrationInterface {
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'user_id', type: 'int', isNullable: false },
+                    { name: 'customer_id', type: 'int', isNullable: false },
                     { name: 'product_id', type: 'int', isNullable: false },
                     { name: 'rating', type: 'int', isNullable: true },
                     { name: 'comment', type: 'text', isNullable: true },
@@ -27,8 +27,8 @@ export class CreateReviewTable1757434387065 implements MigrationInterface {
         await queryRunner.createForeignKey(
             'reviews',
             new TableForeignKey({
-                columnNames: ['user_id'],
-                referencedTableName: 'users',
+                columnNames: ['customer_id'],
+                referencedTableName: 'customers',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
