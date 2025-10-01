@@ -28,6 +28,12 @@
       "@app/common/*": [
         "libs/common/src/*"
       ],
+      "@app/customer": [
+        "libs/customer/src"
+      ],
+      "@app/customer/*": [
+        "libs/customer/src/*"
+      ],
       "@app/database": [
         "libs/database/src"
       ],
@@ -88,11 +94,11 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "@app/customer": [
-        "libs/customer/src"
+      "@app/order": [
+        "libs/order/src"
       ],
-      "@app/customer/*": [
-        "libs/customer/src/*"
+      "@app/order/*": [
+        "libs/order/src/*"
       ]
     }
   }

@@ -11,3 +11,4 @@ export * from './product_promotion.repository';
 export * from './flashsale.repository';
 export * from './flash_sale_customer.repository';
 export * from './customer.repository';
+export * from './order.repository';
