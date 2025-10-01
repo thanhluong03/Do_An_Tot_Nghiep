@@ -43,6 +43,15 @@
         "tsConfigPath": "libs/flashsale/tsconfig.lib.json"
       }
     },
+    "order": {
+      "type": "library",
+      "root": "libs/order",
+      "entryFile": "index",
+      "sourceRoot": "libs/order/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/order/tsconfig.lib.json"
+      }
+    },
     "permission": {
       "type": "library",
       "root": "libs/permission",
