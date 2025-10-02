@@ -1,36 +1,143 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pottery Frontend
 
-## Getting Started
+Trang web bán hàng gốm sứ nghệ thuật được xây dựng với Next.js 15 và TypeScript.
 
-First, run the development server:
+## 🚀 Tính năng
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Trang chủ với animation**: Hero section với hiệu ứng blob animation, countdown timer cho flash sale
+- **Quản lý sản phẩm**: Hiển thị danh sách sản phẩm, tìm kiếm, lọc theo danh mục
+- **Flash Sale**: Hiển thị sản phẩm flash sale với countdown timer real-time
+- **Danh mục sản phẩm**: Grid layout responsive cho các danh mục
+- **Responsive Design**: Tối ưu cho mọi thiết bị
+- **TypeScript**: Type safety và IntelliSense
+- **Custom Hooks**: Tái sử dụng logic state management
+
+## 📁 Cấu trúc thư mục
+
+```
+src/
+├── api/                    # API calls
+│   ├── modules/           # Phân chia theo module
+│   │   ├── products.ts    # API sản phẩm
+│   │   └── users.ts       # API người dùng
+│   └── index.ts           # Export tất cả API
+├── components/            # UI Components
+│   ├── common/           # Components dùng chung
+│   │   ├── Button.tsx
+│   │   ├── LoadingSpinner.tsx
+│   │   ├── Modal.tsx
+│   │   └── index.ts
+│   └── feature/          # Components tính năng
+│       ├── HeroSection.tsx
+│       ├── ProductCard.tsx
+│       ├── ProductGrid.tsx
+│       ├── FlashSaleSection.tsx
+│       ├── CategorySection.tsx
+│       └── index.ts
+├── hooks/                # Custom React Hooks
+│   ├── useProducts.ts    # Hook quản lý sản phẩm
+│   ├── useAuth.ts        # Hook xác thực
+│   └── index.ts
+├── types/                # TypeScript types
+│   ├── product.ts        # Types sản phẩm
+│   ├── user.ts           # Types người dùng
+│   └── index.ts
+├── utils/                # Utility functions
+│   ├── cn.ts            # Class name utility
+│   └── format.ts        # Format functions
+└── app/                 # Next.js App Router
+    ├── globals.css      # Global styles với animations
+    ├── layout.tsx       # Root layout
+    └── page.tsx         # Trang chủ
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Cài đặt
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Cài đặt dependencies:**
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Chạy development server:**
+```bash
+npm run dev
+```
 
-## Learn More
+3. **Build cho production:**
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 🎨 Animations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Blob Animation**: Hiệu ứng blob floating trong hero section
+- **Hover Effects**: Transform và scale effects khi hover
+- **Loading States**: Skeleton loading và spinner animations
+- **Countdown Timer**: Real-time countdown cho flash sale
+- **Smooth Transitions**: Transition mượt mà giữa các states
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 Custom Hooks
 
-## Deploy on Vercel
+### useProducts
+```typescript
+const { products, loading, error } = useProducts({
+  page: 1,
+  limit: 8,
+  category: 'ceramics'
+});
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### useAuth
+```typescript
+const { user, login, logout, isAuthenticated } = useAuth();
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📱 Responsive Design
+
+- **Mobile First**: Thiết kế ưu tiên mobile
+- **Breakpoints**: sm (640px), md (768px), lg (1024px), xl (1280px), 2xl (1536px)
+- **Grid System**: Responsive grid cho products và categories
+- **Touch Friendly**: Tối ưu cho touch interactions
+
+## 🎯 API Integration
+
+Tất cả API calls được tổ chức trong `src/api/modules/`:
+
+- **products.ts**: CRUD operations cho sản phẩm
+- **users.ts**: Authentication và user management
+
+## 🚀 Performance
+
+- **Image Optimization**: Next.js Image component với lazy loading
+- **Code Splitting**: Automatic code splitting với Next.js
+- **Bundle Optimization**: Tree shaking và minification
+- **Caching**: API response caching với React hooks
+
+## 📝 Environment Variables
+
+Tạo file `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+## 🎨 Styling
+
+- **Tailwind CSS**: Utility-first CSS framework
+- **Custom Animations**: CSS keyframes cho blob animation
+- **Responsive Design**: Mobile-first approach
+- **Dark Mode**: Support cho dark mode (có thể mở rộng)
+
+## 🔄 State Management
+
+- **React Hooks**: useState, useEffect cho local state
+- **Custom Hooks**: Tái sử dụng logic state management
+- **Context API**: Cho global state (auth, theme)
+- **Server State**: React Query (có thể thêm sau)
+
+## 📦 Dependencies
+
+- **Next.js 15**: React framework với App Router
+- **TypeScript**: Type safety
+- **Tailwind CSS**: Styling
+- **clsx & tailwind-merge**: Class name utilities
