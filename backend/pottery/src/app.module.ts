@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { LoginController } from './login/login.controller';
+import { LoginModule } from '@app/login';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductController } from './product/product.controller';
@@ -40,9 +42,12 @@ import { OrderModule } from '@app/order';
     FlashSaleModule,
     CustomerModule,
     OrderModule,
+    LoginModule,
   ],
-  controllers: [AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController
+  controllers: [
+    AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
+    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController,
+    LoginController
   ],
   providers: [AppService],
 })
