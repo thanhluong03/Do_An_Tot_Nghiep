@@ -43,6 +43,15 @@
         "tsConfigPath": "libs/flashsale/tsconfig.lib.json"
       }
     },
+    "login": {
+      "type": "library",
+      "root": "libs/login",
+      "entryFile": "index",
+      "sourceRoot": "libs/login/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/login/tsconfig.lib.json"
+      }
+    },
     "order": {
       "type": "library",
       "root": "libs/order",

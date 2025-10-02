@@ -46,6 +46,12 @@
       "@app/flashsale/*": [
         "libs/flashsale/src/*"
       ],
+      "@app/order": [
+        "libs/order/src"
+      ],
+      "@app/order/*": [
+        "libs/order/src/*"
+      ],
       "@app/permission": [
         "libs/permission/src"
       ],
@@ -94,11 +100,11 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "@app/order": [
-        "libs/order/src"
+      "@app/login": [
+        "libs/login/src"
       ],
-      "@app/order/*": [
-        "libs/order/src/*"
+      "@app/login/*": [
+        "libs/login/src/*"
       ]
     }
   }
