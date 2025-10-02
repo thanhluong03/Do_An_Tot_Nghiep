@@ -41,7 +41,6 @@ export class ProductController {
             quantity: createProductDto.quantity,
             supplier_id: createProductDto.supplier_id,
         };
-
         // Xử lý ảnh upload
         if (files && files.length > 0) {
             console.log('Processing', files.length, 'files');
