@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '../../components/common/Button';
+import { Button } from '../../../components/common/Button';
 import Link from 'next/link';
+import { userApi } from '../../../api/modules/users';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,11 +15,30 @@ export default function RegisterPage() {
     confirmPassword: '',
     phone: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement register logic
-    console.log('Register:', formData);
+    if (formData.password !== formData.confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const name = `${formData.firstName} ${formData.lastName}`.trim();
+        const result = await userApi.register({ email: formData.email, password: formData.password, name, phone: formData.phone || undefined });
+        localStorage.setItem('token', result.token);
+        router.push('/');
+      } catch (err: any) {
+        setError(err?.message || 'Register failed');
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   return (
@@ -32,7 +53,7 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="firstName" className="block text-sm font-medium text-[#2C2A24] mb-2">
               Họ
@@ -136,11 +157,14 @@ export default function RegisterPage() {
           </span>
         </div>
 
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
         <Button
           type="submit"
           className="w-full bg-[#65604E] text-white hover:bg-[#3D3A2F] py-3"
+          disabled={loading}
         >
-          Đăng Ký
+          {loading ? 'Đang đăng ký...' : 'Đăng Ký'}
         </Button>
       </form>
 

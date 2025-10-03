@@ -76,13 +76,11 @@ export const HeroSection: React.FC = () => {
           {/* Right Content - Product Image */}
             <div className="relative">
                 {/* Main Product Image Circle */}
-                <div className="relative w-80 h-80 mx-auto lg:mx-0">
+                <div className="relative w-100 h-100 mx-auto lg:mx-0 lg:ml-45">
                   <div className="absolute inset-0 bg-gradient-to-br from-[#F5F1EB] to-[#8B7D6B] rounded-full opacity-20 animate-float-slow"></div>
                   <div className="relative w-full h-full bg-white rounded-full shadow-2xl flex items-center justify-center overflow-hidden animate-float">
-                    <div className="w-64 h-64 bg-gradient-to-br from-[#F5F1EB] to-[#8B7D6B] rounded-full flex items-center justify-center animate-float-reverse">
-                      <div className="w-48 h-48 bg-[#65604E] rounded-full flex items-center justify-center animate-float-slow">
+                    <div className="w-80 h-80 bg-gradient-to-br from-[#F5F1EB] to-[#8B7D6B] rounded-full flex items-center justify-center animate-float-reverse">
                         <img src="/pott.jpg" alt="Pottery" className="w-full h-full object-cover rounded-full" />
-                      </div>
                     </div>
                   </div>
                 </div>

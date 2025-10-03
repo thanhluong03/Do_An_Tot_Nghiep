@@ -85,12 +85,12 @@ export const FeaturedCollectionsSection: React.FC = () => {
                 </ul>
 
                 {/* CTA Button */}
-                <Button
-                  variant="outline"
-                  className="w-full border-2 border-[#65604E] text-[#65604E] hover:bg-[#65604E] hover:text-white transition-all duration-300"
+                <a
+                  href="/products"
+                  className="inline-flex items-center justify-center w-full border-2 border-[#65604E] text-[#65604E] hover:bg-[#65604E] hover:text-white transition-all duration-300 rounded-lg px-4 py-2 font-medium"
                 >
                   Xem Thêm
-                </Button>
+                </a>
               </div>
             </div>
           ))}
@@ -98,12 +98,12 @@ export const FeaturedCollectionsSection: React.FC = () => {
 
         {/* View All Collections Button */}
         <div className="text-center">
-          <Button
-            size="lg"
-            className="px-8 py-4 text-lg font-semibold bg-[#65604E] text-white hover:bg-[#3D3A2F] shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          <a
+            href="/products"
+            className="inline-flex items-center px-8 py-4 text-lg font-semibold bg-[#65604E] text-white hover:bg-[#3D3A2F] shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 rounded-lg"
           >
             Xem Tất Cả Bộ Sưu Tập
-          </Button>
+          </a>
         </div>
       </div>
     </section>

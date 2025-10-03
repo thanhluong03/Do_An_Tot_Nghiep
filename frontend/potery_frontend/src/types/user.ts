@@ -1,18 +1,19 @@
 export interface User {
-  id: string;
+  id?: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
   phone?: string;
   avatar?: string;
   role: {
-    id: string;
-    name: string;
-    permissions: string[];
+    id?: string;
+    name?: string;
+    permissions?: string[];
   };
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface UserProfile {

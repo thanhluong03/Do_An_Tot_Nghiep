@@ -70,7 +70,13 @@ export const useAuthState = () => {
     phone?: string;
   }) => {
     try {
-      const response = await userApi.register(data);
+      const payload = {
+        email: data.email,
+        password: data.password,
+        name: `${data.firstName} ${data.lastName}`.trim(),
+        phone: data.phone,
+      };
+      const response = await userApi.register(payload);
       localStorage.setItem('token', response.token);
       setUser(response.user);
     } catch (error) {

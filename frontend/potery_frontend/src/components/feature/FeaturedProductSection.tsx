@@ -32,10 +32,7 @@ export const FeaturedProductSection: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
             {/* Left - Product Image */}
             <div className="relative aspect-square lg:aspect-auto">
-              
-              {/* ******************************************************
-                 * ĐÃ THAY THẾ DIV CHỨA SVG BẰNG THẺ <img>
-                 ****************************************************** */}
+            
               <img
                 src={product.image}
                 alt={product.name}
@@ -83,7 +80,7 @@ export const FeaturedProductSection: React.FC = () => {
               </p>
 
               {/* Features */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 {product.features.map((feature, index) => (
                   <div key={index} className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-[#7A8471] rounded-full"></div>
