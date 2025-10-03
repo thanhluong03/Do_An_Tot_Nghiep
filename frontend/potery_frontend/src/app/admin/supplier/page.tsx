@@ -18,6 +18,8 @@ export default function SupplierPage() {
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(5); // số dòng / trang
 
   useEffect(() => {
     fetchSuppliers();
@@ -30,7 +32,7 @@ export default function SupplierPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" }); // clear lỗi khi gõ lại
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
   const validate = () => {
@@ -38,11 +40,9 @@ export default function SupplierPage() {
     if (!form.name.trim()) newErrors.name = "Tên không được bỏ trống";
     if (!form.address.trim()) newErrors.address = "Địa chỉ không được bỏ trống";
     if (!form.phone.trim()) newErrors.phone = "Số điện thoại không được bỏ trống";
-    else if (!/^\d+$/.test(form.phone))
-      newErrors.phone = "Số điện thoại chỉ được chứa số";
+    else if (!/^\d+$/.test(form.phone)) newErrors.phone = "Số điện thoại chỉ được chứa số";
     if (!form.email.trim()) newErrors.email = "Email không được bỏ trống";
-    else if (!/\S+@\S+\.\S+/.test(form.email))
-      newErrors.email = "Email không hợp lệ";
+    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = "Email không hợp lệ";
     return newErrors;
   };
 
@@ -76,6 +76,11 @@ export default function SupplierPage() {
     }
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(suppliers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const currentSuppliers = suppliers.slice(startIndex, startIndex + pageSize);
+
   return (
     <div className="min-h-screen bg-gray-100 p-1">
       <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
@@ -86,9 +91,7 @@ export default function SupplierPage() {
         {/* Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tên
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tên</label>
             <input
               name="name"
               placeholder="Nhập tên"
@@ -96,15 +99,11 @@ export default function SupplierPage() {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Địa chỉ
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
             <input
               name="address"
               placeholder="Nhập địa chỉ"
@@ -112,15 +111,11 @@ export default function SupplierPage() {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {errors.address && (
-              <p className="text-red-500 text-xs mt-1">{errors.address}</p>
-            )}
+            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Điện thoại
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Điện thoại</label>
             <input
               name="phone"
               placeholder="Nhập số điện thoại"
@@ -128,15 +123,11 @@ export default function SupplierPage() {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {errors.phone && (
-              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-            )}
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               name="email"
               placeholder="Nhập email"
@@ -144,9 +135,7 @@ export default function SupplierPage() {
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
         </div>
 
@@ -154,9 +143,7 @@ export default function SupplierPage() {
           <button
             onClick={handleSubmit}
             className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-              editingId
-                ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
+              editingId ? "bg-yellow-500 hover:bg-yellow-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
             }`}
           >
             {editingId ? "Cập nhật" : "Thêm"}
@@ -177,12 +164,10 @@ export default function SupplierPage() {
               </tr>
             </thead>
             <tbody>
-              {suppliers.map((s, idx) => (
+              {currentSuppliers.map((s, idx) => (
                 <tr
                   key={s.id}
-                  className={`${
-                    idx % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  } hover:bg-blue-50 transition`}
+                  className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
                 >
                   <td className="px-4 py-3">{s.id}</td>
                   <td className="px-4 py-3">{s.name}</td>
@@ -214,6 +199,33 @@ export default function SupplierPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-gray-600">
+            Hiển thị {startIndex + 1} -{" "}
+            {Math.min(startIndex + pageSize, suppliers.length)} trên {suppliers.length} nhà cung cấp
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Trước
+            </button>
+            <span className="px-3 py-1 font-medium text-gray-700">
+              Trang {currentPage}/{totalPages || 1}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Sau
+            </button>
+          </div>
         </div>
       </div>
     </div>

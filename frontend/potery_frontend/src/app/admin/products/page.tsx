@@ -1,240 +1,236 @@
-// // src/pages/ProductManagementPage.tsx
-// 'use client';
-// import React, { useState, useEffect } from 'react';
-// // src/types/product.ts
-
-// export interface IProductImage {
-//   id: number;
-//   url: string;
-// }
-
-// export interface IProduct {
-//   id: number;
-//   name: string;
-//   description: string;
-//   price: number;
-//   quantity: number;
-//   supplier_id: number;
-//   images: IProductImage[];
-//   // Thêm trường để dễ hiển thị
-//   category: string; 
-// }
-
-// // --- DỮ LIỆU GIẢ (FAKE DATA) VỀ GỐM SỨ ---
-// const FAKE_PRODUCTS: IProduct[] = [
-//   {
-//     id: 101,
-//     name: "Bình gốm hoa văn cổ",
-//     description: "Bình gốm thủ công, hoa văn vẽ tay tinh xảo, thích hợp trưng bày phòng khách.",
-//     price: 850000,
-//     quantity: 15,
-//     supplier_id: 1,
-//     images: [{ id: 1, url: "https://example.com/gom_co.jpg" }],
-//     category: "Gốm trang trí"
-//   },
-//   {
-//     id: 102,
-//     name: "Bộ ấm trà tử sa Bát Tràng",
-//     description: "Chất liệu đất tử sa cao cấp, giữ nhiệt tốt, màu sắc tự nhiên.",
-//     price: 420000,
-//     quantity: 50,
-//     supplier_id: 2,
-//     images: [{ id: 2, url: "https://example.com/am_tra.jpg" }],
-//     category: "Đồ dùng nhà bếp"
-//   },
-//   {
-//     id: 103,
-//     name: "Chậu cây men xanh ngọc",
-//     description: "Chậu gốm men xanh ngọc, dùng để trồng các loại cây cảnh nhỏ.",
-//     price: 95000,
-//     quantity: 120,
-//     supplier_id: 1,
-//     images: [{ id: 3, url: "https://example.com/chau_cay.jpg" }],
-//     category: "Gốm sân vườn"
-//   },
-// ];
-// // ----------------------------------------
-
-// const ProductManagementPage: React.FC = () => {
-//   const [products, setProducts] = useState<IProduct[]>([]);
-//   const [loading, setLoading] = useState(true);
-
-//   // Giả lập hàm gọi API để tải dữ liệu
-//   useEffect(() => {
-//     // Giả lập độ trễ mạng
-//     setTimeout(() => {
-//       setProducts(FAKE_PRODUCTS);
-//       setLoading(false);
-//     }, 500);
-//   }, []);
-
-//   const handleDelete = (id: number) => {
-//     if (window.confirm(`Xác nhận xóa sản phẩm ID: ${id}?`)) {
-//       setProducts(prev => prev.filter(p => p.id !== id));
-//       alert(`Đã xóa sản phẩm ${id} thành công! (Dữ liệu giả)`);
-//     }
-//   };
-
-//   const handleEdit = (product: IProduct) => {
-//     // Mở modal/form chỉnh sửa và điền dữ liệu của 'product'
-//     console.log("Mở form chỉnh sửa cho:", product.name);
-//   };
-
-//   if (loading) {
-//     return <div className="p-8 text-center">Đang tải dữ liệu sản phẩm gốm sứ...</div>;
-//   }
-
-//   return (
-//     <div className="p-8 bg-gray-50 min-h-screen">
-//       <div className="flex justify-between items-center mb-6">
-//         <h1 className="text-3xl font-bold text-gray-800">🏺 Quản lý Sản phẩm Gốm Sứ</h1>
-//         <button 
-//           onClick={() => console.log("Mở form Thêm mới")}
-//           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
-//         >
-//           + Thêm Sản phẩm Mới
-//         </button>
-//       </div>
-
-//       <div className="bg-white shadow-lg rounded-xl overflow-hidden">
-//         <table className="min-w-full divide-y divide-gray-200">
-//           <thead className="bg-gray-100">
-//             <tr>
-//               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-//               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên Sản phẩm</th>
-//               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Giá</th>
-//               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SL Tồn</th>
-//               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nhà Cung cấp</th>
-//               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hình ảnh</th>
-//               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
-//             </tr>
-//           </thead>
-//           <tbody className="divide-y divide-gray-200">
-//             {products.map((p) => (
-//               <tr key={p.id}>
-//                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">{p.id}</td>
-//                 <td className="px-6 py-4 text-sm text-gray-900 font-medium max-w-xs truncate">{p.name}</td>
-//                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{p.price.toLocaleString()} VNĐ</td>
-//                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.quantity}</td>
-//                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.supplier_id}</td>
-//                 <td className="px-6 py-4 whitespace-nowrap text-center">
-//                   <span className="text-indigo-600 hover:underline cursor-pointer">
-//                     {p.images.length} ảnh
-//                   </span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-//                   <button onClick={() => handleEdit(p)} className="text-indigo-600 hover:text-indigo-900 mr-3">Sửa</button>
-//                   <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-900">Xóa</button>
-//                 </td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
-      
-//       {/* TODO: Thêm form Thêm/Sửa sản phẩm (ProductFormModal) tại đây */}
-//     </div>
-//   );
-// };
-
-// export default ProductManagementPage;
 "use client";
-
 import { useEffect, useState } from "react";
-import axios from "axios";
-
-interface IProductImage {
-  id: number;
-  url: string;
-}
-
-interface IProduct {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  quantity: number;
-  supplier_id: number;
-  images: IProductImage[];
-  main_image?: string | null;
-}
+import { getProducts, addProduct, updateProduct, deleteProduct, Product } from "@/api/services/productApi";
+import { getSuppliers, Supplier } from "@/api/services/supplierService";
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<IProduct[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // State cho form modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState<Product>({
+    name: "",
+    price: 0,
+    quantity: 0,
+    description: "",
+    main_image: "",
+    supplier_id: undefined,
+  } as Product);
+
+  // Load products + suppliers
   useEffect(() => {
-    axios
-      .get("http://localhost:3001/products/listproduct")
-      .then((res) => {
-        setProducts(res.data);
-      })
-      .catch((err) => {
-        console.error("Lỗi khi gọi API:", err);
-      });
+    fetchProducts();
+    fetchSuppliers();
   }, []);
 
-  return (
-    <div style={{ padding: "20px" }}>
-      <h1>Danh sách sản phẩm</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
-        {products.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              padding: "15px",
-              background: "#fafafa",
-            }}
-          >
-            {/* Ảnh chính (nếu có) */}
-            {p.main_image ? (
-              <img
-                src={p.main_image}
-                alt={p.name}
-                style={{ width: "100%", height: "200px", objectFit: "cover", borderRadius: "5px" }}
-              />
-            ) : p.images.length > 0 ? (
-              <img
-                src={p.images[0].url}
-                alt={p.name}
-                style={{ width: "100%", height: "200px", objectFit: "cover", borderRadius: "5px" }}
-              />
-            ) : (
-              <div style={{ height: "200px", background: "#eee", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                Không có ảnh
-              </div>
-            )}
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error("Lỗi khi load sản phẩm:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            <h3>{p.name}</h3>
-            <p>{p.description}</p>
-            <p>
-              <b>Giá:</b> {Number(p.price).toLocaleString()} VND
-            </p>
-            <p>
-              <b>Số lượng:</b> {p.quantity}
-            </p>
-            <p>
-              <b>Nhà cung cấp ID:</b> {p.supplier_id}
-            </p>
+  const fetchSuppliers = async () => {
+    try {
+      const data = await getSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      console.error("Lỗi khi load nhà cung cấp:", error);
+    }
+  };
 
-            {/* Hiển thị gallery ảnh */}
-            {p.images.length > 1 && (
-              <div style={{ display: "flex", gap: "5px", marginTop: "10px" }}>
-                {p.images.map((img) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={img.id}
-                    src={img.url}
-                    alt="Ảnh phụ"
-                    style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+  // Xử lý mở modal
+  const openAddModal = () => {
+    setEditingProduct(null);
+    setFormData({
+      id: 0,
+      name: "",
+      description: "",
+      price: 0,
+      quantity: 0,
+      main_image: "",
+      images: [],
+      supplier_id: 0,
+      created_at: "",
+    } as Product);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setFormData(product);
+    setIsModalOpen(true);
+  };
+
+  // Lưu (thêm/sửa)
+  const handleSave = async () => {
+    try {
+      if (editingProduct) {
+        const updated = await updateProduct(editingProduct.id!, formData);
+        setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      } else {
+        const added = await addProduct(formData);
+        setProducts((prev) => [...prev, added]);
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Lỗi khi lưu sản phẩm:", error);
+      alert("❌ Lưu sản phẩm thất bại!");
+    }
+  };
+
+  // Xóa
+  const handleDelete = async (id: number) => {
+    if (confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) {
+      try {
+        await deleteProduct(id);
+        setProducts(products.filter((p) => p.id !== id));
+      } catch (error) {
+        console.error("Lỗi khi xoá sản phẩm:", error);
+      }
+    }
+  };
+
+return (
+  <div className="p-6 flex justify-center">
+    <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-full">
+      {/* Header */}
+      <div className="flex justify-center items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">
+            Quản lý sản phẩm
+        </h1>
       </div>
+
+      <div className="flex justify-end mb-6">
+        <button
+          onClick={openAddModal}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
+          + Thêm sản phẩm
+        </button>
+      </div>
+
+      {loading ? (
+        <p>Đang tải sản phẩm...</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden shadow">
+            <thead>
+              <tr className="bg-gray-100 text-left">
+                <th className="p-3 border-b">#</th>
+                <th className="p-3 border-b">Ảnh</th>
+                <th className="p-3 border-b">Tên</th>
+                <th className="p-3 border-b">Giá</th>
+                <th className="p-3 border-b">Số lượng</th>
+                <th className="p-3 border-b">Nhà cung cấp</th>
+                <th className="p-3 border-b text-center">Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center p-4 text-gray-500">
+                    Không có sản phẩm nào
+                  </td>
+                </tr>
+              ) : (
+                products.map((p, index) => {
+                  const mainImage =
+                    typeof p.main_image === "string" && p.main_image.trim() !== ""
+                      ? p.main_image
+                      : p.images && p.images.length > 0 && typeof p.images[0].url === "string"
+                        ? p.images[0].url
+                        : "https://via.placeholder.com/100";
+
+                  return (
+                    <tr key={p.id} className="hover:bg-gray-50">
+                      <td className="p-3 border-b">{index + 1}</td>
+                      <td className="p-3 border-b">
+                        <img
+                          src={mainImage}
+                          alt={p.name}
+                          className="w-16 h-16 object-cover rounded border"
+                        />
+                      </td>
+                      <td className="p-3 border-b font-medium">{p.name}</td>
+                      <td className="p-3 border-b text-blue-600 font-semibold">
+                        {p.price.toLocaleString()} ₫
+                      </td>
+                      <td className="p-3 border-b">{p.quantity}</td>
+                      <td className="p-3 border-b">
+                        {suppliers.find((s) => s.id === p.supplier_id)?.name || "-"}
+                      </td>
+                      <td className="p-3 border-b text-center space-x-2">
+                        <button
+                          onClick={() => openEditModal(p)}
+                          className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id!)}
+                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                          Xoá
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+      {/* Modal Form (giữ nguyên modal của bạn, overlay mờ nhẹ) */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* overlay mờ (click ngoài đóng) */}
+          <div className="absolute inset-0 bg-black/30" onClick={() => setIsModalOpen(false)} />
+
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6 z-10">
+            <h2 className="text-xl font-semibold mb-4">{editingProduct ? "✏️ Sửa sản phẩm" : "➕ Thêm sản phẩm"}</h2>
+
+            <div className="space-y-3">
+              <label className="block text-sm">Tên sản phẩm</label>
+              <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border rounded p-2" />
+
+              <label className="block text-sm">Giá</label>
+              <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className="w-full border rounded p-2" />
+
+              <label className="block text-sm">Số lượng</label>
+              <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })} className="w-full border rounded p-2" />
+
+              <label className="block text-sm">Mô tả</label>
+              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full border rounded p-2" />
+
+              <label className="block text-sm">Ảnh chính (URL)</label>
+              <input type="text" value={formData.main_image ?? ""} onChange={(e) => setFormData({ ...formData, main_image: e.target.value })} className="w-full border rounded p-2" />
+
+              <label className="block text-sm">Nhà cung cấp</label>
+              <select value={formData.supplier_id ?? ""} onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })} className="w-full border rounded p-2">
+                <option value="">-- Chọn nhà cung cấp --</option>
+                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
+              <button onClick={handleSave} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Lưu</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

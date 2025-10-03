@@ -33,8 +33,8 @@ interface MenuItem {
 const mainMenuItems: MenuItem[] = [
   { name: "Dashboard", icon: faHome, count: null, href: "/admin/dashboard" },
   { name: "Product Management", icon: faBox, count: 247, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
+  { name: "Suppliers", icon: faUsers, count: "1.2k", href: "/admin/supplier", color: "bg-green-100 text-green-600" },
   { name: "Orders", icon: faShoppingCart, count: 12, href: "/admin/orders", color: "bg-red-100 text-red-600" },
-  { name: "Customers", icon: faUsers, count: "1.2k", href: "/admin/customers", color: "bg-green-100 text-green-600" },
   { name: "Reviews", icon: faStar, count: 89, href: "/admin/reviews", color: "bg-yellow-100 text-yellow-600" },
 ];
 

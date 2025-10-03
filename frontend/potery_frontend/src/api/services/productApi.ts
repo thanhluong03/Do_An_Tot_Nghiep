@@ -1,5 +1,5 @@
 import axios from "axios";
-
+const API_URL = "http://localhost:3001/products";
 export interface ProductImage {
   id?: number;
   url: string;
@@ -21,14 +21,14 @@ export interface Product {
 
 // Lấy danh sách sản phẩm
 export const getProducts = async (): Promise<Product[]> => {
-  const res = await axios.get("/products/listproduct");
+  const res = await axios.get(`${API_URL}/listproduct`);
   return res.data;
 };
 
 // Thêm sản phẩm
 export const addProduct = async (product: Product): Promise<Product> => {
   // nếu backend yêu cầu array thì sửa thành [product] giống supplier
-  const res = await axios.post("/products/createproduct", product);
+  const res = await axios.post(`${API_URL}/createproduct`, product);
   return res.data;
 };
 
@@ -37,11 +37,11 @@ export const updateProduct = async (
   id: number,
   product: Product
 ): Promise<Product> => {
-  const res = await axios.put(`/products/updateproduct/${id}`, product);
+  const res = await axios.put(`${API_URL}/updateproduct/${id}`, product);
   return res.data;
 };
 
 // Xoá sản phẩm
 export const deleteProduct = async (id: number): Promise<void> => {
-  await axios.delete(`/products/deleteproduct/${id}`);
+  await axios.delete(`${API_URL}/deleteproduct/${id}`);
 };
