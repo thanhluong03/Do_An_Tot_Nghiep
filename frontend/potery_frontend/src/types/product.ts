@@ -26,7 +26,6 @@ export interface Product {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface ProductCategory {
   id: string;
   name: string;
@@ -34,7 +33,6 @@ export interface ProductCategory {
   image: string;
   productCount: number;
 }
-
 export interface FlashSale {
   id: string;
   title: string;

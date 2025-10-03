@@ -26,13 +26,9 @@ export default function AdminLayout({
         
         {/* Header Component: Thanh điều hướng trên cùng */}
         <AdminHeader />
-        
-        {/* Nội dung chính của trang (Dashboard, Product, v.v.) */}
         <main className="flex-1 p-4 sm:p-6 md:p-8">
           {children} 
         </main>
-        
-        {/* Có thể thêm Footer Admin tại đây nếu cần */}
       </div>
     </div>
   );
