@@ -1,5 +1,6 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { InventoryEntity } from './inventory.entity';
 
 @Entity('stores')
 export class StoreEntity extends BaseEntity {
@@ -12,4 +13,7 @@ export class StoreEntity extends BaseEntity {
 
     @Column({ type: 'varchar', length: 12, nullable: true })
     phone: string
+
+    @OneToMany(() => InventoryEntity, (inventory) => inventory.store)
+    inventories: InventoryEntity[];
 }

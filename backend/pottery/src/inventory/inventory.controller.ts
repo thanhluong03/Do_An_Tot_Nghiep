@@ -1,0 +1,43 @@
+import { Body, Controller, Delete, Param, Put, Post } from '@nestjs/common';
+import { InventoryService } from '@app/inventory';
+import {
+    CreateInventoryDto,
+    UpdateInventoryDto,
+    ListInventoryDto,
+} from './inventory.dto';
+
+@Controller('inventory')
+export class InventoryController {
+    constructor(private readonly inventoryService: InventoryService) { }
+
+
+    @Post('createinventory')
+    async create(@Body() dto: CreateInventoryDto) {
+        return await this.inventoryService.create({
+            ...dto,
+            product_id: dto.product_id,
+            store_id: dto.store_id,
+        });
+    }
+
+    @Put('updateinventory/:id')
+    async update(@Param('id') id: string, @Body() dto: UpdateInventoryDto) {
+        return await this.inventoryService.update(Number(id), dto);
+    }
+
+    @Delete('deleteinventory/:id')
+    async delete(@Param('id') id: string) {
+        return await this.inventoryService.delete(Number(id));
+    }
+
+
+    @Post('list')
+    async list(@Body() dto: ListInventoryDto) {
+        const input = {
+            ...dto,
+            page: dto.page ?? 1,
+            size: dto.size ?? 10,
+        };
+        return await this.inventoryService.list(input);
+    }
+}

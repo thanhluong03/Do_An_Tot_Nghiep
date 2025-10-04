@@ -100,7 +100,8 @@
       "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1",
       "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1",
       "^@app/user(|/.*)$": "<rootDir>/libs/user/src/$1",
-      "^@app/login(|/.*)$": "<rootDir>/libs/login/src/$1"
+      "^@app/login(|/.*)$": "<rootDir>/libs/login/src/$1",
+      "^@app/inventory(|/.*)$": "<rootDir>/libs/inventory/src/$1"
     }
   }
 }
