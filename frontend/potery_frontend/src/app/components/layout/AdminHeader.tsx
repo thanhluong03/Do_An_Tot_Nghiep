@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 export default function AdminHeader() {
     return (
-        <header className="sticky top-0 z-10 flex items-center justify-between h-20 bg-white border-b px-6">
+        <header className="sticky top-0 z-10 flex items-center justify-between h-20 bg-white px-6">
             <div className="flex items-center space-x-4">
                 <h1 className="text-2xl font-semibold text-gray-800">Dashboard Overview</h1>
                 <nav className="hidden sm:flex items-center text-xl text-gray-500">

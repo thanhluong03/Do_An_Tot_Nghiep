@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation"; // Hook quan trọng để lấy URL hiện tại
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -18,48 +19,62 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
+// --- Định nghĩa Kiểu dữ liệu ---
 interface MenuItem {
   name: string;
   icon: IconDefinition;
   count: number | string | null;
   href: string;
-  active: boolean;
+  // Bỏ trường 'active' tĩnh vì chúng ta sẽ tính toán nó động
   color?: string;
 }
 
+// --- Dữ liệu Menu (Giữ nguyên) ---
 const mainMenuItems: MenuItem[] = [
-  { name: "Dashboard", icon: faHome, count: null, href: "/dashboard", active: true },
-  { name: "Product Management", icon: faBox, count: 247, href: "/admin/products", active: false, color: "bg-gray-100 text-gray-600" },
-  { name: "Orders", icon: faShoppingCart, count: 12, href: "/admin/orders", active: false, color: "bg-red-100 text-red-600" },
-  { name: "Customers", icon: faUsers, count: "1.2k", href: "/admin/customers", active: false, color: "bg-green-100 text-green-600" },
-  { name: "Reviews", icon: faStar, count: 89, href: "/admin/reviews", active: false, color: "bg-yellow-100 text-yellow-600" },
+  { name: "Dashboard", icon: faHome, count: null, href: "/admin/dashboard" },
+  { name: "Product Management", icon: faBox, count: 247, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
+  { name: "Suppliers", icon: faUsers, count: "1.2k", href: "/admin/supplier", color: "bg-green-100 text-green-600" },
+  { name: "Orders", icon: faShoppingCart, count: 12, href: "/admin/orders", color: "bg-red-100 text-red-600" },
+  { name: "Reviews", icon: faStar, count: 89, href: "/admin/reviews", color: "bg-yellow-100 text-yellow-600" },
 ];
 
 const analyticItems: MenuItem[] = [
-  { name: "Sales Analytics", icon: faChartLine, count: null, href: "/admin/analytics/sales", active: false },
-  { name: "Product Performance", icon: faChartBar, count: null, href: "/admin/analytics/products", active: false },
-  { name: "Customer Insights", icon: faUsers, count: null, href: "/admin/analytics/customers", active: false },
+  { name: "Sales Analytics", icon: faChartLine, count: null, href: "/admin/analytics/sales" },
+  { name: "Product Performance", icon: faChartBar, count: null, href: "/admin/analytics/products" },
+  { name: "Customer Insights", icon: faUsers, count: null, href: "/admin/analytics/customers" },
 ];
 
 const marketingItems: MenuItem[] = [
-  { name: "Campaigns", icon: faBullhorn, count: null, href: "/admin/marketing/campaigns", active: false },
-  { name: "Promotions", icon: faPercent, count: null, href: "/admin/marketing/promotions", active: false },
-  { name: "Email Marketing", icon: faEnvelope, count: null, href: "/admin/marketing/email", active: false },
+  { name: "Campaigns", icon: faBullhorn, count: null, href: "/admin/marketing/campaigns" },
+  { name: "Promotions", icon: faPercent, count: null, href: "/admin/marketing/promotions" },
+  { name: "Email Marketing", icon: faEnvelope, count: null, href: "/admin/marketing/email" },
 ];
 
 const systemItems: MenuItem[] = [
-  { name: "Settings", icon: faCog, count: null, href: "/admin/settings", active: false },
-  { name: "Support", icon: faLifeRing, count: null, href: "/admin/support", active: false },
+  { name: "Settings", icon: faCog, count: null, href: "/admin/settings" },
+  { name: "Support", icon: faLifeRing, count: null, href: "/admin/support" },
 ];
 
-const SidebarItem = ({ item }: { item: MenuItem }) => {
-  const activeClass = item.active
-    ? "text-[#B95D26] font-semibold bg-orange-50"
-    : "text-gray-600 hover:bg-gray-100";
+// --- Component SidebarItem đã sửa để nhận currentPath ---
+const SidebarItem = ({ item, currentPath }: { item: MenuItem, currentPath: string }) => {
+  // Logic so sánh: 
+  // 1. Kiểm tra khớp hoàn toàn (cho các mục cấp cao nhất)
+  // 2. Hoặc kiểm tra nếu đường dẫn hiện tại bắt đầu bằng item.href (cho các mục có đường dẫn con)
+  
+  // Dùng khớp hoàn toàn cho độ chính xác cao nhất:
+  const isActive = currentPath === item.href; 
+
+  // Nếu muốn khớp đường dẫn con, ví dụ: /admin/products/1 cũng active /admin/products:
+  // const isActive = currentPath === item.href || currentPath.startsWith(`${item.href}/`);
+  
+  const activeClass = isActive
+    ? "text-[#B95D26] font-semibold bg-orange-50" // Màu cam và nền nhạt khi active
+    : "text-gray-600 hover:bg-gray-100"; // Màu xám khi không active
 
   return (
     <Link
       href={item.href}
+      // Áp dụng class dựa trên trạng thái active động
       className={`flex items-center justify-between px-3 py-2 rounded-md transition-colors ${activeClass}`}
     >
       <div className="flex items-center space-x-3">
@@ -73,16 +88,37 @@ const SidebarItem = ({ item }: { item: MenuItem }) => {
           {item.count}
         </span>
       )}
-      {item.active && <span className="w-2 h-2 rounded-full bg-[#B95D26] ml-2"></span>}
+      {/* Hiển thị chấm tròn màu cam khi mục đang hoạt động */}
+      {isActive && <span className="w-2 h-2 rounded-full bg-[#B95D26] ml-2"></span>}
     </Link>
   );
 };
 
+// --- Component AdminSidebar đã sửa để lấy URL hiện tại ---
 export default function AdminSidebar() {
+  // Lấy đường dẫn URL hiện tại
+  const pathname = usePathname(); 
+
+  // Hàm helper để render nhóm menu
+  const renderMenuSection = (title: string, items: MenuItem[]) => (
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2">{title}</h3>
+      <div className="space-y-1">
+        {items.map((item) => (
+          <SidebarItem 
+            key={item.name} 
+            item={item} 
+            currentPath={pathname} // Truyền pathname động vào component con
+          />
+        ))}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="w-64 bg-white border-r flex flex-col h-screen sticky top-0 overflow-y-auto">
+    <div className="w-64 bg-white flex flex-col h-screen sticky top-0 overflow-y-auto">
       {/* Logo */}
-      <div className="p-4 flex flex-col border-b">
+      <div className="p-4 flex flex-col">
         <div className="flex items-center mb-1">
           <div className="w-9 h-9 bg-[#B95D26] flex items-center justify-center rounded-md mr-3">
             <FontAwesomeIcon icon={faHome} className="w-5 h-5 text-white" />
@@ -94,41 +130,10 @@ export default function AdminSidebar() {
 
       {/* Menus */}
       <nav className="p-4 flex-1 space-y-6">
-        <div>
-          <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2">Main Menu</h3>
-          <div className="space-y-1">
-            {mainMenuItems.map((item) => (
-              <SidebarItem key={item.name} item={item} />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2">Analytics</h3>
-          <div className="space-y-1">
-            {analyticItems.map((item) => (
-              <SidebarItem key={item.name} item={item} />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2">Marketing</h3>
-          <div className="space-y-1">
-            {marketingItems.map((item) => (
-              <SidebarItem key={item.name} item={item} />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2">System</h3>
-          <div className="space-y-1">
-            {systemItems.map((item) => (
-              <SidebarItem key={item.name} item={item} />
-            ))}
-          </div>
-        </div>
+        {renderMenuSection("Main Menu", mainMenuItems)}
+        {renderMenuSection("Analytics", analyticItems)}
+        {renderMenuSection("Marketing", marketingItems)}
+        {renderMenuSection("System", systemItems)}
       </nav>
     </div>
   );
