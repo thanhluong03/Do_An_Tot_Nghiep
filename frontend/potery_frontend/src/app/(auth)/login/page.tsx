@@ -1,19 +1,39 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '../../components/common/Button';
+import { Button } from '../../../components/common/Button';
 import Link from 'next/link';
+import { userApi } from '../../../api/modules/users';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log('Login:', formData);
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await userApi.login({ email: formData.email, password: formData.password });
+        localStorage.setItem('token', result.token);
+        router.replace('/');
+      } catch (err: any) {
+        setError(err?.message || 'Login failed');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = userApi.getGoogleLoginUrl();
   };
 
   return (
@@ -68,13 +88,29 @@ export default function LoginPage() {
           </a>
         </div>
 
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
         <Button
           type="submit"
           className="w-full bg-[#65604E] text-white hover:bg-[#3D3A2F] py-3"
+          disabled={loading}
         >
-          Đăng Nhập
+          {loading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
         </Button>
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">Hoặc</span>
+        </div>
+      </div>
+
+      <Button onClick={handleGoogleLogin} className="w-full bg-white text-[#2C2A24] border hover:bg-gray-50 py-3">
+        <span className="mr-2">🔑</span> Đăng nhập với Google
+      </Button>
 
       <div className="text-center">
         <p className="text-[#65604E]">

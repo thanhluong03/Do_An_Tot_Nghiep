@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts';
 import { cn } from '../../utils/cn';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount] = useState(3); // Mock data
+  const { user, isAuthenticated } = useAuth();
 
   const menuItems = [
     { name: 'Trang Chủ', href: '/' },
@@ -13,10 +15,10 @@ export const Header: React.FC = () => {
       name: 'Sản Phẩm', 
       href: '/products',
       submenu: [
-        { name: 'Bát Đĩa', href: '/products/bowls' },
-        { name: 'Ấm Chén', href: '/products/teapots' },
-        { name: 'Trang Trí', href: '/products/decor' },
-        { name: 'Bộ Sưu Tập', href: '/products/collections' }
+        { name: 'Bát Đĩa', href: '/products' },
+        { name: 'Ấm Chén', href: '/products' },
+        { name: 'Trang Trí', href: '/products' },
+        { name: 'Bộ Sưu Tập', href: '/products' }
       ]
     },
     { name: 'Về Chúng Tôi', href: '/about' },
@@ -82,7 +84,7 @@ export const Header: React.FC = () => {
             </button>
 
             {/* Cart */}
-            <button className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
+            <a href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
               </svg>
@@ -91,14 +93,18 @@ export const Header: React.FC = () => {
                   {cartCount}
                 </span>
               )}
-            </button>
+            </a>
 
             {/* Account */}
-            <button className="p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </button>
+            {isAuthenticated ? (
+              <div className="px-3 py-1 text-sm text-[#2C2A24]">Chào, <span className="font-semibold">{user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()}</span></div>
+            ) : (
+              <a href="/login" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </a>
+            )}
 
             {/* Mobile Menu Button */}
             <button

@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Login Success</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <script>
+      (function(){
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var token = params.get('token');
+          if (token) {
+            localStorage.setItem('token', token);
+          }
+        } catch (e) {}
+        window.location.replace('/login-success' + window.location.search);
+      })();
+    </script>
+  </body>
+  </html>
+
+

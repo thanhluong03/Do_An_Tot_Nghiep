@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Product } from '../../types';
 import { formatPrice, calculateDiscount, formatTimeRemaining } from '../../utils/format';
 import { Button } from '../common/Button';
@@ -20,11 +21,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onViewDetails,
   className,
 }) => {
+  const router = useRouter();
   const discount = product.originalPrice 
     ? calculateDiscount(product.originalPrice, product.price)
     : 0;
 
   const isFlashSale = product.isFlashSale && product.flashSaleEndTime;
+
+  const handleNavigateToDetail = () => {
+    if (onViewDetails) {
+      onViewDetails(product);
+      return;
+    }
+    router.push(`/products/${product.id}`);
+  };
 
   return (
     <div className={cn(
@@ -32,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className
     )}>
       {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden">
+      <a href={`/products/${product.id}`} className="relative aspect-square overflow-hidden block">
         <Image
           src={product.images[0] || '/placeholder-product.jpg'}
           alt={product.name}
@@ -74,7 +84,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           </div>
         )}
-      </div>
+      </a>
 
       {/* Content */}
       <div className="p-4 space-y-3">
@@ -84,9 +94,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Product Name */}
-        <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
-          {product.name}
-        </h3>
+        <a href={`/products/${product.id}`} className="block">
+          <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            {product.name}
+          </h3>
+        </a>
 
         {/* Rating */}
         <div className="flex items-center space-x-1">
@@ -131,7 +143,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <Button
             size="sm"
             className="flex-1"
-            onClick={() => onViewDetails?.(product)}
+            onClick={handleNavigateToDetail}
           >
             Xem chi tiết
           </Button>

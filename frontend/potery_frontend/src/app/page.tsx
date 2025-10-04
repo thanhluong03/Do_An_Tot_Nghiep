@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthProvider } from '../contexts';
+import { useCart } from '../contexts/CartContext';
 import { BaseLayout } from '../layouts';
 import { HeroSection } from '../components/feature/HeroSection';
 import { LifestyleSection } from '../components/feature/LifestyleSection';
@@ -15,18 +17,18 @@ import { useFeaturedProducts, useFlashSale, useCategories } from '../hooks/usePr
 import { Product, ProductCategory } from '../types';
 
 export default function HomePage() {
+  const router = useRouter();
   const { products: featuredProducts, loading: featuredLoading, error: featuredError } = useFeaturedProducts(8);
   const { flashSales, loading: flashSaleLoading, error: flashSaleError } = useFlashSale();
   const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
+  const { addItem } = useCart();
 
   const handleAddToCart = (product: Product) => {
-    // TODO: Implement add to cart functionality
-    console.log('Add to cart:', product);
+    addItem(product, 1);
   };
 
   const handleViewDetails = (product: Product) => {
-    // TODO: Implement view details functionality
-    console.log('View details:', product);
+    router.push(`/products/${product.id}`);
   };
 
   const handleCategoryClick = (category: ProductCategory) => {
@@ -93,11 +95,14 @@ export default function HomePage() {
               />
 
               {/* View All Button */}
-              <div className="text-center mt-16">
-                <button className="inline-flex items-center px-8 py-4 bg-[#65604E] text-white font-semibold rounded-lg hover:bg-[#3D3A2F] transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+              <div className="text-center mt-16 flex items-center justify-center gap-4">
+                <a href="/products" className="inline-flex items-center px-8 py-4 bg-[#65604E] text-white font-semibold rounded-lg hover:bg-[#3D3A2F] transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                   Xem Tất Cả Sản Phẩm
                   <img src="/pott.jpg" alt="arrow" className="ml-2 w-4 h-4" />
-                </button>
+                </a>
+                <a href="/cart" className="inline-flex items-center px-6 py-4 border-2 border-[#65604E] text-[#65604E] font-semibold rounded-lg hover:bg-[#F5F1EB] transition-colors duration-200">
+                  Đi tới Giỏ Hàng
+                </a>
               </div>
             </div>
           </section>
