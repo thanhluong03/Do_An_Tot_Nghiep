@@ -105,6 +105,12 @@
       ],
       "@app/login/*": [
         "libs/login/src/*"
+      ],
+      "@app/inventory": [
+        "libs/inventory/src"
+      ],
+      "@app/inventory/*": [
+        "libs/inventory/src/*"
       ]
     }
   }

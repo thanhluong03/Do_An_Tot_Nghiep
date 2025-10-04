@@ -2,6 +2,7 @@ import { Entity, Column, OneToMany } from 'typeorm'
 import { ProductPromotionEntity } from './product_promotion.entity';
 import { BaseEntity } from './base.entity'
 import { ProductImageEntity } from './product_image.entity';
+import { InventoryEntity } from './inventory.entity';
 
 // import { RoleEntity } from './role.entity'
 
@@ -29,4 +30,7 @@ export class ProductEntity extends BaseEntity {
   images: ProductImageEntity[];
   @OneToMany(() => ProductPromotionEntity, (productPromotion) => productPromotion.product)
   productPromotions: ProductPromotionEntity[];
+
+  @OneToMany(() => InventoryEntity, (inventory) => inventory.product)
+  inventories: InventoryEntity[];
 }

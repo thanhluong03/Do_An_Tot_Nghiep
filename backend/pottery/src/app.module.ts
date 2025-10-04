@@ -26,6 +26,8 @@ import { CustomerController } from './customer/customer.controller';
 import { CustomerModule } from '@app/customer';
 import { OrderController } from './order/order.controller';
 import { OrderModule } from '@app/order';
+import { InventoryController } from './inventory/inventory.controller';
+import { InventoryModule } from '@app/inventory';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -43,11 +45,12 @@ import { OrderModule } from '@app/order';
     CustomerModule,
     OrderModule,
     LoginModule,
+    InventoryModule,
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
     UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController,
-    LoginController
+    LoginController, InventoryController
   ],
   providers: [AppService],
 })
