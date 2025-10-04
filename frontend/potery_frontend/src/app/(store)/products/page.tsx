@@ -53,13 +53,13 @@ function ProductFilters({
         type="number"
       />
       <div className="flex gap-2">
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border rounded px-2">
+        <select title="Sắp xếp theo" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border rounded px-2">
           <option value="">Mặc định</option>
           <option value="price">Giá</option>
           <option value="createdAt">Mới nhất</option>
           <option value="name">Tên</option>
         </select>
-        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} className="border rounded px-2">
+        <select title="Thứ tự" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} className="border rounded px-2">
           <option value="asc">Tăng dần</option>
           <option value="desc">Giảm dần</option>
         </select>
