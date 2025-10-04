@@ -61,6 +61,7 @@ export class LoginService {
             customer = result?.customer;
         }
         const token = this.jwtService.sign({ email: user.email, name: user.name });
-        return `/login-success.html?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}`;
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000/';
+        return `${ frontendUrl }/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}`;
     }
 }
