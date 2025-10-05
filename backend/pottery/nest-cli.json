@@ -61,6 +61,15 @@
         "tsConfigPath": "libs/login/tsconfig.lib.json"
       }
     },
+    "news": {
+      "type": "library",
+      "root": "libs/news",
+      "entryFile": "index",
+      "sourceRoot": "libs/news/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/news/tsconfig.lib.json"
+      }
+    },
     "order": {
       "type": "library",
       "root": "libs/order",

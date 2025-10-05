@@ -28,6 +28,8 @@ import { OrderController } from './order/order.controller';
 import { OrderModule } from '@app/order';
 import { InventoryController } from './inventory/inventory.controller';
 import { InventoryModule } from '@app/inventory';
+import { NewsController } from './news/news.controller';
+import { NewsModule } from '@app/news';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -46,11 +48,11 @@ import { InventoryModule } from '@app/inventory';
     OrderModule,
     LoginModule,
     InventoryModule,
+    NewsModule,
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController,
-    LoginController, InventoryController
+    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController, LoginController, InventoryController, NewsController
   ],
   providers: [AppService],
 })

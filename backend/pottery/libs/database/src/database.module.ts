@@ -4,11 +4,11 @@ import { config } from 'dotenv';
 config();
 
 import { DatabaseService } from './database.service';
-import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleCustomerEntity, CustomerEntity, OrderEntity, OrderItemEntity, InventoryEntity } from './entities';
-import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleCustomerRepository, CustomerRepository, OrderRepository, InventoryRepository } from './repositories';
+import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleCustomerEntity, CustomerEntity, OrderEntity, OrderItemEntity, InventoryEntity, NewsEntity } from './entities';
+import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleCustomerRepository, CustomerRepository, OrderRepository, InventoryRepository, NewsRepository} from './repositories';
 
-const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleCustomerRepository, CustomerRepository, OrderRepository, InventoryRepository];
-const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleCustomerEntity, CustomerEntity, OrderEntity, OrderItemEntity, InventoryEntity];
+const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, FlashSaleRepository, FlashSaleCustomerRepository, CustomerRepository, OrderRepository, InventoryRepository, NewsRepository];
+const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, FlashSaleEntity, FlashSaleCustomerEntity, CustomerEntity, OrderEntity, OrderItemEntity, InventoryEntity, NewsEntity];
 @Module({
   imports: [
     TypeOrmModule.forRoot({
