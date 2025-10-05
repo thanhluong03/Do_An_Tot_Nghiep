@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, Put, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Param, Put, Post, Get, Query } from '@nestjs/common';
 import { InventoryService } from '@app/inventory';
 import {
     CreateInventoryDto,
@@ -31,12 +31,12 @@ export class InventoryController {
     }
 
 
-    @Post('list')
-    async list(@Body() dto: ListInventoryDto) {
+    @Get('list')
+    async list(@Query() query: ListInventoryDto) {
         const input = {
-            ...dto,
-            page: dto.page ?? 1,
-            size: dto.size ?? 10,
+            ...query,
+            page: query.page ?? 1,
+            size: query.size ?? 10,
         };
         return await this.inventoryService.list(input);
     }
