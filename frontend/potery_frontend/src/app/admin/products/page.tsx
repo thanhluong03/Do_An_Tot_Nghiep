@@ -17,7 +17,8 @@ export default function ProductsPage() {
     quantity: 0,
     description: "",
     main_image: "",
-    supplier_id: undefined,
+    supplier_id: 0,
+    images: []
   } as Product);
 
   // Load products + suppliers
@@ -122,73 +123,80 @@ return (
         <p>Đang tải sản phẩm...</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden shadow">
-            <thead>
-              <tr className="bg-gray-100 text-left">
-                <th className="p-3 border-b">#</th>
-                <th className="p-3 border-b">Ảnh</th>
-                <th className="p-3 border-b">Tên</th>
-                <th className="p-3 border-b">Giá</th>
-                <th className="p-3 border-b">Số lượng</th>
-                <th className="p-3 border-b">Nhà cung cấp</th>
-                <th className="p-3 border-b text-center">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center p-4 text-gray-500">
-                    Không có sản phẩm nào
-                  </td>
-                </tr>
-              ) : (
-                products.map((p, index) => {
-                  const mainImage =
-                    typeof p.main_image === "string" && p.main_image.trim() !== ""
-                      ? p.main_image
-                      : p.images && p.images.length > 0 && typeof p.images[0].url === "string"
-                        ? p.images[0].url
-                        : "https://via.placeholder.com/100";
+  <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+    <thead>
+      <tr className="bg-gray-100 text-gray-700">
+        <th className="p-3 text-left font-semibold border-b">ID</th>
+        <th className="p-3 text-left font-semibold border-b">Ảnh</th>
+        <th className="p-3 text-left font-semibold border-b">Tên</th>
+        <th className="p-3 text-left font-semibold border-b">Giá</th>
+        <th className="p-3 text-left font-semibold border-b">Số lượng</th>
+        <th className="p-3 text-left font-semibold border-b">Nhà cung cấp</th>
+        <th className="p-3 text-center font-semibold border-b">Hành động</th>
+      </tr>
+    </thead>
+    <tbody>
+      {products.length === 0 ? (
+        <tr>
+          <td
+            colSpan={7}
+            className="text-center p-6 text-gray-500 italic bg-gray-50"
+          >
+            Không có sản phẩm nào
+          </td>
+        </tr>
+      ) : (
+        products.map((p, index) => {
+          const mainImage =
+            typeof p.main_image === "string" && p.main_image.trim() !== ""
+              ? p.main_image
+              : p.images && p.images.length > 0 && typeof p.images[0].url === "string"
+              ? p.images[0].url
+              : "https://via.placeholder.com/100";
 
-                  return (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="p-3 border-b">{index + 1}</td>
-                      <td className="p-3 border-b">
-                        <img
-                          src={mainImage}
-                          alt={p.name}
-                          className="w-16 h-16 object-cover rounded border"
-                        />
-                      </td>
-                      <td className="p-3 border-b font-medium">{p.name}</td>
-                      <td className="p-3 border-b text-blue-600 font-semibold">
-                        {p.price.toLocaleString()} ₫
-                      </td>
-                      <td className="p-3 border-b">{p.quantity}</td>
-                      <td className="p-3 border-b">
-                        {suppliers.find((s) => s.id === p.supplier_id)?.name || "-"}
-                      </td>
-                      <td className="p-3 border-b text-center space-x-2">
-                        <button
-                          onClick={() => openEditModal(p)}
-                          className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDelete(p.id!)}
-                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
-                        >
-                          Xoá
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+          return (
+            <tr key={p.id} className="hover:bg-gray-50 transition duration-150">
+              <td className="p-3 border-b text-gray-800">{index + 1}</td>
+              <td className="p-3 border-b">
+                <img
+                  src={mainImage}
+                  alt={p.name}
+                  className="w-14 h-14 object-cover rounded border"
+                />
+              </td>
+              <td className="p-3 border-b text-gray-800 font-medium">
+                {p.name}
+              </td>
+              <td className="p-3 border-b text-gray-700">
+                {p.price.toLocaleString()} ₫
+              </td>
+              <td className="p-3 border-b text-gray-700">{p.quantity}</td>
+              <td className="p-3 border-b text-gray-600">
+                {suppliers.find((s) => s.id === p.supplier_id)?.name || "-"}
+              </td>
+              <td className="p-3 border-b text-center space-x-2">
+                <button
+                  onClick={() => openEditModal(p)}
+                  className="px-3 py-1 text-sm bg-yellow-400 text-black rounded hover:bg-yellow-500"
+                >
+                  Sửa
+                </button>
+                <button
+                  onClick={() => handleDelete(p.id!)}
+                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Xoá
+                </button>
+              </td>
+            </tr>
+          );
+        })
+      )}
+    </tbody>
+  </table>
+</div>
+
+
       )}
     </div>
 
@@ -199,26 +207,26 @@ return (
           <div className="absolute inset-0 bg-black/30" onClick={() => setIsModalOpen(false)} />
 
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6 z-10">
-            <h2 className="text-xl font-semibold mb-4">{editingProduct ? "✏️ Sửa sản phẩm" : "➕ Thêm sản phẩm"}</h2>
+            <h2 className="text-xl font-semibold mb-4">{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
 
             <div className="space-y-3">
               <label className="block text-sm">Tên sản phẩm</label>
-              <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border rounded p-2" />
+              <input title="Tên sản phẩm" type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border rounded p-2" />
 
               <label className="block text-sm">Giá</label>
-              <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className="w-full border rounded p-2" />
+              <input title="Giá sản phẩm" type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className="w-full border rounded p-2" />
 
               <label className="block text-sm">Số lượng</label>
-              <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })} className="w-full border rounded p-2" />
+              <input title="Số lượng sản phẩm" type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })} className="w-full border rounded p-2" />
 
               <label className="block text-sm">Mô tả</label>
-              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full border rounded p-2" />
+              <textarea title="Mô tả sản phẩm" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full border rounded p-2" />
 
               <label className="block text-sm">Ảnh chính (URL)</label>
-              <input type="text" value={formData.main_image ?? ""} onChange={(e) => setFormData({ ...formData, main_image: e.target.value })} className="w-full border rounded p-2" />
+              <input title="Ảnh chính sản phẩm" type="text" value={formData.main_image ?? ""} onChange={(e) => setFormData({ ...formData, main_image: e.target.value })} className="w-full border rounded p-2" />
 
               <label className="block text-sm">Nhà cung cấp</label>
-              <select value={formData.supplier_id ?? ""} onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })} className="w-full border rounded p-2">
+              <select title="Nhà cung cấp" value={formData.supplier_id ?? ""} onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })} className="w-full border rounded p-2">
                 <option value="">-- Chọn nhà cung cấp --</option>
                 {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>

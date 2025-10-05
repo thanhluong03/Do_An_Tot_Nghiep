@@ -1,5 +1,3 @@
-// src/app/admin/inventory/page.tsx (Final Code)
-
 "use client";
 import React, { useEffect, useState } from "react";
 import {
@@ -12,21 +10,126 @@ import {
     Inventory,
     CreateInventoryDto,
     UpdateInventoryDto,
-    ListInventoryDto,
     SelectOption,
-} from "@/api/services/inventoryService"; // Import các hàm API real
+} from "@/api/services/inventoryService"; // Giả định đường dẫn này là đúng
 
+// --- TYPE DEFINITIONS ---
+interface InventoryFormState {
+    product_id: string | string[] | undefined; 
+    store_id: string | string[] | undefined;
+    quantity_stock: number;
+    quantity_sold: number;
+}
+
+// -----------------------------------------------------
+// Component CheckboxList (FIXED)
+// -----------------------------------------------------
+interface CheckboxListProps {
+    name: "product_id" | "store_id";
+    label: string;
+    options: SelectOption[];
+    selectedValues: string | string[] | undefined;
+    onChange: (name: "product_id" | "store_id", value: string | string[] | undefined) => void; 
+    error: string | undefined;
+}
+
+const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selectedValues, onChange, error }) => {
+    
+    // Ensure selected IDs are properly handled
+    const selectedIds: string[] = React.useMemo(() => {
+        if (Array.isArray(selectedValues)) {
+            return selectedValues.filter(val => val !== 'all');
+        }
+        if (typeof selectedValues === 'string' && selectedValues !== 'all') {
+            return [selectedValues];
+        }
+        return [];
+    }, [selectedValues]);
+    
+    const isAllSelected = selectedValues === 'all';
+
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value, checked } = e.target;
+        
+        let newValue: string | string[] | undefined;
+
+        if (value === 'all') {
+            newValue = checked ? 'all' : undefined;
+        } else {
+            let newSelectedIds = [...selectedIds];
+
+            if (checked) {
+                if (!newSelectedIds.includes(value)) {
+                    newSelectedIds.push(value);
+                }
+            } else {
+                newSelectedIds = newSelectedIds.filter(id => id !== value);
+            }
+            
+            newValue = newSelectedIds.length > 0 ? newSelectedIds : undefined;
+        }
+
+        onChange(name, newValue);
+    };
+
+    return (
+        <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <div className={`p-2 border rounded-lg bg-white overflow-y-auto ${error ? 'border-red-500' : 'border-gray-300'}`} style={{ maxHeight: '180px' }}>
+                
+                {/* Select All Option */}
+                <div className="flex items-center mb-1 pb-1 border-b border-dashed">
+                    <input
+                        type="checkbox"
+                        
+                        id={`${name}-all`}
+                        name={name}
+                        value="all"
+                        checked={isAllSelected}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor={`${name}-all`} className="ml-2 text-sm font-bold text-blue-600 cursor-pointer">
+                        --- TẤT CẢ {name === 'product_id' ? 'SẢN PHẨM' : 'CỬA HÀNG'} ---
+                    </label>
+                </div>
+
+                {/* Options List */}
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                    {options.map((opt) => (
+                        <div key={opt.id} className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id={`${name}-${opt.id}`}
+                                name={name}
+                                value={String(opt.id)}
+                                disabled={isAllSelected} 
+                                checked={isAllSelected || selectedIds.includes(String(opt.id))}
+                                
+                                onChange={handleCheckboxChange}
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200"
+                            />
+                            <label htmlFor={`${name}-${opt.id}`} className={`ml-2 text-sm text-gray-700 ${isAllSelected ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                {opt.name}
+                            </label>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        </div>
+    );
+};
+
+// -----------------------------------------------------
+// InventoryPage Component (Chỉnh sửa fetch data)
+// -----------------------------------------------------
 export default function InventoryPage() {
-    // -----------------------------------------------------
-    // 1. State
-    // -----------------------------------------------------
     const [inventories, setInventories] = useState<Inventory[]>([]); 
-    // State cho dữ liệu dropdown (tải từ API thực)
     const [products, setProducts] = useState<SelectOption[]>([]); 
     const [stores, setStores] = useState<SelectOption[]>([]); 
     
-    // Form data
-    const [form, setForm] = useState<Partial<CreateInventoryDto & UpdateInventoryDto> & { quantity_sold?: number }>({
+    const [form, setForm] = useState<InventoryFormState>({
         product_id: undefined,
         store_id: undefined,
         quantity_stock: 0,
@@ -36,9 +139,6 @@ export default function InventoryPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    // -----------------------------------------------------
-    // 2. Data Fetching
-    // -----------------------------------------------------
     useEffect(() => {
         fetchData();
         fetchDropdownData(); 
@@ -46,120 +146,202 @@ export default function InventoryPage() {
 
     const fetchDropdownData = async () => {
         try {
-            // Lấy danh sách Sản phẩm (REAL API)
-            const productsData = await listDropdownProducts();
-            setProducts(productsData);
+            const [productRes, storeRes] = await Promise.all([
+                listDropdownProducts(),
+                listDropdownStores(),
+            ]);
+            setProducts(Array.isArray(productRes) ? productRes : []);
+            setStores(Array.isArray(storeRes) ? storeRes : []);
         } catch (error) {
-            console.error("Lỗi khi tải danh sách sản phẩm:", error);
+            console.error("Lỗi tải dropdown data:", error);
+            setProducts([]);
+            setStores([]);
         }
-        
-        try {
-            // Lấy danh sách Cửa hàng (REAL API)
-            const storesData = await listDropdownStores();
-            setStores(storesData);
-        } catch (error) {
-            console.error("Lỗi khi tải danh sách cửa hàng:", error);
-        }
-    }
+    };
 
     const fetchData = async () => {
         try {
-            const listDto: ListInventoryDto = { page: 1, size: 9999 }; // Gửi tham số lớn để lấy hết data
-            const invData = await listInventories(listDto); 
-            setInventories(invData); 
-            
+            // FIX: Gửi tham số limit lớn để lấy toàn bộ danh sách tồn kho
+            const res = await listInventories({ limit: 1000 }); 
+            setInventories(Array.isArray(res) ? res : []);
         } catch (error) {
-            console.error("Lỗi khi tải dữ liệu tồn kho:", error);
+            console.error("Lỗi tải tồn kho:", error);
             setInventories([]);
         }
     };
 
     // -----------------------------------------------------
-    // 3. Handlers
+    // Handlers 
     // -----------------------------------------------------
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        const finalValue = ['quantity_stock', 'quantity_sold', 'product_id', 'store_id'].includes(name) 
-                            ? (value === "" ? undefined : Number(value)) 
-                            : value;
-
-        setForm({ ...form, [name]: finalValue });
-        setErrors({ ...errors, [name]: "" });
+        // Ensure we always have a valid number, never null/undefined/NaN
+        let numericValue = 0;
+        if (value !== "" && value !== null && value !== undefined) {
+            const parsed = Number(value);
+            numericValue = isNaN(parsed) ? 0 : parsed;
+        }
+        setForm(prev => ({ ...prev, [name]: numericValue }));
+        setErrors(prev => ({ ...prev, [name]: "" }));
+    };
+    
+    // Fixed handler for checkbox list
+    const handleValueChange = (name: "product_id" | "store_id", value: string | string[] | undefined) => {
+        setForm(prev => ({ 
+            ...prev, 
+            [name]: value 
+        }));
+        setErrors(prev => ({ ...prev, [name]: "" }));
     };
 
+    // -----------------------------------------------------
+    // Validation and Submit 
+    // -----------------------------------------------------
+
+    const checkForDuplicate = (productId: number, storeId: number): boolean => {
+        if (!Array.isArray(inventories)) return false;
+        
+        return inventories.some(
+            item => Number(item.product_id) === productId && Number(item.store_id) === storeId
+        );
+    };
+    
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
+        
         if (isCreating) {
-            // Yêu cầu ID phải là số hợp lệ
-            if (!form.product_id || isNaN(Number(form.product_id))) newErrors.product_id = "Chọn sản phẩm";
-            if (!form.store_id || isNaN(Number(form.store_id))) newErrors.store_id = "Chọn cửa hàng";
+            if (form.product_id === undefined) {
+                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm.";
+            }
+            if (form.store_id === undefined) {
+                newErrors.store_id = "Vui lòng chọn ít nhất 1 Cửa hàng.";
+            }
+        } 
+        
+        if (form.quantity_stock < 0) {
+            newErrors.quantity_stock = "SL Tồn kho phải là số không âm.";
         }
-        if (form.quantity_stock === undefined || form.quantity_stock < 0) newErrors.quantity_stock = "Số lượng tồn kho không hợp lệ";
-        if (form.quantity_sold !== undefined && form.quantity_sold < 0) newErrors.quantity_sold = "Số lượng bán không hợp lệ";
-        return newErrors;
+        
+        if (editingId !== null && form.quantity_sold < 0) {
+            newErrors.quantity_sold = "SL Đã bán phải là số không âm.";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async () => {
-        const isCreating = !editingId;
-        const newErrors = validate(isCreating);
-
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            return;
-        }
+        const isCreating = editingId === null;
+        if (!validate(isCreating)) return;
 
         try {
-            if (editingId) {
+            if (isCreating) {
+                // Get complete ID lists
+                const productIds: number[] = form.product_id === 'all' 
+                    ? products.map(p => Number(p.id)) 
+                    : (Array.isArray(form.product_id) 
+                        ? form.product_id.map(id => Number(id))
+                        : [Number(form.product_id!)]);
+                
+                const storeIds: number[] = form.store_id === 'all' 
+                    ? stores.map(s => Number(s.id)) 
+                    : (Array.isArray(form.store_id) 
+                        ? form.store_id.map(id => Number(id))
+                        : [Number(form.store_id!)]);
+
+                const createDtos: CreateInventoryDto[] = [];
+                let hasDuplicate = false;
+
+                for (const pId of productIds) {
+                    for (const sId of storeIds) {
+                        if (checkForDuplicate(pId, sId)) {
+                            alert(`Lỗi: Tồn kho cho Sản phẩm: ${getDisplayName(products, pId)} và Cửa hàng: ${getDisplayName(stores, sId)} đã tồn tại!`);
+                            hasDuplicate = true;
+                            break; 
+                        }
+
+                        createDtos.push({
+                            product_id: pId, 
+                            store_id: sId, 
+                            quantity_stock: form.quantity_stock,
+                            quantity_sold: 0,
+                        } as CreateInventoryDto); 
+                    }
+                    if (hasDuplicate) break;
+                }
+                
+                if (hasDuplicate) return;
+                
+                if (createDtos.length > 0) {
+                    for (const dto of createDtos) {
+                        await createInventory(dto);
+                    }
+                    alert(`Thêm mới thành công ${createDtos.length} mục tồn kho!`);
+                } else {
+                    alert("Không có mục tồn kho nào được tạo.");
+                }
+
+            } else {
+                // UPDATE
                 const updateDto: UpdateInventoryDto = {
                     quantity_stock: form.quantity_stock,
-                    quantity_sold: form.quantity_sold
+                    quantity_sold: form.quantity_sold,
                 };
-                await updateInventory(editingId, updateDto);
-                setEditingId(null);
-            } else {
-                const createDto: CreateInventoryDto = {
-                    // Chuyển về number/string tùy theo yêu cầu chính xác của NestJS service
-                    product_id: Number(form.product_id), 
-                    store_id: Number(form.store_id),
-                    quantity_stock: form.quantity_stock as number
-                };
-                await createInventory(createDto);
+                
+                await updateInventory(editingId!, updateDto);
+                alert(`Cập nhật tồn kho ID ${editingId} thành công!`);
             }
-            
+
+            // Reset form
+            setEditingId(null);
             setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
             setErrors({});
-            fetchData(); 
-
-        } catch (error) {
+            fetchData();
+        } catch (error: unknown) {
             console.error("Lỗi API:", error);
-            alert("Đã xảy ra lỗi khi lưu tồn kho! (Kiểm tra console)");
+            let message = "Lỗi không xác định";
+            if (error instanceof Error) {
+                message = error.message;
+            }
+            alert("Lỗi xảy ra khi xử lý: " + message);
         }
     };
 
     const handleEdit = (item: Inventory) => {
-        setForm({
-            product_id: item.product_id,
-            store_id: item.store_id,
-            quantity_stock: item.quantity_stock,
-            quantity_sold: item.quantity_sold
-        });
         setEditingId(item.id);
+        setForm({
+            product_id: String(item.product_id), 
+            store_id: String(item.store_id),
+            quantity_stock: item.quantity_stock || 0,
+            quantity_sold: item.quantity_sold || 0,
+        });
         setErrors({});
     };
-
+    
     const handleDelete = async (id: number) => {
-        if (confirm("Bạn có chắc muốn xoá tồn kho này?")) {
+        if (!window.confirm(`Bạn có chắc chắn muốn xoá tồn kho ID ${id} không?`)) return;
+        try {
             await deleteInventory(id);
+            alert(`Xoá tồn kho ID ${id} thành công.`);
             fetchData();
+        } catch (error) {
+            console.error("Lỗi xoá tồn kho:", error);
+            alert("Lỗi xảy ra khi xoá tồn kho.");
         }
     };
     
-    // Hàm tìm tên Product/Store dựa trên ID để hiển thị trong bảng
-    const getDisplayName = (list: SelectOption[], id: number | undefined) => {
-        if (!id) return `ID: ${id}`;
-        return list.find(item => item.id === id)?.name || `ID: ${id}`;
+    // Helper function (FIXED)
+    const getDisplayName = (list: SelectOption[], id: number | undefined): string => {
+        if (id === undefined || id === null) return ""; 
+
+        const found = list.find(item => Number(item.id) === Number(id));
+        return found?.name || `ID: ${id}`;
     };
 
+    // -----------------------------------------------------
+    // Render UI
+    // -----------------------------------------------------
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
@@ -167,90 +349,109 @@ export default function InventoryPage() {
                     Quản lý Tồn kho
                 </h2>
 
-                {/* Form Thêm/Sửa */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className={`border p-6 rounded-lg mb-8 ${editingId ? 'inventory-edit-mode' : 'inventory-create-mode'}`}>
+                    <h3 className={`text-xl font-semibold mb-4 ${editingId ? 'inventory-edit-title' : 'inventory-create-title'}`}>
+                        {editingId ? `Sửa Tồn kho ID: ${editingId}` : "Thêm Tồn kho Linh hoạt (Tạo Hàng Loạt)"}
+                    </h3>
                     
-                    {/* Product ID (Thêm mới) */}
-                    {editingId === null && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Sản phẩm</label>
-                            <select title="Chọn Sản phẩm"
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        
+                        {/* Product ID (Create mode only) */}
+                        {editingId === null && (
+                            <CheckboxList
                                 name="product_id"
-                                value={form.product_id ?? ""} 
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">-- Chọn Sản phẩm --</option>
-                                {products.map((p) => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
-                            {errors.product_id && <p className="text-red-500 text-xs mt-1">{errors.product_id}</p>}
-                        </div>
-                    )}
+                                label="Sản phẩm (Chọn 1, nhiều hoặc Tất cả)"
+                                options={products}
+                                selectedValues={form.product_id}
+                                onChange={handleValueChange}
+                                error={errors.product_id}
+                            />
+                        )}
 
-                    {/* Store ID (Thêm mới) */}
-                    {editingId === null && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cửa hàng</label>
-                            <select title="Chọn Cửa hàng"
+                        {/* Store ID (Create mode only) */}
+                        {editingId === null && (
+                            <CheckboxList
                                 name="store_id"
-                                value={form.store_id ?? ""}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            >
-                                <option value="">-- Chọn Cửa hàng --</option>
-                                {stores.map((s) => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
-                            {errors.store_id && <p className="text-red-500 text-xs mt-1">{errors.store_id}</p>}
-                        </div>
-                    )}
-                    
-                    {/* Số lượng tồn kho (Stock) */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">SL Tồn kho</label>
-                        <input
-                            type="number"
-                            name="quantity_stock"
-                            placeholder="Nhập SL Tồn"
-                            value={form.quantity_stock ?? 0}
-                            onChange={handleChange}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        {errors.quantity_stock && <p className="text-red-500 text-xs mt-1">{errors.quantity_stock}</p>}
-                    </div>
+                                label="Cửa hàng (Chọn 1, nhiều hoặc Tất cả)"
+                                options={stores}
+                                selectedValues={form.store_id}
+                                onChange={handleValueChange}
+                                error={errors.store_id}
+                            />
+                        )}
+                        
+                        {/* Product (Edit mode - Readonly) */}
+                        {editingId !== null && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Sản phẩm</label>
+                                <input type="text" value={getDisplayName(products, Number(form.product_id))} readOnly className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"/>
+                            </div>
+                        )}
+                        {/* Store (Edit mode - Readonly) */}
+                        {editingId !== null && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Cửa hàng</label>
+                                <input type="text" value={getDisplayName(stores, Number(form.store_id))} readOnly className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"/>
+                            </div>
+                        )}
 
-                    {/* Số lượng đã bán (Sửa) */}
-                    {editingId !== null && (
+                        {/* Stock quantity */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">SL Đã bán</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">SL Tồn kho</label>
                             <input
                                 type="number"
-                                name="quantity_sold"
-                                placeholder="Nhập SL Bán"
-                                value={form.quantity_sold ?? 0}
-                                onChange={handleChange}
+                                name="quantity_stock"
+                                placeholder="Nhập SL Tồn"
+                                value={typeof form.quantity_stock === 'number' ? form.quantity_stock : 0}
+                                onChange={handleNumberChange}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                             />
-                            {errors.quantity_sold && <p className="text-red-500 text-xs mt-1">{errors.quantity_sold}</p>}
+                            {errors.quantity_stock && <p className="text-red-500 text-xs mt-1">{errors.quantity_stock}</p>}
                         </div>
-                    )}
+
+                        {/* Sold quantity (Edit mode only) */}
+                        {editingId !== null && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">SL Đã bán</label>
+                                <input
+                                    type="number"
+                                    name="quantity_sold"
+                                    placeholder="Nhập SL Bán"
+                                    value={typeof form.quantity_sold === 'number' ? form.quantity_sold : 0}
+                                    onChange={handleNumberChange}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                {errors.quantity_sold && <p className="text-red-500 text-xs mt-1">{errors.quantity_sold}</p>}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-3">
+                        {editingId !== null && (
+                             <button
+                                 onClick={() => {
+                                     setEditingId(null);
+                                     setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
+                                     setErrors({});
+                                 }}
+                                 className="px-5 py-2 rounded-lg font-semibold shadow-md transition bg-gray-400 hover:bg-gray-500 text-white"
+                             >
+                                 Hủy Sửa
+                             </button>
+                        )}
+                        <button
+                            onClick={handleSubmit}
+                            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
+                                editingId ? "bg-yellow-500 hover:bg-yellow-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+                            }`}
+                        >
+                            {editingId ? "Cập nhật" : "Thêm mới"}
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex justify-end mb-6">
-                    <button
-                        onClick={handleSubmit}
-                        className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-                            editingId ? "bg-yellow-500 hover:bg-yellow-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
-                        }`}
-                    >
-                        {editingId ? "Cập nhật" : "Thêm mới"}
-                    </button>
-                </div>
-
-                {/* Table */}
+                {/* Data Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
                         <thead>
@@ -264,13 +465,15 @@ export default function InventoryPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {Array.isArray(inventories) && inventories.map((item, idx) => (
+                            {inventories.map((item, index) => (
                                 <tr
                                     key={item.id}
-                                    className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
+                                    className={`
+                                        ${item.id === editingId ? 'bg-yellow-50 border-2 border-yellow-400' : (index % 2 === 0 ? "bg-gray-50" : "bg-white")} 
+                                        hover:bg-blue-50 transition
+                                    `}
                                 >
                                     <td className="px-4 py-3">{item.id}</td>
-                                    {/* Hiển thị tên từ danh sách Dropdown nếu có, nếu không hiển thị ID */}
                                     <td className="px-4 py-3 font-medium text-gray-800">
                                         {getDisplayName(products, item.product_id)}
                                     </td>
@@ -295,10 +498,11 @@ export default function InventoryPage() {
                                     </td>
                                 </tr>
                             ))}
+                            
                             {inventories.length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="text-center py-4 text-gray-500">
-                                        Không có dữ liệu tồn kho
+                                        Không có dữ liệu tồn kho. Vui lòng thêm mới.
                                     </td>
                                 </tr>
                             )}

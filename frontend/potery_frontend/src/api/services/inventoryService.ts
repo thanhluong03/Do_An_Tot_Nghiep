@@ -19,8 +19,10 @@ export interface ListInventoryDto {
 }
 
 export interface CreateInventoryDto {
-    product_id: number | string;
-    store_id: number | string;
+    product_id: number | string | number[] | string[]; 
+    
+    // THAY ĐỔI DÒNG NÀY:
+    store_id: number | string | number[] | string[];
     quantity_stock: number;
 }
 
