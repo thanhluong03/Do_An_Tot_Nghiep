@@ -46,6 +46,18 @@
       "@app/flashsale/*": [
         "libs/flashsale/src/*"
       ],
+      "@app/inventory": [
+        "libs/inventory/src"
+      ],
+      "@app/inventory/*": [
+        "libs/inventory/src/*"
+      ],
+      "@app/login": [
+        "libs/login/src"
+      ],
+      "@app/login/*": [
+        "libs/login/src/*"
+      ],
       "@app/order": [
         "libs/order/src"
       ],
@@ -100,17 +112,11 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "@app/login": [
-        "libs/login/src"
+      "@app/news": [
+        "libs/news/src"
       ],
-      "@app/login/*": [
-        "libs/login/src/*"
-      ],
-      "@app/inventory": [
-        "libs/inventory/src"
-      ],
-      "@app/inventory/*": [
-        "libs/inventory/src/*"
+      "@app/news/*": [
+        "libs/news/src/*"
       ]
     }
   }
