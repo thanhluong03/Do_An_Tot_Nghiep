@@ -49,7 +49,9 @@ export interface SelectOption {
 }
 
 
-export const listInventories = async (dto: ListInventoryDto): Promise<any> => {
+export const listInventories = async (
+    dto: ListInventoryDto
+): Promise<{ data: Inventory[]; total: number; page: number; size: number }> => {
     const res = await axios.get(`${API_URL_INVENTORY}/list`, {
         params: dto
     }); 
