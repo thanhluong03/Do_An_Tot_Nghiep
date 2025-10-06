@@ -22,12 +22,8 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     handleDelete,
     totalItems
 }) => {
-    // Tìm item đang được chỉnh sửa (nếu có)
     const editingId = React.useMemo(() => {
         const editingItem = inventories.find(item => {
-            // Logic này cần được truyền từ page.tsx, hoặc page.tsx truyền trực tiếp editingId
-            // Giả định page.tsx chỉ truyền vào các hàm/data cần thiết. Ở đây ta cần item.id
-            // Nếu bạn muốn highlight, bạn cần truyền editingId từ page.tsx vào.
             return false; // Thay thế bằng logic highlight nếu cần
         });
         return null;
@@ -91,10 +87,6 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                         )}
                     </tbody>
                 </table>
-            </div>
-
-            <div className="mt-4 text-sm text-gray-600">
-                Tổng cộng {totalItems} mục (Hiển thị {inventories.length} mục).
             </div>
         </>
     );

@@ -1,4 +1,4 @@
-// src/app/admin/inventory/page.tsx
+
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
@@ -12,12 +12,12 @@ import {
     CreateInventoryDto,
     UpdateInventoryDto,
     SelectOption,
-} from "@/api/services/inventoryService"; // Giả định đường dẫn này là đúng
+} from "@/api/services/inventoryService";
 
-import InventoryForm from "@/components/inventory/InventoryForm"; // Import component Form
-import InventoryTable from "@/components/inventory/InventoryTable"; // Import component Table (Mới)
+import InventoryForm from "@/components/inventory/InventoryForm";
+import InventoryTable from "@/components/inventory/InventoryTable";
+import Pagination from "@/components/inventory/Pagination"; 
 
-// --- TYPE DEFINITIONS ---
 export interface InventoryFormState {
     product_id: string | string[] | undefined;
     store_id: string | string[] | undefined;
@@ -25,10 +25,6 @@ export interface InventoryFormState {
     quantity_sold: number;
 }
 export type FormName = "product_id" | "store_id" | "quantity_stock" | "quantity_sold";
-
-// -----------------------------------------------------
-// InventoryPage Component
-// -----------------------------------------------------
 export default function InventoryPage() {
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
@@ -95,10 +91,6 @@ export default function InventoryPage() {
         }
     };
 
-    // -----------------------------------------------------
-    // Handlers
-    // -----------------------------------------------------
-
     // Handler cho input số (quantity_stock, quantity_sold)
     const handleNumberChange = (name: FormName, value: number) => {
         setForm(prev => ({ ...prev, [name]: value }));
@@ -143,9 +135,6 @@ export default function InventoryPage() {
         }
     };
 
-    // -----------------------------------------------------
-    // Validation and Submit
-    // -----------------------------------------------------
 
     const checkForDuplicate = (productId: number, storeId: number): boolean => {
         if (!Array.isArray(inventories)) return false;
@@ -252,10 +241,18 @@ export default function InventoryPage() {
             alert("Lỗi xảy ra khi xử lý: " + message);
         }
     };
+            const handlePageChange = useCallback((page: number) => {
+            setCurrentPage(page);
+            handleCancelEdit();
+        }, []);
 
-    // -----------------------------------------------------
-    // Render UI
-    // -----------------------------------------------------
+   
+        const handlePageSizeChange = useCallback((size: number) => {
+            setPageSize(size);
+            setCurrentPage(1); 
+    
+            handleCancelEdit();
+        }, []);
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
@@ -285,6 +282,13 @@ export default function InventoryPage() {
                     handleDelete={handleDelete}
                     totalItems={totalItems}
                 />
+                 <Pagination
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+            />
             </div>
         </div>
     );
