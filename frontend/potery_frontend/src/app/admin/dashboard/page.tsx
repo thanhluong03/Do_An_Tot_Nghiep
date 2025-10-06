@@ -1,18 +1,16 @@
 
 import { SalesOverTimeChart } from '@/app/components/Charts/SalesOverTimeChart';
 import { OrderStatusChart } from '@/app/components/Charts/OrderStatusChart';
-import StatCard from '@/app/components/Carts/StatCard';
-import WelcomeBanner from '@/app/components/Carts/WelcomeBanner';
 
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
       
-      {/* 1. Banner Chào mừng */}
+     {/* 1. Banner Chào mừng
       <WelcomeBanner name="Mai Ngọc" />
 
       {/* 2. Các Thẻ Thống kê Tổng quan (Stats Cards) */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Sales" 
           value="₫24,780,000" 
@@ -41,7 +39,7 @@ export default function DashboardPage() {
           color="orange" 
           iconType="products"
         />
-      </div>
+      </div> */} 
 
       {/* 3. Biểu đồ và Trạng thái Đơn hàng */}
       <div className="grid gap-6 lg:grid-cols-3">
