@@ -20,8 +20,8 @@ export class ProductEntity extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price: number
 
-  @Column({ type: 'integer', nullable: true })
-  quantity: number
+  @Column({ type: 'integer', nullable: false })
+  category_id: number
 
   @OneToMany(() => ProductImageEntity, (productImage) => productImage.product, {
     cascade: true,
