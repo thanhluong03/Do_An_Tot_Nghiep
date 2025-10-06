@@ -1,7 +1,6 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import * as qs from 'querystring';
 import { PaymentTransactionRepository } from '@app/database';
 import { PaymentTransaction, IListPaymentTransactionQuery } from './paymenttransaction.interface';
 
@@ -33,31 +32,17 @@ export class PaymenttransactionService {
         params: { orderId: number; amount: number; bankCode?: string },
         clientIp: string,
     ): string {
-        console.log('[VNPAY][buildVnpayUrl] input params:', params);
-        console.log('[VNPAY][buildVnpayUrl] clientIp:', clientIp);
-        const tmnCode = (
-            this.configService.get<string>('VNPAY_TMN_CODE') || ''
-        ).trim();
-        const secretKey = (
-            this.configService.get<string>('VNPAY_HASH_SECRET') || ''
-        ).trim();
-        const vnpUrl = (
-            this.configService.get<string>('VNPAY_PAYMENT_URL') || ''
-        ).trim();
-        const returnUrl = (
-            this.configService.get<string>('VNPAY_RETURN_URL') || ''
-        ).trim();
-        console.log('[VNPAY][buildVnpayUrl] config:', { tmnCode, secretKey, vnpUrl, returnUrl });
+        const tmnCode = (this.configService.get<string>('VNPAY_TMN_CODE') || '').trim();
+        const secretKey = (this.configService.get<string>('VNPAY_HASH_SECRET') || '').trim();
+        const vnpUrl = (this.configService.get<string>('VNPAY_PAYMENT_URL') || '').trim();
+        const returnUrl = (this.configService.get<string>('VNPAY_RETURN_URL') || '').trim();
         const date = new Date();
-        const vnp_TxnRef = date.getTime().toString();
+        const vnp_TxnRef = Date.now().toString();
         const vnp_OrderInfo = `Thanh toan don hang #${params.orderId}`;
         const vnp_Amount = (params.amount * 100).toString();
         const vnp_IpAddr = clientIp || '127.0.0.1';
         const vnp_BankCode = params.bankCode ? String(params.bankCode) : undefined;
-        const vnp_CreateDate = date
-            .toISOString()
-            .replace(/[-T:.Z]/g, '')
-            .slice(0, 14);
+        const vnp_CreateDate = this.formatDateVNPAY(date);
 
         let vnp_Params: Record<string, string> = {
             vnp_Version: '2.1.0',
@@ -73,32 +58,42 @@ export class PaymenttransactionService {
             vnp_IpAddr: vnp_IpAddr,
             vnp_CreateDate: vnp_CreateDate,
         };
+
         if (vnp_BankCode) vnp_Params['vnp_BankCode'] = vnp_BankCode;
-        Object.keys(vnp_Params).forEach((key) => {
-            if (
-                vnp_Params[key] === undefined ||
-                vnp_Params[key] === null ||
-                vnp_Params[key] === ''
-            ) {
-                delete vnp_Params[key];
-            }
+
+        Object.keys(vnp_Params).forEach(key => {
+            if (!vnp_Params[key]) delete vnp_Params[key];
         });
+
         const sortedKeys = Object.keys(vnp_Params).sort();
         const sortedParams: Record<string, string> = {};
-        sortedKeys.forEach((key) => {
+        sortedKeys.forEach(key => {
             sortedParams[key] = vnp_Params[key];
         });
+
         const signData = sortedKeys
-            .map((key) => key + '=' + encodeURIComponent(sortedParams[key]))
+            .map(key => `${key}=${encodeURIComponent(sortedParams[key]).replace(/%20/g, '+')}`)
             .join('&');
+
         const hmac = crypto.createHmac('sha512', secretKey);
-        const vnp_SecureHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+        const vnp_SecureHash = hmac.update(signData, 'utf-8').digest('hex');
+
         sortedParams['vnp_SecureHash'] = vnp_SecureHash;
-        const url = `${vnpUrl}?${qs.stringify(sortedParams)}`;
-        console.log('[VNPAY][buildVnpayUrl] sortedParams:', sortedParams);
-        console.log('[VNPAY][buildVnpayUrl] url:', url);
-        return url;
+
+        const query = Object.entries(sortedParams)
+            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+            .join('&');
+
+        console.log('[VNPAY] Params:', sortedParams);
+
+        return `${vnpUrl}?${query}`;
     }
+
+    private formatDateVNPAY(date: Date): string {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+    }
+
     private mapEntityToInterface(entity: any): PaymentTransaction {
         return {
             id: entity.id,
@@ -115,4 +110,3 @@ export class PaymenttransactionService {
         };
     }
 }
-
