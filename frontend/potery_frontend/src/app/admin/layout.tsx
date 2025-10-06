@@ -1,7 +1,8 @@
 
+import AdminHeader from '@/components/layout/AdminHeader';
+import AdminSidebar from '@/components/layout/AdminSlidebar';
 import React from 'react';
-import AdminSidebar from '../components/layout/AdminSlidebar';
-import AdminHeader from '../components/layout/AdminHeader';
+
 
 // Giả định thư mục components của bạn được ánh xạ bằng alias @/components
 

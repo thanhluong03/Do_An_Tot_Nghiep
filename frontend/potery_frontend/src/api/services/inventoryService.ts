@@ -1,8 +1,7 @@
-// src/api/services/inventoryService.ts (Hoàn thiện)
 
 import axios from "axios";
-import { Product } from "./productApi"; // Import từ productService bạn cung cấp
-import { Store } from "./storeService"; // Import từ storeService bạn cung cấp
+import { Product } from "./productApi";
+import { Store } from "./storeService";
 
 const API_URL_INVENTORY = "http://localhost:3000/inventory"; 
 const API_URL_PRODUCTS = "http://localhost:3000/products"; 
@@ -44,38 +43,25 @@ export interface Inventory {
     store_name?: string;
 }
 
-// Giao diện chung cho Dropdown
 export interface SelectOption {
     id: number;
     name: string;
 }
 
-// --- API TỒN KHO (Inventory) ---
 
-/**
- * Lấy danh sách tồn kho
- * Hàm này ĐẢM BẢO luôn trả về một mảng Inventory[]
- */
-export const listInventories = async (dto: ListInventoryDto): Promise<Inventory[]> => {
-    const res = await axios.post(`${API_URL_INVENTORY}/list`, dto); 
+export const listInventories = async (dto: ListInventoryDto): Promise<any> => {
+    const res = await axios.get(`${API_URL_INVENTORY}/list`, {
+        params: dto
+    }); 
     
     const responseData = res.data;
-
-    if (responseData) {
-        // Ưu tiên trích xuất từ key 'items' (phân trang) hoặc 'data'
-        if (Array.isArray(responseData.items)) {
-            return responseData.items;
-        }
-        if (Array.isArray(responseData.data)) {
-            return responseData.data;
-        }
-        // Trường hợp API trả về thẳng mảng
-        if (Array.isArray(responseData)) {
-            return responseData;
-        }
+    if (responseData && (Array.isArray(responseData.data) || Array.isArray(responseData.items))) {
+         return responseData;
     }
-    
-    return [];
+    if (Array.isArray(responseData)) {
+        return { data: responseData, total: responseData.length, page: dto.page || 1, size: dto.size || 10 };
+    }
+    return { data: [], total: 0, page: 1, size: 10 }; 
 };
 
 export const createInventory = async (data: CreateInventoryDto): Promise<Inventory> => {
@@ -92,36 +78,17 @@ export const deleteInventory = async (id: number): Promise<void> => {
     await axios.delete(`${API_URL_INVENTORY}/deleteinventory/${id}`);
 };
 
-
-// --- API CHO DROPDOWN (Dùng API Products & Stores thực tế) ---
-
-/**
- * Lấy danh sách Sản phẩm cho Dropdown
- */
 export const listDropdownProducts = async (): Promise<SelectOption[]> => {
-    // Dựa vào endpoint bạn cung cấp: GET /products/listproduct
     const res = await axios.get(`${API_URL_PRODUCTS}/listproduct`);
-    
     const products: Product[] = res.data;
-
-    // Giả định ListProduct trả về mảng Product, ta map thành SelectOption
-    // Lưu ý: Nếu listproduct trả về object phân trang, cần trích xuất mảng product trước
     return Array.isArray(products) 
         ? products.map(p => ({ id: p.id as number, name: p.name })) 
         : [];
 };
 
-/**
- * Lấy danh sách Cửa hàng cho Dropdown
- */
 export const listDropdownStores = async (): Promise<SelectOption[]> => {
-    // Dựa vào endpoint bạn cung cấp: GET /stores/liststore
     const res = await axios.get(`${API_URL_STORES}/liststore`);
-    
-    // Dựa vào StoreController, liststore trả về { stores: [...] }
     const storesData = res.data.stores || res.data;
     const stores: Store[] = Array.isArray(storesData) ? storesData : [];
-
-    // Giả định Store có id và store_name
     return stores.map(s => ({ id: s.id as number, name: s.store_name }));
 };

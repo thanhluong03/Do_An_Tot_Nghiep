@@ -1,6 +1,7 @@
+import { OrderStatusChart } from "@/components/Charts/OrderStatusChart";
+import { SalesOverTimeChart } from "@/components/Charts/SalesOverTimeChart";
 
-import { SalesOverTimeChart } from '@/app/components/Charts/SalesOverTimeChart';
-import { OrderStatusChart } from '@/app/components/Charts/OrderStatusChart';
+
 
 export default function DashboardPage() {
   return (
