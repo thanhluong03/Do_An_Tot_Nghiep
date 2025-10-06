@@ -1,3 +1,5 @@
+// src/app/admin/inventory/page.tsx (Hoàn thiện & Đã sửa lỗi)
+
 "use client";
 import React, { useEffect, useState } from "react";
 import {
@@ -15,6 +17,7 @@ import {
 
 // --- TYPE DEFINITIONS ---
 interface InventoryFormState {
+    // Giữ nguyên string | string[] cho form state (vì là checkbox)
     product_id: string | string[] | undefined; 
     store_id: string | string[] | undefined;
     quantity_stock: number;
@@ -22,7 +25,7 @@ interface InventoryFormState {
 }
 
 // -----------------------------------------------------
-// Component CheckboxList (FIXED)
+// Component CheckboxList (GIỮ NGUYÊN)
 // -----------------------------------------------------
 interface CheckboxListProps {
     name: "product_id" | "store_id";
@@ -34,8 +37,6 @@ interface CheckboxListProps {
 }
 
 const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selectedValues, onChange, error }) => {
-    
-    // Ensure selected IDs are properly handled
     const selectedIds: string[] = React.useMemo(() => {
         if (Array.isArray(selectedValues)) {
             return selectedValues.filter(val => val !== 'all');
@@ -81,7 +82,6 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
                 <div className="flex items-center mb-1 pb-1 border-b border-dashed">
                     <input
                         type="checkbox"
-                        
                         id={`${name}-all`}
                         name={name}
                         value="all"
@@ -122,12 +122,16 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
 };
 
 // -----------------------------------------------------
-// InventoryPage Component (Chỉnh sửa fetch data)
+// InventoryPage Component 
 // -----------------------------------------------------
 export default function InventoryPage() {
     const [inventories, setInventories] = useState<Inventory[]>([]); 
     const [products, setProducts] = useState<SelectOption[]>([]); 
     const [stores, setStores] = useState<SelectOption[]>([]); 
+    // State cho phân trang (Mặc dù code UI hiện tại không dùng)
+    const [totalItems, setTotalItems] = useState(0); 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     
     const [form, setForm] = useState<InventoryFormState>({
         product_id: undefined,
@@ -142,14 +146,16 @@ export default function InventoryPage() {
     useEffect(() => {
         fetchData();
         fetchDropdownData(); 
-    }, []); 
+    }, [currentPage, pageSize]); // Thêm dependencies cho phân trang
 
+    // FIX: Sửa lỗi .data không tồn tại
     const fetchDropdownData = async () => {
         try {
             const [productRes, storeRes] = await Promise.all([
                 listDropdownProducts(),
                 listDropdownStores(),
             ]);
+            // BỎ .data VÀ CHỈ NHẬN MẢNG
             setProducts(Array.isArray(productRes) ? productRes : []);
             setStores(Array.isArray(storeRes) ? storeRes : []);
         } catch (error) {
@@ -159,14 +165,28 @@ export default function InventoryPage() {
         }
     };
 
+    // FIX: Sửa lỗi List API trả về Object
     const fetchData = async () => {
         try {
-            // FIX: Gửi tham số limit lớn để lấy toàn bộ danh sách tồn kho
-            const res = await listInventories({ limit: 1000 }); 
-            setInventories(Array.isArray(res) ? res : []);
+            // Gửi tham số phân trang
+            const res = await listInventories({ 
+                page: currentPage, 
+                size: pageSize 
+            }); 
+            
+            // Cần truy cập vào thuộc tính 'data' hoặc 'items' của object response
+            const inventoryList = res.data || res.items || [];
+            
+            setInventories(Array.isArray(inventoryList) ? inventoryList : []); 
+            setTotalItems(res.total || inventoryList.length);
+            // Cập nhật page/size nếu response trả về
+            setCurrentPage(res.page || currentPage);
+            setPageSize(res.size || pageSize);
+
         } catch (error) {
             console.error("Lỗi tải tồn kho:", error);
             setInventories([]);
+            setTotalItems(0);
         }
     };
 
@@ -176,7 +196,6 @@ export default function InventoryPage() {
     
     const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        // Ensure we always have a valid number, never null/undefined/NaN
         let numericValue = 0;
         if (value !== "" && value !== null && value !== undefined) {
             const parsed = Number(value);
@@ -202,8 +221,12 @@ export default function InventoryPage() {
     const checkForDuplicate = (productId: number, storeId: number): boolean => {
         if (!Array.isArray(inventories)) return false;
         
+        // Loại bỏ chính mục đang sửa (nếu đang ở chế độ sửa)
         return inventories.some(
-            item => Number(item.product_id) === productId && Number(item.store_id) === storeId
+            item => 
+                (item.id !== editingId) && // Bỏ qua item đang được sửa
+                (Number(item.product_id) === productId) && 
+                (Number(item.store_id) === storeId)
         );
     };
     
@@ -237,7 +260,7 @@ export default function InventoryPage() {
 
         try {
             if (isCreating) {
-                // Get complete ID lists
+                // Logic tạo ID (Giữ nguyên)
                 const productIds: number[] = form.product_id === 'all' 
                     ? products.map(p => Number(p.id)) 
                     : (Array.isArray(form.product_id) 
@@ -261,12 +284,13 @@ export default function InventoryPage() {
                             break; 
                         }
 
+                        // Ép kiểu CreateInventoryDto (Đã sửa trong inventoryService.ts)
                         createDtos.push({
                             product_id: pId, 
                             store_id: sId, 
                             quantity_stock: form.quantity_stock,
-                            quantity_sold: 0,
-                        } as CreateInventoryDto); 
+                            quantity_sold: 0, // Mặc định là 0 khi tạo mới
+                        }); 
                     }
                     if (hasDuplicate) break;
                 }
@@ -283,7 +307,7 @@ export default function InventoryPage() {
                 }
 
             } else {
-                // UPDATE
+                // UPDATE (Giữ nguyên)
                 const updateDto: UpdateInventoryDto = {
                     quantity_stock: form.quantity_stock,
                     quantity_sold: form.quantity_sold,
@@ -311,6 +335,7 @@ export default function InventoryPage() {
     const handleEdit = (item: Inventory) => {
         setEditingId(item.id);
         setForm({
+            // Chuyển sang string vì form state nhận string/string[]
             product_id: String(item.product_id), 
             store_id: String(item.store_id),
             quantity_stock: item.quantity_stock || 0,
@@ -331,7 +356,7 @@ export default function InventoryPage() {
         }
     };
     
-    // Helper function (FIXED)
+    // FIX: Sửa lỗi Type 'void' (Đảm bảo trả về string)
     const getDisplayName = (list: SelectOption[], id: number | undefined): string => {
         if (id === undefined || id === null) return ""; 
 
@@ -385,6 +410,7 @@ export default function InventoryPage() {
                         {editingId !== null && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Sản phẩm</label>
+                                {/* Dùng Number() để đảm bảo gọi getDisplayName đúng */}
                                 <input type="text" value={getDisplayName(products, Number(form.product_id))} readOnly className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"/>
                             </div>
                         )}
@@ -430,12 +456,12 @@ export default function InventoryPage() {
                     <div className="flex justify-end gap-3">
                         {editingId !== null && (
                              <button
-                                 onClick={() => {
-                                     setEditingId(null);
-                                     setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
-                                     setErrors({});
-                                 }}
-                                 className="px-5 py-2 rounded-lg font-semibold shadow-md transition bg-gray-400 hover:bg-gray-500 text-white"
+                                onClick={() => {
+                                    setEditingId(null);
+                                    setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
+                                    setErrors({});
+                                }}
+                                className="px-5 py-2 rounded-lg font-semibold shadow-md transition bg-gray-400 hover:bg-gray-500 text-white"
                              >
                                  Hủy Sửa
                              </button>
@@ -511,7 +537,7 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="mt-4 text-sm text-gray-600">
-                    Tổng cộng {inventories.length} mục.
+                    Tổng cộng {totalItems} mục (Hiển thị {inventories.length} mục).
                 </div>
             </div>
         </div>

@@ -56,26 +56,33 @@ export interface SelectOption {
  * Lấy danh sách tồn kho
  * Hàm này ĐẢM BẢO luôn trả về một mảng Inventory[]
  */
-export const listInventories = async (dto: ListInventoryDto): Promise<Inventory[]> => {
-    const res = await axios.post(`${API_URL_INVENTORY}/list`, dto); 
+// inventoryService.ts (Đã sửa)
+
+// Thay thế hàm listInventories hiện tại bằng đoạn code này:
+export const listInventories = async (dto: ListInventoryDto): Promise<any> => {
+    // SỬA: Thay axios.post bằng axios.get
+    // và truyền DTO (chứa page, size, key...) vào thuộc tính 'params'
+    const res = await axios.get(`${API_URL_INVENTORY}/list`, {
+        params: dto // Truyền DTO làm query parameters (?page=1&size=10...)
+    }); 
     
     const responseData = res.data;
 
-    if (responseData) {
-        // Ưu tiên trích xuất từ key 'items' (phân trang) hoặc 'data'
-        if (Array.isArray(responseData.items)) {
-            return responseData.items;
-        }
-        if (Array.isArray(responseData.data)) {
-            return responseData.data;
-        }
-        // Trường hợp API trả về thẳng mảng
-        if (Array.isArray(responseData)) {
-            return responseData;
-        }
+    // Logic xử lý phản hồi từ Server (giả định Server trả về { data: [], total: X, ...})
+    // Thay vì chỉ trả về mảng, ta cần trả về TOÀN BỘ object để client có thể lấy total, page, size
+    if (responseData && (Array.isArray(responseData.data) || Array.isArray(responseData.items))) {
+         // Trả về toàn bộ object phân trang
+         return responseData;
     }
     
-    return [];
+    // Trường hợp API trả về thẳng mảng
+    if (Array.isArray(responseData)) {
+        // Tạo object phân trang giả nếu API chỉ trả về mảng
+        return { data: responseData, total: responseData.length, page: dto.page || 1, size: dto.size || 10 };
+    }
+    
+    // Trả về một object rỗng hợp lệ
+    return { data: [], total: 0, page: 1, size: 10 }; 
 };
 
 export const createInventory = async (data: CreateInventoryDto): Promise<Inventory> => {
