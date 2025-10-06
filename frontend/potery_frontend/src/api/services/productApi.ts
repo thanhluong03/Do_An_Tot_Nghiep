@@ -4,23 +4,23 @@ import axios from "axios";
 const API_URL = "http://localhost:3000/products";
 
 export interface ProductImage {
-    id?: number;
-    url: string;
+  url?: string; // nếu backend trả link
+  image_data?: { data: number[] }; // nếu backend trả Buffer
 }
 
+
 export interface Product {
-    id?: number;
-    name: string;
-    description: string;
-    price: number;
-    supplier_id: number;
-    category_id?: number; 
-    images: ProductImage[];
-    main_image?: string | null;
-    created_at?: string;
-    updated_at?: string;
-    
-    category?: { id: number; name: string }; 
+  id?: number;
+  name: string;
+  description: string;
+  price: number;
+  supplier_id: number;
+  category_id?: number;
+  images: ProductImage[];
+  main_image?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  category?: { id: number; name: string };
 }
 
 // Định nghĩa kiểu dữ liệu cho payload gửi lên (Không bao gồm ID, quantity và các trường meta)
@@ -33,22 +33,26 @@ export const getProducts = async (): Promise<Product[]> => {
     return res.data;
 };
 
-// Thêm sản phẩm
-export const addProduct = async (product: ProductPayload): Promise<Product> => {
-    const res = await axios.post(`${API_URL}/createproduct`, product);
-    return res.data;
-};
 
-// Cập nhật sản phẩm
-export const updateProduct = async (
-    id: number,
-    product: ProductPayload
-): Promise<Product> => {
-    const res = await axios.put(`${API_URL}/updateproduct/${id}`, product);
-    return res.data;
-};
 
 // Xoá sản phẩm
 export const deleteProduct = async (id: number): Promise<void> => {
     await axios.delete(`${API_URL}/deleteproduct/${id}`);
+};
+
+
+// Thêm sản phẩm (FormData)
+export const addProduct = async (formData: FormData): Promise<Product> => {
+  const res = await axios.post(`${API_URL}/createproduct`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
+// Cập nhật sản phẩm (FormData)
+export const updateProduct = async (id: number, formData: FormData): Promise<Product> => {
+  const res = await axios.put(`${API_URL}/updateproduct/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
 };

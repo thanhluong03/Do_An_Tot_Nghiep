@@ -18,6 +18,9 @@ import {
   faBullhorn,
   faStore,
   faWarehouse,
+  faList,
+  faThunderstorm,
+  faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -36,8 +39,9 @@ const mainMenuItems: MenuItem[] = [
   { name: "Dashboard", icon: faHome, count: null, href: "/admin/dashboard" },
   { name: "Product Management", icon: faBox, count: 247, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
   { name: "Inventory", icon: faWarehouse, count: 1, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
-  { name: "Categories", icon: faStore, count: "4", href: "/admin/categories", color: "bg-green-100 text-green-600" },
+  { name: "Categories", icon: faList, count: "4", href: "/admin/categories", color: "bg-green-100 text-green-600" },
   { name: "Stores", icon: faStore, count: "2", href: "/admin/stores", color: "bg-green-100 text-green-600" },
+  { name: "Flash Sales", icon: faBolt, count: "5", href: "/admin/flashsales", color: "bg-green-100 text-green-600" },
   { name: "Suppliers", icon: faUsers, count: "5", href: "/admin/supplier", color: "bg-green-100 text-green-600" },
   { name: "Orders", icon: faShoppingCart, count: 12, href: "/admin/orders", color: "bg-red-100 text-red-600" },
   { name: "Reviews", icon: faStar, count: 89, href: "/admin/reviews", color: "bg-yellow-100 text-yellow-600" },

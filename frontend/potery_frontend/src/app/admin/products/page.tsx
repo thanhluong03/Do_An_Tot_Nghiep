@@ -1,5 +1,3 @@
-// src/app/admin/products/ProductsPage.tsx
-
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { 
@@ -34,6 +32,10 @@ export default function ProductsPage() {
     const [categories, setCategories] = useState<Category[]>([]); 
     const [loading, setLoading] = useState(true);
 
+    // 1. THÊM STATE ĐỂ LỌC DANH MỤC
+    // categoryId = 0 (hoặc null) có nghĩa là hiển thị TẤT CẢ
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0); 
+
     // State phân trang: Bắt đầu từ trang 1
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -62,7 +64,9 @@ export default function ProductsPage() {
             setLoading(true);
             const data = await getProducts();
             setProducts(data);
-            setCurrentPage(1); // Reset về trang 1 khi dữ liệu mới được tải
+            // Giữ nguyên logic reset về trang 1 khi tải lại toàn bộ
+            // Lưu ý: Nếu muốn giữ trang hiện tại sau khi chỉnh sửa, có thể bỏ dòng này
+            // setCurrentPage(1); 
         } catch (error) {
             console.error("Lỗi khi load sản phẩm:", error);
         } finally {
@@ -88,23 +92,43 @@ export default function ProductsPage() {
         }
     };
 
-    // LOGIC PHÂN TRANG
-    // Tổng số trang
-    const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+    // 2. LOGIC LỌC SẢN PHẨM
+    const filteredProducts = useMemo(() => {
+        if (selectedCategoryId === 0) {
+            return products; // Hiển thị tất cả
+        }
+        return products.filter(p => p.category_id === selectedCategoryId);
+    }, [products, selectedCategoryId]);
+    
+    // Đặt lại trang về 1 mỗi khi Category Filter thay đổi
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedCategoryId]);
+
+
+    // LOGIC PHÂN TRANG: SỬ DỤNG filteredProducts thay vì products
+    const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
     
     // Sản phẩm cho trang hiện tại
     const paginatedProducts = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return products.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [products, currentPage]);
+        // SỬ DỤNG filteredProducts
+        return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredProducts, currentPage]);
 
     const handlePageChange = (page: number) => {
         if (page > 0 && page <= totalPages) {
             setCurrentPage(page);
         }
     };
+    
+    // Xử lý thay đổi filter danh mục
+    const handleCategoryFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCategoryId = parseInt(event.target.value, 10);
+        setSelectedCategoryId(newCategoryId);
+    };
 
-    // Xử lý Modal và CRUD
+    // Xử lý Modal và CRUD (Giữ nguyên handleSave đã sửa)
     const openAddModal = () => {
         setEditingProduct(null);
         setFormData({
@@ -128,38 +152,44 @@ export default function ProductsPage() {
         setIsModalOpen(true);
     };
 
-    const handleSave = async () => {
-        if (!formData.name || formData.price <= 0 || formData.supplier_id === 0 || !formData.category_id) {
-            alert("Vui lòng nhập đầy đủ Tên, Giá, Nhà cung cấp và Danh mục.");
-            return;
-        }
-        
-        const payload = createProductPayload(formData);
-
+    const handleSave = async (form: FormData) => {
         try {
             if (editingProduct) {
-                const updated = await updateProduct(editingProduct.id!, payload as any); 
-                setProducts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+                const updated = await updateProduct(editingProduct.id!, form);
+                setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
             } else {
-                const added = await addProduct(payload as any);
-                setProducts((prev) => [...prev, added]);
+                await addProduct(form);
+                await fetchProducts(); 
+                // Tính lại trang cuối cùng DỰA TRÊN TỔNG SẢN PHẨM MỚI
+                const newTotalPages = Math.ceil((products.length + 1) / ITEMS_PER_PAGE); 
+                setCurrentPage(newTotalPages);
             }
             setIsModalOpen(false);
         } catch (error) {
             console.error("Lỗi khi lưu sản phẩm:", error);
-            alert("❌ Lưu sản phẩm thất bại!");
+            alert("❌ Lưu sản phẩm thất bại!"); 
         }
     };
+
 
     const handleDelete = async (id: number) => {
         if (confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) {
             try {
                 await deleteProduct(id);
-                setProducts(products.filter((p) => p.id !== id));
-                // Điều chỉnh lại trang nếu trang hiện tại bị trống
-                if (paginatedProducts.length === 1 && currentPage > 1) {
-                    setCurrentPage(currentPage - 1);
+                // Dùng fetchProducts để đảm bảo dữ liệu mới nhất
+                await fetchProducts();
+
+                // Tính toán lại trang hiện tại sau khi xoá để tránh trang rỗng
+                const newTotalProducts = products.length - 1;
+                const newTotalPages = Math.ceil(newTotalProducts / ITEMS_PER_PAGE);
+                
+                if (currentPage > newTotalPages && currentPage > 1) {
+                    setCurrentPage(newTotalPages);
                 }
+                
+                // Cần thêm: Đảm bảo lọc vẫn hoạt động đúng sau khi fetchProducts
+                // (Việc này đã được handle bởi useEffect([selectedCategoryId]) và useMemo([products, selectedCategoryId]))
+
             } catch (error) {
                 console.error("Lỗi khi xoá sản phẩm:", error);
             }
@@ -186,11 +216,32 @@ export default function ProductsPage() {
                 <div className="flex justify-center items-center mb-6">
                     <h1 className="text-3xl font-bold text-gray-800">Quản lý sản phẩm</h1>
                 </div>
+                
+                {/* THÊM KHUNG LỌC VÀ THÊM MỚI */}
+                <div className="flex justify-between items-center mb-6">
+                    {/* DROP-DOWN LỌC THEO DANH MỤC */}
+                    <div className="flex items-center space-x-2">
+                        <label htmlFor="category-filter" className="text-gray-700 font-medium">
+                            Lọc theo Danh mục:
+                        </label>
+                        <select
+                            id="category-filter"
+                            value={selectedCategoryId}
+                            onChange={handleCategoryFilterChange}
+                            className="p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            <option value={0}>Tất cả sản phẩm</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="flex justify-end mb-6">
                     <button
                         onClick={openAddModal}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition duration-150"
                     >
                         + Thêm sản phẩm
                     </button>
@@ -200,14 +251,13 @@ export default function ProductsPage() {
                     <p>Đang tải sản phẩm...</p>
                 ) : (
                     <>
-                   
+                    
                         <ProductsTable
                             products={paginatedProducts}
                             getSupplierName={getSupplierName}
                             getCategoryName={getCategoryName}
                             openEditModal={openEditModal}
                             handleDelete={handleDelete}
-                     
                             startIndex={(currentPage - 1) * ITEMS_PER_PAGE}
                         />
 
@@ -242,7 +292,8 @@ export default function ProductsPage() {
                             </div>
                         )}
                         <div className="mt-4 text-center text-sm text-gray-600">
-                            Hiển thị {paginatedProducts.length} trên tổng số {products.length} sản phẩm (Trang {currentPage} / {totalPages})
+                            Hiển thị {paginatedProducts.length} trên tổng số {filteredProducts.length} sản phẩm (Trang {currentPage} / {totalPages})
+                            {selectedCategoryId !== 0 && ` (Đã lọc theo Danh mục: ${categories.find(c => c.id === selectedCategoryId)?.name})`}
                         </div>
                     </>
                 )}
