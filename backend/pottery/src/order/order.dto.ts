@@ -1,26 +1,154 @@
-import type { OrderStatus, PaymentStatus, PaymentMethod } from '../../libs/database/src/entities/order.entity';
-export interface CreateOrderDto {
-    customer_id: number;
-    driver_id?: number;
-    shipping_address?: string;
-    payment_method?: PaymentMethod;
-    status?: OrderStatus;
-    payment_status?: PaymentStatus;
-    items: Array<{
-        product_id: number;
-        quantity: number;
-        price_at_order: number;
-    }>;
+
+import { Expose, Type } from 'class-transformer';
+import {
+    IsOptional,
+    IsString,
+    IsNumber,
+    IsEnum,
+    IsArray,
+    ValidateNested,
+    IsPositive,
+} from 'class-validator';
+import {
+    OrderStatus,
+    PaymentStatus,
+    PaymentMethod,
+} from '../../libs/database/src/entities/order.entity';
+
+export class SuccessResponseDto<T = any> {
+    @Expose()
+    success: boolean = true;
+
+    @Expose()
+    message: string;
+
+    @Expose()
+    data?: T;
+
+    constructor(message: string, data?: T) {
+        this.message = message;
+        this.data = data;
+    }
 }
 
-export interface UpdateOrderDto {
-    status?: OrderStatus;
-    payment_status?: PaymentStatus;
+export class ErrorResponseDto {
+    @Expose()
+    success: boolean = false;
+
+    @Expose()
+    message: string;
+
+    @Expose()
+    error?: any;
+
+    constructor(message: string, error?: any) {
+        this.message = message;
+        this.error = error;
+    }
+}
+export class OrderItemDto {
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    product_id: number;
+
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    quantity: number;
+
+    @Expose()
+    @IsNumber()
+    price_at_order: number;
+}
+
+export class CreateOrderDto {
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    customer_id: number;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
     shipping_address?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsEnum(PaymentMethod)
     payment_method?: PaymentMethod;
-    items?: Array<{
-        product_id: number;
-        quantity: number;
-        price_at_order: number;
-    }>;
+
+    @Expose()
+    @IsOptional()
+    @IsEnum(OrderStatus)
+    status?: OrderStatus;
+
+    @Expose()
+    @IsOptional()
+    @IsEnum(PaymentStatus)
+    payment_status?: PaymentStatus;
+
+    @Expose()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => OrderItemDto)
+    items: OrderItemDto[];
+}
+
+export class UpdateOrderDto {
+    @Expose()
+    @IsOptional()
+    @IsEnum(OrderStatus)
+    status?: OrderStatus;
+
+    @Expose()
+    @IsOptional()
+    @IsEnum(PaymentStatus)
+    payment_status?: PaymentStatus;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    shipping_address?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsEnum(PaymentMethod)
+    payment_method?: PaymentMethod;
+
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => OrderItemDto)
+    items?: OrderItemDto[];
+}
+export class OrderResponseDto {
+    @Expose()
+    id: number;
+
+    @Expose()
+    customer_id: number;
+
+    @Expose()
+    shipping_address?: string;
+
+    @Expose()
+    payment_method?: PaymentMethod;
+
+    @Expose()
+    status: OrderStatus;
+
+    @Expose()
+    payment_status: PaymentStatus;
+
+    @Expose()
+    @Type(() => OrderItemDto)
+    items: OrderItemDto[];
+
+    @Expose()
+    created_at: Date;
+
+    @Expose()
+    updated_at: Date;
 }
