@@ -1,11 +1,10 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
 
-export class CreateDriverLocationTable1757434387070 implements MigrationInterface {
-
+export class CreatePaymentTransactionsTable1757434387083 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'driver_locations',
+                name: 'payment_transactions',
                 columns: [
                     {
                         name: 'id',
@@ -14,11 +13,14 @@ export class CreateDriverLocationTable1757434387070 implements MigrationInterfac
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'driver_id', type: 'int', isNullable: false },
                     { name: 'order_id', type: 'int', isNullable: false },
-                    { name: 'latitude', type: 'decimal', precision: 9, scale: 6, isNullable: true },
-                    { name: 'longitude', type: 'decimal', precision: 9, scale: 6, isNullable: true },
-                    { name: 'timestamp', type: 'timestamptz' },
+                    { name: 'payment_gateway', type: 'varchar', length: '50', isNullable: false },
+                    { name: 'gateway_txn_ref', type: 'varchar', length: '100', isNullable: true },
+                    { name: 'amount', type: 'decimal', precision: 15, scale: 2, default: 0 },
+                    { name: 'txn_status', type: 'varchar', length: '20', isNullable: true },
+                    { name: 'txn_message', type: 'varchar', length: '255', isNullable: true },
+                    { name: 'txn_time', type: 'timestamptz', isNullable: true },
+                    { name: 'raw_response_data', type: 'json', isNullable: true },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                     { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                     { name: 'deleted_at', type: 'timestamptz', isNullable: true },
@@ -26,17 +28,7 @@ export class CreateDriverLocationTable1757434387070 implements MigrationInterfac
             }),
         )
         await queryRunner.createForeignKey(
-            'driver_locations',
-            new TableForeignKey({
-                columnNames: ['driver_id'],
-                referencedTableName: 'users',
-                referencedColumnNames: ['id'],
-                onDelete: 'SET NULL',
-            }),
-        )
-
-        await queryRunner.createForeignKey(
-            'driver_locations',
+            'payment_transactions',
             new TableForeignKey({
                 columnNames: ['order_id'],
                 referencedTableName: 'orders',
@@ -47,7 +39,6 @@ export class CreateDriverLocationTable1757434387070 implements MigrationInterfac
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('driver_locations')
+        await queryRunner.dropTable('payment_transactions');
     }
-
 }

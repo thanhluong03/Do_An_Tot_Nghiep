@@ -26,9 +26,6 @@ export class OrderEntity extends BaseEntity {
     @Column({ type: 'integer', nullable: false })
     customer_id: number
 
-    @Column({ type: 'integer', nullable: false })
-    driver_id: number
-
     @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     order_date: Date
 
