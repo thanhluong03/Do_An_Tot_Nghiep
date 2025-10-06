@@ -1,244 +1,314 @@
 "use client";
-import { useEffect, useState } from "react";
-import { getProducts, addProduct, updateProduct, deleteProduct, Product } from "@/api/services/productApi";
+import { useEffect, useState, useMemo } from "react";
+import { 
+    getProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    Product,
+    ProductImage
+} from "@/api/services/productApi";
+
 import { getSuppliers, Supplier } from "@/api/services/supplierService";
+import { getCategories, Category } from "@/api/services/categoryService"; 
+import ProductFormModal from "@/components/adminProducts/ProductFormModal";
+import ProductsTable from "@/components/adminProducts/ProductsTable";
+
+
+
+// Hàm tiện ích để tạo DTO chỉ với các trường cần gửi
+const createProductPayload = (data: Product) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, created_at, updated_at, category, ...payload } = data;
+    return payload;
+};
+
+// Cấu hình phân trang
+const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]); 
+    const [loading, setLoading] = useState(true);
 
-  // State cho form modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formData, setFormData] = useState<Product>({
-    name: "",
-    price: 0,
-    quantity: 0,
-    description: "",
-    main_image: "",
-    supplier_id: 0,
-    images: []
-  } as Product);
+    // 1. THÊM STATE ĐỂ LỌC DANH MỤC
+    // categoryId = 0 (hoặc null) có nghĩa là hiển thị TẤT CẢ
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0); 
 
-  // Load products + suppliers
-  useEffect(() => {
-    fetchProducts();
-    fetchSuppliers();
-  }, []);
+    // State phân trang: Bắt đầu từ trang 1
+    const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await getProducts();
-      setProducts(data);
-    } catch (error) {
-      console.error("Lỗi khi load sản phẩm:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSuppliers = async () => {
-    try {
-      const data = await getSuppliers();
-      setSuppliers(data);
-    } catch (error) {
-      console.error("Lỗi khi load nhà cung cấp:", error);
-    }
-  };
-
-  // Xử lý mở modal
-  const openAddModal = () => {
-    setEditingProduct(null);
-    setFormData({
-      id: 0,
-      name: "",
-      description: "",
-      price: 0,
-      quantity: 0,
-      main_image: "",
-      images: [],
-      supplier_id: 0,
-      created_at: "",
+    // State cho form modal
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [formData, setFormData] = useState<Product>({
+        name: "",
+        price: 0,
+        description: "",
+        main_image: "",
+        supplier_id: 0,
+        category_id: 0,
+        images: [] as ProductImage[]
     } as Product);
-    setIsModalOpen(true);
-  };
 
-  const openEditModal = (product: Product) => {
-    setEditingProduct(product);
-    setFormData(product);
-    setIsModalOpen(true);
-  };
+    // Load data
+    useEffect(() => {
+        fetchProducts();
+        fetchSuppliers();
+        fetchCategories(); 
+    }, []);
 
-  // Lưu (thêm/sửa)
-  const handleSave = async () => {
-    try {
-      if (editingProduct) {
-        const updated = await updateProduct(editingProduct.id!, formData);
-        setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-      } else {
-        const added = await addProduct(formData);
-        setProducts((prev) => [...prev, added]);
-      }
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("Lỗi khi lưu sản phẩm:", error);
-      alert("❌ Lưu sản phẩm thất bại!");
-    }
-  };
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+            const data = await getProducts();
+            setProducts(data);
+            // Giữ nguyên logic reset về trang 1 khi tải lại toàn bộ
+            // Lưu ý: Nếu muốn giữ trang hiện tại sau khi chỉnh sửa, có thể bỏ dòng này
+            // setCurrentPage(1); 
+        } catch (error) {
+            console.error("Lỗi khi load sản phẩm:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  // Xóa
-  const handleDelete = async (id: number) => {
-    if (confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) {
-      try {
-        await deleteProduct(id);
-        setProducts(products.filter((p) => p.id !== id));
-      } catch (error) {
-        console.error("Lỗi khi xoá sản phẩm:", error);
-      }
-    }
-  };
+    const fetchSuppliers = async () => {
+        try {
+            const data = await getSuppliers();
+            setSuppliers(data);
+        } catch (error) {
+            console.error("Lỗi khi load nhà cung cấp:", error);
+        }
+    };
+    
+    const fetchCategories = async () => {
+        try {
+            const data = await getCategories();
+            setCategories(data);
+        } catch (error) {
+            console.error("Lỗi khi load danh mục:", error);
+        }
+    };
 
-return (
-  <div className="p-6 flex justify-center">
-    <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-full">
-      {/* Header */}
-      <div className="flex justify-center items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
-            Quản lý sản phẩm
-        </h1>
-      </div>
-
-      <div className="flex justify-end mb-6">
-        <button
-          onClick={openAddModal}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-        >
-          + Thêm sản phẩm
-        </button>
-      </div>
-
-      {loading ? (
-        <p>Đang tải sản phẩm...</p>
-      ) : (
-        <div className="overflow-x-auto">
-  <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
-    <thead>
-      <tr className="bg-gray-100 text-gray-700">
-        <th className="p-3 text-left font-semibold border-b">ID</th>
-        <th className="p-3 text-left font-semibold border-b">Ảnh</th>
-        <th className="p-3 text-left font-semibold border-b">Tên</th>
-        <th className="p-3 text-left font-semibold border-b">Giá</th>
-        <th className="p-3 text-left font-semibold border-b">Số lượng</th>
-        <th className="p-3 text-left font-semibold border-b">Nhà cung cấp</th>
-        <th className="p-3 text-center font-semibold border-b">Hành động</th>
-      </tr>
-    </thead>
-    <tbody>
-      {products.length === 0 ? (
-        <tr>
-          <td
-            colSpan={7}
-            className="text-center p-6 text-gray-500 italic bg-gray-50"
-          >
-            Không có sản phẩm nào
-          </td>
-        </tr>
-      ) : (
-        products.map((p, index) => {
-          const mainImage =
-            typeof p.main_image === "string" && p.main_image.trim() !== ""
-              ? p.main_image
-              : p.images && p.images.length > 0 && typeof p.images[0].url === "string"
-              ? p.images[0].url
-              : "https://via.placeholder.com/100";
-
-          return (
-            <tr key={p.id} className="hover:bg-gray-50 transition duration-150">
-              <td className="p-3 border-b text-gray-800">{index + 1}</td>
-              <td className="p-3 border-b">
-                <img
-                  src={mainImage}
-                  alt={p.name}
-                  className="w-14 h-14 object-cover rounded border"
-                />
-              </td>
-              <td className="p-3 border-b text-gray-800 font-medium">
-                {p.name}
-              </td>
-              <td className="p-3 border-b text-gray-700">
-                {p.price.toLocaleString()} ₫
-              </td>
-              <td className="p-3 border-b text-gray-700">{p.quantity}</td>
-              <td className="p-3 border-b text-gray-600">
-                {suppliers.find((s) => s.id === p.supplier_id)?.name || "-"}
-              </td>
-              <td className="p-3 border-b text-center space-x-2">
-                <button
-                  onClick={() => openEditModal(p)}
-                  className="px-3 py-1 text-sm bg-yellow-400 text-black rounded hover:bg-yellow-500"
-                >
-                  Sửa
-                </button>
-                <button
-                  onClick={() => handleDelete(p.id!)}
-                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Xoá
-                </button>
-              </td>
-            </tr>
-          );
-        })
-      )}
-    </tbody>
-  </table>
-</div>
+    // 2. LOGIC LỌC SẢN PHẨM
+    const filteredProducts = useMemo(() => {
+        if (selectedCategoryId === 0) {
+            return products; // Hiển thị tất cả
+        }
+        return products.filter(p => p.category_id === selectedCategoryId);
+    }, [products, selectedCategoryId]);
+    
+    // Đặt lại trang về 1 mỗi khi Category Filter thay đổi
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedCategoryId]);
 
 
-      )}
-    </div>
+    // LOGIC PHÂN TRANG: SỬ DỤNG filteredProducts thay vì products
+    const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+    
+    // Sản phẩm cho trang hiện tại
+    const paginatedProducts = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        // SỬ DỤNG filteredProducts
+        return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredProducts, currentPage]);
 
-      {/* Modal Form (giữ nguyên modal của bạn, overlay mờ nhẹ) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          {/* overlay mờ (click ngoài đóng) */}
-          <div className="absolute inset-0 bg-black/30" onClick={() => setIsModalOpen(false)} />
+    const handlePageChange = (page: number) => {
+        if (page > 0 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+    
+    // Xử lý thay đổi filter danh mục
+    const handleCategoryFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCategoryId = parseInt(event.target.value, 10);
+        setSelectedCategoryId(newCategoryId);
+    };
 
-          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6 z-10">
-            <h2 className="text-xl font-semibold mb-4">{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
+    // Xử lý Modal và CRUD (Giữ nguyên handleSave đã sửa)
+    const openAddModal = () => {
+        setEditingProduct(null);
+        setFormData({
+            name: "",
+            description: "",
+            price: 0,
+            main_image: "",
+            images: [],
+            supplier_id: 0,
+            category_id: 0,
+        } as Product);
+        setIsModalOpen(true);
+    };
 
-            <div className="space-y-3">
-              <label className="block text-sm">Tên sản phẩm</label>
-              <input title="Tên sản phẩm" type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border rounded p-2" />
+    const openEditModal = (product: Product) => {
+        setEditingProduct(product);
+        setFormData({
+            ...product,
+            category_id: product.category_id || product.category?.id || 0 
+        } as Product);
+        setIsModalOpen(true);
+    };
 
-              <label className="block text-sm">Giá</label>
-              <input title="Giá sản phẩm" type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className="w-full border rounded p-2" />
+    const handleSave = async (form: FormData) => {
+        try {
+            if (editingProduct) {
+                const updated = await updateProduct(editingProduct.id!, form);
+                setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+            } else {
+                await addProduct(form);
+                await fetchProducts(); 
+                // Tính lại trang cuối cùng DỰA TRÊN TỔNG SẢN PHẨM MỚI
+                const newTotalPages = Math.ceil((products.length + 1) / ITEMS_PER_PAGE); 
+                setCurrentPage(newTotalPages);
+            }
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Lỗi khi lưu sản phẩm:", error);
+            alert("❌ Lưu sản phẩm thất bại!"); 
+        }
+    };
 
-              <label className="block text-sm">Số lượng</label>
-              <input title="Số lượng sản phẩm" type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })} className="w-full border rounded p-2" />
 
-              <label className="block text-sm">Mô tả</label>
-              <textarea title="Mô tả sản phẩm" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full border rounded p-2" />
+    const handleDelete = async (id: number) => {
+        if (confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) {
+            try {
+                await deleteProduct(id);
+                // Dùng fetchProducts để đảm bảo dữ liệu mới nhất
+                await fetchProducts();
 
-              <label className="block text-sm">Ảnh chính (URL)</label>
-              <input title="Ảnh chính sản phẩm" type="text" value={formData.main_image ?? ""} onChange={(e) => setFormData({ ...formData, main_image: e.target.value })} className="w-full border rounded p-2" />
+                // Tính toán lại trang hiện tại sau khi xoá để tránh trang rỗng
+                const newTotalProducts = products.length - 1;
+                const newTotalPages = Math.ceil(newTotalProducts / ITEMS_PER_PAGE);
+                
+                if (currentPage > newTotalPages && currentPage > 1) {
+                    setCurrentPage(newTotalPages);
+                }
+                
+                // Cần thêm: Đảm bảo lọc vẫn hoạt động đúng sau khi fetchProducts
+                // (Việc này đã được handle bởi useEffect([selectedCategoryId]) và useMemo([products, selectedCategoryId]))
 
-              <label className="block text-sm">Nhà cung cấp</label>
-              <select title="Nhà cung cấp" value={formData.supplier_id ?? ""} onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })} className="w-full border rounded p-2">
-                <option value="">-- Chọn nhà cung cấp --</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+            } catch (error) {
+                console.error("Lỗi khi xoá sản phẩm:", error);
+            }
+        }
+    };
+
+    const getSupplierName = (id: number) => {
+        return suppliers.find((s) => s.id === id)?.name || "N/A";
+    };
+
+    const getCategoryName = (product: Product) => {
+        if (product.category && product.category.name) {
+            return product.category.name;
+        }
+        const categoryId = product.category_id;
+        if (!categoryId) return "Chưa phân loại";
+        return categories.find((c) => c.id === categoryId)?.name || "Đang tải...";
+    };
+
+
+    return (
+        <div className="p-6 flex justify-center">
+            <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-full">
+                <div className="flex justify-center items-center mb-6">
+                    <h1 className="text-3xl font-bold text-gray-800">Quản lý sản phẩm</h1>
+                </div>
+                
+                {/* THÊM KHUNG LỌC VÀ THÊM MỚI */}
+                <div className="flex justify-between items-center mb-6">
+                    {/* DROP-DOWN LỌC THEO DANH MỤC */}
+                    <div className="flex items-center space-x-2">
+                        <label htmlFor="category-filter" className="text-gray-700 font-medium">
+                            Lọc theo Danh mục:
+                        </label>
+                        <select
+                            id="category-filter"
+                            value={selectedCategoryId}
+                            onChange={handleCategoryFilterChange}
+                            className="p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            <option value={0}>Tất cả sản phẩm</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={openAddModal}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md transition duration-150"
+                    >
+                        + Thêm sản phẩm
+                    </button>
+                </div>
+
+                {loading ? (
+                    <p>Đang tải sản phẩm...</p>
+                ) : (
+                    <>
+                    
+                        <ProductsTable
+                            products={paginatedProducts}
+                            getSupplierName={getSupplierName}
+                            getCategoryName={getCategoryName}
+                            openEditModal={openEditModal}
+                            handleDelete={handleDelete}
+                            startIndex={(currentPage - 1) * ITEMS_PER_PAGE}
+                        />
+
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center space-x-2 mt-6">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1 border rounded disabled:opacity-50"
+                                >
+                                    Trước
+                                </button>
+                                
+                                {/* Tạo các nút số trang */}
+                                {Array.from({ length: totalPages }, (_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => handlePageChange(i + 1)}
+                                        className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1 border rounded disabled:opacity-50"
+                                >
+                                    Sau
+                                </button>
+                            </div>
+                        )}
+                        <div className="mt-4 text-center text-sm text-gray-600">
+                            Hiển thị {paginatedProducts.length} trên tổng số {filteredProducts.length} sản phẩm (Trang {currentPage} / {totalPages})
+                            {selectedCategoryId !== 0 && ` (Đã lọc theo Danh mục: ${categories.find(c => c.id === selectedCategoryId)?.name})`}
+                        </div>
+                    </>
+                )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-5">
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
-              <button onClick={handleSave} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Lưu</button>
-            </div>
-          </div>
+            <ProductFormModal
+                isModalOpen={isModalOpen}
+                editingProduct={editingProduct}
+                formData={formData}
+                setFormData={setFormData}
+                handleSave={handleSave}
+                setIsModalOpen={setIsModalOpen}
+                suppliers={suppliers}
+                categories={categories}
+            />
         </div>
-      )}
-    </div>
-  );
+    );
 }
