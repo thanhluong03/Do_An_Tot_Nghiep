@@ -32,6 +32,8 @@ import { NewsController } from './news/news.controller';
 import { NewsModule } from '@app/news';
 import { CartItemController } from './cart_item/cart_item.controller';
 import { CartItemModule } from '@app/cart_item';
+import { CategoryController } from './category/category.controller';
+import { CategoryModule } from '@app/category';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -51,11 +53,12 @@ import { CartItemModule } from '@app/cart_item';
     LoginModule,
     InventoryModule,
     NewsModule,
-    CartItemModule
+    CartItemModule,
+    CategoryModule,
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController
+    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController
   ],
   providers: [AppService],
 })

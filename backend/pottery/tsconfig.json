@@ -121,8 +121,11 @@
       "@app/cart_item": [
         "libs/cart_item/src"
       ],
-      "@app/cart_item/*": [
-        "libs/cart_item/src/*"
+      "@app/category": [
+        "libs/category/src"
+      ],
+      "@app/category/*": [
+        "libs/category/src/*"
       ]
     }
   }

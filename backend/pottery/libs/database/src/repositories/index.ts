@@ -15,3 +15,4 @@ export * from './order.repository';
 export * from './inventory.repository';
 export * from './news.repository';
 export * from './cart_item.repository';
+export * from './category.repository';

@@ -25,23 +25,18 @@ export class ProductController {
     constructor(private readonly productService: ProductService) { }
 
     @Post('createproduct')
-    @UseInterceptors(FilesInterceptor('images', 10)) // Cho phép tối đa 10 ảnh
+    @UseInterceptors(FilesInterceptor('images'))
     async create(
         @UploadedFiles() files: Express.Multer.File[],
         @Body() createProductDto: CreateProductDto,
     ): Promise<ProductResponseDto> {
-        console.log('Received files:', files?.length || 0);
-        console.log('Received DTO:', createProductDto);
-
-        // Tạo object data để truyền vào service
         const productData: any = {
             name: createProductDto.name,
             description: createProductDto.description,
             price: createProductDto.price,
-            quantity: createProductDto.quantity,
+            category_id: createProductDto.category_id,
             supplier_id: createProductDto.supplier_id,
         };
-        // Xử lý ảnh upload
         if (files && files.length > 0) {
             console.log('Processing', files.length, 'files');
             productData.images = files.map((file, index) => {
@@ -79,13 +74,12 @@ export class ProductController {
     }
 
     @Put('updateproduct/:id')
-    @UseInterceptors(FilesInterceptor('images', 10)) // Cho phép tối đa 10 ảnh
+    @UseInterceptors(FilesInterceptor('images'))
     async update(
         @Param('id') id: number,
         @UploadedFiles() files: Express.Multer.File[],
         @Body() updateProductDto: UpdateProductDto,
     ): Promise<ProductResponseDto> {
-        // Xử lý ảnh upload
         if (files && files.length > 0) {
             updateProductDto.images = files.map((file) => ({
                 image_data: file.buffer,

@@ -103,7 +103,8 @@
       "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1",
       "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1",
       "^@app/user(|/.*)$": "<rootDir>/libs/user/src/$1",
-      "^@app/cart_item(|/.*)$": "<rootDir>/libs/cart_item/src/$1"
+      "^@app/cart_item(|/.*)$": "<rootDir>/libs/cart_item/src/$1",
+      "^@app/category(|/.*)$": "<rootDir>/libs/category/src/$1"
     }
   }
 }

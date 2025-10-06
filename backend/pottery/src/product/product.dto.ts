@@ -31,7 +31,7 @@ export class CreateProductDto {
   @Expose()
   @IsOptional()
   @IsNumber()
-  quantity?: number;
+  category_id?: number;
 
   @Expose()
   @IsNumber()
@@ -64,7 +64,7 @@ export class UpdateProductDto {
   @Expose()
   @IsOptional()
   @IsNumber()
-  quantity?: number;
+  category_id?: number;
 
   @Expose()
   @IsOptional()
@@ -93,7 +93,7 @@ export class ProductResponseDto {
   price?: number;
 
   @Expose()
-  quantity?: number;
+  category_id?: number;
 
   @Expose()
   supplier_id: number;

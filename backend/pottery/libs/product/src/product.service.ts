@@ -25,7 +25,7 @@ export class ProductService {
         name: data.name,
         description: data.description,
         price: data.price,
-        quantity: data.quantity,
+        category_id: data.category_id,
         supplier_id: data.supplier_id,
       });
 
@@ -104,7 +104,7 @@ export class ProductService {
       name: data.name,
       description: data.description,
       price: data.price,
-      quantity: data.quantity,
+      category_id: data.category_id,
       supplier_id: data.supplier_id,
     } as Partial<ProductEntity>;
 
