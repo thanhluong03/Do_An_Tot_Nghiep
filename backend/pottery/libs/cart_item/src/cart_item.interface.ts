@@ -1,0 +1,19 @@
+export class ICreateCartItem {
+    product_id: number
+    customer_id: number
+    quantity?: number
+    total_amount?: number
+}
+
+export interface IUpdateCartItem {
+    product_id: number
+    customer_id: number
+    quantity?: number
+    total_amount?: number
+}
+
+export interface IListCartItem {
+    page?: number
+    size?: number
+    key?: string
+}

@@ -5,11 +5,14 @@ import { BaseEntity } from './base.entity'
 export class CartItemEntity extends BaseEntity {
 
     @Column({ type: 'integer', nullable: false })
-    user_id: number
+    customer_id: number
 
     @Column({ type: 'integer', nullable: false })
     product_id: number
 
     @Column({ type: 'integer', nullable: true })
     quantity: number
+
+    @Column({ type: 'decimal', nullable: true })
+    total_amount: number
 }

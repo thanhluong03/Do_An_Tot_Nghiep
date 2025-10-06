@@ -7,6 +7,15 @@
     "webpack": true
   },
   "projects": {
+    "cart_item": {
+      "type": "library",
+      "root": "libs/cart_item",
+      "entryFile": "index",
+      "sourceRoot": "libs/cart_item/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/cart_item/tsconfig.lib.json"
+      }
+    },
     "common": {
       "type": "library",
       "root": "libs/common",
