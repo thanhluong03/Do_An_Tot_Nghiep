@@ -36,10 +36,12 @@ const mainMenuItems: MenuItem[] = [
   { name: "Dashboard", icon: faHome, count: null, href: "/admin/dashboard" },
   { name: "Product Management", icon: faBox, count: 247, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
   { name: "Inventory", icon: faWarehouse, count: 1, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
+  { name: "Categories", icon: faStore, count: "4", href: "/admin/categories", color: "bg-green-100 text-green-600" },
   { name: "Stores", icon: faStore, count: "2", href: "/admin/stores", color: "bg-green-100 text-green-600" },
-  { name: "Suppliers", icon: faUsers, count: "1.2k", href: "/admin/supplier", color: "bg-green-100 text-green-600" },
+  { name: "Suppliers", icon: faUsers, count: "5", href: "/admin/supplier", color: "bg-green-100 text-green-600" },
   { name: "Orders", icon: faShoppingCart, count: 12, href: "/admin/orders", color: "bg-red-100 text-red-600" },
   { name: "Reviews", icon: faStar, count: 89, href: "/admin/reviews", color: "bg-yellow-100 text-yellow-600" },
+
 ];
 
 const analyticItems: MenuItem[] = [
@@ -61,24 +63,15 @@ const systemItems: MenuItem[] = [
 
 // --- Component SidebarItem đã sửa để nhận currentPath ---
 const SidebarItem = ({ item, currentPath }: { item: MenuItem, currentPath: string }) => {
-  // Logic so sánh: 
-  // 1. Kiểm tra khớp hoàn toàn (cho các mục cấp cao nhất)
-  // 2. Hoặc kiểm tra nếu đường dẫn hiện tại bắt đầu bằng item.href (cho các mục có đường dẫn con)
   
-  // Dùng khớp hoàn toàn cho độ chính xác cao nhất:
   const isActive = currentPath === item.href; 
-
-  // Nếu muốn khớp đường dẫn con, ví dụ: /admin/products/1 cũng active /admin/products:
-  // const isActive = currentPath === item.href || currentPath.startsWith(`${item.href}/`);
-  
   const activeClass = isActive
-    ? "text-[#B95D26] font-semibold bg-orange-50" // Màu cam và nền nhạt khi active
-    : "text-gray-600 hover:bg-gray-100"; // Màu xám khi không active
+    ? "text-[#B95D26] font-semibold bg-orange-50" 
+    : "text-gray-600 hover:bg-gray-100";
 
   return (
     <Link
       href={item.href}
-      // Áp dụng class dựa trên trạng thái active động
       className={`flex items-center justify-between px-3 py-2 rounded-md transition-colors ${activeClass}`}
     >
       <div className="flex items-center space-x-3">
