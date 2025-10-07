@@ -1,6 +1,9 @@
+// src/app/admin/layout.tsx
 
 import AdminHeader from '@/components/layout/AdminHeader';
 import AdminSidebar from '@/components/layout/AdminSlidebar';
+// ⚠️ QUAN TRỌNG: Đã thêm AdminFooter
+import { AdminFooter } from '@/components/layout/AdminFooter'; 
 import React from 'react';
 
 
@@ -11,25 +14,27 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // LƯU Ý QUAN TRỌNG: Đây là nơi bạn thường thêm logic KIỂM TRA QUYỀN TRUY CẬP (Authentication/Authorization) 
-  // Ví dụ: Kiểm tra xem người dùng có phải là Admin hay không. 
-  // Nếu không, chuyển hướng (redirect) họ đến trang đăng nhập.
-  
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    // Sử dụng 'min-h-screen' trên cả main container và flex-col để Footer luôn ở dưới
+    <div className="flex min-h-screen bg-gray-100"> 
       
-      {/* 1. Sidebar Component: Thanh điều hướng cố định bên trái */}
-      {/* Chúng ta sử dụng 'h-screen' và 'sticky top-0' trong chính Sidebar để cố định nó */}
+      {/* 1. Sidebar Component */}
       <AdminSidebar />
       
-      {/* 2. Main Content Area: Vùng hiển thị nội dung chính và Header */}
+      {/* 2. Main Content Area */}
       <div className="flex flex-col flex-1 overflow-x-hidden">
         
-        {/* Header Component: Thanh điều hướng trên cùng */}
+        {/* Header Component */}
         <AdminHeader />
+        
+        {/* Nội dung Trang: Dùng flex-1 để nội dung chiếm hết không gian còn lại */}
         <main className="flex-1 p-4 sm:p-6 md:p-8">
           {children} 
         </main>
+        
+        {/* 3. Footer Component: Đặt bên ngoài <main> nhưng bên trong flex-col */}
+        <AdminFooter />
+        
       </div>
     </div>
   );
