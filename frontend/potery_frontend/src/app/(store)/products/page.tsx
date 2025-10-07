@@ -6,6 +6,8 @@ import { BaseLayout } from '../../../layouts';
 import { ProductGrid } from '../../../components/feature/ProductGrid';
 import { useProducts } from '../../../hooks/useProducts';
 import { Product } from '../../../types';
+import { useAuth } from '../../../contexts/AuthContext';
+import { cartApi } from '../../../api/modules/cart';
 
 function ProductFilters({
   onChange,
@@ -74,6 +76,9 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(12);
   const [filters, setFilters] = useState<{ search?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }>({});
+  const { user, isAuthenticated } = useAuth();
+  const [message, setMessage] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const { products, loading, error, total } = useProducts({
     page,
@@ -85,8 +90,21 @@ export default function ProductsPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
-  const onAddToCart = (p: Product) => {
-    console.log('add to cart', p.id);
+  const onAddToCart = async (p: Product) => {
+    if (!isAuthenticated || !user || !user.id) {
+      setMessage('Vui lòng đăng nhập để thêm vào giỏ hàng');
+      return;
+    }
+    setAddingId(p.id);
+    setMessage(null);
+    try {
+      await cartApi.add({ customer_id: user.id as string, product_id: p.id, quantity: 1 });
+      setMessage('Đã thêm vào giỏ hàng');
+    } catch (e) {
+      setMessage('Không thể thêm vào giỏ hàng');
+    } finally {
+      setAddingId(null);
+    }
   };
   const onViewDetails = (p: Product) => {
     router.push(`/products/${p.id}`);
@@ -106,6 +124,10 @@ export default function ProductsPage() {
           onViewDetails={onViewDetails}
           columns={4}
         />
+
+        {message && (
+          <div className="mt-4 text-sm text-gray-700">{message}{addingId ? ` (${addingId})` : ''}</div>
+        )}
 
         <div className="flex items-center justify-center gap-3 mt-8">
           <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="px-3 py-2 border rounded disabled:opacity-50">Trước</button>

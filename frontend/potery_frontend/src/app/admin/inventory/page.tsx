@@ -203,7 +203,6 @@ export default function InventoryPage() {
                             product_id: pId,
                             store_id: sId,
                             quantity_stock: form.quantity_stock,
-                            quantity_sold: 0,
                         });
                     }
                     if (hasDuplicate) return;

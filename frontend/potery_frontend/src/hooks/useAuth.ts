@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { userApi } from '../api/modules/users';
 import { User } from '../types';
-
+import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -30,20 +30,35 @@ export const useAuth = () => {
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const router = useRouter();
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
+      const customerId = localStorage.getItem('customerId'); 
+      // Chỉ cần có token là coi như đăng nhập; ID có thể fetch sau
       if (!token) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('customerId');
+        localStorage.removeItem('user');
         setLoading(false);
         return;
       }
-
       try {
-        const userData = await userApi.getCurrentUser();
-        setUser(userData);
+        // Ưu tiên lấy từ local storage để không bị chớp tắt dropdown
+        const cached = localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached) as User;
+          setUser(parsed);
+        } else {
+          const userData = await userApi.getCurrentUser();
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
       } catch (error) {
+        // Nếu API lỗi (401/404), xóa token và ID
         localStorage.removeItem('token');
+        localStorage.removeItem('customerId');
+        localStorage.removeItem('user');
       } finally {
         setLoading(false);
       }
@@ -55,8 +70,9 @@ export const useAuthState = () => {
   const login = async (email: string, password: string) => {
     try {
       const response = await userApi.login({ email, password });
-      localStorage.setItem('token', response.token);
+      // userApi.login đã lưu token, customerId, user vào localStorage
       setUser(response.user);
+      router.push('/');
     } catch (error) {
       throw error;
     }
@@ -77,8 +93,9 @@ export const useAuthState = () => {
         phone: data.phone,
       };
       const response = await userApi.register(payload);
-      localStorage.setItem('token', response.token);
+      // userApi.register đã lưu token, customerId, user vào localStorage
       setUser(response.user);
+      router.push('/'); 
     } catch (error) {
       throw error;
     }
@@ -90,8 +107,12 @@ export const useAuthState = () => {
     } finally {
       setUser(null);
       localStorage.removeItem('token');
+      localStorage.removeItem('customerId');
+      localStorage.removeItem('user');
+      // userApi.logout() đã xóa cả token và customerId
+      router.push('/'); 
     }
-  };
+  }
 
   return {
     user,
@@ -99,6 +120,7 @@ export const useAuthState = () => {
     login,
     register,
     logout,
+    // ⭐ TRẠNG THÁI ĐÃ ĐĂNG NHẬP DỰA TRÊN USER ⭐
     isAuthenticated: !!user,
   };
 };

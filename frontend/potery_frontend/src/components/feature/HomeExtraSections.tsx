@@ -1,4 +1,7 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { newsApi, NewsItem } from '../../api/modules/news';
 
 // Value Proposition Section
 export function ValuePropositionSection() {
@@ -130,44 +133,42 @@ export function TestimonialsSection() {
 
 // Journal Section
 export function JournalSection() {
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await newsApi.list();
+        if (mounted) setNews(data);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const top3 = news.slice(0, 3);
+
   return (
     <section className="py-20 bg-[#F5F1EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#2C2A24] mb-6">
-            Câu Chuyện & Cảm Hứng
+            Câu Chuyện & Tin Tức
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          {/* Blog 1 */}
-          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col">
-            <img src="/pott.jpg" alt="Nghệ Thuật Tạo Hình Gốm Truyền Thống" className="w-full h-40 mb-4 object-cover rounded-lg" />
-            <span className="text-sm text-[#A67C52] mb-2">02/10/2025 • 5 phút đọc</span>
-            <h3 className="text-xl font-semibold text-[#2C2A24] mb-2">Nghệ Thuật Tạo Hình Gốm Truyền Thống</h3>
-            <p className="text-[#65604E] mb-4">Khám phá kỹ thuật tạo hình gốm truyền thống qua bàn tay nghệ nhân lành nghề.</p>
-            <button className="mt-auto px-6 py-2 bg-[#A67C52] text-white rounded-lg font-medium hover:bg-[#8C6239] transition">Đọc tiếp</button>
-          </div>
-          {/* Blog 2 */}
-          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col">
-            <img src="/pott.jpg" alt="Xu Hướng Gốm Sứ Hiện Đại 2024" className="w-full h-40 mb-4 object-cover rounded-lg" />
-            <span className="text-sm text-[#A67C52] mb-2">15/09/2025 • 4 phút đọc</span>
-            <h3 className="text-xl font-semibold text-[#2C2A24] mb-2">Xu Hướng Gốm Sứ Hiện Đại 2024</h3>
-            <p className="text-[#65604E] mb-4">Những xu hướng mới nhất trong thiết kế gốm sứ hiện đại, phù hợp với mọi không gian sống.</p>
-            <button className="mt-auto px-6 py-2 bg-[#A67C52] text-white rounded-lg font-medium hover:bg-[#8C6239] transition">Đọc tiếp</button>
-          </div>
-          {/* Blog 3 */}
-          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col">
-            <img src="/pott.jpg" alt="Cách Bảo Quản Đồ Gốm Đúng Cách" className="w-full h-40 mb-4 object-cover rounded-lg" />
-            <span className="text-sm text-[#A67C52] mb-2">28/08/2025 • 3 phút đọc</span>
-            <h3 className="text-xl font-semibold text-[#2C2A24] mb-2">Cách Bảo Quản Đồ Gốm Đúng Cách</h3>
-            <p className="text-[#65604E] mb-4">Hướng dẫn bảo quản đồ gốm để giữ gìn vẻ đẹp và giá trị lâu dài.</p>
-            <button className="mt-auto px-6 py-2 bg-[#A67C52] text-white rounded-lg font-medium hover:bg-[#8C6239] transition">Đọc tiếp</button>
-          </div>
-        </div>
-        <div className="text-center mt-8">
-          <button className="inline-flex items-center px-8 py-4 bg-[#A67C52] text-white font-semibold rounded-lg hover:bg-[#8C6239] transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-            Xem Tất Cả Bài Viết
-          </button>
+          {(loading ? [1,2,3] : (top3.length ? top3 : [])).map((item: any, idx: number) => (
+            <div key={idx} className="bg-white rounded-xl shadow-lg p-8 flex flex-col">
+              <img src="/pott.jpg" alt={item?.title || 'Bài viết'} className="w-full h-40 mb-4 object-cover rounded-lg" />
+              <span className="text-sm text-[#A67C52] mb-2">{item?.published_at ? new Date(item.published_at).toLocaleDateString('vi-VN') : '—'}</span>
+              <h3 className="text-xl font-semibold text-[#2C2A24] mb-2">{item?.title || 'Bài viết'}</h3>
+              <p className="text-[#65604E] mb-4">{(item?.content || '').slice(0, 120)}{(item?.content || '').length > 120 ? '…' : ''}</p>
+              <button className="mt-auto px-6 py-2 bg-[#A67C52] text-white rounded-lg font-medium hover:bg-[#8C6239] transition">Đọc tiếp</button>
+            </div>
+          ))}
         </div>
       </div>
     </section>

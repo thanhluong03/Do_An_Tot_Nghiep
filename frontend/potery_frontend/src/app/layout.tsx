@@ -28,11 +28,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" className="mdl-js">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           <CartProvider>
-            {children}
+             <main>
+               {children}
+             </main>
           </CartProvider>
         </AuthProvider>
       </body>

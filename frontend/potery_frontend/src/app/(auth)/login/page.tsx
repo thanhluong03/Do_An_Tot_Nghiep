@@ -3,8 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../../components/common/Button';
 import Link from 'next/link';
-import { userApi } from '../../../api/modules/users';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -13,7 +12,7 @@ export default function LoginPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +20,8 @@ export default function LoginPage() {
       try {
         setLoading(true);
         setError(null);
-        const result = await userApi.login({ email: formData.email, password: formData.password });
-        localStorage.setItem('token', result.token);
-        router.replace('/');
+        await login(formData.email, formData.password);
+        // redirect is handled inside useAuth.login
       } catch (err: any) {
         setError(err?.message || 'Login failed');
       } finally {
@@ -33,7 +31,10 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = userApi.getGoogleLoginUrl();
+    // Defer to backend Google OAuth route from usersApi
+    // Using window.location to initiate OAuth flow
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    window.location.href = `${API_BASE_URL}/login/google`;
   };
 
   return (
