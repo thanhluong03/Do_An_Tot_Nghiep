@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
@@ -32,6 +31,11 @@ export default function InventoryPage() {
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [loading, setLoading] = useState(false); // Thêm state loading
+
+    // STATE LỌC VÀ TÌM KIẾM MỚI
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [selectedStoreId, setSelectedStoreId] = useState<number>(0); // 0 = Tất cả
 
     const [form, setForm] = useState<InventoryFormState>({
         product_id: undefined,
@@ -44,9 +48,11 @@ export default function InventoryPage() {
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     
     // Hàm dùng chung để lấy tên hiển thị
-    const getDisplayName = useCallback((list: SelectOption[], id: number | undefined): string => {
-        if (id === undefined || id === null || isNaN(id)) return ""; // Xử lý giá trị an toàn
-        const found = list.find(item => Number(item.id) === Number(id));
+    const getDisplayName = useCallback((list: SelectOption[], id: number | string | undefined): string => {
+        if (id === undefined || id === null) return "";
+        const numericId = Number(id);
+        if (isNaN(numericId)) return ""; // Xử lý giá trị không phải số
+        const found = list.find(item => Number(item.id) === numericId);
         return found?.name || `ID: ${id}`;
     }, []);
 
@@ -54,7 +60,7 @@ export default function InventoryPage() {
     useEffect(() => {
         fetchData();
         fetchDropdownData();
-    }, [currentPage, pageSize, getDisplayName]);
+    }, [currentPage, pageSize]); // Bỏ getDisplayName khỏi dependency
 
     const fetchDropdownData = async () => {
         try {
@@ -73,6 +79,7 @@ export default function InventoryPage() {
 
     const fetchData = async () => {
         try {
+            setLoading(true); // Bắt đầu tải
             const res = await listInventories({
                 page: currentPage,
                 size: pageSize
@@ -88,8 +95,35 @@ export default function InventoryPage() {
             console.error("Lỗi tải tồn kho:", error);
             setInventories([]);
             setTotalItems(0);
+        } finally {
+            setLoading(false); // Kết thúc tải
         }
     };
+    
+    // LOGIC LỌC VÀ TÌM KIẾM
+    const filteredInventories = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        const storeId = selectedStoreId;
+
+        return inventories.filter(item => {
+            // Lọc theo Cửa hàng (Store Filter)
+            const storeMatch = storeId === 0 || Number(item.store_id) === storeId;
+
+            // Tìm kiếm theo Tên Sản phẩm HOẶC Tên Cửa hàng
+            const productName = getDisplayName(products, item.product_id).toLowerCase();
+            const storeName = getDisplayName(stores, item.store_id).toLowerCase();
+            
+            const searchMatch = !query || productName.includes(query) || storeName.includes(query);
+
+            return storeMatch && searchMatch;
+        });
+    }, [inventories, selectedStoreId, searchQuery, products, stores, getDisplayName]); 
+    
+    // Đặt lại trang 1 khi filter hoặc search thay đổi
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedStoreId, searchQuery]);
+
 
     // Handler cho input số (quantity_stock, quantity_sold)
     const handleNumberChange = (name: FormName, value: number) => {
@@ -241,18 +275,40 @@ export default function InventoryPage() {
             alert("Lỗi xảy ra khi xử lý: " + message);
         }
     };
-            const handlePageChange = useCallback((page: number) => {
+    
+    // Xử lý thay đổi trang
+    const handlePageChange = useCallback((page: number) => {
+        // Chỉ thay đổi trang nếu không phải là trang hiện tại
+        if (page !== currentPage) {
             setCurrentPage(page);
             handleCancelEdit();
-        }, []);
+        }
+    }, [currentPage]); // Dependency: currentPage
 
-   
-        const handlePageSizeChange = useCallback((size: number) => {
-            setPageSize(size);
-            setCurrentPage(1); 
+    // Xử lý thay đổi kích thước trang
+    const handlePageSizeChange = useCallback((size: number) => {
+        setPageSize(size);
+        setCurrentPage(1); // Luôn về trang 1 khi thay đổi size
+        handleCancelEdit();
+    }, []);
     
-            handleCancelEdit();
-        }, []);
+    // Phân trang danh sách đã lọc (Client-side pagination)
+    const paginatedInventories = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize;
+        // Phân trang trên danh sách đã được lọc
+        return filteredInventories.slice(startIndex, startIndex + pageSize);
+    }, [filteredInventories, currentPage, pageSize]);
+
+
+    // Handlers cho Filter và Search
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    };
+
+    const handleStoreFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedStoreId(Number(e.target.value));
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
@@ -260,6 +316,7 @@ export default function InventoryPage() {
                     Quản lý Tồn kho
                 </h2>
 
+                {/* KHU VỰC THÊM / SỬA FORM */}
                 <InventoryForm
                     form={form}
                     editingId={editingId}
@@ -273,23 +330,84 @@ export default function InventoryPage() {
                     handleCancelEdit={handleCancelEdit}
                 />
 
-                <InventoryTable
-                    inventories={inventories}
-                    products={products}
-                    stores={stores}
-                    getDisplayName={getDisplayName}
-                    handleEdit={handleEdit}
-                    handleDelete={handleDelete}
-                    totalItems={totalItems}
+                {/* KHU VỰC LỌC VÀ TÌM KIẾM MỚI */}
+                <div className="flex flex-wrap justify-between items-center mb-6 p-4 border rounded-lg bg-gray-50">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3 w-full">Bộ lọc và Tìm kiếm</h3>
+
+                    {/* Lọc theo Cửa hàng */}
+                    <div className="w-full md:w-1/3 min-w-[200px] mb-3 md:mb-0">
+                        <label htmlFor="store-filter" className="block text-sm font-medium text-gray-700">
+                            Lọc theo Cửa hàng:
+                        </label>
+                        <select
+                            id="store-filter"
+                            value={selectedStoreId}
+                            onChange={handleStoreFilterChange}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 outline-none"
+                        >
+                            <option value={0}>-- Tất cả Cửa hàng --</option>
+                            {stores.map(store => (
+                                <option key={store.id} value={store.id}>{store.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Ô Tìm kiếm */}
+                    <div className="w-full md:w-1/3 min-w-[200px] mb-3 md:mb-0">
+                        <label htmlFor="search-query" className="block text-sm font-medium text-gray-700">
+                            Tìm kiếm (Tên SP/Cửa hàng):
+                        </label>
+                        <input
+                            type="text"
+                            id="search-query"
+                            placeholder="Nhập tên SP hoặc Cửa hàng..."
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+
+                    <div className="w-full md:w-1/4 min-w-[200px] text-sm text-gray-600">
+                        <p>Tổng số mục: <span className="font-bold">{filteredInventories.length}</span></p>
+                        <p>Đang hiển thị: <span className="font-bold">{paginatedInventories.length}</span></p>
+                    </div>
+                </div>
+
+                {/* KHU VỰC BẢNG DỮ LIỆU */}
+                {loading ? (
+                    <div className="text-center py-10 text-lg text-gray-500">
+                        <p>Đang tải dữ liệu...</p>
+                    </div>
+                ) : (
+                    <InventoryTable
+                        // Sử dụng danh sách đã được phân trang (paginatedInventories)
+                        inventories={paginatedInventories} 
+                        products={products}
+                        stores={stores}
+                        getDisplayName={getDisplayName}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                        // totalItems của bảng là số lượng sau khi lọc
+                        totalItems={filteredInventories.length}
+                    />
+                )}
+
+                {/* KHU VỰC PHÂN TRANG */}
+                <Pagination
+                    // Sử dụng totalItems là số lượng sau khi lọc
+                    totalItems={filteredInventories.length} 
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                 />
-                 <Pagination
-                currentPage={currentPage}
-                pageSize={pageSize}
-                totalItems={totalItems}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-            />
             </div>
         </div>
     );
 }
+
+// Giữ nguyên các file components còn lại:
+// src/components/inventory/InventoryForm.tsx
+// src/components/inventory/InventoryTable.tsx
+// src/components/inventory/Checkboxlist.tsx
+// src/components/inventory/Pagination.tsx
