@@ -7,15 +7,6 @@
     "webpack": true
   },
   "projects": {
-    "category": {
-      "type": "library",
-      "root": "libs/category",
-      "entryFile": "index",
-      "sourceRoot": "libs/category/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/category/tsconfig.lib.json"
-      }
-    },
     "cart_item": {
       "type": "library",
       "root": "libs/cart_item",
@@ -23,6 +14,15 @@
       "sourceRoot": "libs/cart_item/src",
       "compilerOptions": {
         "tsConfigPath": "libs/cart_item/tsconfig.lib.json"
+      }
+    },
+    "category": {
+      "type": "library",
+      "root": "libs/category",
+      "entryFile": "index",
+      "sourceRoot": "libs/category/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/category/tsconfig.lib.json"
       }
     },
     "common": {
@@ -61,6 +61,15 @@
         "tsConfigPath": "libs/flashsale/tsconfig.lib.json"
       }
     },
+    "import_product": {
+      "type": "library",
+      "root": "libs/import_product",
+      "entryFile": "index",
+      "sourceRoot": "libs/import_product/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/import_product/tsconfig.lib.json"
+      }
+    },
     "inventory": {
       "type": "library",
       "root": "libs/inventory",
@@ -95,6 +104,15 @@
       "sourceRoot": "libs/order/src",
       "compilerOptions": {
         "tsConfigPath": "libs/order/tsconfig.lib.json"
+      }
+    },
+    "paymenttransaction": {
+      "type": "library",
+      "root": "libs/paymenttransaction",
+      "entryFile": "index",
+      "sourceRoot": "libs/paymenttransaction/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/paymenttransaction/tsconfig.lib.json"
       }
     },
     "permission": {

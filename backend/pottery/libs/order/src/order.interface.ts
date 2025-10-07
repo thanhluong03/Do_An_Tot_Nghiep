@@ -7,7 +7,6 @@ export interface IOrderItem {
 import type { OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 export interface ICreateOrder {
     customer_id: number;
-    driver_id?: number;
     shipping_address?: string;
     payment_method?: PaymentMethod;
     status?: OrderStatus;

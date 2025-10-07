@@ -22,6 +22,15 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@app/cart_item": [
+        "libs/cart_item/src"
+      ],
+      "@app/category": [
+        "libs/category/src"
+      ],
+      "@app/category/*": [
+        "libs/category/src/*"
+      ],
       "@app/common": [
         "libs/common/src"
       ],
@@ -118,14 +127,17 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "@app/cart_item": [
-        "libs/cart_item/src"
+      "@app/import_product": [
+        "libs/import_product/src"
       ],
-      "@app/category": [
-        "libs/category/src"
+      "@app/import_product/*": [
+        "libs/import_product/src/*"
       ],
-      "@app/category/*": [
-        "libs/category/src/*"
+      "@app/paymenttransaction": [
+        "libs/paymenttransaction/src"
+      ],
+      "@app/paymenttransaction/*": [
+        "libs/paymenttransaction/src/*"
       ]
     }
   }

@@ -15,6 +15,7 @@ export class CreateDriverLocationTable1757434387070 implements MigrationInterfac
                         generationStrategy: 'increment',
                     },
                     { name: 'driver_id', type: 'int', isNullable: false },
+                    { name: 'order_id', type: 'int', isNullable: false },
                     { name: 'latitude', type: 'decimal', precision: 9, scale: 6, isNullable: true },
                     { name: 'longitude', type: 'decimal', precision: 9, scale: 6, isNullable: true },
                     { name: 'timestamp', type: 'timestamptz' },
@@ -29,6 +30,16 @@ export class CreateDriverLocationTable1757434387070 implements MigrationInterfac
             new TableForeignKey({
                 columnNames: ['driver_id'],
                 referencedTableName: 'users',
+                referencedColumnNames: ['id'],
+                onDelete: 'SET NULL',
+            }),
+        )
+
+        await queryRunner.createForeignKey(
+            'driver_locations',
+            new TableForeignKey({
+                columnNames: ['order_id'],
+                referencedTableName: 'orders',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),

@@ -87,6 +87,8 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
+      "^@app/cart_item(|/.*)$": "<rootDir>/libs/cart_item/src/$1",
+      "^@app/category(|/.*)$": "<rootDir>/libs/category/src/$1",
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/customer(|/.*)$": "<rootDir>/libs/customer/src/$1",
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
@@ -103,8 +105,8 @@
       "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1",
       "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1",
       "^@app/user(|/.*)$": "<rootDir>/libs/user/src/$1",
-      "^@app/cart_item(|/.*)$": "<rootDir>/libs/cart_item/src/$1",
-      "^@app/category(|/.*)$": "<rootDir>/libs/category/src/$1"
+      "^@app/import_product(|/.*)$": "<rootDir>/libs/import_product/src/$1",
+      "^@app/paymenttransaction(|/.*)$": "<rootDir>/libs/paymenttransaction/src/$1"
     }
   }
 }
