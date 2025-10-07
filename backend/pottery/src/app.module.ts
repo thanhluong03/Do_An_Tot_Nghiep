@@ -36,11 +36,13 @@ import { CategoryController } from './category/category.controller';
 import { CategoryModule } from '@app/category';
 import { PaymentTransactionController } from './paymenttransaction/paymenttransaction.controller';
 import { PaymenttransactionModule } from '../libs/paymenttransaction/src/paymenttransaction.module';
+import { DatabaseModule } from '../libs/database/src/database.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    DatabaseModule,
     ProductModule,
     SupplierModule,
     RoleModule,
