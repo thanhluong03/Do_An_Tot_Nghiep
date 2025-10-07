@@ -11,25 +11,49 @@ export class PaymentTransactionRepository {
     ) { }
 
     async create(data: Partial<PaymentTransactionEntity>): Promise<PaymentTransactionEntity> {
-        const entity = this.paymentTransactionRepo.create(data);
-        return this.paymentTransactionRepo.save(entity);
+        try {
+            const entity = this.paymentTransactionRepo.create(data);
+            const savedEntity = await this.paymentTransactionRepo.save(entity);
+            return savedEntity;
+        } catch (error) {
+            console.error('[PaymentTransactionRepository] Error creating transaction:', error);
+            throw error;
+        }
     }
 
     async findByGatewayTxnRef(gateway_txn_ref: string): Promise<PaymentTransactionEntity | null> {
-        return this.paymentTransactionRepo.findOne({ where: { gateway_txn_ref } });
+        try {
+            return await this.paymentTransactionRepo.findOne({
+                where: { gateway_txn_ref }
+            });
+        } catch (error) {
+            console.error('[PaymentTransactionRepository] Error finding by gateway_txn_ref:', error);
+            return null;
+        }
     }
+
     async findAll({ limit = 20, offset = 0 }: { limit?: number; offset?: number }) {
-        return this.paymentTransactionRepo.find({
-            skip: offset,
-            take: limit,
-            order: { created_at: 'DESC' },
-        });
+        try {
+            return await this.paymentTransactionRepo.find({
+                skip: offset,
+                take: limit,
+                order: { created_at: 'DESC' },
+            });
+        } catch (error) {
+            console.error('[PaymentTransactionRepository] Error finding all transactions:', error);
+            return [];
+        }
     }
 
     async findByOrderId(order_id: number) {
-        return this.paymentTransactionRepo.find({
-            where: { order_id },
-            order: { created_at: 'DESC' },
-        });
+        try {
+            return await this.paymentTransactionRepo.find({
+                where: { order_id },
+                order: { created_at: 'DESC' },
+            });
+        } catch (error) {
+            console.error('[PaymentTransactionRepository] Error finding by order_id:', error);
+            return [];
+        }
     }
 }
