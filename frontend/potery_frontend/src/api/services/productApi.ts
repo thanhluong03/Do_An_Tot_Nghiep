@@ -4,23 +4,23 @@ import axios from "axios";
 const API_URL = "http://localhost:3000/products";
 
 export interface ProductImage {
-  url?: string; // nếu backend trả link
-  image_data?: { data: number[] }; // nếu backend trả Buffer
+    url?: string; // nếu backend trả link
+    image_data?: { data: number[] }; // nếu backend trả Buffer
 }
 
 
 export interface Product {
-  id?: number;
-  name: string;
-  description: string;
-  price: number;
-  supplier_id: number;
-  category_id?: number;
-  images: ProductImage[];
-  main_image?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  category?: { id: number; name: string };
+    id?: number;
+    name: string;
+    description: string;
+    price: number;
+    supplier_id: number;
+    category_id?: number; // Trường này dùng để lọc
+    images: ProductImage[];
+    main_image?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    category?: { id: number; name: string }; // Trường này dùng để hiển thị tên
 }
 
 // Định nghĩa kiểu dữ liệu cho payload gửi lên (Không bao gồm ID, quantity và các trường meta)
@@ -43,16 +43,16 @@ export const deleteProduct = async (id: number): Promise<void> => {
 
 // Thêm sản phẩm (FormData)
 export const addProduct = async (formData: FormData): Promise<Product> => {
-  const res = await axios.post(`${API_URL}/createproduct`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return res.data;
+    const res = await axios.post(`${API_URL}/createproduct`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
 };
 
 // Cập nhật sản phẩm (FormData)
 export const updateProduct = async (id: number, formData: FormData): Promise<Product> => {
-  const res = await axios.put(`${API_URL}/updateproduct/${id}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return res.data;
+    const res = await axios.put(`${API_URL}/updateproduct/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
 };

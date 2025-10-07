@@ -10,16 +10,12 @@ interface ProductsTableProps {
 }
 
 // Hàm convert Buffer → Base64
-// Đây là hàm xử lý dữ liệu ảnh Buffer (thường từ database) thành chuỗi Base64 có thể hiển thị.
 const bufferToBase64 = (buffer: { data: number[] }): string | null => {
     try {
-        // Chuyển mảng byte thành chuỗi nhị phân
         const binary = new Uint8Array(buffer.data).reduce(
             (acc, byte) => acc + String.fromCharCode(byte),
             ""
         );
-        // Mã hóa chuỗi nhị phân thành Base64 và thêm prefix để hiển thị ảnh PNG
-        // Lưu ý: Hàm này dùng 'image/png'. Nếu ảnh gốc là JPEG, bạn có thể cần thay đổi 'image/png' thành 'image/jpeg'
         return `data:image/png;base64,${btoa(binary)}`;
     } catch (error) {
         console.error("Error converting buffer:", error);
@@ -87,12 +83,11 @@ export default function ProductsTable({
                                 // Nếu nó đã là một chuỗi Base64 thuần, thì chỉ cần gắn prefix
                                 else if (typeof imageData === 'string') {
                                     // Giả định là Base64 string và thêm prefix
-                                    // Chú ý: Nếu ảnh không phải PNG, hãy đổi 'image/png'
                                     mainImage = `data:image/png;base64,${imageData}`;
                                 }
                                 // Thêm console.error nếu image_data tồn tại nhưng không đúng định dạng
                                 if (!mainImage) {
-                                     console.error("Invalid image data format for product ID:", p.id, imageData);
+                                       console.error("Invalid image data format for product ID:", p.id, imageData);
                                 }
                             }
 
@@ -121,7 +116,7 @@ export default function ProductsTable({
                                     </td>
                                     <td className="p-3 border-b text-gray-800 font-medium">{p.name}</td>
                                     <td className="p-3 border-b text-gray-700">{p.price.toLocaleString()} ₫</td>
-                                    <td className="p-3 border-b text-gray-600">{getSupplierName(p.supplier_id)}</td>
+                                    <td className="p-3 border-b text-gray-600">{p.supplier_id ? getSupplierName(p.supplier_id) : 'N/A'}</td>
                                     <td className="p-3 border-b text-gray-600">{getCategoryName(p)}</td>
                                     <td className="p-3 border-b text-center space-x-2">
                                         <button
