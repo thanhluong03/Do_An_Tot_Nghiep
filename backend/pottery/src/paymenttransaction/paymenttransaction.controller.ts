@@ -1,4 +1,4 @@
-
+import { PaymentStatus } from '../../libs/database/src/entities/order.entity';
 import {
     Controller,
     Post,
@@ -18,6 +18,7 @@ import {
     ListPaymentTransactionRequestDto,
 } from './paymenttransaction.dto';
 import { PaymentTransactionRepository } from '../../libs/database/src/repositories/paymenttransaction.repository';
+import { OrderRepository } from '../../libs/database/src/repositories/order.repository';
 import * as crypto from 'crypto';
 
 @Controller('paymenttransaction')
@@ -26,6 +27,8 @@ export class PaymentTransactionController {
         private readonly paymentService: PaymenttransactionService,
         @Inject(PaymentTransactionRepository)
         private readonly paymentTransactionRepo: PaymentTransactionRepository,
+        @Inject(OrderRepository)
+        private readonly orderRepository: OrderRepository,
     ) { }
 
     @Post('vnpay')
@@ -122,6 +125,17 @@ export class PaymentTransactionController {
                 txn_time: new Date(),
                 raw_response_data: query,
             });
+
+            if (status === 'SUCCESS' && order_id) {
+                const order = await this.orderRepository.findById(order_id);
+                if (order) {
+                    const currentOrder = { ...order.current_order, payment_status: PaymentStatus.PAID };
+                    await this.orderRepository.update(order_id, {
+                        payment_status: PaymentStatus.PAID,
+                        current_order: currentOrder
+                    });
+                }
+            }
 
             return res.status(HttpStatus.OK).json({
                 message: 'Payment processed successfully',
