@@ -36,7 +36,7 @@ interface StatCardProps {
     iconType: 'sales' | 'orders' | 'customers' | 'products' | 'lowstock' | 'flashsale';
     colorClass: string;
     isLoading: boolean;
-    changeValue: string; // GIÁ TRỊ PHẢI LUÔN ỔN ĐỊNH
+    changeValue: string; // Đã fix lỗi Hydration bằng cách nhận giá trị thay đổi qua prop
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, iconType, colorClass, isLoading, changeValue }) => {
@@ -60,8 +60,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, iconType, colorClass,
             </div>
             <div className="mt-4 flex items-center">
                 <span className="text-sm font-semibold text-green-500">
-                    {/* BẮT BUỘC CHỈ DÙNG PROP ĐƯỢC TRUYỀN VÀO */}
-                    {changeValue} 
+                    {changeValue} {/* Dùng giá trị đã được tính sẵn từ hook */}
                 </span>
                 <span className="ml-2 text-xs text-gray-500">so với tháng trước</span>
             </div>
@@ -75,7 +74,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, iconType, colorClass,
 // ------------------------------------
 
 export default function DashboardPage() {
-    // Đã sửa lỗi ngẫu nhiên trong hook useDashboardStats
     const { stats, isLoading } = useDashboardStats();
     
     return (
@@ -85,7 +83,7 @@ export default function DashboardPage() {
 
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
                 
-                {/* 1. Doanh thu Thuần: Dùng giá trị ngẫu nhiên đã được tính sẵn từ hook */}
+                {/* Dùng stats.salesChange và stats.ordersChange từ hook */}
                 <StatCard 
                     title="Doanh thu Thuần" 
                     value={stats.totalSalesAmount} 
@@ -95,7 +93,6 @@ export default function DashboardPage() {
                     changeValue={stats.salesChange} 
                 />
                 
-                {/* 2. Tổng Đơn hàng: Dùng giá trị ngẫu nhiên đã được tính sẵn từ hook */}
                 <StatCard 
                     title="Tổng Đơn hàng" 
                     value={stats.totalOrders} 
@@ -105,7 +102,7 @@ export default function DashboardPage() {
                     changeValue={stats.ordersChange} 
                 />
                 
-                {/* 3. Đơn hàng mới: DÙNG CHUỖI CỐ ĐỊNH */}
+                {/* Các StatCard còn lại dùng giá trị cố định để minh họa */}
                 <StatCard 
                     title="Đơn hàng mới" 
                     value={stats.newOrders} 
@@ -115,7 +112,6 @@ export default function DashboardPage() {
                     changeValue={'+1.2%'} 
                 />
 
-                {/* 4. Tổng Sản phẩm: DÙNG CHUỖI CỐ ĐỊNH */}
                 <StatCard 
                     title="Tổng Sản phẩm" 
                     value={stats.totalProducts} 
@@ -125,7 +121,6 @@ export default function DashboardPage() {
                     changeValue={'+5.7%'}
                 />
                 
-                {/* 5. Tồn kho thấp: DÙNG CHUỖI CỐ ĐỊNH */}
                 <StatCard 
                     title="Tồn kho thấp" 
                     value={stats.lowStockItems} 
@@ -135,7 +130,6 @@ export default function DashboardPage() {
                     changeValue={'-3.1%'}
                 />
                 
-                {/* 6. Khách hàng: DÙNG CHUỖI CỐ ĐỊNH */}
                 <StatCard 
                     title="Khách hàng" 
                     value={stats.totalCustomers} 
