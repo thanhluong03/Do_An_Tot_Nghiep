@@ -20,8 +20,8 @@ import { ReviewController } from './review/review.controller';
 import { ReviewModule } from '@app/review';
 import { PromotionController } from './promotion/promotion.controller';
 import { PromotionModule } from '@app/promotion';
-import { FlashSaleController } from './flashsale/flashsale.controller';
-import { FlashSaleModule } from '@app/flashsale';
+import { VoucherController } from './voucher/voucher.controller';
+import { VoucherModule } from '@app/voucher';
 import { CustomerController } from './customer/customer.controller';
 import { CustomerModule } from '@app/customer';
 import { OrderController } from './order/order.controller';
@@ -53,7 +53,7 @@ import { ImportProductModule } from '@app/import_product';
     UserModule,
     ReviewModule,
     PromotionModule,
-    FlashSaleModule,
+    VoucherModule,
     CustomerModule,
     OrderModule,
     LoginModule,
@@ -66,7 +66,7 @@ import { ImportProductModule } from '@app/import_product';
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
+    UserController, ReviewController, PromotionController, VoucherController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
     PaymentTransactionController, ImportProductController
   ],
   providers: [AppService],
