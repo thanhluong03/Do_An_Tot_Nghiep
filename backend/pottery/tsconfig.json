@@ -49,11 +49,11 @@
       "@app/database/*": [
         "libs/database/src/*"
       ],
-      "@app/flashsale": [
-        "libs/flashsale/src"
+      "@app/voucher": [
+        "libs/voucher/src"
       ],
-      "@app/flashsale/*": [
-        "libs/flashsale/src/*"
+      "@app/voucher/*": [
+        "libs/voucher/src/*"
       ],
       "@app/inventory": [
         "libs/inventory/src"

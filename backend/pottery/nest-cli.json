@@ -52,13 +52,13 @@
         "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     },
-    "flashsale": {
+    "voucher": {
       "type": "library",
-      "root": "libs/flashsale",
+      "root": "libs/voucher",
       "entryFile": "index",
-      "sourceRoot": "libs/flashsale/src",
+      "sourceRoot": "libs/voucher/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/flashsale/tsconfig.lib.json"
+        "tsConfigPath": "libs/voucher/tsconfig.lib.json"
       }
     },
     "import_product": {

@@ -1,33 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { FlashSaleCustomerEntity } from '../entities/flash_sale_customer.entity';
+import { VoucherCustomerEntity } from '../entities/voucher_customer.entity';
 
 @Injectable()
-export class FlashSaleCustomerRepository {
+export class VoucherCustomerRepository {
     constructor(
-        @InjectRepository(FlashSaleCustomerEntity)
-        private readonly repository: Repository<FlashSaleCustomerEntity>,
+        @InjectRepository(VoucherCustomerEntity)
+        private readonly repository: Repository<VoucherCustomerEntity>,
     ) { }
 
-    async create(data: Partial<FlashSaleCustomerEntity>): Promise<FlashSaleCustomerEntity> {
+    async create(data: Partial<VoucherCustomerEntity>): Promise<VoucherCustomerEntity> {
         const entity = this.repository.create(data);
         return await this.repository.save(entity);
     }
 
-    async findByUserAndFlashSale(customerId: number, flashSaleId: number): Promise<FlashSaleCustomerEntity | null> {
+    async findByUserAndVoucher(customerId: number, voucherId: number): Promise<VoucherCustomerEntity | null> {
         return await this.repository.findOne({
             where: {
                 customer_id: customerId,
-                flash_sale_id: flashSaleId,
+                voucher_id: voucherId,
             },
         });
     }
 
-    async findById(id: number): Promise<FlashSaleCustomerEntity | null> {
+    async findById(id: number): Promise<VoucherCustomerEntity | null> {
         return await this.repository.findOne({
             where: { id },
-            relations: ['flash_sale', 'user'],
+            relations: ['voucher', 'customer'],
         });
     }
 
@@ -35,18 +35,18 @@ export class FlashSaleCustomerRepository {
         page?: number;
         size?: number;
         customerId?: number;
-        flashSaleId?: number;
-    }): Promise<FlashSaleCustomerEntity[]> {
+        voucherId?: number;
+    }): Promise<VoucherCustomerEntity[]> {
         const query = this.repository.createQueryBuilder('fsp')
-            .leftJoinAndSelect('fsp.flash_sale', 'fs')
+            .leftJoinAndSelect('fsp.voucher', 'fs')
             .leftJoinAndSelect('fsp.customer', 'c');
 
         if (params.customerId) {
             query.andWhere('fsp.customer_id = :customerId', { customerId: params.customerId });
         }
 
-        if (params.flashSaleId) {
-            query.andWhere('fsp.flash_sale_id = :flashSaleId', { flashSaleId: params.flashSaleId });
+        if (params.voucherId) {
+            query.andWhere('fsp.voucher_id = :voucherId', { voucherId: params.voucherId });
         }
 
         if (params.page && params.size) {
@@ -56,7 +56,7 @@ export class FlashSaleCustomerRepository {
         return await query.getMany();
     }
 
-    async update(id: number, data: Partial<FlashSaleCustomerEntity>): Promise<void> {
+    async update(id: number, data: Partial<VoucherCustomerEntity>): Promise<void> {
         await this.repository.update(id, data);
     }
 

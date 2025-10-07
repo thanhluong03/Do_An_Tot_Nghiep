@@ -1,24 +1,26 @@
-export class ICreateFlashSale {
+export class ICreateVoucher {
     name?: string;
-    start_time?: string;
-    end_time?: string;
+    start_time?: Date;
+    end_time?: Date;
     is_active?: boolean;
     effective_period_begins?: Date;
     effective_period_ends?: Date;
-    flash_sale_price?: number;
+    voucher_percentage?: number;
     quantity?: number;
+    order_conditions?: number;
 }
-export interface IUpdateFlashSale {
+export interface IUpdateVoucher {
     name?: string;
-    start_time?: string;
-    end_time?: string;
+    start_time?: Date;
+    end_time?: Date;
     is_active?: boolean;
     effective_period_begins?: Date;
     effective_period_ends?: Date;
-    flash_sale_price?: number;
+    voucher_percentage?: number;
     quantity?: number;
+    order_conditions?: number;
 }
-export interface IListFlashSale {
+export interface IListVoucher {
     page?: number
     size?: number
     key?: string

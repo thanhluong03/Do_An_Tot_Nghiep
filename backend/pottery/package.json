@@ -92,7 +92,7 @@
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@app/customer(|/.*)$": "<rootDir>/libs/customer/src/$1",
       "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
-      "^@app/flashsale(|/.*)$": "<rootDir>/libs/flashsale/src/$1",
+      "^@app/voucher(|/.*)$": "<rootDir>/libs/voucher/src/$1",
       "^@app/inventory(|/.*)$": "<rootDir>/libs/inventory/src/$1",
       "^@app/login(|/.*)$": "<rootDir>/libs/login/src/$1",
       "^@app/news(|/.*)$": "<rootDir>/libs/news/src/$1",

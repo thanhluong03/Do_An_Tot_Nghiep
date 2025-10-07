@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
 
-export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInterface {
+export class CreateVoucherCustomerTable1757434387072 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.createTable(
             new Table({
-                name: 'flash_sale_customer',
+                name: 'voucher_customer',
                 columns: [
                     {
                         name: 'id',
@@ -14,7 +14,7 @@ export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInter
                         isGenerated: true,
                         generationStrategy: 'increment',
                     },
-                    { name: 'flash_sale_id', type: 'int', isNullable: false },
+                    { name: 'voucher_id', type: 'int', isNullable: false },
                     { name: 'customer_id', type: 'int', isNullable: false },
                     { name: 'product_id', type: 'int', isNullable: false },
                     { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
@@ -24,17 +24,17 @@ export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInter
             }),
         )
         await queryRunner.createForeignKey(
-            'flash_sale_customer',
+            'voucher_customer',
             new TableForeignKey({
-                columnNames: ['flash_sale_id'],
-                referencedTableName: 'flash_sales',
+                columnNames: ['voucher_id'],
+                referencedTableName: 'vouchers',
                 referencedColumnNames: ['id'],
                 onDelete: 'SET NULL',
             }),
         )
 
         await queryRunner.createForeignKey(
-            'flash_sale_customer',
+            'voucher_customer',
             new TableForeignKey({
                 columnNames: ['customer_id'],
                 referencedTableName: 'customers',
@@ -44,7 +44,7 @@ export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInter
         )
 
         await queryRunner.createForeignKey(
-            'flash_sale_customer',
+            'voucher_customer',
             new TableForeignKey({
                 columnNames: ['product_id'],
                 referencedTableName: 'products',
@@ -55,6 +55,6 @@ export class CreateFlashSaleCustomerTable1757434387072 implements MigrationInter
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('flash_sale_customer')
+        await queryRunner.dropTable('voucher_customer')
     }
 }
