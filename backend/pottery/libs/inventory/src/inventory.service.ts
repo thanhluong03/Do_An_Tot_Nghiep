@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProductRepository, StoreRepository, InventoryRepository } from '@app/database';
-import { CreateInventoryInput, UpdateInventoryInput, ListInventoryInput } from './inventory.interface';
+import { CreateInventoryInput, UpdateInventoryInput, ListInventoryInput, TransferInventoryInput, DistributeInventoryInput, CollectInventoryInput } from './inventory.interface';
 
 @Injectable()
 export class InventoryService {
@@ -142,5 +142,196 @@ export class InventoryService {
             updated_at: inv.updated_at,
         }));
         return { data, total, page, size };
+    }
+
+    async transferInventory(data: TransferInventoryInput) {
+        const product = await this.productRepository.findById(data.product_id);
+        if (!product) {
+            throw new NotFoundException('Sản phẩm không tồn tại');
+        }
+
+        let sourceStoreIds: number[] = [];
+        if (data.from_store_id === 'all') {
+            const inventories = await this.inventoryRepository.findAll();
+            sourceStoreIds = inventories
+                .filter(inv => inv.product_id === data.product_id && inv.quantity_stock > 0)
+                .map(inv => inv.store_id);
+        } else {
+            sourceStoreIds = [data.from_store_id];
+        }
+
+        let targetStoreIds: number[] = [];
+        if (data.to_store_id === 'all') {
+            const stores = await this.storeRepository.findAll({ size: 1000, page: 1 });
+            targetStoreIds = stores.map(s => s.id);
+        } else if (Array.isArray(data.to_store_id)) {
+            targetStoreIds = data.to_store_id;
+        } else {
+            targetStoreIds = [data.to_store_id];
+        }
+
+        let totalAvailable = 0;
+        const sourceInventories: any[] = [];
+        for (const storeId of sourceStoreIds) {
+            const inventory = await this.inventoryRepository.findByProductAndStore(data.product_id, storeId);
+            if (inventory && inventory.quantity_stock > 0) {
+                sourceInventories.push(inventory);
+                totalAvailable += inventory.quantity_stock;
+            }
+        }
+
+        const totalRequired = data.quantity * targetStoreIds.length;
+        if (totalAvailable < totalRequired) {
+            throw new NotFoundException(
+                `Không đủ số lượng để chuyển. Có sẵn: ${totalAvailable}, cần: ${totalRequired}`
+            );
+        }
+
+        let remainingQuantity = data.quantity;
+        const quantityPerTarget = Math.floor(data.quantity / targetStoreIds.length);
+
+        for (const targetStoreId of targetStoreIds) {
+            let quantityToTransfer = quantityPerTarget;
+            if (targetStoreId === targetStoreIds[targetStoreIds.length - 1]) {
+                quantityToTransfer = remainingQuantity;
+            }
+
+            let needToTransfer = quantityToTransfer;
+            for (const sourceInv of sourceInventories) {
+                if (needToTransfer <= 0) break;
+
+                const canTake = Math.min(sourceInv.quantity_stock, needToTransfer);
+                sourceInv.quantity_stock -= canTake;
+                needToTransfer -= canTake;
+
+                await this.inventoryRepository.create(sourceInv);
+            }
+
+            const targetInventory = await this.inventoryRepository.findByProductAndStore(
+                data.product_id,
+                targetStoreId
+            );
+            if (targetInventory) {
+                targetInventory.quantity_stock += quantityToTransfer;
+                await this.inventoryRepository.create(targetInventory);
+            } else {
+                await this.inventoryRepository.create({
+                    product_id: data.product_id,
+                    store_id: targetStoreId,
+                    quantity_stock: quantityToTransfer,
+                });
+            }
+
+            remainingQuantity -= quantityToTransfer;
+        }
+
+        return { success: true, message: 'Chuyển hàng thành công' };
+    }
+
+    async distributeInventory(data: DistributeInventoryInput) {
+        const product = await this.productRepository.findById(data.product_id);
+        if (!product) {
+            throw new NotFoundException('Sản phẩm không tồn tại');
+        }
+
+        const sourceInventory = await this.inventoryRepository.findByProductAndStore(
+            data.product_id,
+            data.from_store_id
+        );
+        if (!sourceInventory) {
+            throw new NotFoundException('Không tìm thấy sản phẩm trong cửa hàng nguồn');
+        }
+
+        const totalRequired = data.distributions.reduce((sum, dist) => sum + dist.quantity, 0);
+        if (sourceInventory.quantity_stock < totalRequired) {
+            throw new NotFoundException(
+                `Không đủ số lượng. Có: ${sourceInventory.quantity_stock}, cần: ${totalRequired}`
+            );
+        }
+
+        for (const distribution of data.distributions) {
+            sourceInventory.quantity_stock -= distribution.quantity;
+            const targetInventory = await this.inventoryRepository.findByProductAndStore(
+                data.product_id,
+                distribution.to_store_id
+            );
+            if (targetInventory) {
+                targetInventory.quantity_stock += distribution.quantity;
+                await this.inventoryRepository.create(targetInventory);
+            } else {
+                await this.inventoryRepository.create({
+                    product_id: data.product_id,
+                    store_id: distribution.to_store_id,
+                    quantity_stock: distribution.quantity,
+                });
+            }
+        }
+
+        await this.inventoryRepository.create(sourceInventory);
+        return { success: true, message: 'Phân phối thành công' };
+    }
+
+    async collectInventory(data: CollectInventoryInput) {
+        const product = await this.productRepository.findById(data.product_id);
+        if (!product) {
+            throw new NotFoundException('Sản phẩm không tồn tại');
+        }
+
+        let sourceStoreIds: number[] = [];
+        if (data.from_store_ids === 'all') {
+            const inventories = await this.inventoryRepository.findAll();
+            sourceStoreIds = inventories
+                .filter(inv => inv.product_id === data.product_id && inv.quantity_stock > 0)
+                .map(inv => inv.store_id);
+        } else {
+            sourceStoreIds = data.from_store_ids;
+        }
+
+        let totalCollected = 0;
+        const sourceInventories: any[] = [];
+
+        for (const storeId of sourceStoreIds) {
+            if (storeId === data.to_store_id) continue;
+
+            const inventory = await this.inventoryRepository.findByProductAndStore(data.product_id, storeId);
+            if (inventory && inventory.quantity_stock > 0) {
+                const quantityToTake = data.quantity_per_store
+                    ? Math.min(data.quantity_per_store, inventory.quantity_stock)
+                    : inventory.quantity_stock;
+
+                inventory.quantity_stock -= quantityToTake;
+                totalCollected += quantityToTake;
+                sourceInventories.push(inventory);
+            }
+        }
+
+        if (totalCollected === 0) {
+            throw new NotFoundException('Không có hàng nào để thu thập');
+        }
+
+        for (const inv of sourceInventories) {
+            await this.inventoryRepository.create(inv);
+        }
+
+        const targetInventory = await this.inventoryRepository.findByProductAndStore(
+            data.product_id,
+            data.to_store_id
+        );
+        if (targetInventory) {
+            targetInventory.quantity_stock += totalCollected;
+            await this.inventoryRepository.create(targetInventory);
+        } else {
+            await this.inventoryRepository.create({
+                product_id: data.product_id,
+                store_id: data.to_store_id,
+                quantity_stock: totalCollected,
+            });
+        }
+
+        return {
+            success: true,
+            message: `Thu thập thành công ${totalCollected} sản phẩm từ ${sourceInventories.length} cửa hàng`,
+            collected_quantity: totalCollected
+        };
     }
 }

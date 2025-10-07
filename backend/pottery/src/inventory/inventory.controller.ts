@@ -4,6 +4,9 @@ import {
     CreateInventoryDto,
     UpdateInventoryDto,
     ListInventoryDto,
+    TransferInventoryDto,
+    DistributeInventoryDto,
+    CollectInventoryDto,
 } from './inventory.dto';
 
 @Controller('inventory')
@@ -39,5 +42,32 @@ export class InventoryController {
             size: query.size ?? 10,
         };
         return await this.inventoryService.list(input);
+    }
+
+    @Post('transfer')
+    async transfer(@Body() dto: TransferInventoryDto) {
+        return await this.inventoryService.transferInventory({
+            product_id: dto.product_id,
+            from_store_id: dto.from_store_id === 'all' ? 'all' : Number(dto.from_store_id),
+            to_store_id: dto.to_store_id === 'all' ? 'all' :
+                Array.isArray(dto.to_store_id) ? dto.to_store_id.map(id => Number(id)) : Number(dto.to_store_id),
+            quantity: dto.quantity,
+        });
+    }
+
+    @Post('distribute')
+    async distribute(@Body() dto: DistributeInventoryDto) {
+        return await this.inventoryService.distributeInventory(dto);
+    }
+
+    @Post('collect')
+    async collect(@Body() dto: CollectInventoryDto) {
+        return await this.inventoryService.collectInventory({
+            product_id: dto.product_id,
+            from_store_ids: dto.from_store_ids === 'all' ? 'all' :
+                Array.isArray(dto.from_store_ids) ? dto.from_store_ids : [Number(dto.from_store_ids)],
+            to_store_id: dto.to_store_id,
+            quantity_per_store: dto.quantity_per_store,
+        });
     }
 }
