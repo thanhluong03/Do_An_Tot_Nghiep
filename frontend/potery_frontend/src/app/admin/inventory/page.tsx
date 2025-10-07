@@ -85,7 +85,7 @@ export default function InventoryPage() {
                 size: pageSize
             });
 
-            const inventoryList = res.data || res.items || [];
+            const inventoryList = res.data || [];
             setInventories(Array.isArray(inventoryList) ? inventoryList : []);
             setTotalItems(res.total || inventoryList.length);
             setCurrentPage(res.page || currentPage);
@@ -236,8 +236,7 @@ export default function InventoryPage() {
                         createDtos.push({
                             product_id: pId,
                             store_id: sId,
-                            quantity_stock: form.quantity_stock,
-                            quantity_sold: 0,
+                            quantity_stock: form.quantity_stock
                         });
                     }
                     if (hasDuplicate) return;
