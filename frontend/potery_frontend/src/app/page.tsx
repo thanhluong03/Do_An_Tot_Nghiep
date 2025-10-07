@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider } from '../contexts';
 import { useCart } from '../contexts/CartContext';
 import { BaseLayout } from '../layouts';
 import { HeroSection } from '../components/feature/HeroSection';
@@ -15,6 +14,8 @@ import { CategorySection } from '../components/feature/CategorySection';
 import { ValuePropositionSection, TestimonialsSection, JournalSection } from '../components/feature/HomeExtraSections';
 import { useFeaturedProducts, useFlashSale, useCategories } from '../hooks/useProducts';
 import { Product, ProductCategory } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { cartApi } from '../api/modules/cart';
 
 export default function HomePage() {
   const router = useRouter();
@@ -22,9 +23,21 @@ export default function HomePage() {
   const { flashSales, loading: flashSaleLoading, error: flashSaleError } = useFlashSale();
   const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
   const { addItem } = useCart();
+  const { user, isAuthenticated } = useAuth();
+  const [addingId, setAddingId] = React.useState<string | null>(null);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = async (product: Product) => {
+    // Local add as fallback
     addItem(product, 1);
+    // Server add when logged in
+    if (isAuthenticated && user && user.id) {
+      try {
+        setAddingId(product.id);
+        await cartApi.add({ customer_id: user.id as string, product_id: product.id, quantity: 1 });
+      } finally {
+        setAddingId(null);
+      }
+    }
   };
 
   const handleViewDetails = (product: Product) => {
@@ -37,8 +50,7 @@ export default function HomePage() {
   };
 
   return (
-    <AuthProvider>
-      <BaseLayout>
+    <BaseLayout>
           {/* Hero Section */}
           <HeroSection />
 
@@ -116,6 +128,5 @@ export default function HomePage() {
           {/* Newsletter Section */}
            
       </BaseLayout>
-    </AuthProvider>
   );
 }

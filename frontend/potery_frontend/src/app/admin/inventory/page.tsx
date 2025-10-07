@@ -236,7 +236,7 @@ export default function InventoryPage() {
                         createDtos.push({
                             product_id: pId,
                             store_id: sId,
-                            quantity_stock: form.quantity_stock
+                            quantity_stock: form.quantity_stock,
                         });
                     }
                     if (hasDuplicate) return;
