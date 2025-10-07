@@ -35,7 +35,6 @@ export class ProductController {
             description: createProductDto.description,
             price: createProductDto.price,
             category_id: createProductDto.category_id,
-            supplier_id: createProductDto.supplier_id,
         };
         if (files && files.length > 0) {
             console.log('Processing', files.length, 'files');

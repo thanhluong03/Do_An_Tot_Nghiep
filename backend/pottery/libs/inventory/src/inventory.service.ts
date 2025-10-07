@@ -30,6 +30,11 @@ export class InventoryService {
             storeIds = [Number(data.store_id)];
         }
         for (const pid of productIds) {
+            let totalQuantity = storeIds.length * data.quantity_stock;
+            const product = await this.productRepository.findById(pid);
+            if (product && Number(product.quantity) < totalQuantity) {
+                throw new NotFoundException(`Số lượng sản phẩm không đủ để chia cho các cửa hàng. Sản phẩm còn: ${product.quantity}, yêu cầu chia: ${totalQuantity}`);
+            }
             for (const sid of storeIds) {
                 const existed = await this.inventoryRepository.findByProductAndStore(
                     pid,
@@ -46,6 +51,10 @@ export class InventoryService {
                     });
                 }
             }
+            if (product) {
+                product.quantity = Number(product.quantity) - totalQuantity;
+                await this.productRepository.update(pid, { quantity: product.quantity });
+            }
         }
         const { data: allInventories } = await this.list({ page: 1, size: 1000 });
         return {
@@ -61,7 +70,14 @@ export class InventoryService {
         if (!inventory) {
             throw new NotFoundException('Inventory not found');
         }
-        Object.assign(inventory, data);
+        const oldQuantity = inventory.quantity_stock || 0;
+        const newQuantity = typeof data.quantity_stock === 'number' ? data.quantity_stock : 0;
+        inventory.quantity_stock = newQuantity;
+        const product = await this.productRepository.findById(inventory.product_id);
+        if (product) {
+            product.quantity = Number(product.quantity) + oldQuantity - newQuantity;
+            await this.productRepository.update(product.id, { quantity: product.quantity });
+        }
         return this.inventoryRepository.create(inventory);
     }
 
@@ -69,6 +85,11 @@ export class InventoryService {
         const inventory = await this.inventoryRepository.findById(id);
         if (!inventory) {
             throw new NotFoundException('Inventory not found');
+        }
+        const product = await this.productRepository.findById(inventory.product_id);
+        if (product) {
+            product.quantity = Number(product.quantity) + (inventory.quantity_stock || 0);
+            await this.productRepository.update(product.id, { quantity: product.quantity });
         }
         await this.inventoryRepository.softDelete(id);
         return { deleted: true };

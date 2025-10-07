@@ -37,6 +37,8 @@ import { CategoryModule } from '@app/category';
 import { PaymentTransactionController } from './paymenttransaction/paymenttransaction.controller';
 import { PaymenttransactionModule } from '../libs/paymenttransaction/src/paymenttransaction.module';
 import { DatabaseModule } from '../libs/database/src/database.module';
+import { ImportProductController } from './import_product/import_product.controller';
+import { ImportProductModule } from '@app/import_product';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -60,11 +62,12 @@ import { DatabaseModule } from '../libs/database/src/database.module';
     CartItemModule,
     CategoryModule,
     PaymenttransactionModule,
+    ImportProductModule,
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
     UserController, ReviewController, PromotionController, FlashSaleController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
-    PaymentTransactionController
+    PaymentTransactionController, ImportProductController
   ],
   providers: [AppService],
 })

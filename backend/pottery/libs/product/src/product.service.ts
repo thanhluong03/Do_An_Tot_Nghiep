@@ -17,7 +17,6 @@ export class ProductService {
     try {
       console.log('Creating product with data:', {
         name: data.name,
-        supplier_id: data.supplier_id,
         imagesCount: data.images?.length || 0
       });
 
@@ -25,8 +24,8 @@ export class ProductService {
         name: data.name,
         description: data.description,
         price: data.price,
+        quantity: 0,
         category_id: data.category_id,
-        supplier_id: data.supplier_id,
       });
 
       console.log('Product created with ID:', product.id);
@@ -105,7 +104,6 @@ export class ProductService {
       description: data.description,
       price: data.price,
       category_id: data.category_id,
-      supplier_id: data.supplier_id,
     } as Partial<ProductEntity>;
 
     await this.productRepository.update(id, product);

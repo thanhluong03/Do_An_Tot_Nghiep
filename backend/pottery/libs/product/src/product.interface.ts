@@ -6,7 +6,6 @@ export class ICreateProduct {
   description?: string
   price?: number
   category_id?: number
-  supplier_id?: number
   images?: IProductImage[]
 }
 export interface IUpdateProduct {
@@ -14,7 +13,6 @@ export interface IUpdateProduct {
   description?: string
   price?: number
   category_id?: number
-  supplier_id?: number
   images?: IProductImage[]
 }
 export interface IListProduct {
