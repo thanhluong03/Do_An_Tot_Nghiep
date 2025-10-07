@@ -61,6 +61,15 @@
         "tsConfigPath": "libs/flashsale/tsconfig.lib.json"
       }
     },
+    "import_product": {
+      "type": "library",
+      "root": "libs/import_product",
+      "entryFile": "index",
+      "sourceRoot": "libs/import_product/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/import_product/tsconfig.lib.json"
+      }
+    },
     "inventory": {
       "type": "library",
       "root": "libs/inventory",

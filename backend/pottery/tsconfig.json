@@ -127,10 +127,16 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "y/paymenttransaction": [
+      "@app/import_product": [
+        "libs/import_product/src"
+      ],
+      "@app/import_product/*": [
+        "libs/import_product/src/*"
+      ],
+      "@app/paymenttransaction": [
         "libs/paymenttransaction/src"
       ],
-      "y/paymenttransaction/*": [
+      "@app/paymenttransaction/*": [
         "libs/paymenttransaction/src/*"
       ]
     }

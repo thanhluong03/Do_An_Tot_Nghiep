@@ -17,3 +17,4 @@ export * from './news.repository';
 export * from './cart_item.repository';
 export * from './category.repository';
 export * from './paymenttransaction.repository';
+export * from './import_product.repository';
