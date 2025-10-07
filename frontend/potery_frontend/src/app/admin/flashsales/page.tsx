@@ -6,15 +6,31 @@ import {
     updateFlashSale,
     deleteFlashSale,
     FlashSale,
-} from "@/api/services/flashsaleService"; // Đảm bảo đường dẫn đúng
+} from "@/api/services/flashsaleService"; 
 
 const initialFormState: FlashSale = {
     name: "",
     flash_sale_price: 0,
     quantity: 0,
-    start_time: "", // Dùng cho input datetime-local
-    end_time: "", // Dùng cho input datetime-local
+    start_time: "", 
+    end_time: "", 
     is_active: false,
+};
+
+const toDatetimeLocal = (dateIsoString?: string, timeHmsString?: string) => {
+    if (!dateIsoString) return "";
+    const datePart = dateIsoString.split("T")[0]; 
+    
+    let timePart: string;
+    if (timeHmsString && timeHmsString.length >= 5) {
+        timePart = timeHmsString.substring(0, 5); 
+    } else {
+        const isoTimePart = dateIsoString.split("T")[1];
+        timePart = isoTimePart ? isoTimePart.substring(0, 5) : "00:00";
+    }
+
+    const datetimeLocalString = `${datePart}T${timePart}`;
+    return datetimeLocalString;
 };
 
 export default function FlashSalePage() {
@@ -22,31 +38,28 @@ export default function FlashSalePage() {
     const [form, setForm] = useState<FlashSale>(initialFormState);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(5);
 
-    // ================== LOAD DỮ LIỆU ==================
     useEffect(() => {
         fetchFlashSales();
     }, []);
 
     const fetchFlashSales = async () => {
         try {
-            const data = await getFlashSales();
+            const data = await getFlashSales(); 
             setFlashSales(data);
         } catch (error) {
             console.error("Lỗi tải Flash Sale:", error);
         }
     };
 
-    // ================== XỬ LÝ FORM ==================
-
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
         const target = e.target as HTMLInputElement;
         const { name, value, type } = target;
-
         const processedValue = (name === 'flash_sale_price' || name === 'quantity')
             ? Number(value)
             : value;
@@ -63,8 +76,8 @@ export default function FlashSalePage() {
         if (!form.name?.trim()) newErrors.name = "Tên Flash Sale không được bỏ trống";
         if (!form.flash_sale_price || form.flash_sale_price <= 0)
             newErrors.flash_sale_price = "Giá phải lớn hơn 0";
-        if (form.quantity === undefined || form.quantity < 0)
-            newErrors.quantity = "Số lượng không hợp lệ";
+        if (form.quantity === undefined || form.quantity <= 0) 
+            newErrors.quantity = "Số lượng phải lớn hơn 0";
         if (!form.start_time) newErrors.start_time = "Thời gian bắt đầu không được bỏ trống";
         if (!form.end_time) newErrors.end_time = "Thời gian kết thúc không được bỏ trống";
         return newErrors;
@@ -79,13 +92,11 @@ export default function FlashSalePage() {
 
         try {
             if (editingId) {
-                const { id, created_at, updated_at, ...updateDto } = form;
-                // Hàm updateFlashSale đã được viết trong service để xử lý tách 4 trường
+                const { id, ...updateDto } = form;
                 await updateFlashSale(editingId, updateDto);
                 alert(`Cập nhật Flash Sale ID ${editingId} thành công!`);
                 setEditingId(null);
             } else {
-                // Hàm addFlashSale đã được viết trong service để xử lý tách 4 trường
                 await addFlashSale(form as FlashSale);
                 alert("Thêm Flash Sale mới thành công!");
             }
@@ -93,45 +104,20 @@ export default function FlashSalePage() {
             setForm(initialFormState);
             setErrors({});
             await fetchFlashSales(); 
-        } catch (error: any) {
-            const errorMsg = error.message || "Có lỗi xảy ra khi thực hiện thao tác!";
+        } catch (error: unknown) {
+            const errorMsg =
+                typeof error === "object" && error !== null && "message" in error
+                    ? (error as { message?: string }).message || "Có lỗi xảy ra khi thực hiện thao tác!"
+                    : "Có lỗi xảy ra khi thực hiện thao tác!";
             console.error("Lỗi CRUD:", error);
             alert(errorMsg);
-        }
-    };
-
-    /**
-     * Chuyển đổi Ngày ISO (effective_period_begins) + Giờ (start_time: HH:MM:SS) 
-     * thành chuỗi datetime-local (YYYY-MM-DDTHH:MM) để điền vào input form.
-     */
-    const toDatetimeLocal = (dateIsoString?: string, timeHmsString?: string) => {
-        if (!dateIsoString) return "";
-        
-        // 1. Lấy phần ngày YYYY-MM-DD từ effective_period_begins/ends
-        const datePart = dateIsoString.split("T")[0]; 
-        
-        // 2. Lấy phần giờ HH:MM (loại bỏ :SS) từ start_time/end_time
-        const timePart = timeHmsString?.substring(0, 5) || "00:00"; 
-
-        const datetimeLocalString = `${datePart}T${timePart}`;
-        
-        try {
-            const date = new Date(datetimeLocalString);
-            if (isNaN(date.getTime())) return datetimeLocalString; 
-            
-            // Điều chỉnh múi giờ địa phương cho input datetime-local
-            return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
-                .toISOString()
-                .slice(0, 16);
-        } catch {
-            return datetimeLocalString;
         }
     };
 
     const handleEdit = (item: FlashSale) => {
         setForm({
             ...item,
-            // Ghép Ngày (effective_period_begins) và Giờ (start_time) để điền vào input
+            // Sử dụng toDatetimeLocal để chuyển đổi 4 trường thành 2 trường datetime-local
             start_time: toDatetimeLocal(item.effective_period_begins, item.start_time),
             end_time: toDatetimeLocal(item.effective_period_ends, item.end_time),
         });
@@ -156,20 +142,17 @@ export default function FlashSalePage() {
         }
     };
 
-    // ================== PHÂN TRANG ==================
     const totalPages = Math.ceil(flashSales.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const currentItems = flashSales.slice(startIndex, startIndex + pageSize);
 
-    // ================== RENDER ==================
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">
                     Quản lý Flash Sale
                 </h2>
-                
-                {/* Form Thêm/Sửa */}
+            
                 <div
                     className={`border p-6 rounded-lg mb-8 ${
                         editingId ? "border-yellow-400" : "border-blue-400"
@@ -182,10 +165,7 @@ export default function FlashSalePage() {
                     </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        
-                        {/* CỘT TRÁI (Tên, Giá, Ngày BĐ) */}
                         <div className="md:col-span-1 space-y-4">
-                            {/* Tên Flash Sale */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Tên Flash Sale
@@ -196,23 +176,24 @@ export default function FlashSalePage() {
                                     onChange={handleChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                     placeholder="Nhập tên Flash Sale"
+                                    required
                                 />
                                 {errors.name && (
                                     <p className="text-red-500 text-xs mt-1">{errors.name}</p>
                                 )}
                             </div>
-
-                            {/* Giá Flash Sale */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Giá Flash Sale
                                 </label>
                                 <input
+                                    title="Giá Flash Sale phải lớn hơn 0"
                                     name="flash_sale_price"
                                     type="number"
                                     value={form.flash_sale_price || ""}
                                     onChange={handleChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                    required
                                 />
                                 {errors.flash_sale_price && (
                                     <p className="text-red-500 text-xs mt-1">
@@ -220,55 +201,56 @@ export default function FlashSalePage() {
                                     </p>
                                 )}
                             </div>
-
-                             {/* Ngày bắt đầu */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Ngày và Giờ bắt đầu
                                 </label>
                                 <input
+                                    title="Thời gian bắt đầu phải trước thời gian kết thúc"
                                     name="start_time"
                                     type="datetime-local"
                                     value={form.start_time || ""}
                                     onChange={handleChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                    required 
                                 />
                                 {errors.start_time && (
                                     <p className="text-red-500 text-xs mt-1">{errors.start_time}</p>
                                 )}
                             </div>
                         </div>
-
-                        {/* CỘT PHẢI (Số lượng, Kích hoạt) */}
                         <div className="md:col-span-1 space-y-4">
-                             {/* Số lượng */}
                             <div> 
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Số lượng
                                 </label>
                                 <input
+                                    title="
+                                    Số lượng sản phẩm trong Flash Sale phải lớn hơn 0"
                                     name="quantity"
                                     type="number"
                                     value={form.quantity || ""}
                                     onChange={handleChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                    required 
                                 />
                                 {errors.quantity && (
                                     <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>
                                 )}
                             </div>
-                           
-                            {/* Ngày kết thúc */}
+                            
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Ngày và Giờ kết thúc
                                 </label>
-                                <input
+                                <input 
+                                    title="Thời gian kết thúc phải sau thời gian bắt đầu"
                                     name="end_time"
                                     type="datetime-local"
                                     value={form.end_time || ""}
                                     onChange={handleChange}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                    required 
                                 />
                                 {errors.end_time && (
                                     <p className="text-red-500 text-xs mt-1">{errors.end_time}</p>
@@ -345,21 +327,21 @@ export default function FlashSalePage() {
                                             <span className="text-gray-500">Ngừng</span>
                                         )}
                                     </td>
-                                    {/* 💡 HIỂN THỊ ĐẦY ĐỦ 4 TRƯỜNG CHO NGƯỜI DÙNG DỄ HIỂU */}
+                                    {/* HIỂN THỊ 4 TRƯỜNG */}
                                     <td className="px-4 py-3 text-sm">
                                         <p className="font-semibold text-gray-700">Bắt đầu:</p>
                                         <p className="text-xs text-gray-600">
                                             Ngày (eff): {fs.effective_period_begins?.split("T")[0]}
                                         </p>
                                         <p className="text-xs text-gray-600 mb-2">
-                                            Giờ (time): {fs.start_time?.substring(0, 5)}
+                                            Giờ (time): {fs.start_time?.substring(0, 5) || fs.effective_period_begins?.split("T")[1]?.substring(0, 5) || 'N/A'}
                                         </p>
                                         <p className="font-semibold text-gray-700">Kết thúc:</p>
                                         <p className="text-xs text-gray-600">
                                             Ngày (eff): {fs.effective_period_ends?.split("T")[0]}
                                         </p>
                                         <p className="text-xs text-gray-600">
-                                            Giờ (time): {fs.end_time?.substring(0, 5)}
+                                            Giờ (time): {fs.end_time?.substring(0, 5) || fs.effective_period_ends?.split("T")[1]?.substring(0, 5) || 'N/A'}
                                         </p>
                                     </td>
                                     <td className="px-4 py-3 flex gap-2 justify-center">
