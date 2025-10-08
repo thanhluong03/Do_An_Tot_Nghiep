@@ -48,7 +48,7 @@ const dashboardItems: MenuItem[] = [
 
 // 2. QUẢN LÝ BÁN HÀNG & VẬN HÀNH (Sales & Operations)
 const salesOperationsItems: MenuItem[] = [
-   
+   { name: "Import Products", icon: faWarehouse, href: "/admin/importproduct", color: "bg-yellow-100 text-yellow-600" },
     { name: "Inventory", icon: faWarehouse, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
     { name: "Stores", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
     { name: "Suppliers", icon: faTruckIcon, href: "/admin/supplier", color: "bg-blue-100 text-blue-600" }, // Dùng icon Truck
@@ -66,8 +66,8 @@ const contentResourcesItems: MenuItem[] = [
 // 4. MARKETING & PHÂN TÍCH (Marketing & Analytics)
 const marketingAnalyticsItems: MenuItem[] = [
     // Marketing
-    { name: "Promotions/Vouchers", icon: faTagsIcon, href: "/admin/promotions", color: "bg-red-100 text-red-600" }, // Dùng icon Tags
-    { name: "Flash Sales", icon: faBolt, href: "/admin/flashsales", color: "bg-orange-100 text-orange-600" },
+    { name: "Promotions", icon: faTagsIcon, href: "/admin/promotions", color: "bg-red-100 text-red-600" }, // Dùng icon Tags
+    { name: "Vouchers", icon: faBolt, href: "/admin/vouchers", color: "bg-orange-100 text-orange-600" },
     // Analytics
     { name: "Sales Analytics", icon: faChartArea, href: "#" },
     { name: "Product Performance", icon: faChartBar, href: "#" },

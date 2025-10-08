@@ -21,7 +21,6 @@ export default function ProductFormModal({
     setFormData,
     handleSave,
     setIsModalOpen,
-    suppliers,
     categories,
 }: ProductFormModalProps) {
     const [previewImages, setPreviewImages] = useState<string[]>([]);
@@ -45,7 +44,6 @@ export default function ProductFormModal({
         form.append("name", formData.name);
         form.append("price", formData.price.toString());
         form.append("description", formData.description || "");
-        form.append("supplier_id", formData.supplier_id.toString());
         form.append("category_id", (formData.category_id || 0).toString());
 
         files.forEach((file) => {
@@ -93,17 +91,6 @@ export default function ProductFormModal({
                             ))}
                         </div>
                     )}
-
-                    {/* Nhà cung cấp */}
-                    <label className="block text-sm">Nhà cung cấp</label>
-                    <select 
-                    title='supplier'
-                        value={formData.supplier_id ?? 0} 
-                        onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })} 
-                        className="w-full border rounded p-2">
-                        <option value={0}>-- Chọn nhà cung cấp --</option>
-                        {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
 
                     {/* Danh mục */}
                     <label className="block text-sm">Danh mục</label>
