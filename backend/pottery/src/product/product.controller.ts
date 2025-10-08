@@ -105,4 +105,16 @@ export class ProductController {
     async findAllByInventory() {
         return this.productService.findAllByInventory();
     }
+
+    @Get('listproduct-by-category/:categoryid')
+    async getInventoryByCategory(@Param('categoryid') categoryId: string) {
+        if (!categoryId) {
+            return { error: 'categoryid param is required' };
+        }
+        const catId = Number(categoryId);
+        if (isNaN(catId)) {
+            return { products: [] };
+        }
+        return await this.productService.findAllByInventoryWithCategory(catId);
+    }
 }

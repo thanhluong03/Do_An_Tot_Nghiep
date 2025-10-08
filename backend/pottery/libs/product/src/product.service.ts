@@ -1,4 +1,5 @@
 import { ProductEntity, ProductRepository, ProductImageRepository, InventoryRepository, ProductPromotionRepository, PromotionRepository, PromotionEntity } from '@app/database';
+import { InventoryEntity } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateProduct, IListProduct, IUpdateProduct } from './product.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
@@ -172,10 +173,21 @@ export class ProductService {
 
   async findAllByInventory() {
     const inventories = await this.inventoryRepository.findAll();
-    const productsWithStock = await Promise.all(
-      inventories.map(async (inv) => {
-        const product = await this.productRepository.findById(inv.product_id);
-        const images = await this.productImageRepository.findByProductId(inv.product_id);
+    const inventoryMap = new Map<number, InventoryEntity[]>();
+    inventories.forEach((inv: InventoryEntity) => {
+      if (!inv.product_id) return;
+      if (!inventoryMap.has(inv.product_id)) {
+        inventoryMap.set(inv.product_id, []);
+      }
+      const arr = inventoryMap.get(inv.product_id);
+      if (arr) arr.push(inv);
+    });
+
+    const products = await Promise.all(
+      Array.from(inventoryMap.entries()).map(async ([productId, invList]: [number, InventoryEntity[]]) => {
+        const product = await this.productRepository.findById(productId);
+        if (!product) return null;
+        const images = await this.productImageRepository.findByProductId(productId);
         const processedImages = images.map((image) => ({
           id: image.id,
           image_data: image.image_data ? image.image_data.toString('base64') : null,
@@ -183,23 +195,77 @@ export class ProductService {
           priority: image.priority,
         }));
         let promotion: PromotionEntity | null = null;
-        const productPromotion = await this.productPromotionRepository.findActiveByProductId(inv.product_id);
+        const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
         if (productPromotion && productPromotion.promotion_id) {
           promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
         }
+        const stores = invList.map((inv: InventoryEntity) => ({
+          store_id: inv.store_id,
+          store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
+          store_address: inv.store && inv.store.address ? inv.store.address : null,
+          quantity_stock: inv.quantity_stock,
+          quantity_sold: inv.quantity_sold,
+        }));
         return {
           ...product,
           images: processedImages,
           main_image: processedImages.find((img) => img.is_main_image) || null,
-          store_id: inv.store_id,
-          store_name: inv.store?.store_name,
-          store_address: inv.store?.address,
-          quantity_stock: inv.quantity_stock,
-          quantity_sold: inv.quantity_sold,
+          stores,
           promotion,
         };
       }),
     );
-    return productsWithStock;
+    return {
+      products: products.filter((item) => item !== null)
+    };
+  }
+
+  async findAllByInventoryWithCategory(categoryId: number) {
+    const inventories = await this.inventoryRepository.findAll();
+    const inventoryMap = new Map<number, InventoryEntity[]>();
+    inventories.forEach((inv: InventoryEntity) => {
+      if (!inv.product_id) return;
+      if (!inventoryMap.has(inv.product_id)) {
+        inventoryMap.set(inv.product_id, []);
+      }
+      const arr = inventoryMap.get(inv.product_id);
+      if (arr) arr.push(inv);
+    });
+
+    const products = await Promise.all(
+      Array.from(inventoryMap.entries()).map(async ([productId, invList]: [number, InventoryEntity[]]) => {
+        const product = await this.productRepository.findById(productId);
+        if (!product || product.category_id !== categoryId) return null;
+        const images = await this.productImageRepository.findByProductId(productId);
+        const processedImages = images.map((image) => ({
+          id: image.id,
+          image_data: image.image_data ? image.image_data.toString('base64') : null,
+          is_main_image: image.is_main_image,
+          priority: image.priority,
+        }));
+        let promotion: PromotionEntity | null = null;
+        const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
+        if (productPromotion && productPromotion.promotion_id) {
+          promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+        }
+        const stores = invList.map((inv: InventoryEntity) => ({
+          store_id: inv.store_id,
+          store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
+          store_address: inv.store && inv.store.address ? inv.store.address : null,
+          quantity_stock: inv.quantity_stock,
+          quantity_sold: inv.quantity_sold,
+        }));
+        return {
+          ...product,
+          images: processedImages,
+          main_image: processedImages.find((img) => img.is_main_image) || null,
+          stores,
+          promotion,
+        };
+      }),
+    );
+    return {
+      products: products.filter((item) => item !== null)
+    };
   }
 }
