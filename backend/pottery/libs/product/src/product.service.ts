@@ -1,4 +1,4 @@
-import { ProductEntity, ProductRepository, ProductImageRepository } from '@app/database';
+import { ProductEntity, ProductRepository, ProductImageRepository, InventoryRepository } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateProduct, IListProduct, IUpdateProduct } from './product.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
@@ -11,8 +11,9 @@ export class ProductService {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly productImageRepository: ProductImageRepository,
+    private readonly inventoryRepository: InventoryRepository,
   ) { }
-
+  
   async create(data: ICreateProduct) {
     try {
       console.log('Creating product with data:', {
@@ -131,5 +132,57 @@ export class ProductService {
     await this.productImageRepository.deleteByProductId(id);
 
     return this.productRepository.softDelete(id);
+  }
+
+  async findAllByStore(storeId: number) {
+    const inventories = await this.inventoryRepository.findByStore(storeId);
+    const productsWithStock = await Promise.all(
+      inventories.map(async (inv) => {
+        const product = await this.productRepository.findById(inv.product_id);
+        const images = await this.productImageRepository.findByProductId(inv.product_id);
+        const processedImages = images.map((image) => ({
+          id: image.id,
+          image_data: image.image_data ? image.image_data.toString('base64') : null,
+          is_main_image: image.is_main_image,
+          priority: image.priority,
+        }));
+        return {
+          ...product,
+          images: processedImages,
+          main_image: processedImages.find((img) => img.is_main_image) || null,
+          store_id: inv.store_id,
+          quantity_stock: inv.quantity_stock,
+          quantity_sold: inv.quantity_sold,
+          store_name: inv.store?.store_name,
+        };
+      })
+    );
+    return productsWithStock;
+  }
+
+  async findAllByInventory() {
+    const inventories = await this.inventoryRepository.findAll();
+    const productsWithStock = await Promise.all(
+      inventories.map(async (inv) => {
+        const product = await this.productRepository.findById(inv.product_id);
+        const images = await this.productImageRepository.findByProductId(inv.product_id);
+        const processedImages = images.map((image) => ({
+          id: image.id,
+          image_data: image.image_data ? image.image_data.toString('base64') : null,
+          is_main_image: image.is_main_image,
+          priority: image.priority,
+        }));
+        return {
+          ...product,
+          images: processedImages,
+          main_image: processedImages.find((img) => img.is_main_image) || null,
+          store_id: inv.store_id,
+          store_name: inv.store?.store_name,
+          quantity_stock: inv.quantity_stock,
+          quantity_sold: inv.quantity_sold,
+        };
+      }),
+    );
+    return productsWithStock;
   }
 }
