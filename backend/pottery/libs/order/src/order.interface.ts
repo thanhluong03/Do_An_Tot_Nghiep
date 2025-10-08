@@ -1,5 +1,6 @@
 export interface IOrderItem {
     product_id: number;
+    store_id: number;
     quantity: number;
     price_at_order: number;
 }

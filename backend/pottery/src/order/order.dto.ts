@@ -55,6 +55,11 @@ export class OrderItemDto {
     @Expose()
     @IsNumber()
     @IsPositive()
+    store_id: number;
+
+    @Expose()
+    @IsNumber()
+    @IsPositive()
     quantity: number;
 
     @Expose()

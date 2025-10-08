@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { OrderRepository } from '@app/database';
+import { OrderRepository, InventoryRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 
@@ -8,6 +8,8 @@ export class OrderService {
     constructor(
         @Inject(OrderRepository)
         private readonly orderRepository: OrderRepository,
+        @Inject(InventoryRepository)
+        private readonly inventoryRepository: InventoryRepository,
     ) { }
 
     async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -22,7 +24,7 @@ export class OrderService {
             payment_method: payment_method ?? PaymentMethod.ONSITE,
             order_date: new Date(),
         };
-        return this.orderRepository.createOrder(
+        const order = await this.orderRepository.createOrder(
             {
                 ...orderData,
                 total_amount,
@@ -33,6 +35,15 @@ export class OrderService {
             },
             items
         );
+        for (const item of items) {
+            const inventory = await this.inventoryRepository.findByProductAndStore(item.product_id, item.store_id);
+            if (!inventory) throw new NotFoundException(`Không tìm thấy tồn kho cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`);
+            if (inventory.quantity_stock < item.quantity) throw new NotFoundException(`Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`);
+            inventory.quantity_stock -= item.quantity;
+            inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
+            await this.inventoryRepository.create(inventory);
+        }
+        return order;
     }
 
     async getOrderById(id: number): Promise<OrderEntity | null> {
