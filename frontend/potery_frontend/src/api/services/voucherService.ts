@@ -1,105 +1,108 @@
-import axios from "axios";
+// src/services/voucher.service.ts (hoặc tên file gộp khác)
 
-const API_URL = "http://localhost:3000/vouchers";
+import axios from 'axios';
 
-export interface Voucher {
-  id?: number;
-  name?: string;
-  voucher_percentage?: number;
-  quantity?: number;
-  order_conditions?: number;
-  is_active?: boolean;
-  start_time?: string;
-  end_time?: string;
-  effective_period_begins?: string | Date;
-  effective_period_ends?: string | Date;
+// =======================================================
+// 1. KIỂU DỮ LIỆU (DTO/INTERFACE)
+// =======================================================
+
+/** DTO cơ bản cho tạo mới Voucher */
+export interface CreateVoucherDto {
+    name: string;
+    start_time?: Date;
+    end_time?: Date;
+    effective_period_begins?: Date;
+    effective_period_ends?: Date;
+    voucher_percentage?: number;
+    quantity?: number;
+    order_conditions?: number;
+    is_active?: boolean;
 }
 
-// ✅ Chuyển input datetime-local sang format ISO backend
-const toBackendDate = (date?: string) => {
-  if (!date) return undefined;
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return undefined;
-  return d.toISOString();
+/** DTO cho cập nhật Voucher (các trường là optional) */
+export interface UpdateVoucherDto extends Partial<CreateVoucherDto> {
+    name?: string; 
+}
+
+/** DTO cho response khi lấy danh sách hoặc chi tiết Voucher */
+export interface VoucherResponseDto {
+    id: number;
+    name: string;
+    start_time?: Date;
+    end_time?: Date;
+    effective_period_begins?: Date;
+    effective_period_ends?: Date;
+    voucher_percentage?: number;
+    quantity?: number;
+    order_conditions?: number;
+    is_active?: boolean;
+    created_at: Date;
+    updated_at: Date | null;
+}
+
+/** DTO cho request tìm kiếm/phân trang danh sách Voucher */
+export interface ListVoucherRequestDto {
+    page?: number;
+    size?: number;
+    key?: string; // Tên tìm kiếm
+}
+
+/** DTO cho cập nhật/nhận voucher cho khách hàng */
+export interface VoucherCustomerDto {
+    voucher_id: number;
+    customer_id: number;
+}
+
+
+// =======================================================
+// 2. CÁC HÀM GỌI API
+// =======================================================
+
+const API_URL = 'http://localhost:3000/vouchers'; // Thay thế bằng URL Backend thực tế của bạn
+
+/**
+ * Tạo mới một hoặc nhiều Voucher. Backend mong đợi một mảng DTO.
+ * @param data Mảng các CreateVoucherDto
+ */
+export const createVoucher = async (data: CreateVoucherDto[]) => {
+    const response = await axios.post(`${API_URL}/createvoucher`, data);
+    return response.data; // { message: string, voucher: VoucherResponseDto }[]
 };
 
-export const getVouchers = async (): Promise<Voucher[]> => {
-  const res = await axios.get(`${API_URL}/listvouchers`);
-  // ⚠️ SỬA: Vì Controller NestJS trả về mảng trực tiếp (VoucherResponseDto[]), 
-  // nên chỉ cần lấy res.data. Backend của bạn không trả về object { vouchers: [...] }
-  return res.data || []; 
+/**
+ * Lấy danh sách Voucher cho quản trị viên.
+ * @param query Tham số phân trang và tìm kiếm
+ */
+export const listVouchersAdmin = async (query: ListVoucherRequestDto) => {
+    const response = await axios.get(`${API_URL}/listvouchers`, { params: query });
+    return response.data as VoucherResponseDto[];
 };
 
-export const addVoucher = async (voucher: Voucher): Promise<void> => {
-  // Lọc bỏ các trường không cần thiết hoặc có giá trị 0/rỗng để tránh lỗi validation
-  const cleanVoucher = (v: Voucher) => {
-    const payload = {
-      name: v.name,
-      // ⚠️ SỬA: Backend DTO mong đợi "HH:mm:ss" cho start_time/end_time
-      start_time: v.start_time?.split("T")[1] + ":00", 
-      end_time: v.end_time?.split("T")[1] + ":00",
-      
-      // Gửi ngày/giờ đầy đủ theo chuẩn ISO cho effective_period_begins/ends
-      effective_period_begins: toBackendDate(v.start_time),
-      effective_period_ends: toBackendDate(v.end_time),
-      
-      // Lọc các giá trị number = 0 hoặc undefined
-      voucher_percentage: v.voucher_percentage > 0 ? v.voucher_percentage : undefined,
-      quantity: v.quantity > 0 ? v.quantity : undefined,
-      order_conditions: v.order_conditions > 0 ? v.order_conditions : undefined,
-      is_active: v.is_active ?? true,
-    };
-    
-    // Loại bỏ các trường undefined
-    Object.keys(payload).forEach(key => 
-        payload[key] === undefined && delete payload[key]);
-
-    return payload;
-  };
-
-  const payload = [cleanVoucher(voucher)]; // Backend cần payload là một MẢNG
-  
-  await axios.post(`${API_URL}/createvoucher`, payload, {
-    headers: { "Content-Type": "application/json" },
-  });
+/**
+ * Lấy chi tiết một Voucher theo ID.
+ * @param id ID của Voucher
+ */
+export const getVoucherDetail = async (id: number) => {
+    const response = await axios.get(`${API_URL}/voucherdetail/${id}`);
+    // Backend trả về mảng 1 phần tử, ta lấy phần tử đầu tiên
+    return response.data[0] as VoucherResponseDto; 
 };
 
-export const updateVoucher = async (
-  id: number,
-  voucher: Voucher
-): Promise<void> => {
-  // Lặp lại logic làm sạch dữ liệu cho Update
-  const cleanVoucher = (v: Voucher) => {
-    const payload = {
-      ...v,
-      // Đảm bảo gửi đúng format thời gian cho backend
-      start_time: v.start_time?.split("T")[1] + ":00",
-      end_time: v.end_time?.split("T")[1] + ":00",
-      effective_period_begins: toBackendDate(v.start_time),
-      effective_period_ends: toBackendDate(v.end_time),
-    };
-    
-    // Lọc các trường undefined
-    Object.keys(payload).forEach(key => 
-        payload[key] === undefined && delete payload[key]);
-
-    return payload;
-  };
-  
-  await axios.put(`${API_URL}/updatevoucher/${id}`, cleanVoucher(voucher));
+/**
+ * Cập nhật thông tin một Voucher.
+ * @param id ID của Voucher cần cập nhật
+ * @param data Dữ liệu cập nhật
+ */
+export const updateVoucher = async (id: number, data: UpdateVoucherDto) => {
+    const response = await axios.put(`${API_URL}/updatevoucher/${id}`, data);
+    return response.data; // { message: string, voucher: VoucherResponseDto }[]
 };
 
-export const deleteVoucher = async (id: number): Promise<void> => {
-  await axios.delete(`${API_URL}/deletevoucher/${id}`);
-};
-
-export const updateVoucherCustomer = async (
-  customerId: number,
-  voucherId: number
-) => {
-  const res = await axios.post(`${API_URL}/updatevouchercustomer`, {
-    customer_id: customerId,
-    voucher_id: voucherId,
-  });
-  return res.data;
+/**
+ * Xóa mềm (soft delete) một Voucher.
+ * @param id ID của Voucher cần xóa
+ */
+export const deleteVoucher = async (id: number) => {
+    const response = await axios.delete(`${API_URL}/deletevoucher/${id}`);
+    return response.data; // { message: string }[]
 };
