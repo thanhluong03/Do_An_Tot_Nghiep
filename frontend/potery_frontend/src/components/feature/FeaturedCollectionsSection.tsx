@@ -1,111 +1,100 @@
 'use client';
 
 import React from 'react';
-import { Button } from '../common/Button';
-// Khuyến khích dùng Next/image nếu bạn muốn tối ưu hiệu suất ảnh
-// import Image from 'next/image';
+// Nếu bạn có component Button, bạn có thể cân nhắc dùng nó, nhưng ở đây tôi dùng thẻ <a> để đơn giản hóa CTA
+// import { Button } from '../common/Button'; 
 
 export const FeaturedCollectionsSection: React.FC = () => {
-  const collections = [
-    {
-      title: 'Bát Đĩa',
-      description: 'Bộ sưu tập bát đĩa gốm sứ tinh tế, phù hợp cho mọi bữa ăn gia đình',
-      image: '/pott.jpg', // Ảnh đã được đặt trong public/
-      features: ['Thủ công 100%', 'An toàn thực phẩm', 'Dễ vệ sinh'],
-      featureIcon: '✔' // Thêm một icon đơn giản cho features
-    },
-    {
-      title: 'Ấm Chén',
-      description: 'Bộ ấm chén trà đạo, kết hợp vẻ đẹp truyền thống và hiện đại',
-      image: '/pott.jpg',
-      features: ['Giữ nhiệt tốt', 'Thiết kế ergonomic', 'Chất liệu cao cấp'],
-      featureIcon: '✔'
-    },
-    {
-      title: 'Trang Trí',
-      description: 'Các tác phẩm gốm sứ nghệ thuật để trang trí không gian sống',
-      image: '/pott.jpg',
-      features: ['Độc đáo', 'Bền đẹp', 'Dễ bảo quản'],
-      featureIcon: '✔'
-    }
-  ];
+    const collections = [
+        {
+            title: 'Bát Đĩa',
+            description: 'Bộ sưu tập bát đĩa cao cấp cho bữa ăn sang trọng',
+            image: './special/special1.png', // Thay thế bằng đường dẫn hình ảnh thực tế
+            alt: 'Bộ sưu tập Bát Đĩa',
+        },
+        {
+            title: 'Ấm Chén',
+            description: 'Bộ ấm chén trà đạo truyền thống thiểu tinh tế',
+            image: './special/special2.png', // Thay thế bằng đường dẫn hình ảnh thực tế
+            alt: 'Bộ sưu tập Ấm Chén',
+        },
+        {
+            title: 'Trang Trí',
+            description: 'Đồ trang trí gốm sứ nghệ thuật cho không gian',
+            image: './special/special3.png', // Thay thế bằng đường dẫn hình ảnh thực tế
+            alt: 'Bộ sưu tập Trang Trí',
+        }
+    ];
 
-  return (
-    <section className="py-20 bg-[#FBFBFB]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#2C2A24] mb-6">
-            Bộ Sưu Tập Đặc Biệt
-          </h2>
-          <p className="text-xl text-[#65604E] max-w-3xl mx-auto leading-relaxed">
-            Khám phá những tác phẩm tinh túy được tuyển chọn kỹ lưỡng, 
-            mang đậm dấu ấn nghệ thuật và văn hóa truyền thống
-          </p>
-        </div>
-
-        {/* Collections Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {collections.map((collection, index) => (
-            <div key={index} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden">
-              {/* Image */}
-              <div className="relative aspect-square overflow-hidden">
+    return (
+        // Màu nền trắng nhẹ (FBFBFB) và padding trên/dưới lớn hơn một chút
+        <section className="py-32 bg-[#FBFBFB]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
-                {/* **********************************************************
-                   * ĐÃ THAY THẾ DIV MÀU ĐEN BẰNG THẺ <img>
-                   ********************************************************** */}
-                <img
-                  src={collection.image}
-                  alt={`Bộ sưu tập ${collection.title}`}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                
-                {/* Lớp phủ khi hover (giữ lại để tạo hiệu ứng) */}
-        
-              </div>
+                {/* Header */}
+                <div className="text-center mb-16">
+                    {/* Tiêu đề nhỏ: Màu be nhạt và chữ nâu */}
+                    <span className="text-sm font-medium text-[#8B7D6B] uppercase tracking-wider bg-[#F5F1EB] px-4 py-1 rounded-full inline-block mb-4">
+                        Sản Phẩm Nổi Bật
+                    </span>
+                    
+                    {/* Tiêu đề chính: Font Serif và màu nâu đậm */}
+                    <h2 className="text-5xl md:text-6xl font-serif font-bold text-[#2C2A24] mb-6 leading-tight">
+                        Bộ Sưu Tập <span className="text-[#8B7D6B]">Đặc Biệt</span>
+                    </h2>
+                    
+                    {/* Mô tả */}
+                    <p className="text-xl text-[#65604E] max-w-4xl mx-auto leading-relaxed">
+                        Khám phá những tác phẩm tinh túy được tuyển chọn kỹ lưỡng từ xưởng gốm đến <br/>
+                        <span className="text-[#2C2A24] font-medium">Tiệm Gốm Nhà Gạo</span>
+                    </p>
+                </div>
 
-              {/* Content */}
-              <div className="p-8">
-                <h3 className="text-2xl font-serif font-semibold text-[#2C2A24] mb-4 group-hover:text-[#65604E] transition-colors duration-300">
-                  {collection.title}
-                </h3>
-                <p className="text-[#65604E] leading-relaxed mb-6">
-                  {collection.description}
-                </p>
+                {/* Collections Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {collections.map((collection, index) => (
+                        // Thẻ ngoài không có shadow, chỉ có bo góc lớn (rounded-2xl)
+                        <div key={index} className="group relative rounded-2xl overflow-hidden min-h-[400px]">
+                            
+                            {/* Hình ảnh (Toàn bộ thẻ là hình ảnh) */}
+                            <img
+                                src={collection.image}
+                                alt={collection.alt}
+                                // Sử dụng h-full object-cover để lấp đầy toàn bộ thẻ
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            
+                            {/* Lớp Overlay tối nhẹ (chỉ ở dưới cùng) để làm nổi bật văn bản */}
+                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/60 to-transparent"></div>
+                            
+                            {/* Nội dung (Text và Button) */}
+                            <div className="absolute inset-0 flex flex-col justify-end p-8 text-white z-10">
+                                
+                                {/* Tiêu đề */}
+                                <h3 className="text-3xl font-serif font-bold mb-2">
+                                    {collection.title}
+                                </h3>
+                                
+                                {/* Mô tả */}
+                                <p className="text-base font-light mb-6">
+                                    {collection.description}
+                                </p>
 
-                {/* Features */}
-                <ul className="space-y-2 mb-6">
-                  {collection.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center text-sm text-[#65604E]">
-                      {/* Sử dụng icon đơn giản thay vì cố gắng dùng /pott.jpg làm icon */}
-                      <span className="text-[#65604E] mr-2 text-base">{collection.featureIcon}</span> 
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA Button */}
-                <a
-                  href="/products"
-                  className="inline-flex items-center justify-center w-full border-2 border-[#65604E] text-[#65604E] hover:bg-[#65604E] hover:text-white transition-all duration-300 rounded-lg px-4 py-2 font-medium"
-                >
-                  Xem Thêm
-                </a>
-              </div>
+                                {/* Nút "Xem Thêm" */}
+                                <a
+                                    href="/products"
+                                    className="inline-flex items-center w-max text-base font-semibold border-2 border-white text-white bg-white/20 backdrop-blur-sm 
+                                       hover:bg-white hover:text-[#2C2A24] transition-all duration-300 rounded-full px-6 py-3"
+                                >
+                                    <span>Xem Thêm</span>
+                                    {/* Mũi tên phải */}
+                                    <span className="ml-2 text-xl">→</span> 
+                                </a>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
-          ))}
-        </div>
-
-        {/* View All Collections Button */}
-        <div className="text-center">
-          <a
-            href="/products"
-            className="inline-flex items-center px-8 py-4 text-lg font-semibold bg-[#65604E] text-white hover:bg-[#3D3A2F] shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 rounded-lg"
-          >
-            Xem Tất Cả Bộ Sưu Tập
-          </a>
-        </div>
-      </div>
-    </section>
-  );
+        </section>
+    );
 };

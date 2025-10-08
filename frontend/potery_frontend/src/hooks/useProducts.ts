@@ -9,6 +9,8 @@ export const useProducts = (params?: {
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  minPrice?: number;
+  maxPrice?: number;
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,16 @@ export const useProducts = (params?: {
     };
 
     fetchProducts();
-  }, [params?.page, params?.category, params?.search, params?.sortBy, params?.sortOrder]);
+  }, [
+    params?.page,
+    params?.limit,
+    params?.category,
+    params?.search,
+    params?.sortBy,
+    params?.sortOrder,
+    params?.minPrice,
+    params?.maxPrice,
+  ]);
 
   return { products, loading, error, total };
 };

@@ -1,9 +1,9 @@
-import { StoreLayout } from '../../layouts';
+import { BaseLayout } from '../../layouts';
 
 export default function StoreLayoutWrapper({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <StoreLayout>{children}</StoreLayout>;
+  return <BaseLayout>{children}</BaseLayout>;
 }

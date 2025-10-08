@@ -1,9 +1,11 @@
 export { Header } from './Header';
 export { HeroSection } from './HeroSection';
-export { LifestyleSection } from './LifestyleSection';
+export { AboutSection } from './AboutSection';
 export { FeaturedCollectionsSection } from './FeaturedCollectionsSection';
 export { FeaturedProductSection } from './FeaturedProductSection';
 export { ProductCard } from './ProductCard';
 export { ProductGrid } from './ProductGrid';
 export { FlashSaleSection } from './FlashSaleSection';
 export { CategorySection } from './CategorySection';
+export { LifestyleSection } from './LifestyleSection';
+export { NewsletterSection } from './NewsLetterSection';

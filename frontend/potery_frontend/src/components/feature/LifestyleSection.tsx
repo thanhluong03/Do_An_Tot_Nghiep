@@ -2,89 +2,107 @@
 
 import React from 'react';
 import { Button } from '../common/Button';
-// Nếu bạn đang dùng Next.js, bạn có thể cân nhắc dùng Image component để tối ưu hóa
+// Giả sử bạn đang dùng Next.js, nên giữ lại ghi chú về Image component
 // import Image from 'next/image'; 
 
-export const LifestyleSection: React.FC = () => {
-  const lifestyleItems = [
+// Dữ liệu cho 3 thẻ Lifestyle (Đã sửa Title để khớp với ảnh mẫu hơn)
+const lifestyleItems = [
     {
-      title: 'Bàn Ăn Tối Ấm Cúng',
-      description: 'Tạo không gian ấm cúng cho bữa ăn gia đình với bộ bát đĩa gốm sứ tinh tế',
-      image: '/pott.jpg', // Đảm bảo file pott.jpg nằm trong thư mục public
-      icon: '🍽️'
+        title: 'Bữa Ăn Gia Đình',
+        description: 'Tạo không gian ấm cúng cho những bữa cơm sum vầy',
+        image: './life/life1.png', 
+        alt: 'Bữa ăn gia đình'
     },
     {
-      title: 'Bộ Ấm Trà Thiền Tịnh',
-      description: 'Thưởng thức trà đạo với bộ ấm chén Nhật Bản, mang lại sự bình yên trong tâm hồn',
-      image: '/pott.jpg', // Đảm bảo file pott.jpg nằm trong thư mục public
-      icon: '🍵'
+        title: 'Trà đạo Thiền', // Đã sửa Title: "Trà đạo Thiền"
+        description: 'Thưởng trà trong không gian tĩnh lặng, thanh tịnh',
+        image: './life/life2.png', 
+        alt: 'Trà đạo'
     },
     {
-      title: 'Trang Trí Nội Thất Hiện Đại',
-      description: 'Làm đẹp không gian sống với các tác phẩm gốm sứ nghệ thuật độc đáo',
-      image: '/pott.jpg', // Đảm bảo file pott.jpg nằm trong thư mục public
-      icon: '🏺'
+        title: 'Trang Trí Nhà', // Đã sửa Title: "Trang Trí Nhà"
+        description: 'Điểm tô không gian sống với nghệ thuật gốm sứ',
+        image: './life/life3.png', 
+        alt: 'Trang trí nhà'
     }
-  ];
+];
 
-  return (
-    <section className="py-20 bg-[#65604E] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6">
-            Gốm Sứ Trong Cuộc Sống Hàng Ngày
-          </h2>
-          <div className="max-w-3xl mx-auto">
-            <blockquote className="text-xl md:text-2xl italic leading-relaxed">
-              "Mỗi tác phẩm gốm sứ không chỉ là một vật dụng, mà còn là cầu nối giữa quá khứ và hiện tại, 
-              mang theo hơi thở của truyền thống và vẻ đẹp của cuộc sống hiện đại."
-            </blockquote>
-            <cite className="block mt-6 text-lg text-[#F5F1EB]">
-              — Nguyễn Văn Minh, Founder Tiệm Gốm Nhà Gạo
-            </cite>
-          </div>
-        </div>
-
-        {/* Lifestyle Items */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {lifestyleItems.map((item, index) => (
-            <div key={index} className="group">
-              <div className="relative aspect-square rounded-2xl overflow-hidden mb-6">
+export const LifestyleSection: React.FC = () => {
+    return (
+        // Màu nền chính xác theo ảnh mẫu
+        <section className="py-24 bg-[#65604E] text-white"> 
+            
+            {/* CONTAINER GIỚI HẠN NỘI DUNG */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                 
-                {/* * ĐÃ THÊM THẺ <img> VÀ SỬ DỤNG item.image
-                  * Đảm bảo file pott.jpg nằm trong thư mục public/ của bạn
-                */}
-                <img 
-                  src={item.image} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                {/* Header và Quote */}
+                <div className="mb-16">
+                    {/* Tiêu đề nhỏ */}
+                    <span className="text-sm font-medium text-[#F5F1EB] uppercase tracking-wider bg-[#8B7D6B] px-4 py-1 rounded-full inline-block mb-4">
+                        Phong Cách Sống
+                    </span>
+                    
+                    {/* Tiêu đề chính */}
+                    <h2 className="text-4xl md:text-5xl font-serif font-bold leading-tight mb-8">
+                        Gốm Sứ Trong <br/> Cuộc Sống Hàng Ngày
+                    </h2>
+                    
+                    {/* Quote */}
+                    <div className="max-w-4xl mx-auto italic text-lg leading-relaxed text-[#F5F1EB]">
+                        “Nghệ thuật không chỉ để ngắm nhìn mà còn để sống cùng. Mỗi sản phẩm gốm sứ đều mang trong mình một câu chuyện, một cảm xúc và một phần tâm hồn của người thợ.”
+                    </div>
+                    
+                    {/* Tác giả Quote */}
+                    <cite className="block mt-4 text-base text-[#F5F1EB]/80">
+                        - Tiệm Gốm Nhà Gạo, Founder
+                    </cite>
+                </div>
 
-                {/* Lớp overlay (có thể tùy chỉnh opacity hoặc xóa đi) */}
+                {/* Lifestyle Items (3 Thẻ Hình Ảnh) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    {lifestyleItems.map((item, index) => (
+                        <div key={index} className="group">
+                            {/* Khung Hình ảnh bo tròn góc và tối ưu hóa */}
+                            {/* ĐÃ SỬA: Thay đổi aspect-[3/4] (dọc) thành aspect-[4/3] (ngang) */}
+                            <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 shadow-xl">
+                                
+                                {/* Hình ảnh */}
+                                <img 
+                                    src={item.image} 
+                                    alt={item.alt} 
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+
+                                {/* Lớp Overlay gradient mờ ở phía dưới để chữ dễ đọc */}
+                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent"></div>
+
+                                {/* Nội dung văn bản đặt trên ảnh */}
+                                <div className="absolute bottom-0 left-0 p-4 text-left">
+                                    <h3 className="text-xl font-semibold mb-1 text-white">
+                                        {item.title}
+                                    </h3>
+                                    <p className="text-sm text-white/90">
+                                        {item.description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* CTA Button */}
+                <div className="text-center">
+                    <Button
+                        size="lg"
+                        className="px-8 py-3 text-lg font-semibold bg-white text-[#65604E] hover:bg-[#F5F1EB] shadow-lg transition-all duration-300 flex items-center justify-center mx-auto space-x-2 rounded-lg" // Thêm rounded-lg cho nút
+                    >
+                        <span>Khám Phá Bộ Sưu Tập Lifestyle</span>
+                        {/* Icon mũi tên phải */}
+                        <span className="ml-2 text-xl">→</span> 
+                    </Button>
+                </div>
                 
-                 
-              </div>
-              <h3 className="text-xl font-serif font-semibold mb-3 group-hover:text-[#F5F1EB] transition-colors duration-300">
-                {item.title}
-              </h3>
-              <p className="text-[#F5F1EB] leading-relaxed">
-                {item.description}
-              </p>
             </div>
-          ))}
-        </div>
-
-        {/* CTA Button */}
-        <div className="text-center">
-          <Button
-            size="lg"
-            className="px-8 py-4 text-lg font-semibold bg-white text-[#65604E] hover:bg-[#F5F1EB] shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            Khám Phá Bộ Sưu Tập Lifestyle
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
+        </section>
+    );
 };

@@ -4,52 +4,8 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#2C2A24] text-white">
+    <footer className="bg-[#111827] text-white">
       {/* Newsletter Section */}
-      <div className="bg-[#65604E] py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-              Đăng Ký Nhận Tin Tức
-            </h2>
-            <p className="text-xl text-[#F5F1EB] mb-8">
-              Nhận thông tin về sản phẩm mới, khuyến mãi đặc biệt và các sự kiện độc quyền
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto mb-8">
-              <input
-                type="email"
-                placeholder="Nhập email của bạn"
-                className="flex-1 px-6 py-4 rounded-lg border-0 focus:ring-2 focus:ring-[#7A8471] focus:outline-none text-[#2C2A24]"
-              />
-              <button className="px-8 py-4 bg-white text-[#65604E] font-semibold rounded-lg hover:bg-[#F5F1EB] transition-colors duration-200">
-                Đăng Ký
-              </button>
-            </div>
-
-            {/* Newsletter Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#D4AF37]">2K+</div>
-                <div className="text-[#F5F1EB]">Người Đăng Ký</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#D4AF37]">Weekly</div>
-                <div className="text-[#F5F1EB]">Gửi Tin Tức</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#D4AF37]">Exclusive</div>
-                <div className="text-[#F5F1EB]">Ưu đãi</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[#D4AF37]">First</div>
-                <div className="text-[#F5F1EB]">Sản phẩm Mới</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Footer */}
       <div className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -78,6 +78,16 @@ export default function CartPage() {
     return () => { mounted = false; };
   }, [serverItems, serverProducts]);
 
+  // Tính tổng tiền dựa trên serverItems nếu có, ngược lại dựa trên local items
+  const total = React.useMemo(() => {
+    if (serverItems.length > 0) {
+      return serverItems.reduce((acc, ci) => acc + (serverProducts[String(ci.product_id)]?.price ?? 0) * (ci.quantity ?? 1), 0);
+    }
+    return subtotal;
+  }, [serverItems, serverProducts, subtotal]);
+
+  // Checkout flow moved to checkout page
+
   return (
     <BaseLayout>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -96,7 +106,23 @@ export default function CartPage() {
                     <div className="text-sm text-gray-600">{formatPrice(serverProducts[String(ci.product_id)]?.price ?? 0)}</div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-700">x{ci.quantity}</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-gray-700">x{ci.quantity}</div>
+                  <button
+                    aria-label="Xóa khỏi giỏ"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={async () => {
+                      try {
+                        await cartApi.remove(ci.id);
+                        setServerItems(prev => prev.filter(x => x.id !== ci.id));
+                      } catch {
+                        alert('Không thể xóa sản phẩm khỏi giỏ');
+                      }
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -143,8 +169,8 @@ export default function CartPage() {
           </div>
           <div className="border rounded p-4">
             <div className="flex items-center justify-between mb-2">
-              <span>Tạm tính</span>
-              <span className="font-semibold">{formatPrice(subtotal)}</span>
+              <span>Tổng tiền</span>
+              <span className="font-semibold">{formatPrice(total)}</span>
             </div>
             <a href="/checkout" className="block text-center bg-[#65604E] text-white py-2 rounded mt-4">Tiến hành thanh toán</a>
           </div>

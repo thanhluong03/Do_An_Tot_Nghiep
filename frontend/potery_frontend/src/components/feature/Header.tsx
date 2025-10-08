@@ -98,7 +98,7 @@ export const Header: React.FC = () => {
         { name: 'Bộ Sưu Tập', href: '/products' }
       ]
     },
-    { name: 'Về Chúng Tôi', href: '/about' },
+    { name: 'Về Nhà Gạo', href: '/about' },
     { name: 'Tin Tức', href: '/news' },
     { name: 'Liên Hệ', href: '/contact' }
   ];
@@ -108,19 +108,29 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo (giữ nguyên) */}
           <div className="flex items-center space-x-3">
-             {/* ... (Logo Code) ... */}
-            <div className="w-10 h-10 bg-[#65604E] rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2L3 7v11h14V7l-7-5zM8 15H6v-2h2v2zm0-4H6V9h2v2zm0-4H6V5h2v2zm6 8h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2z"/>
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-xl font-serif font-semibold text-[#2C2A24]">
-                Tiệm Gốm Nhà Gạo
-              </h1>
-              <p className="text-xs text-[#65604E] -mt-1">Nghệ thuật gốm sứ truyền thống</p>
-            </div>
+    {/* Logo Circle with PNG Image */}
+    {/* Thay đổi màu nền và thêm border cho vòng tròn */}
+    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC]"> {/* Màu nền trắng, viền nhạt */}
+              <img 
+                  src="./logo.png" // Đảm bảo đây là đường dẫn đúng tới ảnh logo PNG của bạn (ví dụ: cành lúa mì/gạo)
+                  alt="Tiệm Gốm Nhà Gạo Logo" 
+                  className="w-10 h-10 object-contain" // Kích thước và object-contain để ảnh logo không bị cắt
+                  // Lưu ý: Nếu logo PNG của bạn không có màu nâu nhạt, bạn không thể thay đổi nó bằng CSS.
+                  // Bạn cần chuẩn bị file PNG có màu sắc mong muốn.
+              />
           </div>
+          {/* Tên thương hiệu */}
+          <div>
+              {/* Tiệm Gốm */}
+              <h1 className="text-2xl font-serif text-[#65604E] -mb-1 leading-none"> {/* Kích thước to hơn, màu nâu nhạt hơn */}
+                  Tiệm Gốm
+              </h1>
+              {/* Nhà Gạo */}
+              <p className="text-sm font-serif italic text-[#65604E]"> {/* Kích thước nhỏ hơn, font italic, màu tương tự */}
+                  Nhà Gạo
+              </p>
+          </div>
+      </div>
 
           {/* Desktop Navigation (giữ nguyên) */}
           <nav className="hidden md:flex items-center space-x-8">
@@ -163,15 +173,20 @@ export const Header: React.FC = () => {
 
             {/* Cart (giữ nguyên) */}
             <a href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
-               {/* ... (Cart Icon Code) ... */}
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-               </svg>
-               {cartCount > 0 && (
-                 <span className="absolute -top-1 -right-1 bg-[#65604E] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                   {cartCount}
-                 </span>
-               )}
+    
+    {/* THAY THẾ ICON SVG BẰNG ẢNH PNG */}
+                <img 
+                    src="./Bag.png" // Thay đổi đường dẫn này thành đường dẫn file .png thực tế của bạn
+                    alt="Giỏ hàng" 
+                    className="w-5 h-5" // Giữ nguyên kích thước 5x5 để khớp với icon SVG ban đầu
+                />
+                
+                {/* Số lượng sản phẩm trong giỏ hàng (Cart Count Badge) */}
+                {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#65604E] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {cartCount}
+                    </span>
+                )}
             </a>
 
             {/* ⭐ ACCOUNT LOGIC ĐÃ SỬA ⭐ */}
