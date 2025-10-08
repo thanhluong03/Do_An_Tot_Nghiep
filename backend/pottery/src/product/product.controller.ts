@@ -95,4 +95,14 @@ export class ProductController {
     async remove(@Param('id') id: number) {
         return this.productService.softDelete(Number(id));
     }
+
+    @Get('listproduct-by-store/:storeId')
+    async findAllByStore(@Param('storeId') storeId: number) {
+        return this.productService.findAllByStore(Number(storeId));
+    }
+
+    @Get('listproduct-by-inventory')
+    async findAllByInventory() {
+        return this.productService.findAllByInventory();
+    }
 }
