@@ -13,7 +13,7 @@ export class ProductService {
     private readonly productImageRepository: ProductImageRepository,
     private readonly inventoryRepository: InventoryRepository,
   ) { }
-  
+
   async create(data: ICreateProduct) {
     try {
       console.log('Creating product with data:', {
@@ -154,6 +154,7 @@ export class ProductService {
           quantity_stock: inv.quantity_stock,
           quantity_sold: inv.quantity_sold,
           store_name: inv.store?.store_name,
+          store_address: inv.store?.address,
         };
       })
     );
@@ -178,6 +179,7 @@ export class ProductService {
           main_image: processedImages.find((img) => img.is_main_image) || null,
           store_id: inv.store_id,
           store_name: inv.store?.store_name,
+          store_address: inv.store?.address,
           quantity_stock: inv.quantity_stock,
           quantity_sold: inv.quantity_sold,
         };
