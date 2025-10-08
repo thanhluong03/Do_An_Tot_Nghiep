@@ -47,6 +47,7 @@ export default function ProductsPage() {
 
     // Load data
     useEffect(() => {
+        
         fetchProducts();
         fetchSuppliers();
         fetchCategories(); 
@@ -68,6 +69,7 @@ export default function ProductsPage() {
         try {
             const data = await getSuppliers();
             setSuppliers(data);
+            console.log("Suppliers loaded:", data); 
         } catch (error) {
             console.error("Lỗi khi load nhà cung cấp:", error);
         }
@@ -154,6 +156,7 @@ export default function ProductsPage() {
             images: [],
             supplier_id: suppliers[0]?.id || 0, // Đặt default là supplier đầu tiên
             category_id: categories[0]?.id || 0, // Đặt default là category đầu tiên
+            
         } as Product);
         setIsModalOpen(true);
     };
@@ -202,6 +205,7 @@ export default function ProductsPage() {
 
     const getSupplierName = (id: number) => {
         return suppliers.find((s) => s.id === id)?.name || "N/A";
+        
     };
 
     // HÀM SỬA LỖI: Luôn trả về string và xử lý cả hai trường category
@@ -279,7 +283,7 @@ export default function ProductsPage() {
                         {/* LỌC THEO NHÀ CUNG CẤP (Cửa hàng) */}
                         <div className="flex items-center space-x-2">
                             <label htmlFor="supplier-filter" className="text-gray-700 font-medium text-sm">
-                                Lọc theo Cửa hàng/NCC:
+                                Lọc theo NCC:
                             </label>
                             <select
                                 id="supplier-filter"
@@ -287,7 +291,7 @@ export default function ProductsPage() {
                                 onChange={handleSupplierFilterChange}
                                 className="p-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"
                             >
-                                <option value={0}>Tất cả cửa hàng</option>
+                                <option value={0}>Tất cả NCC</option>
                                 {suppliers.map((sup) => (
                                     <option key={sup.id} value={sup.id}>
                                         {sup.name}
