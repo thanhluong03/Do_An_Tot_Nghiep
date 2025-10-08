@@ -1,7 +1,8 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { OrderRepository, InventoryRepository } from '@app/database';
-import { ICreateOrder, IUpdateOrder, IListOrder } from './order.interface';
+import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
+import { CategoryRepository } from '@app/database';
 
 @Injectable()
 export class OrderService {
@@ -10,19 +11,61 @@ export class OrderService {
         private readonly orderRepository: OrderRepository,
         @Inject(InventoryRepository)
         private readonly inventoryRepository: InventoryRepository,
+        @Inject(CategoryRepository)
+        private readonly categoryRepository: CategoryRepository,
     ) { }
 
     async createOrder(data: ICreateOrder): Promise<OrderEntity> {
         const { items, status, payment_status, payment_method, ...orderData } = data;
-        const total_amount = items.reduce((sum, item) => sum + (item.price_at_order * item.quantity), 0);
+        const enrichedItems: IOrderItem[] = [];
+        let total_amount = 0;
+        for (const item of items) {
+            const inventory = await this.inventoryRepository.findByProductAndStore(
+                item.product_id,
+                item.store_id,
+            );
+            if (!inventory) {
+                throw new NotFoundException(
+                    `Không tìm thấy tồn kho cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
+                );
+            }
+            if (inventory.quantity_stock < item.quantity) {
+                throw new NotFoundException(
+                    `Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
+                );
+            }
+            const product = inventory.product;
+            const store = inventory.store;
+            let categoryName: string | undefined = undefined;
+            if (product && product.category_id) {
+                const category = await this.categoryRepository.findById(
+                    product.category_id,
+                );
+                categoryName = category?.name;
+            }
+            enrichedItems.push({
+                ...item,
+                product_name: product?.name,
+                description: product?.description,
+                price: product?.price,
+                category_id: product?.category_id,
+                category_name: categoryName,
+                store_name: store?.store_name,
+                store_address: store?.address,
+            });
+            total_amount += item.price_at_order * item.quantity;
+            inventory.quantity_stock -= item.quantity;
+            inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
+            await this.inventoryRepository.create(inventory);
+        }
         const current_order = {
             ...orderData,
-            items,
+            items: enrichedItems,
             total_amount,
             status: status ?? OrderStatus.CREATED,
             payment_status: payment_status ?? PaymentStatus.UNPAID,
             payment_method: payment_method ?? PaymentMethod.ONSITE,
-            order_date: new Date(),
+            order_date: new Date()
         };
         const order = await this.orderRepository.createOrder(
             {
@@ -31,18 +74,10 @@ export class OrderService {
                 status: status ?? OrderStatus.CREATED,
                 payment_status: payment_status ?? PaymentStatus.UNPAID,
                 payment_method: payment_method ?? PaymentMethod.ONSITE,
-                current_order,
+                current_order
             },
             items
         );
-        for (const item of items) {
-            const inventory = await this.inventoryRepository.findByProductAndStore(item.product_id, item.store_id);
-            if (!inventory) throw new NotFoundException(`Không tìm thấy tồn kho cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`);
-            if (inventory.quantity_stock < item.quantity) throw new NotFoundException(`Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`);
-            inventory.quantity_stock -= item.quantity;
-            inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
-            await this.inventoryRepository.create(inventory);
-        }
         return order;
     }
 

@@ -3,6 +3,13 @@ export interface IOrderItem {
     store_id: number;
     quantity: number;
     price_at_order: number;
+    product_name?: string;
+    description?: string;
+    price?: number;
+    category_id?: number;
+    category_name?: string;
+    store_name?: string;
+    store_address?: string;
 }
 
 import type { OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
