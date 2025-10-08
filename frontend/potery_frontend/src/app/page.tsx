@@ -5,17 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '../contexts/CartContext';
 import { BaseLayout } from '../layouts';
 import { HeroSection } from '../components/feature/HeroSection';
-import { LifestyleSection } from '../components/feature/LifestyleSection';
+import { AboutSection } from '../components/feature/AboutSection';
 import { FeaturedCollectionsSection } from '../components/feature/FeaturedCollectionsSection';
 import { FeaturedProductSection } from '../components/feature/FeaturedProductSection';
 import { ProductGrid } from '../components/feature/ProductGrid';
 import { FlashSaleSection } from '../components/feature/FlashSaleSection';
 import { CategorySection } from '../components/feature/CategorySection';
-import { ValuePropositionSection, TestimonialsSection, JournalSection } from '../components/feature/HomeExtraSections';
+import { NewsletterSection } from '../components/feature/NewsLetterSection';
+import { ValuePropositionSection, TestimonialsSection, JournalSection } from '../components/feature/ValueProppositionSection';
 import { useFeaturedProducts, useFlashSale, useCategories } from '../hooks/useProducts';
 import { Product, ProductCategory } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { cartApi } from '../api/modules/cart';
+import { LifestyleSection } from '@/components/feature/LifestyleSection';
 
 export default function HomePage() {
   const router = useRouter();
@@ -55,7 +57,10 @@ export default function HomePage() {
           <HeroSection />
 
           {/* Lifestyle Section */}
-          <LifestyleSection />
+          <AboutSection />
+
+          {/* Value Proposition Section */}
+          <ValuePropositionSection />
 
           {/* Featured Collections Section */}
           <FeaturedCollectionsSection />
@@ -63,8 +68,8 @@ export default function HomePage() {
           {/* Featured Product Section */}
           <FeaturedProductSection />
 
-          {/* Value Proposition Section */}
-          <ValuePropositionSection />
+          {/* Lifestyle Section */}
+          <LifestyleSection />
 
           {/* Categories Section */}
           <CategorySection
@@ -126,7 +131,7 @@ export default function HomePage() {
           <JournalSection />
 
           {/* Newsletter Section */}
-           
+          <NewsletterSection />
       </BaseLayout>
   );
 }

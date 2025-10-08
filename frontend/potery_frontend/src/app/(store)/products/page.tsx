@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BaseLayout } from '../../../layouts';
 import { ProductGrid } from '../../../components/feature/ProductGrid';
-import { useProducts } from '../../../hooks/useProducts';
+import { useProducts, useCategories } from '../../../hooks/useProducts';
 import { Product } from '../../../types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { cartApi } from '../../../api/modules/cart';
@@ -13,10 +13,12 @@ function ProductFilters({
   onChange,
   initial,
 }: {
-  onChange: (filters: { search?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }) => void;
-  initial?: { search?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' };
+  onChange: (filters: { search?: string; category?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }) => void;
+  initial?: { search?: string; category?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' };
 }) {
+  const { categories } = useCategories();
   const [search, setSearch] = useState(initial?.search ?? '');
+  const [category, setCategory] = useState<string>(initial?.category ?? '');
   const [minPrice, setMinPrice] = useState<string>(initial?.minPrice?.toString() ?? '');
   const [maxPrice, setMaxPrice] = useState<string>(initial?.maxPrice?.toString() ?? '');
   const [sortBy, setSortBy] = useState<string>(initial?.sortBy ?? '');
@@ -25,6 +27,7 @@ function ProductFilters({
   const apply = () => {
     onChange({
       search: search || undefined,
+      category: category || undefined,
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       sortBy: sortBy || undefined,
@@ -33,13 +36,19 @@ function ProductFilters({
   };
 
   return (
-    <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+    <div className="mb-6 grid grid-cols-1 md:grid-cols-6 gap-3">
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Tìm kiếm sản phẩm..."
         className="border rounded px-3 py-2"
       />
+      <select value={category} onChange={(e) => setCategory(e.target.value)} className="border rounded px-3 py-2">
+        <option value="">Tất cả danh mục</option>
+        {categories.map((c) => (
+          <option key={c.id} value={c.slug ?? c.name}>{c.name}</option>
+        ))}
+      </select>
       <input
         value={minPrice}
         onChange={(e) => setMinPrice(e.target.value)}
@@ -75,7 +84,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit] = useState(12);
-  const [filters, setFilters] = useState<{ search?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }>({});
+  const [filters, setFilters] = useState<{ search?: string; category?: string; minPrice?: number; maxPrice?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }>({});
   const { user, isAuthenticated } = useAuth();
   const [message, setMessage] = useState<string | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -83,9 +92,12 @@ export default function ProductsPage() {
   const { products, loading, error, total } = useProducts({
     page,
     limit,
+    category: filters.category,
     search: filters.search,
     sortBy: filters.sortBy,
     sortOrder: filters.sortOrder,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
   });
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);

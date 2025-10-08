@@ -1,0 +1,34 @@
+import axios from 'axios';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const api = axios.create({ baseURL: API_BASE_URL, headers: { 'Content-Type': 'application/json' } });
+
+export interface OrderItemPayload {
+  product_id: number;
+  quantity: number;
+  price_at_order: number;
+}
+
+export interface CreateOrderPayload {
+  customer_id: number;
+  shipping_address?: string;
+  payment_method?: string; // backend enum, e.g. 'VNPAY'
+  items: OrderItemPayload[];
+}
+
+export const orderApi = {
+  async createOrder(payload: CreateOrderPayload) {
+    const res = await api.post('/orders/createorder', payload);
+    return res.data; // { success, message, data }
+  },
+  async getOrderDetail(id: number | string) {
+    const res = await api.get(`/orders/orderdetail/${id}`);
+    return res.data;
+  },
+  async getOrdersByCustomer(customerId: number | string, page = 1, size = 10) {
+    const res = await api.get(`/orders/customer/${customerId}`, { params: { page, size } });
+    return res.data; // { success, data }
+  },
+};
+
+
