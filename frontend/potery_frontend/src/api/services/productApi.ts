@@ -14,7 +14,6 @@ export interface Product {
     name: string;
     description: string;
     price: number;
-    supplier_id: number;
     category_id?: number; // Trường này dùng để lọc
     images: ProductImage[];
     main_image?: string | null;

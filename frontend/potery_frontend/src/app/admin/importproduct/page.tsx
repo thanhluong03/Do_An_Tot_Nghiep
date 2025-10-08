@@ -254,12 +254,12 @@ export default function ImportProductPage() {
                         : [form.supplier_id!]); 
 
                 // Check trùng lặp chỉ khi chọn 1 sản phẩm và 1 nhà cung cấp
-                if (productIds.length === 1 && supplierIds.length === 1) {
-                    if (checkForDuplicate(Number(productIds[0]), Number(supplierIds[0]))) {
-                         alert(`Lỗi: Phiếu nhập kho cho Sản phẩm: ${getDisplayName(products, productIds[0])} và Nhà cung cấp: ${getDisplayName(suppliers, supplierIds[0])} đã tồn tại!`);
-                         return;
-                    }
-                }
+                // if (productIds.length === 1 && supplierIds.length === 1) {
+                //     if (checkForDuplicate(Number(productIds[0]), Number(supplierIds[0]))) {
+                //          alert(`Lỗi: Phiếu nhập kho cho Sản phẩm: ${getDisplayName(products, productIds[0])} và Nhà cung cấp: ${getDisplayName(suppliers, supplierIds[0])} đã tồn tại!`);
+                //          return;
+                //     }
+                // }
 
                 const createDto: CreateImportProductDto = { 
                     product_id: form.product_id, // Gửi nguyên array/string/all cho backend xử lý
