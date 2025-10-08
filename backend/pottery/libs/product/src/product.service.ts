@@ -1,4 +1,4 @@
-import { ProductEntity, ProductRepository, ProductImageRepository, InventoryRepository } from '@app/database';
+import { ProductEntity, ProductRepository, ProductImageRepository, InventoryRepository, ProductPromotionRepository, PromotionRepository, PromotionEntity } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateProduct, IListProduct, IUpdateProduct } from './product.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
@@ -12,7 +12,10 @@ export class ProductService {
     private readonly productRepository: ProductRepository,
     private readonly productImageRepository: ProductImageRepository,
     private readonly inventoryRepository: InventoryRepository,
+    private readonly productPromotionRepository: ProductPromotionRepository,
+    private readonly promotionRepository: PromotionRepository,
   ) { }
+
 
   async create(data: ICreateProduct) {
     try {
@@ -146,6 +149,11 @@ export class ProductService {
           is_main_image: image.is_main_image,
           priority: image.priority,
         }));
+        let promotion: PromotionEntity | null = null;
+        const productPromotion = await this.productPromotionRepository.findActiveByProductId(inv.product_id);
+        if (productPromotion && productPromotion.promotion_id) {
+          promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+        }
         return {
           ...product,
           images: processedImages,
@@ -155,6 +163,7 @@ export class ProductService {
           quantity_sold: inv.quantity_sold,
           store_name: inv.store?.store_name,
           store_address: inv.store?.address,
+          promotion,
         };
       })
     );
@@ -173,6 +182,11 @@ export class ProductService {
           is_main_image: image.is_main_image,
           priority: image.priority,
         }));
+        let promotion: PromotionEntity | null = null;
+        const productPromotion = await this.productPromotionRepository.findActiveByProductId(inv.product_id);
+        if (productPromotion && productPromotion.promotion_id) {
+          promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+        }
         return {
           ...product,
           images: processedImages,
@@ -182,6 +196,7 @@ export class ProductService {
           store_address: inv.store?.address,
           quantity_stock: inv.quantity_stock,
           quantity_sold: inv.quantity_sold,
+          promotion,
         };
       }),
     );
