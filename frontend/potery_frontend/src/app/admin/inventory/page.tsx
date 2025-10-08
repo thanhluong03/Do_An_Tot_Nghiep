@@ -1,3 +1,4 @@
+// src/app/admin/inventory/page.tsx
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
@@ -28,14 +29,13 @@ export default function InventoryPage() {
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [stores, setStores] = useState<SelectOption[]>([]);
-    const [totalItems, setTotalItems] = useState(0);
+    const [totalItems, setTotalItems] = useState(0); 
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [loading, setLoading] = useState(false); // Thêm state loading
+    const [loading, setLoading] = useState(false); 
 
-    // STATE LỌC VÀ TÌM KIẾM MỚI
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [selectedStoreId, setSelectedStoreId] = useState<number>(0); // 0 = Tất cả
+    const [selectedStoreId, setSelectedStoreId] = useState<number>(0); 
 
     const [form, setForm] = useState<InventoryFormState>({
         product_id: undefined,
@@ -51,16 +51,18 @@ export default function InventoryPage() {
     const getDisplayName = useCallback((list: SelectOption[], id: number | string | undefined): string => {
         if (id === undefined || id === null) return "";
         const numericId = Number(id);
-        if (isNaN(numericId)) return ""; // Xử lý giá trị không phải số
+        if (isNaN(numericId)) return ""; 
         const found = list.find(item => Number(item.id) === numericId);
         return found?.name || `ID: ${id}`;
     }, []);
 
-    // Load Data
+    useEffect(() => {
+        fetchDropdownData();
+    }, []); 
+
     useEffect(() => {
         fetchData();
-        fetchDropdownData();
-    }, [currentPage, pageSize]); // Bỏ getDisplayName khỏi dependency
+    }, [currentPage, pageSize]); 
 
     const fetchDropdownData = async () => {
         try {
@@ -77,17 +79,20 @@ export default function InventoryPage() {
         }
     };
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
-            setLoading(true); // Bắt đầu tải
+            setLoading(true); 
+            
             const res = await listInventories({
                 page: currentPage,
-                size: pageSize
+                size: pageSize,
+                key: searchQuery, 
+                store_id: selectedStoreId === 0 ? undefined : selectedStoreId, 
             });
 
             const inventoryList = res.data || [];
             setInventories(Array.isArray(inventoryList) ? inventoryList : []);
-            setTotalItems(res.total || inventoryList.length);
+            setTotalItems(res.total || inventoryList.length); 
             setCurrentPage(res.page || currentPage);
             setPageSize(res.size || pageSize);
 
@@ -96,42 +101,25 @@ export default function InventoryPage() {
             setInventories([]);
             setTotalItems(0);
         } finally {
-            setLoading(false); // Kết thúc tải
+            setLoading(false); 
         }
-    };
+    }, [currentPage, pageSize, searchQuery, selectedStoreId]); 
     
-    // LOGIC LỌC VÀ TÌM KIẾM
-    const filteredInventories = useMemo(() => {
-        const query = searchQuery.toLowerCase().trim();
-        const storeId = selectedStoreId;
-
-        return inventories.filter(item => {
-            // Lọc theo Cửa hàng (Store Filter)
-            const storeMatch = storeId === 0 || Number(item.store_id) === storeId;
-
-            // Tìm kiếm theo Tên Sản phẩm HOẶC Tên Cửa hàng
-            const productName = getDisplayName(products, item.product_id).toLowerCase();
-            const storeName = getDisplayName(stores, item.store_id).toLowerCase();
-            
-            const searchMatch = !query || productName.includes(query) || storeName.includes(query);
-
-            return storeMatch && searchMatch;
-        });
-    }, [inventories, selectedStoreId, searchQuery, products, stores, getDisplayName]); 
     
-    // Đặt lại trang 1 khi filter hoặc search thay đổi
     useEffect(() => {
-        setCurrentPage(1);
+        if (currentPage !== 1) {
+            setCurrentPage(1);
+        } else {
+            fetchData();
+        }
     }, [selectedStoreId, searchQuery]);
 
 
-    // Handler cho input số (quantity_stock, quantity_sold)
     const handleNumberChange = (name: FormName, value: number) => {
         setForm(prev => ({ ...prev, [name]: value }));
         setErrors(prev => ({ ...prev, [name]: "" }));
     };
 
-    // Handler cho CheckboxList (product_id, store_id)
     const handleValueChange = (name: "product_id" | "store_id", value: string | string[] | undefined) => {
         setForm(prev => ({
             ...prev,
@@ -149,7 +137,7 @@ export default function InventoryPage() {
     const handleEdit = (item: Inventory) => {
         setEditingId(item.id);
         setForm({
-            product_id: String(item.product_id),
+            product_id: String(item.product_id), 
             store_id: String(item.store_id),
             quantity_stock: item.quantity_stock || 0,
             quantity_sold: item.quantity_sold || 0,
@@ -169,26 +157,15 @@ export default function InventoryPage() {
         }
     };
 
-
-    const checkForDuplicate = (productId: number, storeId: number): boolean => {
-        if (!Array.isArray(inventories)) return false;
-        return inventories.some(
-            item =>
-                (item.id !== editingId) &&
-                (Number(item.product_id) === productId) &&
-                (Number(item.store_id) === storeId)
-        );
-    };
-
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
 
         if (isCreating) {
-            if (form.product_id === undefined) {
-                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm.";
+            if (!form.product_id) { 
+                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm hoặc Tất cả.";
             }
-            if (form.store_id === undefined) {
-                newErrors.store_id = "Vui lòng chọn ít nhất 1 Cửa hàng.";
+            if (!form.store_id) { 
+                newErrors.store_id = "Vui lòng chọn ít nhất 1 Cửa hàng hoặc Tất cả.";
             }
         }
 
@@ -210,49 +187,18 @@ export default function InventoryPage() {
 
         try {
             if (isCreating) {
-                const productIds: number[] = form.product_id === 'all'
-                    ? products.map(p => Number(p.id))
-                    : (Array.isArray(form.product_id)
-                        ? form.product_id.map(id => Number(id))
-                        : [Number(form.product_id!)]);
+                
+                const createDto: CreateInventoryDto = {
+                    product_id: form.product_id || 'all', 
+                    store_id: form.store_id || 'all',
+                    quantity_stock: form.quantity_stock,
+                };
+                
+                await createInventory(createDto as CreateInventoryDto);
 
-                const storeIds: number[] = form.store_id === 'all'
-                    ? stores.map(s => Number(s.id))
-                    : (Array.isArray(form.store_id)
-                        ? form.store_id.map(id => Number(id))
-                        : [Number(form.store_id!)]);
-
-                const createDtos: CreateInventoryDto[] = [];
-                let hasDuplicate = false;
-
-                for (const pId of productIds) {
-                    for (const sId of storeIds) {
-                        if (checkForDuplicate(pId, sId)) {
-                            alert(`Lỗi: Tồn kho cho Sản phẩm: ${getDisplayName(products, pId)} và Cửa hàng: ${getDisplayName(stores, sId)} đã tồn tại!`);
-                            hasDuplicate = true;
-                            break;
-                        }
-
-                        createDtos.push({
-                            product_id: pId,
-                            store_id: sId,
-                            quantity_stock: form.quantity_stock,
-                        });
-                    }
-                    if (hasDuplicate) return;
-                }
-
-                if (createDtos.length > 0) {
-                    for (const dto of createDtos) {
-                        await createInventory(dto);
-                    }
-                    alert(`Thêm mới thành công ${createDtos.length} mục tồn kho!`);
-                } else {
-                    alert("Không có mục tồn kho nào được tạo.");
-                }
+                alert(`Yêu cầu tạo tồn kho đã được gửi. Backend sẽ xử lý tạo các cặp sản phẩm/cửa hàng!`);
 
             } else {
-                // UPDATE
                 const updateDto: UpdateInventoryDto = {
                     quantity_stock: form.quantity_stock,
                     quantity_sold: form.quantity_sold,
@@ -262,7 +208,6 @@ export default function InventoryPage() {
                 alert(`Cập nhật tồn kho ID ${editingId} thành công!`);
             }
 
-            // Reset form
             handleCancelEdit();
             fetchData();
         } catch (error: unknown) {
@@ -275,31 +220,19 @@ export default function InventoryPage() {
         }
     };
     
-    // Xử lý thay đổi trang
     const handlePageChange = useCallback((page: number) => {
-        // Chỉ thay đổi trang nếu không phải là trang hiện tại
         if (page !== currentPage) {
             setCurrentPage(page);
             handleCancelEdit();
         }
-    }, [currentPage]); // Dependency: currentPage
+    }, [currentPage]); 
 
-    // Xử lý thay đổi kích thước trang
     const handlePageSizeChange = useCallback((size: number) => {
         setPageSize(size);
-        setCurrentPage(1); // Luôn về trang 1 khi thay đổi size
+        setCurrentPage(1);
         handleCancelEdit();
     }, []);
     
-    // Phân trang danh sách đã lọc (Client-side pagination)
-    const paginatedInventories = useMemo(() => {
-        const startIndex = (currentPage - 1) * pageSize;
-        // Phân trang trên danh sách đã được lọc
-        return filteredInventories.slice(startIndex, startIndex + pageSize);
-    }, [filteredInventories, currentPage, pageSize]);
-
-
-    // Handlers cho Filter và Search
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
@@ -329,7 +262,7 @@ export default function InventoryPage() {
                     handleCancelEdit={handleCancelEdit}
                 />
 
-                {/* KHU VỰC LỌC VÀ TÌM KIẾM MỚI */}
+                {/* KHU VỰC LỌC VÀ TÌM KIẾM */}
                 <div className="flex flex-wrap justify-between items-center mb-6 p-4 border rounded-lg bg-gray-50">
                     <h3 className="text-lg font-semibold text-gray-700 mb-3 w-full">Bộ lọc và Tìm kiếm</h3>
 
@@ -367,8 +300,8 @@ export default function InventoryPage() {
                     </div>
 
                     <div className="w-full md:w-1/4 min-w-[200px] text-sm text-gray-600">
-                        <p>Tổng số mục: <span className="font-bold">{filteredInventories.length}</span></p>
-                        <p>Đang hiển thị: <span className="font-bold">{paginatedInventories.length}</span></p>
+                        <p>Tổng số mục: <span className="font-bold">{totalItems}</span></p>
+                        <p>Đang hiển thị: <span className="font-bold">{inventories.length}</span></p>
                     </div>
                 </div>
 
@@ -379,22 +312,19 @@ export default function InventoryPage() {
                     </div>
                 ) : (
                     <InventoryTable
-                        // Sử dụng danh sách đã được phân trang (paginatedInventories)
-                        inventories={paginatedInventories} 
+                        inventories={inventories} 
                         products={products}
                         stores={stores}
                         getDisplayName={getDisplayName}
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
-                        // totalItems của bảng là số lượng sau khi lọc
-                        totalItems={filteredInventories.length}
+                        totalItems={totalItems} 
                     />
                 )}
 
                 {/* KHU VỰC PHÂN TRANG */}
                 <Pagination
-                    // Sử dụng totalItems là số lượng sau khi lọc
-                    totalItems={filteredInventories.length} 
+                    totalItems={totalItems} 
                     currentPage={currentPage}
                     pageSize={pageSize}
                     onPageChange={handlePageChange}
@@ -404,9 +334,3 @@ export default function InventoryPage() {
         </div>
     );
 }
-
-// Giữ nguyên các file components còn lại:
-// src/components/inventory/InventoryForm.tsx
-// src/components/inventory/InventoryTable.tsx
-// src/components/inventory/Checkboxlist.tsx
-// src/components/inventory/Pagination.tsx
