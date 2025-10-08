@@ -38,9 +38,19 @@ export class VoucherController {
     }
 
     @Get('listvouchers')
-    async findAll(@Query() query: ListVoucherRequestDto): Promise<VoucherResponseDto[]> {
-        await this.voucherService.softDeleteExpiredVouchers();
+    async findAllAdmin(@Query() query: ListVoucherRequestDto): Promise<VoucherResponseDto[]> {
         const result = await this.voucherService.findAll(query);
+        return result.vouchers.map(voucher =>
+            plainToInstance(VoucherResponseDto, voucher, {
+                excludeExtraneousValues: true,
+            }),
+        );
+    }
+
+    @Get('listvoucherselectofcustomers')
+    async findAllCustomer(@Query() query: ListVoucherRequestDto): Promise<VoucherResponseDto[]> {
+        await this.voucherService.softDeleteExpiredVouchers();
+        const result = await this.voucherService.findAllForCustomer(query);
         return result.vouchers.map(voucher =>
             plainToInstance(VoucherResponseDto, voucher, {
                 excludeExtraneousValues: true,
