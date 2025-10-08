@@ -38,7 +38,22 @@ export class VoucherService {
                 }
         }
 
-        async findAll(params: IListVoucher): Promise<{ message: string, vouchers: VoucherEntity[] }> {
+        async findAll(params: IListVoucher): Promise<{ message: string; vouchers: VoucherEntity[] }> {
+                const vouchers = await this.voucherRepository.findAll({
+                        ...params,
+                        size: params.size || DEFAULT_PAGE_SIZE,
+                        page: params.page || DEFAULT_PAGE,
+                });
+                return {
+                        message:
+                                vouchers.length > 0
+                                        ? 'Vouchers fetched successfully'
+                                        : 'No vouchers found',
+                        vouchers,
+                };
+        }
+
+        async findAllForCustomer(params: IListVoucher): Promise<{ message: string; vouchers: VoucherEntity[] }> {
                 const allVouchers = await this.voucherRepository.findAll({
                         ...params,
                         size: params.size || DEFAULT_PAGE_SIZE,
@@ -50,7 +65,10 @@ export class VoucherService {
                         return new Date(voucher.end_time) > now;
                 });
                 return {
-                        message: vouchers.length > 0 ? 'Vouchers fetched successfully' : 'No vouchers found',
+                        message:
+                                vouchers.length > 0
+                                        ? 'Vouchers fetched successfully'
+                                        : 'No vouchers found',
                         vouchers,
                 };
         }
