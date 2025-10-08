@@ -1,3 +1,5 @@
+// src/app/admin/importproduct/page.tsx
+
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
@@ -6,28 +8,33 @@ import {
     updateImportProduct,
     deleteImportProduct,
     listDropdownProducts,
-    listDropdownSuppliers, // Thay đổi
+    listDropdownSuppliers, 
+    listProducts, // IMPORT HÀM MỚI
     ImportProduct,
     CreateImportProductDto,
     UpdateImportProductDto,
     SelectOption,
-} from "@/api/services/importProductsService"; // Thay đổi
+    Product // IMPORT INTERFACE MỚI
+} from "@/api/services/importProductsService"; 
 
-import ImportProductForm from "@/components/adminImportProduct/ImportProductForm"; // Thay đổi
-import ImportProductTable from "@/components/adminImportProduct/ImportProductTable"; // Thay đổi
-import Pagination from "@/components/inventory/Pagination"; // Giả định Pagination ở common
+import ImportProductForm from "@/components/adminImportProduct/ImportProductForm"; 
+import ImportProductTable from "@/components/adminImportProduct/ImportProductTable"; 
+import ProductTable from "@/components/adminImportProduct/ProductTable"; // IMPORT BẢNG SẢN PHẨM
+import Pagination from "@/components/inventory/Pagination"; 
 
 export interface ImportProductFormState {
     product_id: string | string[] | undefined;
-    supplier_id: string | string[] | undefined; // Thay đổi
-    import_quantity: number; // Thay đổi
+    supplier_id: string | string[] | undefined; 
+    import_quantity: number; 
 }
 
-export type FormName = "product_id" | "supplier_id" | "import_quantity"; // Thay đổi
-export default function ImportProductPage() { // Thay đổi
-    const [importProducts, setImportProducts] = useState<ImportProduct[]>([]); // Thay đổi
-    const [products, setProducts] = useState<SelectOption[]>([]);
-    const [suppliers, setSuppliers] = useState<SelectOption[]>([]); // Thay đổi
+export type FormName = "product_id" | "supplier_id" | "import_quantity"; 
+
+export default function ImportProductPage() { 
+    const [importProducts, setImportProducts] = useState<ImportProduct[]>([]); 
+    const [products, setProducts] = useState<SelectOption[]>([]); // Dropdown Products
+    const [allProducts, setAllProducts] = useState<Product[]>([]); // SẢN PHẨM ĐẦY ĐỦ (DÙNG CHO BẢNG)
+    const [suppliers, setSuppliers] = useState<SelectOption[]>([]); 
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -35,12 +42,12 @@ export default function ImportProductPage() { // Thay đổi
 
     // STATE LỌC VÀ TÌM KIẾM
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [selectedSupplierId, setSelectedSupplierId] = useState<number>(0); // Thay đổi
+    const [selectedSupplierId, setSelectedSupplierId] = useState<number>(0); 
 
-    const [form, setForm] = useState<ImportProductFormState>({ // Thay đổi
+    const [form, setForm] = useState<ImportProductFormState>({ 
         product_id: undefined,
-        supplier_id: undefined, // Thay đổi
-        import_quantity: 0, // Thay đổi
+        supplier_id: undefined, 
+        import_quantity: 0, 
     });
 
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -59,16 +66,42 @@ export default function ImportProductPage() { // Thay đổi
     useEffect(() => {
         fetchData();
         fetchDropdownData();
+        fetchAllProducts(); // GỌI HÀM MỚI
     }, [currentPage, pageSize]);
+    
+    // Hàm để lấy tên Nhà cung cấp (dùng cho ProductTable)
+    const getSupplierName = useCallback((supplierId: number): string => {
+        return getDisplayName(suppliers, supplierId);
+    }, [suppliers, getDisplayName]);
+
+    // Hàm để lấy tên Danh mục (dùng cho ProductTable)
+    const getCategoryName = useCallback((product: Product): string => {
+        // Giả định bạn có list categories hoặc logic lấy tên category
+        // Hiện tại không có list categories, ta trả về placeholder
+        return `Category ID: ${product.category_id || 'N/A'}`;
+    }, []);
+
+    // HÀM TẢI SẢN PHẨM ĐẦY ĐỦ (DÙNG CHO BẢNG CUỐI)
+    const fetchAllProducts = async () => {
+        try {
+            // Tải 1000 sản phẩm (giả định) để hiển thị tồn kho tổng
+            const res = await listProducts({ page: 1, size: 1000 }); 
+            setAllProducts(Array.isArray(res.data) ? res.data : []);
+        } catch (error) {
+            console.error("Lỗi tải toàn bộ sản phẩm:", error);
+            setAllProducts([]);
+        }
+    };
+
 
     const fetchDropdownData = async () => {
         try {
-            const [productRes, supplierRes] = await Promise.all([ // Thay đổi
+            const [productRes, supplierRes] = await Promise.all([ 
                 listDropdownProducts(),
-                listDropdownSuppliers(), // Thay đổi
+                listDropdownSuppliers(), 
             ]);
             setProducts(Array.isArray(productRes) ? productRes : []);
-            setSuppliers(Array.isArray(supplierRes) ? supplierRes : []); // Thay đổi
+            setSuppliers(Array.isArray(supplierRes) ? supplierRes : []); 
         } catch (error) {
             console.error("Lỗi tải dropdown data:", error);
             setProducts([]);
@@ -79,44 +112,46 @@ export default function ImportProductPage() { // Thay đổi
     const fetchData = async () => {
         try {
             setLoading(true); 
-            const res = await listImportProducts({ // Thay đổi
+            const res = await listImportProducts({ 
                 page: currentPage,
                 size: pageSize
             });
 
             const list = res.data || [];
-            setImportProducts(Array.isArray(list) ? list : []); // Thay đổi
+            setImportProducts(Array.isArray(list) ? list : []); 
             setTotalItems(res.total || list.length);
             setCurrentPage(res.page || currentPage);
             setPageSize(res.size || pageSize);
 
         } catch (error) {
-            console.error("Lỗi tải nhập kho:", error); // Thay đổi
+            console.error("Lỗi tải nhập kho:", error); 
             setImportProducts([]);
             setTotalItems(0);
         } finally {
             setLoading(false);
+            // Sau khi tải ImportProducts, TẢI LẠI SẢN PHẨM để đảm bảo tồn kho mới nhất
+            fetchAllProducts(); 
         }
     };
     
     // LOGIC LỌC VÀ TÌM KIẾM (Client-side)
-    const filteredImportProducts = useMemo(() => { // Thay đổi
+    const filteredImportProducts = useMemo(() => { 
         const query = searchQuery.toLowerCase().trim();
-        const supplierId = selectedSupplierId; // Thay đổi
+        const supplierId = selectedSupplierId; 
 
-        return importProducts.filter(item => { // Thay đổi
+        return importProducts.filter(item => { 
             // Lọc theo Nhà cung cấp
-            const supplierMatch = supplierId === 0 || Number(item.supplier_id) === supplierId; // Thay đổi
+            const supplierMatch = supplierId === 0 || Number(item.supplier_id) === supplierId; 
 
             // Tìm kiếm theo Tên Sản phẩm HOẶC Tên Nhà cung cấp
             const productName = getDisplayName(products, item.product_id).toLowerCase();
-            const supplierName = getDisplayName(suppliers, item.supplier_id).toLowerCase(); // Thay đổi
+            const supplierName = getDisplayName(suppliers, item.supplier_id).toLowerCase(); 
             
             const searchMatch = !query || productName.includes(query) || supplierName.includes(query);
 
             return supplierMatch && searchMatch;
         });
-    }, [importProducts, selectedSupplierId, searchQuery, products, suppliers, getDisplayName]); // Thay đổi dependencies
+    }, [importProducts, selectedSupplierId, searchQuery, products, suppliers, getDisplayName]); 
     
     // Đặt lại trang 1 khi filter hoặc search thay đổi
     useEffect(() => {
@@ -125,13 +160,13 @@ export default function ImportProductPage() { // Thay đổi
 
 
     // Handler cho input số (import_quantity)
-    const handleNumberChange = (name: FormName, value: number) => { // Thay đổi FormName
+    const handleNumberChange = (name: FormName, value: number) => { 
         setForm(prev => ({ ...prev, [name]: value }));
         setErrors(prev => ({ ...prev, [name]: "" }));
     };
 
     // Handler cho CheckboxList (product_id, supplier_id)
-    const handleValueChange = (name: "product_id" | "supplier_id", value: string | string[] | undefined) => { // Thay đổi
+    const handleValueChange = (name: "product_id" | "supplier_id", value: string | string[] | undefined) => { 
         setForm(prev => ({
             ...prev,
             [name]: value
@@ -141,41 +176,42 @@ export default function ImportProductPage() { // Thay đổi
     
     const handleCancelEdit = () => {
         setEditingId(null);
-        setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 }); // Thay đổi
+        setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 }); 
         setErrors({});
     }
 
-    const handleEdit = (item: ImportProduct) => { // Thay đổi
+    const handleEdit = (item: ImportProduct) => { 
         setEditingId(item.id);
         setForm({
             product_id: String(item.product_id),
-            supplier_id: String(item.supplier_id), // Thay đổi
-            import_quantity: item.import_quantity || 0, // Thay đổi
+            supplier_id: String(item.supplier_id), 
+            import_quantity: item.import_quantity || 0, 
         });
         setErrors({});
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm(`Bạn có chắc chắn muốn xoá phiếu nhập kho ID ${id} không?`)) return; // Thay đổi
+        if (!window.confirm(`Bạn có chắc chắn muốn xoá phiếu nhập kho ID ${id} không?`)) return; 
         try {
-            await deleteImportProduct(id); // Thay đổi
-            alert(`Xoá phiếu nhập kho ID ${id} thành công.`); // Thay đổi
+            await deleteImportProduct(id); 
+            alert(`Xoá phiếu nhập kho ID ${id} thành công.`); 
             fetchData();
+            fetchAllProducts(); // CẬP NHẬT TỒN KHO SAU KHI XOÁ
         } catch (error) {
-            console.error("Lỗi xoá phiếu nhập kho:", error); // Thay đổi
+            console.error("Lỗi xoá phiếu nhập kho:", error); 
             alert("Lỗi xảy ra khi xoá phiếu nhập kho.");
         }
     };
 
 
-    const checkForDuplicate = (productId: number, supplierId: number): boolean => { // Thay đổi
-        if (!Array.isArray(importProducts)) return false; // Thay đổi
+    const checkForDuplicate = (productId: number, supplierId: number): boolean => { 
+        if (!Array.isArray(importProducts)) return false; 
         // Check trùng trong danh sách nhập kho
-        return importProducts.some( // Thay đổi
+        return importProducts.some( 
             item =>
                 (item.id !== editingId) &&
                 (Number(item.product_id) === productId) &&
-                (Number(item.supplier_id) === supplierId) // Thay đổi
+                (Number(item.supplier_id) === supplierId) 
         );
     };
 
@@ -183,16 +219,16 @@ export default function ImportProductPage() { // Thay đổi
         const newErrors: { [key: string]: string } = {};
 
         if (isCreating) {
-            if (form.product_id === undefined) {
+            if (form.product_id === undefined || (Array.isArray(form.product_id) && form.product_id.length === 0)) {
                 newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm.";
             }
-            if (form.supplier_id === undefined) { // Thay đổi
-                newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp."; // Thay đổi
+            if (form.supplier_id === undefined || (Array.isArray(form.supplier_id) && form.supplier_id.length === 0)) { 
+                newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp."; 
             }
         }
 
-        if (form.import_quantity <= 0) { // Thay đổi: Nhập kho phải > 0
-            newErrors.import_quantity = "SL Nhập kho phải là số lớn hơn 0."; // Thay đổi
+        if (form.import_quantity <= 0) { 
+            newErrors.import_quantity = "SL Nhập kho phải là số lớn hơn 0."; 
         }
 
         setErrors(newErrors);
@@ -206,49 +242,49 @@ export default function ImportProductPage() { // Thay đổi
         try {
             if (isCreating) {
                 const productIds: string[] = form.product_id === 'all'
-                    ? ['all']
+                    ? products.map(p => String(p.id)) // Lấy tất cả ID nếu chọn 'all'
                     : (Array.isArray(form.product_id)
                         ? form.product_id
                         : [form.product_id!]);
 
-                const supplierIds: string[] = form.supplier_id === 'all' // Thay đổi
-                    ? ['all']
-                    : (Array.isArray(form.supplier_id) // Thay đổi
-                        ? form.supplier_id // Thay đổi
-                        : [form.supplier_id!]); // Thay đổi
+                const supplierIds: string[] = form.supplier_id === 'all' 
+                    ? suppliers.map(s => String(s.id)) // Lấy tất cả ID nếu chọn 'all'
+                    : (Array.isArray(form.supplier_id) 
+                        ? form.supplier_id 
+                        : [form.supplier_id!]); 
 
-                // Lưu ý: Dù backend chấp nhận tạo hàng loạt, frontend vẫn nên cảnh báo trùng lặp trước khi gửi
-                // Nếu 'all' được chọn, ta bỏ qua check trùng lặp client-side vì sẽ là quá nhiều
-                if (productIds.length === 1 && supplierIds.length === 1 && productIds[0] !== 'all' && supplierIds[0] !== 'all') {
+                // Check trùng lặp chỉ khi chọn 1 sản phẩm và 1 nhà cung cấp
+                if (productIds.length === 1 && supplierIds.length === 1) {
                     if (checkForDuplicate(Number(productIds[0]), Number(supplierIds[0]))) {
                          alert(`Lỗi: Phiếu nhập kho cho Sản phẩm: ${getDisplayName(products, productIds[0])} và Nhà cung cấp: ${getDisplayName(suppliers, supplierIds[0])} đã tồn tại!`);
                          return;
                     }
                 }
 
-                const createDto: CreateImportProductDto = { // Thay đổi
+                const createDto: CreateImportProductDto = { 
                     product_id: form.product_id, // Gửi nguyên array/string/all cho backend xử lý
-                    supplier_id: form.supplier_id, // Thay đổi
-                    import_quantity: form.import_quantity, // Thay đổi
+                    supplier_id: form.supplier_id, 
+                    import_quantity: form.import_quantity, 
                 };
 
-                await createImportProduct(createDto); // Thay đổi
-                alert(`Thêm mới phiếu nhập kho thành công!`); // Thay đổi
+                await createImportProduct(createDto); 
+                alert(`Thêm mới phiếu nhập kho thành công!`); 
                 
 
             } else {
                 // UPDATE
-                const updateDto: UpdateImportProductDto = { // Thay đổi
-                    import_quantity: form.import_quantity, // Thay đổi
+                const updateDto: UpdateImportProductDto = { 
+                    import_quantity: form.import_quantity, 
                 };
 
-                await updateImportProduct(editingId!, updateDto); // Thay đổi
-                alert(`Cập nhật phiếu nhập kho ID ${editingId} thành công!`); // Thay đổi
+                await updateImportProduct(editingId!, updateDto); 
+                alert(`Cập nhật phiếu nhập kho ID ${editingId} thành công!`); 
             }
 
             // Reset form
             handleCancelEdit();
             fetchData();
+            fetchAllProducts(); // CẬP NHẬT TỒN KHO SAU KHI THÊM/SỬA
         } catch (error: any) {
             console.error("Lỗi API:", error);
             let message = error.response?.data?.message || error.message || "Lỗi không xác định";
@@ -272,10 +308,10 @@ export default function ImportProductPage() { // Thay đổi
     }, []);
     
     // Phân trang danh sách đã lọc (Client-side pagination)
-    const paginatedImportProducts = useMemo(() => { // Thay đổi
+    const paginatedImportProducts = useMemo(() => { 
         const startIndex = (currentPage - 1) * pageSize;
-        return filteredImportProducts.slice(startIndex, startIndex + pageSize); // Thay đổi
-    }, [filteredImportProducts, currentPage, pageSize]); // Thay đổi dependencies
+        return filteredImportProducts.slice(startIndex, startIndex + pageSize); 
+    }, [filteredImportProducts, currentPage, pageSize]); 
 
 
     // Handlers cho Filter và Search
@@ -283,9 +319,24 @@ export default function ImportProductPage() { // Thay đổi
         setSearchQuery(e.target.value);
     };
 
-    const handleSupplierFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => { // Thay đổi
-        setSelectedSupplierId(Number(e.target.value)); // Thay đổi
+    const handleSupplierFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => { 
+        setSelectedSupplierId(Number(e.target.value)); 
     };
+    
+    // Handler mở modal sửa sản phẩm (Dùng cho ProductTable)
+    const openEditProductModal = (product: Product) => {
+        // Log hoặc gọi hàm mở modal sửa Product thực tế
+        console.log("Open Edit Product Modal for:", product.id);
+        alert(`Mở modal sửa Sản phẩm ID: ${product.id}`);
+    };
+    
+    // Handler xoá sản phẩm (Dùng cho ProductTable)
+    const handleDeleteProduct = (id: number) => {
+        // Log hoặc gọi hàm xoá Product thực tế
+        console.log("Delete Product:", id);
+        alert(`Thực hiện xoá Sản phẩm ID: ${id}`);
+    };
+    
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -295,13 +346,13 @@ export default function ImportProductPage() { // Thay đổi
                 </h2>
 
                 {/* KHU VỰC THÊM / SỬA FORM */}
-                <ImportProductForm // Thay đổi component
+                <ImportProductForm 
                     form={form as any}
                     editingId={editingId}
                     errors={errors}
                     products={products}
-                    suppliers={suppliers} // Thay đổi
-                    getDisplayName={getDisplayName}
+                    suppliers={suppliers} 
+                    getDisplayName={getDisplayName as any}
                     handleValueChange={handleValueChange as any}
                     handleNumberChange={handleNumberChange as any}
                     handleSubmit={handleSubmit}
@@ -310,7 +361,7 @@ export default function ImportProductPage() { // Thay đổi
 
                 {/* KHU VỰC LỌC VÀ TÌM KIẾM MỚI */}
                 <div className="flex flex-wrap justify-between items-center mb-6 p-4 border rounded-lg bg-gray-50">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-3 w-full">Bộ lọc và Tìm kiếm</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3 w-full">Bộ lọc và Tìm kiếm (Phiếu nhập)</h3>
 
                     {/* Lọc theo Nhà cung cấp */}
                     <div className="w-full md:w-1/3 min-w-[200px] mb-3 md:mb-0">
@@ -319,8 +370,8 @@ export default function ImportProductPage() { // Thay đổi
                         </label>
                         <select
                             id="supplier-filter"
-                            value={selectedSupplierId} // Thay đổi
-                            onChange={handleSupplierFilterChange} // Thay đổi
+                            value={selectedSupplierId} 
+                            onChange={handleSupplierFilterChange} 
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 outline-none"
                         >
                             <option value={0}>-- Tất cả Nhà cung cấp --</option>
@@ -346,21 +397,22 @@ export default function ImportProductPage() { // Thay đổi
                     </div>
 
                     <div className="w-full md:w-1/4 min-w-[200px] text-sm text-gray-600">
-                        <p>Tổng số mục: <span className="font-bold">{filteredImportProducts.length}</span></p>
+                        <p>Tổng số phiếu: <span className="font-bold">{filteredImportProducts.length}</span></p>
                         <p>Đang hiển thị: <span className="font-bold">{paginatedImportProducts.length}</span></p>
                     </div>
                 </div>
 
-                {/* KHU VỰC BẢNG DỮ LIỆU */}
+                {/* KHU VỰC BẢNG PHIẾU NHẬP */}
+                <h3 className="text-xl font-semibold text-gray-700 mb-4">Danh sách Phiếu nhập kho</h3>
                 {loading ? (
                     <div className="text-center py-10 text-lg text-gray-500">
                         <p>Đang tải dữ liệu...</p>
                     </div>
                 ) : (
-                    <ImportProductTable // Thay đổi component
-                        importProducts={paginatedImportProducts} // Thay đổi prop
+                    <ImportProductTable 
+                        importProducts={paginatedImportProducts} 
                         products={products}
-                        suppliers={suppliers} // Thay đổi prop
+                        suppliers={suppliers} 
                         getDisplayName={getDisplayName as any}
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
@@ -376,6 +428,30 @@ export default function ImportProductPage() { // Thay đổi
                     onPageChange={handlePageChange}
                     onPageSizeChange={handlePageSizeChange}
                 />
+                
+                {/* --- DÒNG PHÂN CÁCH VÀ KHU VỰC BẢNG SẢN PHẨM --- */}
+                <hr className="my-8 border-gray-300" />
+                
+                <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">
+                    Tồn kho Sản phẩm Tổng
+                </h2>
+                
+                {/* BẢNG SẢN PHẨM VỚI TỒN KHO ĐƯỢC CẬP NHẬT */}
+                {loading ? (
+                     <div className="text-center py-10 text-lg text-gray-500">
+                        <p>Đang tải danh sách sản phẩm...</p>
+                     </div>
+                ) : (
+                    <ProductTable 
+                        products={allProducts} // Sử dụng danh sách Sản phẩm đầy đủ
+                        getSupplierName={getSupplierName}
+                        getCategoryName={getCategoryName}
+                        openEditModal={openEditProductModal} // Giả định handler
+                        handleDelete={handleDeleteProduct} // Giả định handler
+                        startIndex={0} // Hiển thị từ đầu
+                    />
+                )}
+                
             </div>
         </div>
     );

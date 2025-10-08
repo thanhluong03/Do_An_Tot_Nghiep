@@ -1,41 +1,42 @@
-// src/components/import_product/ImportProductTable.tsx
+// src/components/adminImportProduct/ImportProductTable.tsx
 
 import React from 'react';
-import { ImportProduct, SelectOption } from "@/api/services/importProductsService"; // Thay đổi Import Type
+import { ImportProduct, SelectOption } from "@/api/services/importProductsService";
 
 interface ImportProductTableProps {
-    importProducts: ImportProduct[]; // Thay đổi prop name
+    importProducts: ImportProduct[];
     products: SelectOption[];
-    suppliers: SelectOption[]; // Thay đổi prop name
+    suppliers: SelectOption[];
     getDisplayName: (list: SelectOption[], id: number | undefined) => string;
     handleEdit: (item: ImportProduct) => void;
     handleDelete: (id: number) => Promise<void>;
     totalItems: number;
 }
 
-const ImportProductTable: React.FC<ImportProductTableProps> = ({ // Thay đổi component name
-    importProducts, // Thay đổi
+const ImportProductTable: React.FC<ImportProductTableProps> = ({
+    importProducts,
     products,
-    suppliers, // Thay đổi
+    suppliers,
     getDisplayName,
     handleEdit,
     handleDelete,
     totalItems,
-    
 }) => {
     return (
         <>
             <div className="overflow-x-auto">
                 <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
-                    <thead><tr className="bg-gray-200 text-gray-700 text-sm uppercase">
+                    <thead>
+                        <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
                             <th className="px-4 py-3 text-left">ID</th>
                             <th className="px-4 py-3 text-left">Sản phẩm</th>
-                            <th className="px-4 py-3 text-left">Nhà cung cấp</th> {/* Thay đổi */}
-                            <th className="px-4 py-3 text-right">SL Nhập kho</th> {/* Thay đổi */}
+                            <th className="px-4 py-3 text-left">Nhà cung cấp</th>
+                            <th className="px-4 py-3 text-right">SL Nhập kho</th>
                             <th className="px-4 py-3 text-left">Ngày tạo</th>
                             <th className="px-4 py-3 text-left">Thao tác</th>
                         </tr>
                     </thead>
+                    
                     <tbody>
                         {importProducts.length > 0 ? (
                             importProducts.map((item) => (
@@ -44,11 +45,11 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({ // Thay đổi 
                                     <td className="px-4 py-3 max-w-[200px] truncate" title={getDisplayName(products, item.product_id)}>
                                         {getDisplayName(products, item.product_id)}
                                     </td>
-                                    <td className="px-4 py-3 max-w-[200px] truncate" title={getDisplayName(suppliers, item.supplier_id)}> {/* Thay đổi */}
-                                        {getDisplayName(suppliers, item.supplier_id)} {/* Thay đổi */}
+                                    <td className="px-4 py-3 max-w-[200px] truncate" title={getDisplayName(suppliers, item.supplier_id)}>
+                                        {getDisplayName(suppliers, item.supplier_id)}
                                     </td>
                                     <td className="px-4 py-3 text-right font-bold text-green-600">
-                                        {item.import_quantity.toLocaleString()} {/* Thay đổi */}
+                                        {item.import_quantity.toLocaleString()}
                                     </td>
                                     <td className="px-4 py-3">
                                         {new Date(item.created_at).toLocaleDateString()}

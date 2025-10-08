@@ -9,7 +9,6 @@ import {
     ProductImage
 } from "@/api/services/productApi";
 
-import { getSuppliers, Supplier } from "@/api/services/supplierService";
 import { getCategories, Category } from "@/api/services/categoryService"; 
 import ProductFormModal from "@/components/adminProducts/ProductFormModal";
 import ProductsTable from "@/components/adminProducts/ProductsTable";
@@ -20,13 +19,12 @@ const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
-    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [categories, setCategories] = useState<Category[]>([]); 
     const [loading, setLoading] = useState(true);
 
     // STATE LỌC VÀ TÌM KIẾM
     const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0); 
-    const [selectedSupplierId, setSelectedSupplierId] = useState<number>(0); 
+
     const [searchQuery, setSearchQuery] = useState<string>("");
 
     // State phân trang: Bắt đầu từ trang 1
@@ -40,7 +38,6 @@ export default function ProductsPage() {
         price: 0,
         description: "",
         main_image: "",
-        supplier_id: 0,
         category_id: 0,
         images: [] as ProductImage[]
     } as Product);
@@ -49,12 +46,12 @@ export default function ProductsPage() {
     useEffect(() => {
         
         fetchProducts();
-        fetchSuppliers();
         fetchCategories(); 
     }, []);
 
     const fetchProducts = async () => {
         try {
+            
             setLoading(true);
             const data = await getProducts();
             setProducts(data);
@@ -65,15 +62,6 @@ export default function ProductsPage() {
         }
     };
 
-    const fetchSuppliers = async () => {
-        try {
-            const data = await getSuppliers();
-            setSuppliers(data);
-            console.log("Suppliers loaded:", data); 
-        } catch (error) {
-            console.error("Lỗi khi load nhà cung cấp:", error);
-        }
-    };
     
     const fetchCategories = async () => {
         try {
@@ -94,10 +82,7 @@ export default function ProductsPage() {
                 selectedCategoryId === 0 || 
                 (p.category_id === selectedCategoryId) ||
                 (p.category?.id === selectedCategoryId); // Trường hợp category_id bị null nhưng category object có id
-            
-            // Lọc 2: Theo Nhà cung cấp
-            const supplierMatch = 
-                selectedSupplierId === 0 || p.supplier_id === selectedSupplierId;
+        
 
             // Lọc 3: Theo Tên/Mô tả (Tìm kiếm)
             const searchMatch = 
@@ -105,14 +90,14 @@ export default function ProductsPage() {
                 p.name.toLowerCase().includes(lowerCaseQuery) ||
                 (p.description && p.description.toLowerCase().includes(lowerCaseQuery));
             
-            return categoryMatch && supplierMatch && searchMatch;
+            return categoryMatch  && searchMatch;
         });
-    }, [products, selectedCategoryId, selectedSupplierId, searchQuery]); 
+    }, [products, selectedCategoryId, searchQuery]); 
     
     // Đặt lại trang về 1 mỗi khi Filter/Search thay đổi
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedCategoryId, selectedSupplierId, searchQuery]);
+    }, [selectedCategoryId, searchQuery]);
 
 
     // LOGIC PHÂN TRANG: SỬ DỤNG filteredProducts
@@ -134,11 +119,6 @@ export default function ProductsPage() {
         setSelectedCategoryId(parseInt(event.target.value, 10));
     };
 
-    // Xử lý thay đổi filter nhà cung cấp
-    const handleSupplierFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedSupplierId(parseInt(event.target.value, 10));
-    };
-
     // Xử lý thay đổi ô tìm kiếm
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(event.target.value);
@@ -154,7 +134,6 @@ export default function ProductsPage() {
             price: 0,
             main_image: "",
             images: [],
-            supplier_id: suppliers[0]?.id || 0, // Đặt default là supplier đầu tiên
             category_id: categories[0]?.id || 0, // Đặt default là category đầu tiên
             
         } as Product);
@@ -203,10 +182,6 @@ export default function ProductsPage() {
         }
     };
 
-    const getSupplierName = (id: number) => {
-        return suppliers.find((s) => s.id === id)?.name || "N/A";
-        
-    };
 
     // HÀM SỬA LỖI: Luôn trả về string và xử lý cả hai trường category
     const getCategoryName = (product: Product): string => {
@@ -222,7 +197,7 @@ export default function ProductsPage() {
         return categories.find((c) => c.id === categoryId)?.name || "Đang tải...";
     };
 
-
+    console.log("Fetching products...",{data: products});
     return (
         <div className="p-6 flex justify-center">
             <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-full">
@@ -280,25 +255,7 @@ export default function ProductsPage() {
                             </select>
                         </div>
 
-                        {/* LỌC THEO NHÀ CUNG CẤP (Cửa hàng) */}
-                        <div className="flex items-center space-x-2">
-                            <label htmlFor="supplier-filter" className="text-gray-700 font-medium text-sm">
-                                Lọc theo NCC:
-                            </label>
-                            <select
-                                id="supplier-filter"
-                                value={selectedSupplierId}
-                                onChange={handleSupplierFilterChange}
-                                className="p-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value={0}>Tất cả NCC</option>
-                                {suppliers.map((sup) => (
-                                    <option key={sup.id} value={sup.id}>
-                                        {sup.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                      
                     </div>
                 </div>
 
@@ -309,7 +266,6 @@ export default function ProductsPage() {
                         
                         <ProductsTable
                             products={paginatedProducts}
-                            getSupplierName={getSupplierName}
                             getCategoryName={getCategoryName}
                             openEditModal={openEditModal}
                             handleDelete={handleDelete}
@@ -348,10 +304,9 @@ export default function ProductsPage() {
                         )}
                         <div className="mt-4 text-center text-sm text-gray-600">
                             Hiển thị {paginatedProducts.length} trên tổng số {filteredProducts.length} sản phẩm (Trang {currentPage} / {totalPages})
-                            {(selectedCategoryId !== 0 || selectedSupplierId !== 0 || searchQuery) && (
+                            {(selectedCategoryId !== 0 || searchQuery) && (
                                 <p className="mt-1 text-xs italic">
                                     {selectedCategoryId !== 0 && ` | Lọc Danh mục: ${categories.find(c => c.id === selectedCategoryId)?.name}`}
-                                    {selectedSupplierId !== 0 && ` | Lọc Cửa hàng: ${suppliers.find(s => s.id === selectedSupplierId)?.name}`}
                                     {searchQuery && ` | Tìm kiếm: "${searchQuery}"`}
                                 </p>
                             )}
@@ -367,7 +322,6 @@ export default function ProductsPage() {
                 setFormData={setFormData}
                 handleSave={handleSave}
                 setIsModalOpen={setIsModalOpen}
-                suppliers={suppliers}
                 categories={categories}
             />
         </div>
