@@ -1,4 +1,4 @@
-import { CartItemRepository, CartItemEntity, ProductRepository, ProductEntity } from '@app/database';
+import { CartItemRepository, CartItemEntity, ProductRepository, ProductEntity, InventoryRepository, StoreEntity } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateCartItem, IListCartItem, IUpdateCartItem } from './cart_item.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
@@ -8,6 +8,7 @@ export class CartItemService {
     constructor(
         private readonly cartItemRepository: CartItemRepository,
         private readonly productRepository: ProductRepository,
+        private readonly inventoryRepository: InventoryRepository,
     ) { }
 
     async create(data: ICreateCartItem): Promise<{ message: string, cartItem: CartItemEntity | null }> {
@@ -22,6 +23,7 @@ export class CartItemService {
             const cartItem = await this.cartItemRepository.create({
                 product_id: data.product_id,
                 customer_id: data.customer_id,
+                store_id: data.store_id,
                 quantity,
                 total_amount,
             });
@@ -37,45 +39,66 @@ export class CartItemService {
         }
     }
 
-    async findAll(params: IListCartItem): Promise<{ message: string, cartItems: (CartItemEntity & { product?: ProductEntity })[] }> {
+    async findAll(params: IListCartItem): Promise<{ message: string, cartItems: (CartItemEntity & { product?: ProductEntity, store?: StoreEntity })[] }> {
         const cartItems = await this.cartItemRepository.findAll({
             ...params,
             size: params.size || DEFAULT_PAGE_SIZE,
             page: params.page || DEFAULT_PAGE,
         });
-        const cartItemsWithProduct = await Promise.all(
+        const cartItemsWithProductAndStore = await Promise.all(
             cartItems.map(async (cartItem) => {
                 const product = await this.productRepository.findById(cartItem.product_id) || undefined;
-                return { ...cartItem, product };
+                let store: StoreEntity | undefined = undefined;
+                if (product && cartItem.store_id) {
+                    const inventory = await this.inventoryRepository.findByProductAndStore(product.id, cartItem.store_id);
+                    if (inventory && inventory.store) {
+                        store = inventory.store;
+                    }
+                }
+                return { ...cartItem, product, store };
             })
         );
         return {
-            message: cartItemsWithProduct.length > 0 ? 'Cart items fetched successfully' : 'No cart items found',
-            cartItems: cartItemsWithProduct,
+            message: cartItemsWithProductAndStore.length > 0 ? 'Cart items fetched successfully' : 'No cart items found',
+            cartItems: cartItemsWithProductAndStore,
         };
     }
 
-    async findByCustomer(customer_id: number): Promise<{ message: string, cartItems: (CartItemEntity & { product?: ProductEntity })[] }> {
+    async findByCustomer(customer_id: number): Promise<{ message: string, cartItems: (CartItemEntity & { product?: ProductEntity, store?: StoreEntity })[] }> {
         const cartItems = await this.cartItemRepository.findAllByCustomer(customer_id);
-        const cartItemsWithProduct = await Promise.all(
+        const cartItemsWithProductAndStore = await Promise.all(
             cartItems.map(async (cartItem) => {
                 const product = await this.productRepository.findById(cartItem.product_id) || undefined;
-                return { ...cartItem, product };
+                let store: StoreEntity | undefined = undefined;
+                if (product && cartItem.store_id) {
+                    const inventory = await this.inventoryRepository.findByProductAndStore(product.id, cartItem.store_id);
+                    if (inventory && inventory.store) {
+                        store = inventory.store;
+                    }
+                }
+                return { ...cartItem, product, store };
             })
         );
         return {
-            message: cartItemsWithProduct.length > 0 ? 'Cart items fetched successfully' : 'No cart items found',
-            cartItems: cartItemsWithProduct,
+            message: cartItemsWithProductAndStore.length > 0 ? 'Cart items fetched successfully' : 'No cart items found',
+            cartItems: cartItemsWithProductAndStore,
         };
     }
 
-    async findOne(id: number): Promise<{ message: string, cartItem: (CartItemEntity & { product?: ProductEntity }) | null }> {
+    async findOne(id: number): Promise<{ message: string, cartItem: (CartItemEntity & { product?: ProductEntity, store?: StoreEntity }) | null }> {
         const cartItem = await this.cartItemRepository.findById(id);
         if (!cartItem) throw new NotFoundException('Cart item not found');
         const product = await this.productRepository.findById(cartItem.product_id) || undefined;
+        let store: StoreEntity | undefined = undefined;
+        if (product && cartItem.store_id) {
+            const inventory = await this.inventoryRepository.findByProductAndStore(product.id, cartItem.store_id);
+            if (inventory && inventory.store) {
+                store = inventory.store;
+            }
+        }
         return {
             message: 'Cart item fetched successfully',
-            cartItem: { ...cartItem, product },
+            cartItem: { ...cartItem, product, store },
         };
     }
 

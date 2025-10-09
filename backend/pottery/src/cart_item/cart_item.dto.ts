@@ -20,6 +20,11 @@ export class CreateCartItemDto {
     customer_id: number;
 
     @Expose()
+    @IsNumber()
+    @IsPositive()
+    store_id: number;
+
+    @Expose()
     @IsOptional()
     @IsNumber()
     @IsPositive()
@@ -42,6 +47,11 @@ export class UpdateCartItemDto {
     @IsNumber()
     @IsPositive()
     customer_id: number;
+
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    store_id: number;
 
     @Expose()
     @IsOptional()

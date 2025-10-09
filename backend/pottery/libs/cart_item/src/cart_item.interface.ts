@@ -1,6 +1,7 @@
 export class ICreateCartItem {
     product_id: number
     customer_id: number
+    store_id: number
     quantity?: number
     total_amount?: number
 }
@@ -8,6 +9,7 @@ export class ICreateCartItem {
 export interface IUpdateCartItem {
     product_id: number
     customer_id: number
+    store_id: number
     quantity?: number
     total_amount?: number
 }

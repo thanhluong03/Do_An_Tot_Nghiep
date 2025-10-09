@@ -10,6 +10,9 @@ export class CartItemEntity extends BaseEntity {
     @Column({ type: 'integer', nullable: false })
     product_id: number
 
+    @Column({ type: 'integer', nullable: false })
+    store_id: number
+
     @Column({ type: 'integer', nullable: true })
     quantity: number
 

@@ -40,6 +40,7 @@ export class CartItemController {
             cartItems: result.cartItems.map((cartItem) => ({
                 ...plainToInstance(CartItemResponseDto, cartItem, { excludeExtraneousValues: true }),
                 product: cartItem.product,
+                store: cartItem.store ?? null,
             })),
         };
     }
@@ -58,6 +59,7 @@ export class CartItemController {
             cartItems: result.cartItems.map((cartItem) => ({
                 ...plainToInstance(CartItemResponseDto, cartItem, { excludeExtraneousValues: true }),
                 product: cartItem.product,
+                store: cartItem.store ?? null,
             })),
         };
     }
@@ -72,6 +74,7 @@ export class CartItemController {
                     ? {
                         ...plainToInstance(CartItemResponseDto, result.cartItem, { excludeExtraneousValues: true }),
                         product: result.cartItem.product,
+                        store: result.cartItem.store ?? null,
                     }
                     : null,
             };
