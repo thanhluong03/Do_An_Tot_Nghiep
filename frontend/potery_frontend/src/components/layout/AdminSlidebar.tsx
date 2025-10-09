@@ -23,7 +23,8 @@ import {
     faNewspaper,
     faTruck, // Thêm icon cho Supplier/Logistics
     faTags,
-    faUserShield, // Thêm icon cho Promotions/Marketing
+    faUserShield,
+    faUser, // Thêm icon cho Promotions/Marketing
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -78,7 +79,7 @@ const marketingAnalyticsItems: MenuItem[] = [
 const systemItems: MenuItem[] = [
     { name: "Roles", icon: faUserShield, href: "/admin/roles" },
     { name: "Permissions", icon: faUserShield, href: "/admin/permissions" },
-    { name: "Support", icon: faLifeRing, href: "/admin/support" },
+    { name: "Users", icon: faUser, href: "/admin/users" },
 ];
 
 
