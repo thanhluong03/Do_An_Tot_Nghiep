@@ -77,7 +77,7 @@ const marketingAnalyticsItems: MenuItem[] = [
 // 5. CẤU HÌNH HỆ THỐNG (System)
 const systemItems: MenuItem[] = [
     { name: "Roles", icon: faUserShield, href: "/admin/roles" },
-    { name: "Settings", icon: faCog, href: "/admin/settings" },
+    { name: "Permissions", icon: faUserShield, href: "/admin/permissions" },
     { name: "Support", icon: faLifeRing, href: "/admin/support" },
 ];
 

@@ -1,28 +1,60 @@
+// src/api/services/permissionService.ts
 import axios from "axios";
 
-export interface Permission {
-  id?: number;
+export type PermissionEntity = {
+  id: number;
+  role_id: number;
   name: string;
-  description: string;
-}
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
+};
 
-const API_URL = "http://localhost:3001/permissions"; // Đổi port nếu backend khác
+export type RoleEntity = {
+  id: number;
+  name: string;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
+};
 
-export const getPermissions = async (): Promise<Permission[]> => {
-  const res = await axios.get(API_URL);
+const API = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000",
+  headers: { "Content-Type": "application/json" },
+});
+
+export const getAvailablePermissions = async (): Promise<string[]> => {
+  const res = await API.get("/permissions/listpermissions");
+  // backend returns { message, permissions: string[] }
+  return res.data?.permissions || [];
+};
+
+export const getPermissionsByRole = async (roleId: number): Promise<PermissionEntity[]> => {
+  const res = await API.get(`/permissions/role/${roleId}`);
+  // backend returns array of PermissionResponseDto
+  return res.data || [];
+};
+
+export const updatePermissionsForRole = async (roleId: number, permissions: string[]): Promise<{ message: string }> => {
+  const res = await API.put(`/permissions/role/${roleId}`, { permissions });
   return res.data;
 };
 
-export const addPermission = async (data: Permission): Promise<Permission> => {
-  const res = await axios.post(API_URL, data);
-  return res.data;
+export const createPermission = async (payload: {
+  role_id: number;
+  name: string;
+  description?: string;
+}): Promise<PermissionEntity | null> => {
+  const res = await API.post("/permissions/createpermission", payload);
+  return res.data || null;
 };
 
-export const updatePermission = async (id: number, data: Permission): Promise<Permission> => {
-  const res = await axios.put(`${API_URL}/${id}`, data);
-  return res.data;
-};
-
-export const deletePermission = async (id: number): Promise<void> => {
-  await axios.delete(`${API_URL}/${id}`);
+/**
+ * Simple helper to fetch roles list used for the role dropdown.
+ * It calls the existing /roles/listrole endpoint and returns RoleEntity[]
+ * (This lets the permissions page work standalone.)
+ */
+export const getRoles = async (params?: { page?: number; size?: number; key?: string }): Promise<RoleEntity[]> => {
+  const res = await API.get("/roles/listrole", { params: { page: params?.page ?? 1, size: params?.size ?? 100, key: params?.key } });
+  return res.data || [];
 };

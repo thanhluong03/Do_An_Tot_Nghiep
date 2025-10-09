@@ -1,157 +1,166 @@
+// src/app/admin/permissions/page.tsx
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  getPermissions,
-  addPermission,
-  updatePermission,
-  deletePermission,
-  Permission,
+  getAvailablePermissions,
+  getPermissionsByRole,
+  updatePermissionsForRole,
+  createPermission,
+  getRoles,
 } from "@/api/services/permissionApi";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash, faEdit } from "@fortawesome/free-solid-svg-icons";
-import toast, { Toaster } from "react-hot-toast";
+import PermissionTable from "@/components/adminPermissions/PermissionTable";
+import PermissionCreateModal from "@/components/adminPermissions/PermissionCreateModal";
+import { RoleEntity } from "@/api/services/permissionApi";
 
-export default function PermissionPage() {
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [form, setForm] = useState<Permission>({ name: "", description: "" });
-  const [editingId, setEditingId] = useState<number | null>(null);
+export default function PermissionsPage() {
+  const [roles, setRoles] = useState<RoleEntity[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | "">("");
+  const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPermissions();
+    fetchInitial();
   }, []);
 
-  const loadPermissions = async () => {
+  useEffect(() => {
+    if (selectedRoleId) {
+      fetchRolePermissions(Number(selectedRoleId));
+    } else {
+      setRolePermissions(new Set());
+    }
+  }, [selectedRoleId]);
+
+  async function fetchInitial() {
+    setLoading(true);
     try {
-      const data = await getPermissions();
-      setPermissions(data);
-    } catch (error) {
-      toast.error("Không thể tải danh sách quyền");
+      const [avails, roleList] = await Promise.all([getAvailablePermissions(), getRoles({ page: 1, size: 100 })]);
+      setAvailablePermissions(avails);
+      setRoles(roleList);
+      // auto-select first role if exists
+      if (roleList.length > 0) setSelectedRoleId(roleList[0].id);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const handleSubmit = async () => {
-    if (!form.name.trim() || !form.description.trim()) {
-      toast.error("Vui lòng nhập đầy đủ thông tin");
-      return;
-    }
-
+  async function fetchRolePermissions(roleId: number) {
+    setLoading(true);
     try {
-      if (editingId) {
-        await updatePermission(editingId, form);
-        toast.success("Cập nhật quyền thành công");
-      } else {
-        await addPermission(form);
-        toast.success("Thêm quyền mới thành công");
-      }
-      setForm({ name: "", description: "" });
-      setEditingId(null);
-      loadPermissions();
-    } catch (error) {
-      toast.error("Lỗi khi lưu quyền");
+      const perms = await getPermissionsByRole(roleId);
+      const names = perms.map((p) => p.name);
+      setRolePermissions(new Set(names));
+    } catch (err) {
+      console.error(err);
+      setRolePermissions(new Set());
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const handleEdit = (p: Permission) => {
-    setForm(p);
-    setEditingId(p.id!);
-  };
+  function onTogglePermission(name: string) {
+    setRolePermissions((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Bạn có chắc muốn xóa quyền này?")) {
-      try {
-        await deletePermission(id);
-        toast.success("Xóa thành công");
-        loadPermissions();
-      } catch (error) {
-        toast.error("Không thể xóa quyền");
-      }
+  async function onSave() {
+    if (!selectedRoleId) return setError("Please select a role");
+    setError(null);
+    setSaving(true);
+    try {
+      await updatePermissionsForRole(Number(selectedRoleId), Array.from(rolePermissions));
+      // fetch again to refresh state from server
+      await fetchRolePermissions(Number(selectedRoleId));
+      alert("Permissions updated successfully");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update permissions");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
+
+  async function handleCreatePermission(payload: { role_id: number; name: string; description?: string }) {
+    try {
+      const created = await createPermission(payload);
+      // after creation, refresh available permissions and role permissions if relevant
+      const avails = await getAvailablePermissions();
+      setAvailablePermissions(avails);
+      if (payload.role_id === Number(selectedRoleId)) {
+        await fetchRolePermissions(Number(selectedRoleId));
+      }
+      return created;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  const selectedRole = useMemo(() => roles.find((r) => r.id === selectedRoleId), [roles, selectedRoleId]);
 
   return (
-    <div className="p-6">
-      <Toaster />
-      <h2 className="text-2xl font-bold mb-4">Quản lý quyền</h2>
+    <div className="p-6 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Permissions Management</h1>
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedRoleId}
+            onChange={(e) => setSelectedRoleId(e.target.value ? Number(e.target.value) : "")}
+            className="border px-3 py-2 rounded-md"
+          >
+            <option value="">-- Select role --</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
 
-      {/* Form thêm/sửa */}
-      <div className="bg-white p-4 rounded-xl shadow-md mb-6">
-        <h3 className="font-semibold mb-3">
-          <FontAwesomeIcon icon={faPlus} className="text-purple-600 mr-2" />
-          {editingId ? "Chỉnh sửa quyền" : "Thêm quyền mới"}
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="font-medium">Tên quyền</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="vd: admin/product"
-              className="border w-full p-2 rounded mt-1"
-            />
-          </div>
-          <div>
-            <label className="font-medium">Mô tả</label>
-            <input
-              type="text"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="vd: Quyền quản lý sản phẩm"
-              className="border w-full p-2 rounded mt-1"
-            />
-          </div>
+          <button onClick={() => setModalOpen(true)} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+            + Create Permission
+          </button>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <div className="text-sm text-gray-600">Role: <span className="font-medium">{selectedRole?.name || "—"}</span></div>
+      </div>
+
+      <PermissionTable
+        availablePermissions={availablePermissions}
+        selected={rolePermissions}
+        onToggle={onTogglePermission}
+        loading={loading}
+      />
+
+      <div className="mt-4 flex justify-end gap-3">
         <button
-          onClick={handleSubmit}
-          className="bg-blue-600 hover:bg-blue-700 text-white mt-4 px-4 py-2 rounded"
+          onClick={() => {
+            // reset toggles to server state
+            if (selectedRoleId) fetchRolePermissions(Number(selectedRoleId));
+          }}
+          className="px-4 py-2 border rounded-md"
         >
-          {editingId ? "Cập nhật" : "Thêm mới"}
+          Reset
+        </button>
+        <button
+          onClick={onSave}
+          disabled={saving || !selectedRoleId}
+          className={`px-4 py-2 rounded-md text-white ${!selectedRoleId ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+        >
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
 
-      {/* Bảng danh sách */}
-      <div className="bg-white p-4 rounded-xl shadow-md">
-        <table className="w-full border">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border p-2 text-left">ID</th>
-              <th className="border p-2 text-left">Tên quyền</th>
-              <th className="border p-2 text-left">Mô tả</th>
-              <th className="border p-2 text-center">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {permissions.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <td className="border p-2">{p.id}</td>
-                <td className="border p-2">{p.name}</td>
-                <td className="border p-2">{p.description}</td>
-                <td className="border p-2 text-center space-x-3">
-                  <button
-                    onClick={() => handleEdit(p)}
-                    className="text-yellow-500 hover:text-yellow-600"
-                  >
-                    <FontAwesomeIcon icon={faEdit} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id!)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {permissions.length === 0 && (
-              <tr>
-                <td colSpan={4} className="text-center p-3 text-gray-500">
-                  Chưa có quyền nào
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <PermissionCreateModal open={modalOpen} roles={roles} onClose={() => setModalOpen(false)} onCreate={handleCreatePermission} />
     </div>
   );
 }
