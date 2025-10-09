@@ -126,8 +126,10 @@ export default function ProductsPage() {
     <BaseLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-serif font-bold mb-6">Tất cả sản phẩm</h1>
-        <ProductFilters onChange={(f) => { setPage(1); setFilters(f); }} />
-
+        <ProductFilters 
+          onChange={(f) => { setPage(1); setFilters(f); }}
+          initial={filters} // Thiết lập giá trị category ban đầu
+          />
         <ProductGrid
           products={products}
           loading={loading}

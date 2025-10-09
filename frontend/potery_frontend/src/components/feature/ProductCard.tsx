@@ -119,10 +119,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Price */}
         <div className="flex items-center space-x-2">
-          <span className="text-lg font-bold text-gray-900">
+          <span className={`text-lg font-bold ${discount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
             {formatPrice(product.price)}
           </span>
-          {product.originalPrice && product.originalPrice > product.price && (
+          {/* Chỉ hiển thị giá gốc gạch ngang nếu có discount */}
+          {discount > 0 && product.originalPrice && (
             <span className="text-sm text-gray-500 line-through">
               {formatPrice(product.originalPrice)}
             </span>
