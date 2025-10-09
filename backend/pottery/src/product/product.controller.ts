@@ -117,4 +117,16 @@ export class ProductController {
         }
         return await this.productService.findAllByInventoryWithCategory(catId);
     }
+
+    @Get('productdetail-by-inventory/:productId')
+    async getInventoryDetailByProductId(@Param('productId') productId: string) {
+        if (!productId) {
+            return { error: 'productId param is required' };
+        }
+        const prodId = Number(productId);
+        if (isNaN(prodId)) {
+            return { products: [] };
+        }
+        return await this.productService.findInventoryDetailByProductId(prodId);
+    }
 }

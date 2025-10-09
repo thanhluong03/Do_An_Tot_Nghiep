@@ -268,4 +268,40 @@ export class ProductService {
       products: products.filter((item) => item !== null)
     };
   }
+
+  async findInventoryDetailByProductId(productId: number) {
+    const inventories = await this.inventoryRepository.findAll();
+    const invList = inventories.filter((inv: InventoryEntity) => inv.product_id === productId);
+    if (invList.length === 0) {
+      throw new NotFoundException('No inventory found for this product');
+    }
+    const product = await this.productRepository.findById(productId);
+    if (!product) throw new NotFoundException('product not found');
+    const images = await this.productImageRepository.findByProductId(productId);
+    const processedImages = images.map((image) => ({
+      id: image.id,
+      image_data: image.image_data ? image.image_data.toString('base64') : null,
+      is_main_image: image.is_main_image,
+      priority: image.priority,
+    }));
+    let promotion: PromotionEntity | null = null;
+    const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
+    if (productPromotion && productPromotion.promotion_id) {
+      promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+    }
+    const stores = invList.map((inv: InventoryEntity) => ({
+      store_id: inv.store_id,
+      store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
+      store_address: inv.store && inv.store.address ? inv.store.address : null,
+      quantity_stock: inv.quantity_stock,
+      quantity_sold: inv.quantity_sold,
+    }));
+    return {
+      ...product,
+      images: processedImages,
+      main_image: processedImages.find((img) => img.is_main_image) || null,
+      stores,
+      promotion,
+    };
+  }
 }
