@@ -34,9 +34,14 @@ export class PermissionService {
         permissionNames: string[]
     ): Promise<{ message: string }> {
         try {
-            await this.permissionRepository.deleteByRoleId(roleId);
-
-            for (const permissionName of permissionNames) {
+            const currentPermissions = await this.permissionRepository.findByRoleId(roleId);
+            const currentNames = currentPermissions.map(p => p.name);
+            const toDelete = currentPermissions.filter(p => !permissionNames.includes(p.name));
+            for (const perm of toDelete) {
+                await this.permissionRepository.softDelete(perm.id);
+            }
+            const toAdd = permissionNames.filter(name => !currentNames.includes(name));
+            for (const permissionName of toAdd) {
                 await this.permissionRepository.create({
                     role_id: roleId,
                     name: permissionName,
