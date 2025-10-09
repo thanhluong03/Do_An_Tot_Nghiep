@@ -62,7 +62,11 @@ export default function HomePage() {
     if (isAuthenticated && user && user.id) {
       try {
         setAddingId(product.id);
-        await cartApi.add({ customer_id: user.id as string, product_id: product.id, quantity: 1 });
+        // Determine store id safely whether product.store is an array or an object
+        const storeId = Array.isArray(product.store)
+          ? (product.store[0]?.store_id ?? product.store[0]?.id ?? 1)
+          : ((product.store as any)?.store_id ?? (product.store as any)?.id ?? 1);
+        await cartApi.add({ customer_id: user.id as string, product_id: product.id, quantity: 1, store_id: storeId }); // Giả sử chọn cửa hàng đầu tiên
       } finally {
         setAddingId(null);
       }

@@ -109,7 +109,6 @@ export default async function ProductDetailPage(props: PageProps) {
                   <StoreSelectorClient 
                         stores={product.stores} 
                         initialStoreId={defaultStore?.store_id}
-                        onStoreSelect={(storeId) => console.log(`[ProductDetail] Store ID: ${storeId}`)} 
                             />
             )}
             {!hasStores && (

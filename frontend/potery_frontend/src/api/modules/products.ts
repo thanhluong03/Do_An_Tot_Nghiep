@@ -157,8 +157,7 @@ export const productApi = {
     let url = '/products/listproduct-by-inventory'; // Endpoint mặc định
       if (params?.category) {
           // Nếu có category, gọi endpoint category dynamic route
-          url = `/products/listproduct-by-category/${params.category}`; // VÍ DỤ: /products/listproduct-by-category/bat dia
-          delete axiosParams.category; 
+          url = `/products/listproduct-by-category/${params.category}`; // VÍ DỤ: /products/listproduct-by-category/bat dia 
       }
     if (params?.search) {
       axiosParams.search = params.search;
@@ -225,7 +224,7 @@ export const productApi = {
   getProductById: async (id: string): Promise<ProductDetail> => { // Thay đổi kiểu trả về thành ProductDetail
         try {
             // Endpoint giả định: /products/productdetail/:id
-            const response = await api.get(`/products/productdetail/${id}`);
+            const response = await api.get(`/products/productdetail-by-inventory/${id}`);
             
             // Sử dụng hàm ánh xạ chi tiết mới (mapProductDetail)
             const productDetail = mapProductDetail(response.data); 

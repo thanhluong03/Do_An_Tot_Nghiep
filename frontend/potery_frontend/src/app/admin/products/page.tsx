@@ -322,8 +322,7 @@ export default function ProductsPage() {
                 setFormData={setFormData}
                 handleSave={handleSave}
                 setIsModalOpen={setIsModalOpen}
-                categories={categories}
-            />
+                categories={categories} suppliers={[]}            />
         </div>
     );
 }

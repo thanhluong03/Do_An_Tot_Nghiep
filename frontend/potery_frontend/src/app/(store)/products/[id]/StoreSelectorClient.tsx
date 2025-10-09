@@ -14,11 +14,10 @@ interface StoreInventory {
 interface StoreSelectorProps {
     stores: StoreInventory[]; // Danh sách cửa hàng kèm tồn kho
     initialStoreId?: string;
-    // Hàm callback để truyền ID cửa hàng được chọn ra bên ngoài (ví dụ: cho AddToCartClient)
-    onStoreSelect: (storeId: string) => void; 
+     
 }
 
-export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({ stores, initialStoreId, onStoreSelect }) => {
+export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({ stores, initialStoreId }) => {
     // Chỉ lọc các cửa hàng còn tồn kho để hiển thị
     const availableStores = stores.filter(s => s.quantity_stock > 0);
     const [selectedStoreId, setSelectedStoreId] = useState<string | null>(initialStoreId || (availableStores.length > 0 ? availableStores[0].store_id : null));
@@ -27,16 +26,10 @@ export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({ stores, init
     const handleStoreChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const newStoreId = event.target.value;
         setSelectedStoreId(newStoreId);
-        onStoreSelect(newStoreId);
+       
         console.log(`✅ ID Cửa hàng được chọn: ${newStoreId}`);
-    }, [onStoreSelect]);
+    }, []);
 
-    // Gọi callback ban đầu khi component mount
-    useEffect(() => {
-        if (selectedStoreId) {
-            onStoreSelect(selectedStoreId);
-        }
-    }, [selectedStoreId, onStoreSelect]);
 
     return (
         <section className="space-y-4">
