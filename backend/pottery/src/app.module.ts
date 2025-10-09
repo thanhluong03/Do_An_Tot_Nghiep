@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LoginController } from './login/login.controller';
+import { AdminLoginController } from './login/admin-login.controller';
 import { LoginModule } from '@app/login';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -67,7 +68,8 @@ import { ImportProductModule } from '@app/import_product';
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
     UserController, ReviewController, PromotionController, VoucherController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
-    PaymentTransactionController, ImportProductController
+    PaymentTransactionController, ImportProductController,
+    AdminLoginController
   ],
   providers: [AppService],
 })

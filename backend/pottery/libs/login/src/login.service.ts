@@ -1,4 +1,10 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserEntity } from '@app/database/entities/user.entity';
+import { RoleEntity } from '@app/database/entities/role.entity';
+import { PermissionEntity } from '@app/database/entities/permission.entity';
+import * as bcryptjs from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { CustomerService } from '@app/customer';
 import * as bcrypt from 'bcrypt';
@@ -8,6 +14,12 @@ export class LoginService {
     constructor(
         private jwtService: JwtService,
         private customerService: CustomerService,
+        @InjectRepository(UserEntity)
+        private readonly userRepository: Repository<UserEntity>,
+        @InjectRepository(RoleEntity)
+        private readonly roleRepository: Repository<RoleEntity>,
+        @InjectRepository(PermissionEntity)
+        private readonly permissionRepository: Repository<PermissionEntity>,
     ) { }
 
     async login(body: any) {
@@ -62,6 +74,26 @@ export class LoginService {
         }
         const token = this.jwtService.sign({ email: user.email, name: user.name });
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000/';
-        return `${ frontendUrl }/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}`;
+        return `${frontendUrl}/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}`;
+    }
+
+    async adminLogin(adminLoginDto: { username: string; password: string }) {
+        const { username, password } = adminLoginDto;
+        const user = (await this.userRepository.findOne({
+            where: { username },
+            relations: ['role', 'role.permissions'],
+        })) as UserEntity;
+        if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
+        const isMatch = await bcryptjs.compare(password, user.password_hash as string);
+        if (!isMatch) throw new UnauthorizedException('Mật khẩu không đúng');
+        const role = user.role as RoleEntity;
+        if (!role) throw new UnauthorizedException('Không tìm thấy role');
+        const permissions = (role.permissions as PermissionEntity[] ?? []).map((p) => ({ id: p.id, name: p.name }));
+        return {
+            message: 'Bạn đã đăng nhập thành công',
+            roleId: role.id,
+            roleName: role.name,
+            permissions: permissions.map(p => p.name),
+        };
     }
 }
