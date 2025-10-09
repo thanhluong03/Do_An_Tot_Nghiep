@@ -8,7 +8,7 @@ export class ConversationEntity extends BaseEntity {
     user_id: number
 
     @Column({ type: 'integer', nullable: false })
-    store_id: number
+    customer_id: number
 
     @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     started_at: Date

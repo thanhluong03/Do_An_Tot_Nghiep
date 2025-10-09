@@ -40,6 +40,7 @@ import { PaymenttransactionModule } from '../libs/paymenttransaction/src/payment
 import { DatabaseModule } from '../libs/database/src/database.module';
 import { ImportProductController } from './import_product/import_product.controller';
 import { ImportProductModule } from '@app/import_product';
+import { ConversationModule } from './conversation/conversation.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -64,6 +65,7 @@ import { ImportProductModule } from '@app/import_product';
     CategoryModule,
     PaymenttransactionModule,
     ImportProductModule,
+    ConversationModule,
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
