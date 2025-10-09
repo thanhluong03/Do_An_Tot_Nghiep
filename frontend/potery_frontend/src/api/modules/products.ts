@@ -196,38 +196,38 @@ export const productApi = {
     return [];
   },
 
-  getFlashSaleProducts: async (): Promise<FlashSale[]> => {
-        try {
-            const response = await api.get('/flashsales/listflashsales');
-            const data = response.data;
+  // getFlashSaleProducts: async (): Promise<FlashSale[]> => {
+  //       try {
+  //           const response = await api.get('/flashsales/listflashsales');
+  //           const data = response.data;
             
-            const inventoryList = await getInventoryList();
-            const inventoryMap = inventoryList.reduce((map, item) => {
-                map.set(item.product_id, item.quantity);
-                return map;
-            }, new Map<string, number>());
+  //           const inventoryList = await getInventoryList();
+  //           const inventoryMap = inventoryList.reduce((map, item) => {
+  //               map.set(item.product_id, item.quantity);
+  //               return map;
+  //           }, new Map<string, number>());
 
-            return (Array.isArray(data) ? data : []).map((fs: any): FlashSale => ({
-                id: String(fs.id ?? fs._id ?? ''),
-                title: fs.title ?? fs.name ?? 'Flash Sale',
-                description: fs.description ?? '',
-                startTime: fs.start_time ? new Date(fs.start_time) : new Date(),
-                endTime: fs.end_time ? new Date(fs.end_time) : new Date(),
-                isActive: Boolean(fs.is_active ?? true),
-                products: Array.isArray(fs.products) 
-                    ? fs.products.map((p: any) => {
-                        // Ánh xạ sản phẩm và CẬP NHẬT STOCK ở đây
-                        const product = mapProduct(p);
-                        const stock = inventoryMap.get(product.id) ?? 0;
-                        return { ...product, stock };
-                    }) 
-                    : [],
-            }));
-        } catch (error) {
-            console.error('Failed to fetch flash sale products:', error);
-            throw new Error('Failed to fetch flash sale products');
-        }
-  },
+  //           return (Array.isArray(data) ? data : []).map((fs: any): FlashSale => ({
+  //               id: String(fs.id ?? fs._id ?? ''),
+  //               title: fs.title ?? fs.name ?? 'Flash Sale',
+  //               description: fs.description ?? '',
+  //               startTime: fs.start_time ? new Date(fs.start_time) : new Date(),
+  //               endTime: fs.end_time ? new Date(fs.end_time) : new Date(),
+  //               isActive: Boolean(fs.is_active ?? true),
+  //               products: Array.isArray(fs.products) 
+  //                   ? fs.products.map((p: any) => {
+  //                       // Ánh xạ sản phẩm và CẬP NHẬT STOCK ở đây
+  //                       const product = mapProduct(p);
+  //                       const stock = inventoryMap.get(product.id) ?? 0;
+  //                       return { ...product, stock };
+  //                   }) 
+  //                   : [],
+  //           }));
+  //       } catch (error) {
+  //           console.error('Failed to fetch flash sale products:', error);
+  //           throw new Error('Failed to fetch flash sale products');
+  //       }
+  // },
 
   getFeaturedProducts: async (limit: number = 8): Promise<Product[]> => {
     const { products } = await productApi.getProducts({ page: 1, limit });
