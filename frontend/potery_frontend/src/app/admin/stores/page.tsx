@@ -7,7 +7,7 @@ import {
   deleteStore,
   Store,
 } from "@/api/services/storeService";
-
+import toast, { Toaster } from "react-hot-toast";
 
 export default function StorePage() {
   const [stores, setStores] = useState<Store[]>([]);
@@ -26,8 +26,12 @@ export default function StorePage() {
   }, []);
 
   const fetchStores = async () => {
-    const data = await getStores();
-    setStores(data);
+    try {
+      const data = await getStores();
+      setStores(data);
+    } catch {
+      toast.error("Không thể tải danh sách cửa hàng!");
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,21 +52,24 @@ export default function StorePage() {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      toast.error("Vui lòng kiểm tra lại thông tin!");
       return;
     }
 
     try {
       if (editingId) {
         await updateStore(editingId, form);
+        toast.success("Cập nhật cửa hàng thành công!");
         setEditingId(null);
       } else {
         await addStore(form);
+        toast.success("Thêm cửa hàng thành công!");
       }
       setForm({ store_name: "", address: "", phone: "" });
       fetchStores();
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra!");
+      toast.error("Có lỗi xảy ra trong quá trình lưu!");
     }
   };
 
@@ -70,12 +77,17 @@ export default function StorePage() {
     setForm(store);
     setEditingId(store.id || null);
     setErrors({});
+    toast("Chỉnh sửa cửa hàng đang được bật", { icon: "✏️" });
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Bạn có chắc muốn xoá cửa hàng này?")) {
+    if (!confirm("Bạn có chắc muốn xoá cửa hàng này?")) return;
+    try {
       await deleteStore(id);
+      toast.success("Xoá cửa hàng thành công!");
       fetchStores();
+    } catch {
+      toast.error("Không thể xoá cửa hàng!");
     }
   };
 
@@ -86,6 +98,7 @@ export default function StorePage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-1">
+      <Toaster position="top-right" />
       <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">
           Quản lý cửa hàng
@@ -134,7 +147,9 @@ export default function StorePage() {
           <button
             onClick={handleSubmit}
             className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-              editingId ? "bg-yellow-500 hover:bg-yellow-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+              editingId
+                ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
             }`}
           >
             {editingId ? "Cập nhật" : "Thêm"}
@@ -159,14 +174,20 @@ export default function StorePage() {
               {currentStores.map((store, idx) => (
                 <tr
                   key={store.id}
-                  className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
+                  className={`${
+                    idx % 2 === 0 ? "bg-gray-50" : "bg-white"
+                  } hover:bg-blue-50 transition`}
                 >
                   <td className="px-4 py-3">{store.id}</td>
                   <td className="px-4 py-3">{store.store_name}</td>
                   <td className="px-4 py-3">{store.address}</td>
                   <td className="px-4 py-3">{store.phone}</td>
-                  <td className="px-4 py-3">{store.created_at?.split("T")[0]}</td>
-                  <td className="px-4 py-3">{store.updated_at?.split("T")[0]}</td>
+                  <td className="px-4 py-3">
+                    {store.created_at?.split("T")[0] || ""}
+                  </td>
+                  <td className="px-4 py-3">
+                    {store.updated_at?.split("T")[0] || ""}
+                  </td>
                   <td className="px-4 py-3 flex gap-2 justify-center">
                     <button
                       onClick={() => handleEdit(store)}
@@ -197,7 +218,9 @@ export default function StorePage() {
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-gray-600">
-            Hiển thị {startIndex + 1} - {Math.min(startIndex + pageSize, stores.length)} trên {stores.length} cửa hàng
+            Hiển thị {startIndex + 1} -{" "}
+            {Math.min(startIndex + pageSize, stores.length)} trên{" "}
+            {stores.length} cửa hàng
           </p>
           <div className="flex gap-2">
             <button

@@ -22,7 +22,9 @@ import {
     faBolt,
     faNewspaper,
     faTruck, // Thêm icon cho Supplier/Logistics
-    faTags, // Thêm icon cho Promotions/Marketing
+    faTags,
+    faUserShield,
+    faUser, // Thêm icon cho Promotions/Marketing
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -75,8 +77,9 @@ const marketingAnalyticsItems: MenuItem[] = [
 
 // 5. CẤU HÌNH HỆ THỐNG (System)
 const systemItems: MenuItem[] = [
-    { name: "Settings", icon: faCog, href: "/admin/settings" },
-    { name: "Support", icon: faLifeRing, href: "/admin/support" },
+    { name: "Roles", icon: faUserShield, href: "/admin/roles" },
+    { name: "Permissions", icon: faUserShield, href: "/admin/permissions" },
+    { name: "Users", icon: faUser, href: "/admin/users" },
 ];
 
 

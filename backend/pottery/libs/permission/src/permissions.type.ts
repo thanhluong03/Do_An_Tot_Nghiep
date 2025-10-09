@@ -9,4 +9,5 @@ export const AVAILABLE_PERMISSIONS: string[] = [
     'admin/stores',
     'admin/supplier',
     'admin/vouchers',
+    'admin/permissions',
 ];

@@ -83,6 +83,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
             <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2 text-gray-700">Tên Voucher</label>
                 <input
+                    title='Nhập tên voucher'
                     type="text"
                     name="name"
                     value={formData.name || ''}
@@ -97,6 +98,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 <div className="mb-4">
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Phần Trăm Giảm Giá (%)</label>
                     <input
+                    title='Nhập phần trăm giảm giá (0-100%)'
                         type="number"
                         name="voucher_percentage"
                         value={formData.voucher_percentage || ''}
@@ -111,6 +113,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 <div className="mb-4">
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Số Lượng</label>
                     <input
+                    title='Nhập số lượng voucher có thể phát hành'
                         type="number"
                         name="quantity"
                         value={formData.quantity || ''}
@@ -125,6 +128,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
             <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2 text-gray-700">Đơn hàng tối thiểu (₫)</label>
                 <input
+                title='Nhập điều kiện đơn hàng tối thiểu để áp dụng voucher'
                     type="number"
                     name="order_conditions"
                     value={formData.order_conditions || ''}
@@ -139,6 +143,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Hiệu lực Bắt đầu</label>
                     <input
+                    title='Chọn thời gian bắt đầu hiệu lực voucher'
                         type="datetime-local"
                         name="effective_period_begins"
                         value={formatForInput(formData.effective_period_begins)}
@@ -149,6 +154,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Hiệu lực Kết thúc</label>
                     <input
+                        title='Chọn thời gian kết thúc hiệu lực voucher'
                         type="datetime-local"
                         name="effective_period_ends"
                         value={formatForInput(formData.effective_period_ends)}

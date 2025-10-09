@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import {
   getSuppliers,
   addSupplier,
@@ -26,8 +27,12 @@ export default function SupplierPage() {
   }, []);
 
   const fetchSuppliers = async () => {
-    const data = await getSuppliers();
-    setSuppliers(data);
+    try {
+      const data = await getSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      toast.error("Không thể tải danh sách nhà cung cấp");
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,27 +58,61 @@ export default function SupplierPage() {
       return;
     }
 
-    if (editingId) {
-      await updateSupplier(editingId, form);
-      setEditingId(null);
-    } else {
-      await addSupplier(form);
+    try {
+      if (editingId) {
+        await updateSupplier(editingId, form);
+        toast.success("Cập nhật nhà cung cấp thành công!");
+        setEditingId(null);
+      } else {
+        await addSupplier(form);
+        toast.success("Thêm nhà cung cấp thành công!");
+      }
+      setForm({ name: "", address: "", phone: "", email: "" });
+      fetchSuppliers();
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi khi lưu nhà cung cấp!");
     }
-    setForm({ name: "", address: "", phone: "", email: "" });
-    fetchSuppliers();
   };
 
   const handleEdit = (supplier: Supplier) => {
     setForm(supplier);
     setEditingId(supplier.id || null);
     setErrors({});
+    toast("Đang chỉnh sửa thông tin nhà cung cấp...");
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Bạn có chắc muốn xoá?")) {
-      await deleteSupplier(id);
-      fetchSuppliers();
-    }
+    toast(
+      (t) => (
+        <div>
+          <p>Bạn có chắc muốn xoá nhà cung cấp này?</p>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  await deleteSupplier(id);
+                  toast.success("Đã xoá nhà cung cấp!");
+                  fetchSuppliers();
+                } catch {
+                  toast.error("Không thể xoá nhà cung cấp!");
+                }
+              }}
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+            >
+              Xoá
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded"
+            >
+              Huỷ
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 2000 }
+    );
   };
 
   // Pagination logic
@@ -83,6 +122,11 @@ export default function SupplierPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-1">
+      <Toaster position="top-center" containerStyle={{
+    top: '50%',
+    transform: 'translateY(-50%)',
+  }} reverseOrder={false} />
+
       <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">
           Quản lý Nhà cung cấp
@@ -90,60 +134,37 @@ export default function SupplierPage() {
 
         {/* Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tên</label>
-            <input
-              name="name"
-              placeholder="Nhập tên"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-            <input
-              name="address"
-              placeholder="Nhập địa chỉ"
-              value={form.address}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Điện thoại</label>
-            <input
-              name="phone"
-              placeholder="Nhập số điện thoại"
-              value={form.phone}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              name="email"
-              placeholder="Nhập email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-          </div>
+          {["name", "address", "phone", "email"].map((field) => (
+            <div key={field}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {{
+                  name: "Tên",
+                  address: "Địa chỉ",
+                  phone: "Điện thoại",
+                  email: "Email",
+                }[field]}
+              </label>
+              <input
+                name={field}
+                placeholder={`Nhập ${
+                  { name: "tên", address: "địa chỉ", phone: "số điện thoại", email: "email" }[field]
+                }`}
+                value={(form as any)[field]}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
+            </div>
+          ))}
         </div>
 
         <div className="flex justify-end mb-6">
           <button
             onClick={handleSubmit}
             className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-              editingId ? "bg-yellow-500 hover:bg-yellow-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+              editingId
+                ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
             }`}
           >
             {editingId ? "Cập nhật" : "Thêm"}
