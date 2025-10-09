@@ -27,6 +27,7 @@ export interface Product {
   updatedAt: Date;
 }
 export interface ProductCategory {
+  slug: string;
   id: string;
   name: string;
   description: string;
