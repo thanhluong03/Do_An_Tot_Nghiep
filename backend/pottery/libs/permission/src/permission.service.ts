@@ -1,33 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PermissionEntity, PermissionRepository } from '@app/database';
 import { ICreatePermission } from './permission.interface';
+import { AVAILABLE_PERMISSIONS } from './permissions.type';
 
 @Injectable()
 export class PermissionService {
     constructor(private readonly permissionRepository: PermissionRepository) { }
-e
     getAllAvailablePermissions(): {
         message: string;
         permissions: string[];
     } {
-        const availablePermissions = [
-            '/dashboard',
-            '/users',
-            '/roles',
-            '/permissions',
-            '/products',
-            '/orders',
-            '/suppliers',
-            '/reports',
-            '/settings',
-            '/categories',
-            '/inventory',
-            '/customers'
-        ];
-
         return {
             message: 'Available permissions fetched successfully',
-            permissions: availablePermissions
+            permissions: AVAILABLE_PERMISSIONS,
         };
     }
     async getPermissionsByRole(roleId: number): Promise<{
