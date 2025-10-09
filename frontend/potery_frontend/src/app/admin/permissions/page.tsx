@@ -1,197 +1,157 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import {
+  getPermissions,
+  addPermission,
+  updatePermission,
+  deletePermission,
+  Permission,
+} from "@/api/services/permissionApi";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faTrash, faEdit } from "@fortawesome/free-solid-svg-icons";
 import toast, { Toaster } from "react-hot-toast";
 
-interface Permission {
-  id: number;
-  name: string;
-  description: string;
-}
-
-const API_BASE_URL = "http://localhost:3000/permissions";
-
-export default function PermissionManagerPage() {
+export default function PermissionPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState<Permission>({ name: "", description: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ name: "", description: "" });
 
-  // 🔹 Lấy danh sách quyền
-  const fetchPermissions = async () => {
-    setLoading(true);
+  useEffect(() => {
+    loadPermissions();
+  }, []);
+
+  const loadPermissions = async () => {
     try {
-      const res = await axios.get<Permission[]>(API_BASE_URL);
-      setPermissions(res.data);
-    } catch {
-      toast.error("Không thể tải danh sách quyền hạn!");
-    } finally {
-      setLoading(false);
+      const data = await getPermissions();
+      setPermissions(data);
+    } catch (error) {
+      toast.error("Không thể tải danh sách quyền");
     }
   };
 
-  useEffect(() => {
-    fetchPermissions();
-  }, []);
-
-  // 🔹 Xử lý form input
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // 🔹 Thêm mới hoặc cập nhật quyền
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error("Tên quyền không được để trống!");
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.description.trim()) {
+      toast.error("Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
     try {
-      if (isEditing && editingId) {
-        await axios.put(`${API_BASE_URL}/${editingId}`, formData);
-        toast.success("Cập nhật quyền thành công!");
+      if (editingId) {
+        await updatePermission(editingId, form);
+        toast.success("Cập nhật quyền thành công");
       } else {
-        await axios.post(API_BASE_URL, formData);
-        toast.success("Thêm quyền mới thành công!");
+        await addPermission(form);
+        toast.success("Thêm quyền mới thành công");
       }
-
-      setFormData({ name: "", description: "" });
-      setIsEditing(false);
+      setForm({ name: "", description: "" });
       setEditingId(null);
-      fetchPermissions();
-    } catch {
-      toast.error("Không thể lưu quyền!");
+      loadPermissions();
+    } catch (error) {
+      toast.error("Lỗi khi lưu quyền");
     }
   };
 
-  // 🔹 Sửa quyền
-  const handleEdit = (permission: Permission) => {
-    setIsEditing(true);
-    setEditingId(permission.id);
-    setFormData({ name: permission.name, description: permission.description || "" });
+  const handleEdit = (p: Permission) => {
+    setForm(p);
+    setEditingId(p.id!);
   };
 
-  // 🔹 Xóa quyền
   const handleDelete = async (id: number) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa quyền này không?")) return;
-
-    try {
-      await axios.delete(`${API_BASE_URL}/${id}`);
-      toast.success("Xóa quyền thành công!");
-      fetchPermissions();
-    } catch {
-      toast.error("Không thể xóa quyền!");
+    if (confirm("Bạn có chắc muốn xóa quyền này?")) {
+      try {
+        await deletePermission(id);
+        toast.success("Xóa thành công");
+        loadPermissions();
+      } catch (error) {
+        toast.error("Không thể xóa quyền");
+      }
     }
   };
 
   return (
     <div className="p-6">
       <Toaster />
-      <h1 className="text-2xl font-bold mb-4">⚙️ Quản lý quyền hạn (CRUD)</h1>
+      <h2 className="text-2xl font-bold mb-4">Quản lý quyền</h2>
 
       {/* Form thêm/sửa */}
-      <form
-        onSubmit={handleSubmit}
-        className="mb-6 border p-4 rounded-lg shadow-sm w-full max-w-lg"
-      >
-        <h2 className="text-lg font-semibold mb-3">
-          {isEditing ? "✏️ Chỉnh sửa quyền" : "➕ Thêm quyền mới"}
-        </h2>
-
-        <div className="mb-3">
-          <label className="block font-medium mb-1">Tên quyền:</label>
-          <input
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-            placeholder="VD: create_user, view_order"
-          />
+      <div className="bg-white p-4 rounded-xl shadow-md mb-6">
+        <h3 className="font-semibold mb-3">
+          <FontAwesomeIcon icon={faPlus} className="text-purple-600 mr-2" />
+          {editingId ? "Chỉnh sửa quyền" : "Thêm quyền mới"}
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="font-medium">Tên quyền</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="vd: admin/product"
+              className="border w-full p-2 rounded mt-1"
+            />
+          </div>
+          <div>
+            <label className="font-medium">Mô tả</label>
+            <input
+              type="text"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="vd: Quyền quản lý sản phẩm"
+              className="border w-full p-2 rounded mt-1"
+            />
+          </div>
         </div>
+        <button
+          onClick={handleSubmit}
+          className="bg-blue-600 hover:bg-blue-700 text-white mt-4 px-4 py-2 rounded"
+        >
+          {editingId ? "Cập nhật" : "Thêm mới"}
+        </button>
+      </div>
 
-        <div className="mb-3">
-          <label className="block font-medium mb-1">Mô tả:</label>
-          <input
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-            placeholder="VD: Quyền tạo người dùng"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            {isEditing ? "Cập nhật" : "Thêm mới"}
-          </button>
-
-          {isEditing && (
-            <button
-              type="button"
-              className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              onClick={() => {
-                setIsEditing(false);
-                setEditingId(null);
-                setFormData({ name: "", description: "" });
-              }}
-            >
-              Hủy
-            </button>
-          )}
-        </div>
-      </form>
-
-      {/* Danh sách quyền */}
-      {loading ? (
-        <p>Đang tải dữ liệu...</p>
-      ) : (
-        <table className="w-full border border-gray-300 rounded-lg">
-          <thead>
-            <tr className="bg-gray-100 text-left">
-              <th className="p-3 border-b">ID</th>
-              <th className="p-3 border-b">Tên quyền</th>
-              <th className="p-3 border-b">Mô tả</th>
-              <th className="p-3 border-b text-center">Hành động</th>
+      {/* Bảng danh sách */}
+      <div className="bg-white p-4 rounded-xl shadow-md">
+        <table className="w-full border">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border p-2 text-left">ID</th>
+              <th className="border p-2 text-left">Tên quyền</th>
+              <th className="border p-2 text-left">Mô tả</th>
+              <th className="border p-2 text-center">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {permissions.map((p) => (
               <tr key={p.id} className="hover:bg-gray-50">
-                <td className="p-3 border-b">{p.id}</td>
-                <td className="p-3 border-b">{p.name}</td>
-                <td className="p-3 border-b">{p.description}</td>
-                <td className="p-3 border-b text-center space-x-2">
+                <td className="border p-2">{p.id}</td>
+                <td className="border p-2">{p.name}</td>
+                <td className="border p-2">{p.description}</td>
+                <td className="border p-2 text-center space-x-3">
                   <button
                     onClick={() => handleEdit(p)}
-                    className="text-blue-600 hover:underline"
+                    className="text-yellow-500 hover:text-yellow-600"
                   >
-                    Sửa
+                    <FontAwesomeIcon icon={faEdit} />
                   </button>
                   <button
-                    onClick={() => handleDelete(p.id)}
-                    className="text-red-600 hover:underline"
+                    onClick={() => handleDelete(p.id!)}
+                    className="text-red-500 hover:text-red-600"
                   >
-                    Xóa
+                    <FontAwesomeIcon icon={faTrash} />
                   </button>
                 </td>
               </tr>
             ))}
             {permissions.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center p-4 text-gray-500">
-                  Không có quyền nào
+                <td colSpan={4} className="text-center p-3 text-gray-500">
+                  Chưa có quyền nào
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      )}
+      </div>
     </div>
   );
 }
