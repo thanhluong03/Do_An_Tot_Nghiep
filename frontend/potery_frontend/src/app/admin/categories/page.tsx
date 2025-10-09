@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+
 import {
   getCategories,
   addCategory,
@@ -21,7 +23,8 @@ export default function CategoryPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(5);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null); // ✅ thêm state xác nhận xoá
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
 
   useEffect(() => {
     fetchCategories();
