@@ -9,3 +9,4 @@ export { FlashSaleSection } from './FlashSaleSection';
 export { CategorySection } from './CategorySection';
 export { LifestyleSection } from './LifestyleSection';
 export { NewsletterSection } from './NewsLetterSection';
+export { VoucherModal } from './VoucherPopup';
