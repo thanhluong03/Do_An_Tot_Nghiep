@@ -19,11 +19,15 @@ export function AddToCartClient({ product, disabled } : { product: Product; disa
     setLoading(true);
     setMessage(null);
     try {
+      
+      const storeId = product.store?.id;
       const customerId = user.id as string; // guarded above
       await cartApi.add({
         customer_id: customerId,
         product_id: product.id,
+         store_id: storeId,
         quantity: 1,
+        
       });
       setMessage('Đã thêm vào giỏ hàng');
     } catch (e) {

@@ -22,9 +22,38 @@ export const useProducts = (params?: {
       try {
         setLoading(true);
         setError(null);
+
         const response = await productApi.getProducts(params);
-        setProducts(response.products);
-        setTotal(response.total);
+        let filtered = [...response.products];
+
+        // --- Lọc theo giá tại FE ---
+        if (params?.minPrice != null) {
+          filtered = filtered.filter(p => p.price >= params.minPrice!);
+        }
+        if (params?.maxPrice != null) {
+          filtered = filtered.filter(p => p.price <= params.maxPrice!);
+        }
+
+        // --- Sắp xếp theo giá / tên / createdAt ---
+        if (params?.sortBy) {
+          filtered.sort((a, b) => {
+            const order = params.sortOrder === 'desc' ? -1 : 1;
+
+            if (params.sortBy === 'price') {
+              return (a.price - b.price) * order;
+            }
+            if (params.sortBy === 'name') {
+              return a.name.localeCompare(b.name) * order;
+            }
+            if (params.sortBy === 'createdAt') {
+              return (a.createdAt.getTime() - b.createdAt.getTime()) * order;
+            }
+            return 0;
+          });
+        }
+
+        setProducts(filtered);
+        setTotal(filtered.length); // tổng sau khi lọc
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {

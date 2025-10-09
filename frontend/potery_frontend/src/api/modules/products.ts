@@ -9,7 +9,62 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+export interface StoreInventory {
+    store_id: string;
+    store_name: string;
+    store_address: string;
+    quantity_stock: number; // Tồn kho tại cửa hàng này
+}
 
+// Kiểu Product Detail chứa danh sách các Store Inventory
+export interface ProductDetail extends Product {
+    stores: StoreInventory[]; // Mảng các cửa hàng phân phối
+    promotion: any;           // Dữ liệu promotion (nếu có)
+}
+const mapProductDetail = (p: any): ProductDetail => {
+    // 1. Ánh xạ các trường chung
+    const baseProduct = mapProduct(p); 
+    
+    // 2. Ánh xạ danh sách cửa hàng (stores)
+    const stores: StoreInventory[] = Array.isArray(p.stores)
+        ? p.stores.map((s: any) => ({
+            store_id: String(s.store_id ?? ''),
+            store_name: s.store_name ?? 'Cửa hàng',
+            store_address: s.store_address ?? '',
+            quantity_stock: Number(s.quantity_stock ?? 0),
+        }))
+        : [];
+
+    // 3. Xử lý Promotion và Giá
+    const originalPrice = Number(p.price ?? 0);
+    // Giả định promotion là một object có trường 'price' là giá khuyến mãi
+    const promotionPrice = p.promotion?.price ? Number(p.promotion.price) : undefined;
+    const hasPromotion = Boolean(p.promotion);
+
+    // Giá hiển thị sẽ là giá khuyến mãi, nếu không có thì là giá gốc
+    const currentPrice = promotionPrice ?? originalPrice;
+
+    // Tính toán lại tổng tồn kho (stock) dựa trên tất cả cửa hàng (nếu cần)
+    const totalStock = stores.reduce((sum, s) => sum + s.quantity_stock, 0);
+
+    return {
+        ...baseProduct,
+        id: String(p.id ?? p._id ?? ''),
+        name: p.name ?? 'Sản phẩm',
+        description: p.description ?? '',
+        price: currentPrice,            // Giá sau khuyến mãi (hoặc giá gốc)
+        originalPrice: hasPromotion ? originalPrice : undefined, // Giá gốc (chỉ hiển thị nếu có KM)
+        discount: hasPromotion ? (originalPrice - currentPrice) / originalPrice : undefined,
+        
+        // Cập nhật tồn kho và thông tin cửa hàng chi tiết
+        stock: totalStock, 
+        stores: stores,
+        promotion: p.promotion,
+        isFlashSale: hasPromotion, // Giả định mọi promotion đều là FlashSale cho tiện hiển thị
+        flashSalePrice: promotionPrice,
+        flashSaleEndTime: p.promotion?.end_time ? new Date(p.promotion.end_time) : undefined,
+    };
+};
 // Hàm ánh xạ (mapping) sản phẩm từ API raw data sang kiểu Product frontend
 // Lưu ý: Trường 'stock' sẽ được set tạm bằng 0 và được cập nhật sau từ Inventory API trong getProducts
 const mapProduct = (p: any): Product => {
@@ -32,7 +87,7 @@ const mapProduct = (p: any): Product => {
     rating: Number(p.rating ?? 5),
     reviewCount: Number(p.reviewCount ?? 0),
     // Tạm thời đặt stock là 0, sẽ được cập nhật sau từ Inventory API
-    stock: Number(p.quantity_stock ?? p.quantity ?? 0),
+    stock: Number(p.quantity_stock ?? p.quantity ?? 0), 
     isFlashSale: Boolean(p.isFlashSale),
     flashSalePrice: p.flashSalePrice ? Number(p.flashSalePrice) : undefined,
     flashSaleEndTime: p.flashSaleEndTime ? new Date(p.flashSaleEndTime) : undefined,
@@ -99,7 +154,11 @@ export const productApi = {
     const axiosParams: Record<string, any> = {};
     if (params?.page) axiosParams.page = params.page;
     if (params?.limit) axiosParams.size = params.limit;
-    if (params?.category) axiosParams.category = params.category;
+    let url = '/products/listproduct-by-inventory'; // Endpoint mặc định
+      if (params?.category) {
+          // Nếu có category, gọi endpoint category dynamic route
+          url = `/products/listproduct-by-category/${params.category}`; // VÍ DỤ: /products/listproduct-by-category/bat dia 
+      }
     if (params?.search) {
       axiosParams.search = params.search;
       axiosParams.key = params.search; 
@@ -110,7 +169,7 @@ export const productApi = {
     if (params?.maxPrice) axiosParams.max_price = params.maxPrice; 
     try {
       // 1. Gọi API lấy danh sách sản phẩm
-      const productsPromise = api.get('/products/listproduct', { params: axiosParams });
+      const productsPromise = api.get(url, { params: axiosParams });
       
       // 2. Gọi API lấy danh sách tồn kho (Có thể gọi đồng thời)
       const inventoryPromise = getInventoryList(); 
@@ -162,39 +221,49 @@ export const productApi = {
   },
 
   // Lấy chi tiết sản phẩm (Cần thêm logic lấy tồn kho nếu muốn chính xác)
-  getProductById: async (id: string): Promise<Product> => {
-    try {
-        const response = await api.get(`/products/productdetail/${id}`);
-        let product = mapProduct(response.data);
-        const inventoryList = await getInventoryList(); 
-            const inventoryItem = inventoryList.find(item => item.product_id === id);
-            product.stock = inventoryItem ? inventoryItem.quantity : 0;
-
-        // Lấy tồn kho cho 1 sản phẩm cụ thể (Giả định có API /inventory/product/:id hoặc cần lọc từ list)
-        // Nếu có API lấy tồn kho theo ID sản phẩm, ta sẽ dùng:
-        /*
-        const inventoryResponse = await api.get(`/inventory/product/${id}`);
-        product.stock = Number(inventoryResponse.data?.quantity ?? 0);
-        */
-        
-        // Hiện tại, ta sẽ bỏ qua bước này để giữ đơn giản, chỉ lấy thông tin có sẵn từ product API
-        // Nếu API productdetail đã trả về trường quantity/stock, thì ta sẽ sửa mapProduct để dùng nó.
-        
-        // Nếu API Inventory có endpoint chi tiết:
-        // const inventoryResponse = await api.get(`/inventory/detail/${id}`);
-        // product.stock = Number(inventoryResponse.data?.quantity ?? 0);
-
-        return product;
-    } catch (error) {
-      console.error(`Failed to fetch product with id ${id}:`, error);
-      throw new Error('Failed to fetch product');
-    }
-  },
+  getProductById: async (id: string): Promise<ProductDetail> => { // Thay đổi kiểu trả về thành ProductDetail
+        try {
+            // Endpoint giả định: /products/productdetail/:id
+            const response = await api.get(`/products/productdetail-by-inventory/${id}`);
+            
+            // Sử dụng hàm ánh xạ chi tiết mới (mapProductDetail)
+            const productDetail = mapProductDetail(response.data); 
+            
+            // Loại bỏ getInventoryList không cần thiết
+            
+            return productDetail;
+        } catch (error) {
+            console.error(`Failed to fetch product with id ${id}:`, error);
+            throw new Error('Failed to fetch product');
+        }
+    },
 
   // ... (Giữ nguyên các hàm khác)
-  getCategories: async (): Promise<ProductCategory[]> => {
-    return [];
-  },
+   getCategories: async (): Promise<ProductCategory[]> => {
+        try {
+            const response = await api.get('/categories/listcategory');
+            const rawData = response.data;
+            
+            // Xử lý dữ liệu trả về: Backend có thể trả về một mảng trực tiếp, 
+            // hoặc mảng nằm trong trường 'data', 'items', 'categories',...
+            const categoriesArray = Array.isArray(rawData) 
+                ? rawData 
+                : Array.isArray(rawData?.data) ? rawData.data
+                : Array.isArray(rawData?.items) ? rawData.items
+                : Array.isArray(rawData?.categories) ? rawData.categories
+                : [];
+
+            return categoriesArray.map((c: any) => ({
+                id: String(c.id ?? c._id ?? ''),
+                name: c.name ?? 'Danh mục không tên',
+                slug: c.slug ?? c.name, // Giả sử slug là tên (hoặc trường slug nếu có)
+            }));
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+            // Trả về mảng rỗng để tránh lỗi nếu API thất bại
+            return []; 
+        }
+    },
 
   // getFlashSaleProducts: async (): Promise<FlashSale[]> => {
   //       try {

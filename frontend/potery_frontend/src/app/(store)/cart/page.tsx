@@ -7,6 +7,7 @@ import { formatPrice } from '../../../utils/format';
 import { useAuth } from '../../../contexts/AuthContext';
 import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
+import Link from 'next/link';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
@@ -22,10 +23,11 @@ export default function CartPage() {
     images: string[];
   }>>({});
 
+  // Lấy giỏ hàng từ server
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!isAuthenticated || !user || !user.id) return;
+      if (!isAuthenticated || !user?.id) return;
       setLoading(true);
       setError(null);
       try {
@@ -38,7 +40,7 @@ export default function CartPage() {
           }));
           setServerItems(mapped);
         }
-      } catch (e) {
+      } catch {
         if (mounted) setError('Không thể tải giỏ hàng');
       } finally {
         if (mounted) setLoading(false);
@@ -47,7 +49,7 @@ export default function CartPage() {
     return () => { mounted = false; };
   }, [isAuthenticated, user]);
 
-  // Fetch product details for serverItems so we can render image/name/price
+  // Lấy thông tin sản phẩm từ API để hiển thị
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -72,13 +74,13 @@ export default function CartPage() {
         });
         setServerProducts(next);
       } catch {
-        // ignore; rows without details will render with placeholders
+        // ignore
       }
     })();
     return () => { mounted = false; };
   }, [serverItems, serverProducts]);
 
-  // Tính tổng tiền dựa trên serverItems nếu có, ngược lại dựa trên local items
+  // Tính tổng tiền
   const total = React.useMemo(() => {
     if (serverItems.length > 0) {
       return serverItems.reduce((acc, ci) => acc + (serverProducts[String(ci.product_id)]?.price ?? 0) * (ci.quantity ?? 1), 0);
@@ -86,98 +88,97 @@ export default function CartPage() {
     return subtotal;
   }, [serverItems, serverProducts, subtotal]);
 
-  // Checkout flow moved to checkout page
+  // Component hiển thị một sản phẩm
+  const renderCartItem = (product: any, quantity: number, id?: string | number) => (
+    <div key={id || product.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded p-4 gap-3">
+      <div className="flex items-center gap-4">
+        <img
+          src={product.images?.[0] || '/pott.jpg'}
+          alt={product.name}
+          className="w-16 h-16 object-cover rounded"
+        />
+        <div>
+          <div className="font-medium">{product.name}</div>
+          <div className="text-sm text-gray-600">{formatPrice(product.price)}</div>
+          <div className="text-sm text-gray-500">Số lượng: {quantity}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 justify-end">
+        <Link
+          href={`/checkout?product_id=${product.id}&quantity=${quantity}`}
+          className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition"
+        >
+          Đặt hàng
+        </Link>
+
+        <button
+          className="text-red-600 hover:text-red-700"
+          onClick={async () => {
+            if (id) {
+              try {
+                await cartApi.remove(id);
+                setServerItems(prev => prev.filter(x => x.id !== id));
+              } catch {
+                alert('Không thể xóa sản phẩm khỏi giỏ');
+              }
+            } else {
+              removeItem(product.id);
+            }
+          }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <BaseLayout>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-serif font-bold mb-6">Giỏ hàng</h1>
 
-        {(loading && <div className="text-gray-600">Đang tải giỏ hàng…</div>)}
+        {loading && <div className="text-gray-600">Đang tải giỏ hàng…</div>}
         {error && <div className="text-red-600">{error}</div>}
-        {!loading && !error && (serverItems.length > 0 ? (
-          <div className="space-y-4">
-            {serverItems.map((ci) => (
-              <div key={ci.id} className="flex items-center justify-between border rounded p-4">
-                <div className="flex items-center gap-4">
-                  <img src={(serverProducts[String(ci.product_id)]?.images?.[0]) || '/pott.jpg'} alt={`Sản phẩm ${ci.product_id}`} className="w-16 h-16 object-cover rounded" />
-                  <div>
-                    <div className="font-medium">{serverProducts[String(ci.product_id)]?.name || `Sản phẩm #${ci.product_id}`}</div>
-                    <div className="text-sm text-gray-600">{formatPrice(serverProducts[String(ci.product_id)]?.price ?? 0)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm text-gray-700">x{ci.quantity}</div>
-                  <button
-                    aria-label="Xóa khỏi giỏ"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={async () => {
-                      try {
-                        await cartApi.remove(ci.id);
-                        setServerItems(prev => prev.filter(x => x.id !== ci.id));
-                      } catch {
-                        alert('Không thể xóa sản phẩm khỏi giỏ');
-                      }
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
+
+        {!loading && !error && (
+          <>
+            {/* Server items */}
+            {serverItems.length > 0 && (
+              <div className="space-y-4">
+                {serverItems.map(ci => {
+                  const product = serverProducts[String(ci.product_id)];
+                  if (!product) return null;
+                  return renderCartItem(product, ci.quantity, ci.id);
+                })}
               </div>
-            ))}
-          </div>
-        ) : (
-          items.length === 0 ? (
-            <div className="text-gray-600">Chưa có sản phẩm trong giỏ hàng.</div>
-          ) : (
-            <div className="space-y-4">
-              {items.map(({ product, quantity }) => (
-                <div key={product.id} className="flex items-center justify-between border rounded p-4">
-                  <div className="flex items-center gap-4">
-                    <img src={product.images[0] || '/pott.jpg'} alt={product.name} className="w-16 h-16 object-cover rounded" />
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-gray-600">{formatPrice(product.price)}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      className="border rounded px-2 py-1 w-20"
-                      min={1}
-                      value={quantity}
-                      onChange={(e) => updateQuantity(product.id, Math.max(1, Number(e.target.value)))}
-                    />
-                    <button className="text-red-600" onClick={() => removeItem(product.id)}>Xóa</button>
-                  </div>
+            )}
+
+            {/* Local items fallback */}
+            {serverItems.length === 0 && (
+              items.length === 0 ? (
+                <div className="text-gray-600">Chưa có sản phẩm trong giỏ hàng.</div>
+              ) : (
+                <div className="space-y-4">
+                  {items.map(({ product, quantity }) => renderCartItem(product, quantity))}
                 </div>
-              ))}
-            </div>
-          )
-        ))}
+              )
+            )}
+          </>
+        )}
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <h2 className="font-semibold mb-2">Địa chỉ giao hàng</h2>
-            <textarea
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full border rounded p-3"
-              rows={4}
-              placeholder="Nhập địa chỉ giao hàng của bạn"
-            />
-          </div>
           <div className="border rounded p-4">
             <div className="flex items-center justify-between mb-2">
               <span>Tổng tiền</span>
               <span className="font-semibold">{formatPrice(total)}</span>
             </div>
-            <a href="/checkout" className="block text-center bg-[#65604E] text-white py-2 rounded mt-4">Tiến hành thanh toán</a>
+            <Link href="/checkout" className="block text-center bg-[#65604E] text-white py-2 rounded mt-4">
+              Tiến hành thanh toán
+            </Link>
           </div>
         </div>
       </div>
     </BaseLayout>
   );
 }
-
-

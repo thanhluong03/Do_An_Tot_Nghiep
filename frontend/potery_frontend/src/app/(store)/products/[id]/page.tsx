@@ -4,6 +4,7 @@ import { formatPrice } from '../../../../utils/format';
 import { BaseLayout } from '../../../../layouts';
 import { ReviewsClient } from '../[id]/reviews-client';
 import { AddToCartClient } from '../[id]/add-to-cart-client';
+import { StoreSelectorClient } from './StoreSelectorClient';
 
 interface PageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -30,7 +31,9 @@ export default async function ProductDetailPage(props: PageProps) {
       </div>
     );
   }
-
+  const defaultStore = product.stores.find(s => s.quantity_stock > 0);
+    const hasStores = product.stores && product.stores.length > 0;
+    const isAvailable = product.stock > 0 && !!defaultStore; // Tồn kho tổng > 0 và có cửa hàng phân phối
   return (
     <BaseLayout>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -64,12 +67,14 @@ export default async function ProductDetailPage(props: PageProps) {
         <div className="space-y-6">
           <div>
             <div className="inline-flex items-center gap-2 mb-3">
-              <span className="px-3 py-1 text-xs rounded-full bg-[#F5F1EB] text-[#65604E]">{product.category || 'Gốm sứ'}</span>
-              {product.stock > 0 ? (
-                <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700">Còn hàng</span>
-              ) : (
-                <span className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-700">Hết hàng</span>
-              )}
+                            <span className="px-3 py-1 text-xs rounded-full bg-[#F5F1EB] text-[#65604E]">{product.category || 'Gốm sứ'}</span>
+                            
+                            {/* CẬP NHẬT: Dùng defaultStore để xác định trạng thái tồn kho */}
+                            {isAvailable ? ( 
+                                <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700">Còn hàng</span>
+                            ) : (
+                                <span className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-700">Hết hàng</span>
+                            )}
             </div>
             <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#2C2A24]">{product.name}</h1>
             <div className="mt-2 flex items-center gap-3 text-sm text-gray-600">
@@ -83,25 +88,46 @@ export default async function ProductDetailPage(props: PageProps) {
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white shadow">
+          <div className="p-5 rounded-2xl bg-white shadow space-y-5">
             <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-bold text-[#2C2A24]">{formatPrice(product.price)}</span>
-              {product.originalPrice && product.originalPrice > product.price && (
-                <span className="text-lg text-gray-500 line-through">{formatPrice(product.originalPrice)}</span>
-              )}
+                {product.originalPrice && product.originalPrice > product.price && (
+                    <span className="text-lg text-gray-500 line-through">
+                        {formatPrice(product.originalPrice)}
+                    </span>
+                )}
+                <span className={`text-3xl font-bold ${product.originalPrice ? 'text-red-600' : 'text-[#2C2A24]'}`}>
+                    {formatPrice(product.price)}
+                </span>
+                {product.isFlashSale && (
+                    <span className="text-sm font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                        🔥 SALE
+                    </span>
+                )}
             </div>
             <p className="mt-4 text-gray-700 leading-relaxed">{product.description || 'Sản phẩm gốm sứ chất lượng, chế tác thủ công tinh xảo.'}</p>
+            {hasStores && (
+                  <StoreSelectorClient 
+                        stores={product.stores} 
+                        initialStoreId={defaultStore?.store_id}
+                            />
+            )}
+            {!hasStores && (
+                <p className="text-red-500 text-sm">DEBUG: Sản phẩm này chưa được phân phối đến cửa hàng hoặc dữ liệu cửa hàng bị lỗi.</p>
+            )}
 
-            <div className="mt-5 flex flex-col sm:flex-row gap-3">
-              <AddToCartClient product={product} disabled={product.stock === 0} />
-              <a href="/products" className="px-6 py-3 border-2 border-[#65604E] text-[#65604E] rounded-lg hover:bg-[#F5F1EB]">Quay lại</a>
+            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              {/* AddToCartClient cần được cập nhật để nhận storeId từ StoreSelectorClient */}
+              <AddToCartClient 
+            product={product} 
+            disabled={!isAvailable} // Chỉ disabled khi hết hàng
+               />
+              <a href="/products" className="px-6 py-3 border-2 border-[#65604E] text-[#65604E] rounded-lg hover:bg-[#F5F1EB] text-center">Quay lại</a>
             </div>
           </div>
 
+           {/* Supplier/Store Info (Chỉ hiển thị thông tin chung, phần chi tiết đã chuyển lên StoreSelector) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
             {product.supplier?.name && <div><span className="text-gray-500">Nhà cung cấp: </span>{product.supplier.name}</div>}
-            {product.store?.name && <div><span className="text-gray-500">Cửa hàng: </span>{product.store.name}</div>}
-            {product.store?.address && <div className="sm:col-span-2"><span className="text-gray-500">Địa chỉ: </span>{product.store.address}</div>}
           </div>
         </div>
       </div>
