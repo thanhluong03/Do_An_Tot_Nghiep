@@ -252,7 +252,7 @@ export default function PromotionPage() {
                 {/* 1. TIÊU ĐỀ & NÚT THÊM MỚI */}
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-3xl font-extrabold text-gray-800">
-                        🎁 Quản lý Chương trình Khuyến mãi
+                        Quản lý Chương trình Khuyến mãi
                     </h2>
                     <button
                         onClick={() => {
@@ -304,9 +304,8 @@ export default function PromotionPage() {
                 </h2>
                 
                 <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-100"> {/* Bọc bảng trong container có shadow và bo góc */}
-                    {/* 👇 Sửa tương tự cho bảng thứ hai */}
                     <table className="w-full border-collapse bg-white"><thead>
-                        <tr className="bg-gray-200 text-black text-sm font-semibold uppercase tracking-wider"> {/* Tiêu đề bảng màu đậm sang trọng */}
+                        <tr className="bg-gray-200 text-black text-sm font-semibold uppercase tracking-wider"> 
                             <th className="px-5 py-3 text-left rounded-tl-xl">ID</th>
                             <th className="px-5 py-3 text-left">Tên/Mô tả</th>
                             <th className="px-5 py-3 text-left">Giá trị giảm</th>
@@ -319,7 +318,7 @@ export default function PromotionPage() {
                         {currentItems.map((promo, idx) => (
                             <tr 
                                 key={promo.id} 
-                                className={`border-b border-gray-100 transition hover:bg-gray-50 ${editingId === promo.id ? 'bg-yellow-50' : ''}`} // Highlight hàng đang sửa
+                                className={`border-b border-gray-100 transition hover:bg-gray-50 ${editingId === promo.id ? 'bg-yellow-50' : ''}`}
                             >
                                 <td className="px-5 py-3 text-sm font-mono text-gray-600">{promo.id}</td>
                                 <td className="px-5 py-3 text-sm">

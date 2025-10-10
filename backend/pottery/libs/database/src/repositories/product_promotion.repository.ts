@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm'; 
 import { ProductPromotionEntity } from '../entities/product_promotion.entity';
 
 @Injectable()
@@ -32,6 +32,16 @@ export class ProductPromotionRepository {
                 deleted_at: IsNull()
             },
             relations: ['promotion'],
+        });
+    }
+     // ✅ THÊM HÀM findByProductIds VÀO ĐÂY
+    async findByProductIds(productIds: number[]): Promise<ProductPromotionEntity[]> {
+        return this.repository.find({
+            relations: ['product', 'promotion'], // Có thể cần relations cho các trường hợp đặc biệt
+            where: {
+                product_id: In(productIds), // Sử dụng In(productIds)
+                deleted_at: IsNull()
+            }
         });
     }
 
