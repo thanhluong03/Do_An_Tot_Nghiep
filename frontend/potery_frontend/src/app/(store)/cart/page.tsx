@@ -12,18 +12,12 @@ import Link from 'next/link';
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
   const { user, isAuthenticated } = useAuth();
-  const [address, setAddress] = useState('');
   const [serverItems, setServerItems] = useState<Array<{ id: string; product_id: string | number; quantity: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverProducts, setServerProducts] = useState<Record<string, {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-  }>>({});
+  const [serverProducts, setServerProducts] = useState<Record<string, any>>({});
 
-  // Lấy giỏ hàng từ server
+  // 🔹 Lấy giỏ hàng từ server
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -46,19 +40,19 @@ export default function CartPage() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [isAuthenticated, user]);
 
-  // Lấy thông tin sản phẩm từ API để hiển thị
+  // 🔹 Lấy thông tin sản phẩm (bao gồm giá giảm)
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const missing = serverItems
-        .map((ci) => String(ci.product_id))
-        .filter((pid) => !serverProducts[pid]);
+      const missing = serverItems.map(ci => String(ci.product_id)).filter(pid => !serverProducts[pid]);
       if (missing.length === 0) return;
       try {
-        const results = await Promise.allSettled(missing.map((pid) => productApi.getProductById(pid)));
+        const results = await Promise.allSettled(missing.map(pid => productApi.getProductById(pid)));
         if (!mounted) return;
         const next: Record<string, any> = { ...serverProducts };
         results.forEach((r, idx) => {
@@ -67,7 +61,8 @@ export default function CartPage() {
             next[pid] = {
               id: r.value.id,
               name: r.value.name,
-              price: r.value.price,
+              price: r.value.price, // ✅ giá đã giảm
+              originalPrice: r.value.originalPrice,
               images: r.value.images,
             };
           }
@@ -77,18 +72,24 @@ export default function CartPage() {
         // ignore
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [serverItems, serverProducts]);
 
-  // Tính tổng tiền
+  // 🔹 Tổng tiền (giá sau giảm)
   const total = React.useMemo(() => {
     if (serverItems.length > 0) {
-      return serverItems.reduce((acc, ci) => acc + (serverProducts[String(ci.product_id)]?.price ?? 0) * (ci.quantity ?? 1), 0);
+      return serverItems.reduce(
+        (acc, ci) =>
+          acc + (serverProducts[String(ci.product_id)]?.price ?? 0) * (ci.quantity ?? 1),
+        0
+      );
     }
     return subtotal;
   }, [serverItems, serverProducts, subtotal]);
 
-  // Component hiển thị một sản phẩm
+  // ✅ Hiển thị item có giá giảm
   const renderCartItem = (product: any, quantity: number, id?: string | number) => (
     <div key={id || product.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border rounded p-4 gap-3">
       <div className="flex items-center gap-4">
@@ -99,7 +100,16 @@ export default function CartPage() {
         />
         <div>
           <div className="font-medium">{product.name}</div>
-          <div className="text-sm text-gray-600">{formatPrice(product.price)}</div>
+
+          {product.originalPrice && product.originalPrice > product.price ? (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 line-through">{formatPrice(product.originalPrice)}</span>
+              <span className="text-red-600 font-semibold">{formatPrice(product.price)}</span>
+            </div>
+          ) : (
+            <div className="text-gray-800 font-semibold">{formatPrice(product.price)}</div>
+          )}
+
           <div className="text-sm text-gray-500">Số lượng: {quantity}</div>
         </div>
       </div>
@@ -135,50 +145,86 @@ export default function CartPage() {
 
   return (
     <BaseLayout>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-serif font-bold mb-6">Giỏ hàng</h1>
+  <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 className="text-4xl font-serif font-bold mb-8 text-center">Giỏ Hàng</h1>
 
-        {loading && <div className="text-gray-600">Đang tải giỏ hàng…</div>}
-        {error && <div className="text-red-600">{error}</div>}
+    {loading && <div className="text-gray-500 text-center">Đang tải giỏ hàng…</div>}
+    {error && <div className="text-red-600 text-center">{error}</div>}
 
-        {!loading && !error && (
-          <>
-            {/* Server items */}
-            {serverItems.length > 0 && (
-              <div className="space-y-4">
-                {serverItems.map(ci => {
-                  const product = serverProducts[String(ci.product_id)];
-                  if (!product) return null;
-                  return renderCartItem(product, ci.quantity, ci.id);
-                })}
-              </div>
-            )}
-
-            {/* Local items fallback */}
-            {serverItems.length === 0 && (
-              items.length === 0 ? (
-                <div className="text-gray-600">Chưa có sản phẩm trong giỏ hàng.</div>
-              ) : (
-                <div className="space-y-4">
-                  {items.map(({ product, quantity }) => renderCartItem(product, quantity))}
+    {!loading && !error && (
+      <>
+        {serverItems.length > 0 ? (
+          <div className="grid md:grid-cols-2 gap-6">
+            {serverItems.map(ci => {
+              const product = serverProducts[String(ci.product_id)];
+              if (!product) return null;
+              return (
+                <div key={ci.id} className="border rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm hover:shadow-md transition">
+                  <img src={product.images?.[0] || '/pott.jpg'} alt={product.name} className="w-28 h-28 object-cover rounded-lg" />
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold">{product.name}</h2>
+                    {product.originalPrice && product.originalPrice > product.price ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="line-through text-gray-400">{formatPrice(product.originalPrice)}</span>
+                        <span className="text-red-600 font-bold">{formatPrice(product.price)}</span>
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-gray-800 font-bold">{formatPrice(product.price)}</div>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">Số lượng: {ci.quantity}</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href={`/checkout?product_id=${product.id}&quantity=${ci.quantity}`}
+                      className="px-4 py-2 bg-[#65604E] text-white rounded-lg text-sm text-center hover:bg-[#524c3f] transition"
+                    >
+                      Đặt hàng
+                    </Link>
+                    <button
+                      className="text-red-600 hover:text-red-700 text-lg"
+                      onClick={async () => {
+                        if (ci.id) {
+                          try {
+                            await cartApi.remove(ci.id);
+                            setServerItems(prev => prev.filter(x => x.id !== ci.id));
+                          } catch {
+                            alert('Không thể xóa sản phẩm khỏi giỏ');
+                          }
+                        } else {
+                          removeItem(product.id);
+                        }
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-              )
-            )}
-          </>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center text-gray-500 mt-12 text-lg">Chưa có sản phẩm trong giỏ hàng.</div>
         )}
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="border rounded p-4">
-            <div className="flex items-center justify-between mb-2">
+        {/* Tổng tiền */}
+        <div className="mt-12 flex justify-end">
+          <div className="border rounded-2xl p-6 w-full md:w-1/3 shadow-sm">
+            <div className="flex justify-between text-lg mb-4">
               <span>Tổng tiền</span>
-              <span className="font-semibold">{formatPrice(total)}</span>
+              <span className="font-bold">{formatPrice(total)}</span>
             </div>
-            <Link href="/checkout" className="block text-center bg-[#65604E] text-white py-2 rounded mt-4">
+            <Link
+              href="/checkout"
+              className="block text-center bg-[#65604E] text-white py-3 rounded-lg font-semibold hover:bg-[#524c3f] transition"
+            >
               Tiến hành thanh toán
             </Link>
           </div>
         </div>
-      </div>
-    </BaseLayout>
+      </>
+    )}
+  </div>
+</BaseLayout>
+
   );
 }

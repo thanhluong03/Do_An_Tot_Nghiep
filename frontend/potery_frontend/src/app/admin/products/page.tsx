@@ -330,14 +330,13 @@ export default function ProductsPage() {
 
       {/* Modal thêm/sửa */}
       <ProductFormModal
-        isModalOpen={isModalOpen}
-        editingProduct={editingProduct}
-        formData={formData}
-        setFormData={setFormData}
-        handleSave={handleSave}
-        setIsModalOpen={setIsModalOpen}
-        categories={categories}
-      />
+              isModalOpen={isModalOpen}
+              editingProduct={editingProduct}
+              formData={formData}
+              setFormData={setFormData}
+              handleSave={handleSave}
+              setIsModalOpen={setIsModalOpen}
+              categories={categories} suppliers={[]}      />
     </div>
   );
 }

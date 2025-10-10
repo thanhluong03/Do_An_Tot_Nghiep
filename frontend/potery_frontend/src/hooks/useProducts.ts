@@ -128,31 +128,6 @@ export const useCategories = () => {
   return { categories, loading, error };
 };
 
-export const useFlashSale = () => {
-  const [flashSales, setFlashSales] = useState<FlashSale[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchFlashSales = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await productApi.getFlashSaleProducts();
-        setFlashSales(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFlashSales();
-  }, []);
-
-  return { flashSales, loading, error };
-};
-
 export const useFeaturedProducts = (limit: number = 8) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);

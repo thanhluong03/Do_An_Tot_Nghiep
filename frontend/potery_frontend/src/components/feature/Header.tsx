@@ -112,7 +112,7 @@ export const Header: React.FC = () => {
     {/* Thay đổi màu nền và thêm border cho vòng tròn */}
     <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC]"> {/* Màu nền trắng, viền nhạt */}
               <img 
-                  src="./logo.png" // Đảm bảo đây là đường dẫn đúng tới ảnh logo PNG của bạn (ví dụ: cành lúa mì/gạo)
+                  src="/logo.png" // Đảm bảo đây là đường dẫn đúng tới ảnh logo PNG của bạn (ví dụ: cành lúa mì/gạo)
                   alt="Tiệm Gốm Nhà Gạo Logo" 
                   className="w-10 h-10 object-contain" // Kích thước và object-contain để ảnh logo không bị cắt
                   // Lưu ý: Nếu logo PNG của bạn không có màu nâu nhạt, bạn không thể thay đổi nó bằng CSS.
@@ -176,7 +176,7 @@ export const Header: React.FC = () => {
     
     {/* THAY THẾ ICON SVG BẰNG ẢNH PNG */}
                 <img 
-                    src="./Bag.png" // Thay đổi đường dẫn này thành đường dẫn file .png thực tế của bạn
+                    src="/Bag.png" // Thay đổi đường dẫn này thành đường dẫn file .png thực tế của bạn
                     alt="Giỏ hàng" 
                     className="w-5 h-5" // Giữ nguyên kích thước 5x5 để khớp với icon SVG ban đầu
                 />

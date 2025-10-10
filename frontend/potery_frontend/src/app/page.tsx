@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '../contexts/CartContext';
 import { BaseLayout } from '../layouts';
 // ... (Các imports khác giữ nguyên)
-import { useFeaturedProducts, useFlashSale, useCategories } from '../hooks/useProducts';
+import { useFeaturedProducts, useCategories } from '../hooks/useProducts';
 import { Product, ProductCategory } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { cartApi } from '../api/modules/cart';
@@ -20,7 +20,6 @@ const VOUCHER_MODAL_SHOWN_KEY = 'voucher_modal_shown';
 export default function HomePage() {
   const router = useRouter();
   const { products: featuredProducts, loading: featuredLoading, error: featuredError } = useFeaturedProducts(8);
-  const { flashSales, loading: flashSaleLoading, error: flashSaleError } = useFlashSale();
   const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
   const { addItem } = useCart();
   const { user, isAuthenticated } = useAuth();
@@ -131,14 +130,6 @@ export default function HomePage() {
         loading={categoriesLoading}
         error={categoriesError}
         onCategoryClick={handleCategoryClick}
-      />
-
-      <FlashSaleSection
-        flashSales={flashSales}
-        loading={flashSaleLoading}
-        error={flashSaleError}
-        onAddToCart={handleAddToCart}
-        onViewDetails={handleViewDetails}
       />
 
       {/* Featured Products Section */}

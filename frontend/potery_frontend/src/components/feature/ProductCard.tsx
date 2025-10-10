@@ -106,7 +106,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {[...Array(5)].map((_, i) => (
               <img
                 key={i}
-                src={i < Math.floor(product.rating) ? '/images/star-filled.png' : '/images/star-empty.png'}
+                src={i < Math.floor(product.rating) ? '/heart.png' : '/leaf.png'}
                 alt="star"
                 className="w-4 h-4"
               />
