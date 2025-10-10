@@ -55,22 +55,15 @@ export default function ImportProductPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     
-    // State mới để quản lý việc hiển thị form thêm mới
     const [isAdding, setIsAdding] = useState(false); 
 
-    /**
-     * Cập nhật hàm getDisplayName để xử lý string, number, string[] và giá trị 'all'.
-     */
     const getDisplayName = useCallback((list: SelectOption[], id: number | string | string[] | undefined): string => {
         if (id === undefined || id === null) return "";
         
-        // Trường hợp 'Tất cả'
         if (id === 'all') return "Tất cả"; 
 
-        // Trường hợp mảng (chế độ tạo hàng loạt)
         if (Array.isArray(id)) {
              if (id.length === 0) return "";
-             // Chỉ lấy 3 tên đầu để hiển thị ngắn gọn
              const names = id.slice(0, 3).map(idStr => {
                  const numericId = Number(idStr);
                  const found = list.find((item) => Number(item.id) === numericId);
@@ -79,7 +72,6 @@ export default function ImportProductPage() {
              return id.length > 3 ? `${names}, ... (${id.length} mục)` : names;
         }
 
-        // Trường hợp 1 ID (chế độ sửa)
         const idValue = Number(id);
         if (isNaN(idValue)) return "";
         
@@ -116,6 +108,7 @@ export default function ImportProductPage() {
 
     const fetchDropdownData = async () => {
         try {
+            // listDropdownProducts đã được cập nhật để trả về SelectOption có imageUrl
             const [productRes, supplierRes] = await Promise.all([listDropdownProducts(), listDropdownSuppliers()]);
             setProducts(Array.isArray(productRes) ? productRes : []);
             setSuppliers(Array.isArray(supplierRes) ? supplierRes : []);
@@ -145,7 +138,6 @@ export default function ImportProductPage() {
             setTotalItems(0);
         } finally {
             setLoading(false);
-            fetchAllProducts();
         }
     };
 
@@ -184,13 +176,10 @@ export default function ImportProductPage() {
         setErrors((prev) => ({ ...prev, [name]: "" }));
     };
     
-    // Hàm chuyển đổi chế độ thêm mới
     const toggleAddMode = () => {
-        // Nếu đang sửa, hủy sửa trước khi bật/tắt thêm mới
         if (editingId !== null) {
             handleCancelEdit();
         }
-        // Reset form khi chuyển sang chế độ thêm mới
         if (!isAdding) {
              setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
              setErrors({});
@@ -202,15 +191,12 @@ export default function ImportProductPage() {
         setEditingId(null);
         setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
         setErrors({});
-        // Khi hủy sửa, TẮT chế độ thêm mới
         setIsAdding(false); 
     };
 
     const handleEdit = (item: ImportProduct) => {
-        // Khi bắt đầu sửa, TẮT chế độ thêm mới
         setIsAdding(false); 
         setEditingId(item.id);
-        // Khi sửa, product_id và supplier_id chỉ là một ID duy nhất (string)
         setForm({
             product_id: String(item.product_id), 
             supplier_id: String(item.supplier_id),
@@ -253,7 +239,6 @@ export default function ImportProductPage() {
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
         if (isCreating) {
-            // Kiểm tra: Phải chọn 'all' (string) hoặc array có items
             if (form.product_id === undefined || form.product_id === null || 
                 (Array.isArray(form.product_id) && form.product_id.length === 0)) {
                 newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm (hoặc Tất cả).";
@@ -276,21 +261,20 @@ export default function ImportProductPage() {
         try {
             if (isCreating) {
                 const createDto: CreateImportProductDto = {
-                    product_id: form.product_id, // string | string[] | undefined
-                    supplier_id: form.supplier_id, // string | string[] | undefined
+                    product_id: form.product_id, 
+                    supplier_id: form.supplier_id, 
                     import_quantity: form.import_quantity,
                 };
                 await createImportProduct(createDto);
                 toast.success("Thêm phiếu nhập kho thành công!");
             } else {
-                // Khi sửa, chỉ cho phép sửa số lượng
                 const updateDto: UpdateImportProductDto = { import_quantity: form.import_quantity };
                 await updateImportProduct(editingId!, updateDto);
                 toast.success(`Cập nhật phiếu nhập kho ID ${editingId} thành công!`);
             }
-            handleCancelEdit(); // Tự động đóng form sau khi submit thành công
+            handleCancelEdit(); 
             fetchData();
-            fetchAllProducts();
+            fetchAllProducts(); 
         } catch (error: any) {
             const message = error.response?.data?.message || error.message || "Lỗi không xác định";
             toast.error("Lỗi xảy ra khi xử lý: " + message);
@@ -338,7 +322,6 @@ export default function ImportProductPage() {
                     Quản lý Nhập kho (Import Product)
                 </h2>
 
-                {/* NÚT THÊM MỚI (chỉ hiện khi không ở chế độ sửa) */}
                 <div className="mb-6 flex justify-end">
                     {editingId === null && (
                         <button
@@ -352,7 +335,6 @@ export default function ImportProductPage() {
                     )}
                 </div>
 
-                {/* FORM THÊM/SỬA (chỉ hiện khi đang Thêm Mới HOẶC đang Chỉnh Sửa) */}
                 {(isAdding || editingId !== null) && (
                     <ImportProductForm
                         form={form}
@@ -360,23 +342,22 @@ export default function ImportProductPage() {
                         errors={errors}
                         products={products}
                         suppliers={suppliers}
-                        getDisplayName={getDisplayName} 
+                        allProducts={allProducts} 
+                        getDisplayName={getDisplayName as any} 
                         handleValueChange={handleValueChange}
                         handleNumberChange={handleNumberChange}
                         handleSubmit={handleSubmit}
                         handleCancelEdit={handleCancelEdit}
-                        isAdding={isAdding} // Truyền state isAdding
+                        isAdding={isAdding} 
                     />
                 )}
 
-                {/* --- BỘ LỌC --- */}
                 <div className="flex flex-wrap justify-between items-end mb-6 p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4 w-full flex items-center gap-2">
                         <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
                         Bộ lọc & Tìm kiếm (Phiếu nhập)
                     </h3>
 
-                    {/* Nhà cung cấp */}
                     <div className="w-full md:w-1/4 mb-4">
                         <label className="block text-sm font-medium text-gray-600 mb-1">
                             Nhà cung cấp
@@ -396,7 +377,6 @@ export default function ImportProductPage() {
                         </select>
                     </div>
 
-                    {/* Bộ lọc ngày */}
                     <div className="w-full md:w-1/3 flex gap-3 mb-4">
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-600 mb-1">
@@ -424,7 +404,6 @@ export default function ImportProductPage() {
                         </div>
                     </div>
 
-                    {/* Tìm kiếm */}
                     <div className="w-full md:w-1/3 mb-4">
                         <label className="block text-sm font-medium text-gray-600 mb-1">
                             Tìm kiếm
@@ -468,6 +447,7 @@ export default function ImportProductPage() {
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
                         totalItems={filteredImportProducts.length}
+                        allProducts={allProducts} 
                     />
                 )}
 
