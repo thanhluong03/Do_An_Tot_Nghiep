@@ -66,7 +66,8 @@ export default function AdminHeader() {
     const { title, breadcrumb } = getTitleAndBreadcrumb(pathname);
 
     return (
-        <header className="sticky top-0 z-10 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
+        <header className="sticky top-0 z-50 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
+
             <div className="flex items-center space-x-4">
                 <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
                 <nav className="hidden sm:flex items-center text-sm text-gray-500">
