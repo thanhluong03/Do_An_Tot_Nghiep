@@ -54,9 +54,8 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse bg-white rounded-xl shadow-lg text-sm text-gray-800">
         <thead><tr className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 uppercase text-xs font-bold border-b border-gray-200">
-          {/* Cập nhật padding cho th */}
           <th className="px-5 py-3 text-center w-[60px] rounded-tl-xl">ID</th>
-          <th className="px-5 py-3 text-center w-[100px]">Ảnh</th> {/* Rộng hơn cho ảnh */}
+          <th className="px-5 py-3 text-center w-[100px]">Ảnh</th>
           <th className="px-5 py-3 text-left min-w-[200px]">Sản phẩm</th>
           <th className="px-5 py-3 text-left min-w-[150px]">Nhà cung cấp</th>
           <th className="px-5 py-3 text-right w-[120px]">SL Nhập</th>
@@ -79,7 +78,6 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                   <img
                     src={findAndGetProductImageUrl(allProducts, item.product_id)}
                     alt={getDisplayName(products, item.product_id)}
-                    // Ảnh lớn hơn (w-14 h-14), bo góc (rounded-md)
                     className="w-14 h-14 object-cover rounded-md border-2 border-gray-200 shadow-sm mx-auto"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
