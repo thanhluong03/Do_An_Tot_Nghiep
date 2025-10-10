@@ -59,56 +59,44 @@ export default function RolePage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Role Management</h1>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search..."
-            className="border rounded-l-md px-3 py-2 focus:outline-none"
-          />
-          <button
-            onClick={() => fetchRoles()}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-r-md hover:bg-indigo-700"
-          >
-            Search
-          </button>
-          <button
-            onClick={() => {
-              setEditing(null);
-              setForm({ name: "", description: "" });
-              setIsOpen(true);
-            }}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
-          >
-            + Create
-          </button>
+        <div className="p-8 mx-auto bg-white rounded-lg shadow">
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-2xl font-bold text-gray-800 text-center">Quản lý Phân quyền (Role Management)</h1>
+                <div className="flex gap-2">
+                    
+                    <button
+                        onClick={() => {
+                            setEditing(null);
+                            setForm({ name: "", description: "" });
+                            setIsOpen(true);
+                        }}
+                        className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 transition duration-150 shadow-md"
+                    >
+                        + Tạo Mới
+                    </button>
+                </div>
+            </div>
+
+            <RoleTable
+                roles={roles}
+                loading={loading}
+                onEdit={(r) => {
+                    setEditing(r);
+                    setForm({ name: r.name, description: r.description || "" });
+                    setIsOpen(true);
+                }}
+                onDelete={handleDelete}
+            />
+
+            <RoleModal
+                open={isOpen}
+                editing={editing}
+                form={form}
+                onChange={setForm}
+                onClose={() => setIsOpen(false)}
+                onSubmit={handleSubmit}
+                error={error}
+            />
         </div>
-      </div>
-
-      <RoleTable
-        roles={roles}
-        loading={loading}
-        onEdit={(r) => {
-          setEditing(r);
-          setForm({ name: r.name, description: r.description || "" });
-          setIsOpen(true);
-        }}
-        onDelete={handleDelete}
-      />
-
-      <RoleModal
-        open={isOpen}
-        editing={editing}
-        form={form}
-        onChange={setForm}
-        onClose={() => setIsOpen(false)}
-        onSubmit={handleSubmit}
-        error={error}
-      />
-    </div>
-  );
+    );
 }

@@ -23,57 +23,59 @@ export default function RoleModal({
 }: Props) {
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6">
-        <h2 className="text-lg font-semibold mb-4">
-          {editing ? "Edit Role" : "Create Role"}
-        </h2>
+ return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+            <div className="relative bg-white rounded-xl shadow-3xl w-full max-w-lg p-6 animate-fade-in">
+                <h2 className="text-xl font-semibold mb-6 text-gray-800">
+                    {editing ? "Chỉnh sửa Phân quyền" : "Tạo Phân quyền Mới"}
+                </h2>
+                <form onSubmit={onSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700">Tên Phân quyền</label>
+                        <input
+                            value={form.name}
+                            onChange={(e) => onChange({ ...form, name: e.target.value })}
+                            className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
+                            placeholder="Ví dụ: QUAN_LY_KHO"
+                        />
+                    </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input
-              value={form.name}
-              onChange={(e) => onChange({ ...form, name: e.target.value })}
-              className="w-full border px-3 py-2 rounded-md focus:outline-none focus:ring-2"
-              placeholder="Role name"
-            />
-          </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700">Mô tả</label> 
+                        <textarea
+                            value={form.description}
+                            onChange={(e) =>
+                                onChange({ ...form, description: e.target.value })
+                            }
+                     
+                            className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
+                            placeholder="Mô tả chi tiết về quyền hạn"
+                            rows={3}
+                        />
+                    </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                onChange({ ...form, description: e.target.value })
-              }
-              className="w-full border px-3 py-2 rounded-md focus:outline-none focus:ring-2"
-              placeholder="Optional description"
-              rows={4}
-            />
-          </div>
+                    {error && <div className="text-red-600 text-sm p-2 bg-red-50 rounded-md border border-red-200">{error}</div>}
 
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded-md"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md"
-            >
-              {editing ? "Update" : "Create"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                    
+                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition duration-150"
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            type="submit"
+                         
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-150 shadow-md"
+                        >
+                            {editing ? "Cập nhật" : "Tạo mới"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 }

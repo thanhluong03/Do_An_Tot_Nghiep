@@ -1,65 +1,92 @@
+// src/api/services/userService.ts
 import axios from "axios";
 
-// =====================
-// 🧩 Interface định nghĩa User
-// =====================
 export interface User {
-  id?: number;
-  username: string;
-  email?: string;
-  full_name?: string;
-  phone_number?: string;
-  address?: string;
-  is_active?: boolean;
-  role_id: number;
-  avatar_image?: string; // Base64 hoặc URL ảnh đại diện
+    id?: number;
+    username: string;
+    email?: string;
+    full_name?: string;
+    phone_number?: string;
+    address?: string;
+    is_active?: boolean;
+    role_id: number;
+    avatar_image?: string | { type: string; data: number[] }; 
 }
 
-// =====================
-// ⚙️ Cấu hình API URL
-// =====================
+const bufferToBase64 = (buffer: { data: number[] }): string | null => {
+    if (typeof window === 'undefined' || !buffer || !buffer.data) {
+        return null;
+    }
+    
+    try {
+        const binary = new Uint8Array(buffer.data).reduce(
+            (acc, byte) => acc + String.fromCharCode(byte),
+            ""
+        );
+        return `data:image/jpeg;base64,${btoa(binary)}`; 
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const getUserAvatarUrl = (user: User): string => {
+    const defaultImage = "/no-image.jpg"; 
+    const avatarData = user.avatar_image;
+
+    if (!avatarData) {
+        return defaultImage;
+    }
+
+    if (typeof avatarData === "string" && avatarData.trim() !== "") {
+        const trimmedData = avatarData.trim();
+        
+        if (trimmedData.startsWith("data:") || trimmedData.startsWith("http")) {
+            return trimmedData;
+        }
+        
+        if (trimmedData.length > 100 && !trimmedData.includes('/')) {
+             return `data:image/jpeg;base64,${trimmedData}`;
+        }
+
+        return trimmedData; 
+    }
+
+    if (typeof avatarData === "object" && avatarData !== null && "data" in avatarData && Array.isArray(avatarData.data)) {
+        const base64Url = bufferToBase64(avatarData as { data: number[] });
+        if (base64Url) return base64Url;
+    }
+
+    return defaultImage;
+};
+
 const API_URL = "http://localhost:3000/users";
 
-// =====================
-// 📋 Lấy danh sách người dùng
-// =====================
 export async function listUsers(params?: { page?: number; size?: number; key?: string }) {
-  const res = await axios.get(`${API_URL}/listusers`, { params });
-  return res.data.users || [];
+    const res = await axios.get(`${API_URL}/listusers`, { params });
+    return res.data.users || [];
 }
 
-// =====================
-// 🔍 Lấy chi tiết người dùng
-// =====================
 export async function getUserDetail(id: number) {
-  const res = await axios.get(`${API_URL}/userdetail/${id}`);
-  return res.data;
+    const res = await axios.get(`${API_URL}/userdetail/${id}`);
+    return res.data;
 }
 
-// =====================
-// ➕ Tạo mới người dùng
-// =====================
 export async function createUser(data: FormData) {
-  const res = await axios.post(`${API_URL}/createuser`, data, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return res.data;
+    const res = await axios.post(`${API_URL}/createuser`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
 }
 
-// =====================
-// ✏️ Cập nhật người dùng
-// =====================
 export async function updateUser(id: number, data: FormData) {
-  const res = await axios.put(`${API_URL}/updateuser/${id}`, data, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return res.data;
+    const res = await axios.put(`${API_URL}/updateuser/${id}`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
 }
 
-// =====================
-// ❌ Xóa người dùng
-// =====================
 export async function deleteUser(id: number) {
-  const res = await axios.delete(`${API_URL}/deleteuser/${id}`);
-  return res.data;
+    const res = await axios.delete(`${API_URL}/deleteuser/${id}`);
+    return res.data;
 }
