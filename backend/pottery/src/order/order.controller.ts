@@ -73,7 +73,13 @@ export class OrderController {
     @Put('updateorder/:id')
     async updateOrder(@Param('id') id: number, @Body() body: UpdateOrderDto) {
         try {
-            await this.orderService.updateOrder(Number(id), body);
+            await this.orderService.updateOrder(
+                Number(id),
+                body,
+                body.user_id,
+                body.customer_id,
+                body.actor_type
+            );
             return new SuccessResponseDto('Order updated successfully');
         } catch (error: any) {
             return new ErrorResponseDto(

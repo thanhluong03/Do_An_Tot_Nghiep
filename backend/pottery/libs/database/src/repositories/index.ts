@@ -18,3 +18,5 @@ export * from './cart_item.repository';
 export * from './category.repository';
 export * from './paymenttransaction.repository';
 export * from './import_product.repository';
+export * from './order_status_history.repository';
+export * from './actor_change_status_order.repository';
