@@ -10,3 +10,5 @@ export { CategorySection } from './CategorySection';
 export { LifestyleSection } from './LifestyleSection';
 export { NewsletterSection } from './NewsLetterSection';
 export { VoucherModal } from './VoucherPopup';
+export { ChatModal } from './ChatSection';
+export { ScrollToTopButton } from './ScrollToTopButton';

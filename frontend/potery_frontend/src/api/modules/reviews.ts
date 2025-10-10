@@ -34,25 +34,26 @@ export const reviewsApi = {
   },
 
   async create(payload: {
-    product_id: string;
-    customer_id?: string;
-    rating: number; // ✅ nhận number từ frontend
-    comment?: string;
-  }) {
-    const body = {
-      product_id: String(payload.product_id),
-      customer_id: String(payload.customer_id),
-      rating: String(payload.rating), // ✅ chỉ ép sang string khi gửi
-      comment: String(payload.comment ?? ''),
-    };
+  product_id: string;
+  customer_id?: string;
+  rating: number;
+  comment?: string;
+}) {
+  const body = {
+    product_id: String(payload.product_id),
+    customer_id: String(payload.customer_id),
+    rating: Number(payload.rating), // vẫn gửi number
+    comment: String(payload.comment ?? ''),
+  };
 
-    console.log('📦 Gửi review tới API:', body);
+  console.log('📦 Gửi review tới API:', body);
 
-    const res = await api.post('/reviews/createreview', body);
+  // 🔹 Sửa ở đây: gửi mảng để backend không lỗi .map()
+  const res = await api.post('/reviews/createreview', [body]);
 
-    const data = Array.isArray(res.data) ? res.data[0] : res.data;
-    console.log('✅ API trả về:', data);
+  const data = Array.isArray(res.data) ? res.data[0] : res.data;
+  console.log('✅ API trả về:', data);
 
-    return mapReview(data);
-  },
+  return mapReview(data);
+},
 };

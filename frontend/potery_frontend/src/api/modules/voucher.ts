@@ -76,9 +76,9 @@ export const voucherApi = {
     try {
       // Chuyển đổi ID sang kiểu phù hợp
       const payload = {
-        customerId: String(customerId).trim(),
-        voucherId: String(voucherId).trim()
-      };
+      customer_id: String(customerId).trim(),
+      voucher_id: String(voucherId).trim(),
+    };
       
       console.log('📤 Claiming voucher with payload:', payload);
       
