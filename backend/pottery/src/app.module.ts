@@ -40,6 +40,8 @@ import { PaymenttransactionModule } from '../libs/paymenttransaction/src/payment
 import { DatabaseModule } from '../libs/database/src/database.module';
 import { ImportProductController } from './import_product/import_product.controller';
 import { ImportProductModule } from '@app/import_product';
+import { DeliveryProofController } from './delivery_proof/delivery_proof.controller';
+import { DeliveryProofModule } from '@app/delivery_proof';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -64,11 +66,12 @@ import { ImportProductModule } from '@app/import_product';
     CategoryModule,
     PaymenttransactionModule,
     ImportProductModule,
+    DeliveryProofModule
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
     UserController, ReviewController, PromotionController, VoucherController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
-    PaymentTransactionController, ImportProductController,
+    PaymentTransactionController, ImportProductController, DeliveryProofController,
     AdminLoginController
   ],
   providers: [AppService],

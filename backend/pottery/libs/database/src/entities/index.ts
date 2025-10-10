@@ -28,3 +28,4 @@ export * from './paymenttransaction.entity'
 export * from './import_product.entity'
 export * from './order_status_history.entity'
 export * from './actor_change_status_order.entity'
+export * from './delivery_proof.entity';
