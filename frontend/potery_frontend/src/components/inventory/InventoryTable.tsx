@@ -3,6 +3,7 @@
 import React from 'react';
 // Import Product, getProductImageUrl
 import { Inventory, SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService";
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface InventoryTableProps {
     inventories: Inventory[];
@@ -76,7 +77,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                 <th className="px-2 py-3 text-center w-[60px]">Ảnh</th> 
                                 <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th> 
                                 <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th> 
-                                <th className="px-4 py-3 text-center w-[90px]">Tồn kho</th>
+                                <th className="px-4 py-3 text-center w-[90px]">Trong kho</th>
                                 <th className="px-4 py-3 text-center w-[90px]">Đã bán</th>
                                 <th className="px-4 py-3 text-left w-[150px]">Ngày tạo</th>
                                 <th className="px-4 py-3 text-left w-[150px]">Cập nhật</th>
@@ -138,15 +139,15 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                     <td className="px-4 py-3 text-center space-x-1">
                                         <button
                                             onClick={() => handleEdit(item)}
-                                            className="text-white bg-yellow-500 hover:bg-yellow-600 font-medium text-xs px-3 py-1 rounded-lg transition duration-150 shadow-md transform hover:scale-105"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
                                         >
-                                            Sửa
+                                            <Pencil size={15} />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(item.id)}
-                                            className="text-white bg-red-500 hover:bg-red-600 font-medium text-xs px-3 py-1 rounded-lg transition duration-150 shadow-md transform hover:scale-105"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
                                         >
-                                            Xoá
+                                           <Trash2 size={15} />
                                         </button>
                                     </td>
                                 </tr>

@@ -37,7 +37,7 @@ export default function ProductsTable({
                         <th className="p-4 text-left font-semibold w-[100px]">Ảnh</th>
                         <th className="p-4 text-left font-semibold min-w-[200px]">Tên sản phẩm</th>
                         <th className="p-4 text-left font-semibold min-w-[100px]">Giá</th>
-                        <th className="p-4 text-right font-semibold min-w-[120px] text-green-700">Tồn kho</th>
+                        <th className="p-4 text-right font-semibold min-w-[120px] text-green-700">Tồn kho nhập</th>
                         <th className="p-4 text-left font-semibold min-w-[160px]">Danh mục</th>
                     </tr>
                 </thead>
