@@ -49,11 +49,11 @@
       "@app/database/*": [
         "libs/database/src/*"
       ],
-      "@app/voucher": [
-        "libs/voucher/src"
+      "@app/import_product": [
+        "libs/import_product/src"
       ],
-      "@app/voucher/*": [
-        "libs/voucher/src/*"
+      "@app/import_product/*": [
+        "libs/import_product/src/*"
       ],
       "@app/inventory": [
         "libs/inventory/src"
@@ -78,6 +78,12 @@
       ],
       "@app/order/*": [
         "libs/order/src/*"
+      ],
+      "@app/paymenttransaction": [
+        "libs/paymenttransaction/src"
+      ],
+      "@app/paymenttransaction/*": [
+        "libs/paymenttransaction/src/*"
       ],
       "@app/permission": [
         "libs/permission/src"
@@ -127,17 +133,17 @@
       "@app/user/*": [
         "libs/user/src/*"
       ],
-      "@app/import_product": [
-        "libs/import_product/src"
+      "@app/voucher": [
+        "libs/voucher/src"
       ],
-      "@app/import_product/*": [
-        "libs/import_product/src/*"
+      "@app/voucher/*": [
+        "libs/voucher/src/*"
       ],
-      "@app/paymenttransaction": [
-        "libs/paymenttransaction/src"
+      "@app/delivery_proof": [
+        "libs/delivery_proof/src"
       ],
-      "@app/paymenttransaction/*": [
-        "libs/paymenttransaction/src/*"
+      "@app/delivery_proof/*": [
+        "libs/delivery_proof/src/*"
       ]
     }
   }

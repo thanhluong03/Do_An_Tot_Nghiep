@@ -52,13 +52,13 @@
         "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     },
-    "voucher": {
+    "delivery_proof": {
       "type": "library",
-      "root": "libs/voucher",
+      "root": "libs/delivery_proof",
       "entryFile": "index",
-      "sourceRoot": "libs/voucher/src",
+      "sourceRoot": "libs/delivery_proof/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/voucher/tsconfig.lib.json"
+        "tsConfigPath": "libs/delivery_proof/tsconfig.lib.json"
       }
     },
     "import_product": {
@@ -185,6 +185,15 @@
       "sourceRoot": "libs/user/src",
       "compilerOptions": {
         "tsConfigPath": "libs/user/tsconfig.lib.json"
+      }
+    },
+    "voucher": {
+      "type": "library",
+      "root": "libs/voucher",
+      "entryFile": "index",
+      "sourceRoot": "libs/voucher/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/voucher/tsconfig.lib.json"
       }
     }
   }
