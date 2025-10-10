@@ -10,7 +10,7 @@ interface ProductFormModalProps {
     setFormData: React.Dispatch<React.SetStateAction<Product>>;
     handleSave: (formData: FormData) => Promise<void>;
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    suppliers: Supplier[];
+    // suppliers: Supplier[]; // Không cần thiết cho form này
     categories: Category[];
 }
 
@@ -25,6 +25,21 @@ export default function ProductFormModal({
 }: ProductFormModalProps) {
     const [previewImages, setPreviewImages] = useState<string[]>([]);
     const [files, setFiles] = useState<File[]>([]);
+
+    // Cần reset state khi mở modal, đặc biệt là khi chuyển từ Edit sang Add
+    React.useEffect(() => {
+        if (isModalOpen) {
+            // Nếu là edit, hiển thị ảnh cũ (nếu có) và không có file mới
+            if (editingProduct) {
+                // Chúng ta giả định backend trả về URL hoặc chúng ta đã có cơ chế xử lý ở đây
+                // Tạm thời, ta chỉ hiển thị ảnh mới được chọn
+                setPreviewImages([]);
+            } else {
+                setPreviewImages([]);
+            }
+            setFiles([]);
+        }
+    }, [isModalOpen, editingProduct]);
 
     if (!isModalOpen) return null;
 
@@ -45,6 +60,8 @@ export default function ProductFormModal({
         form.append("price", formData.price.toString());
         form.append("description", formData.description || "");
         form.append("category_id", (formData.category_id || 0).toString());
+
+        // CHÚ Ý: Không thêm trường 'quantity' vào FormData
 
         files.forEach((file) => {
             form.append("images", file);
@@ -78,20 +95,7 @@ export default function ProductFormModal({
                     <textarea title='Mô tả sản phẩm' value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         className="w-full border rounded p-2" />
-
-                    {/* Upload ảnh */}
-                    <label className="block text-sm">Ảnh sản phẩm</label>
-                    <input title='Ảnh sản phẩm' type="file" multiple accept="image/*" onChange={handleFileChange} />
-
-                    {/* Preview ảnh */}
-                    {previewImages.length > 0 && (
-                        <div className="flex gap-2 flex-wrap mt-2">
-                            {previewImages.map((src, i) => (
-                                <img key={i} src={src} alt="preview" className="w-20 h-20 object-cover rounded border" />
-                            ))}
-                        </div>
-                    )}
-
+                    
                     {/* Danh mục */}
                     <label className="block text-sm">Danh mục</label>
                     <select 
@@ -106,6 +110,19 @@ export default function ProductFormModal({
                             </option>
                         ))}
                     </select>
+
+                    {/* Upload ảnh */}
+                    <label className="block text-sm">Ảnh sản phẩm</label>
+                    <input title='Ảnh sản phẩm' type="file" multiple accept="image/*" onChange={handleFileChange} />
+
+                    {/* Preview ảnh */}
+                    {previewImages.length > 0 && (
+                        <div className="flex gap-2 flex-wrap mt-2">
+                            {previewImages.map((src, i) => (
+                                <img key={i} src={src} alt="preview" className="w-20 h-20 object-cover rounded border" />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-end gap-3 mt-5">

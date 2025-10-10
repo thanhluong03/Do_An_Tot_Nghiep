@@ -1,248 +1,252 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
-  getStores,
-  addStore,
-  updateStore,
-  deleteStore,
-  Store,
+    getStores,
+    addStore,
+    updateStore,
+    deleteStore,
+    Store,
 } from "@/api/services/storeService";
 import toast, { Toaster } from "react-hot-toast";
+import { Pencil, Trash2 } from 'lucide-react'; // Import icons
+import StoreForm from "@/components/adminStore/StoreForm"; // IMPORT COMPONENT MỚI (Giả định path này)
 
 export default function StorePage() {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [form, setForm] = useState<Store>({
-    store_name: "",
-    address: "",
-    phone: "",
-  });
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(5);
+    const defaultForm: Store = {
+        store_name: "",
+        address: "",
+        phone: "",
+    };
 
-  useEffect(() => {
-    fetchStores();
-  }, []);
+    const [stores, setStores] = useState<Store[]>([]);
+    const [form, setForm] = useState<Store>(defaultForm);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(5);
+    const [showForm, setShowForm] = useState(false); // STATE MỚI: Quản lý hiển thị form
 
-  const fetchStores = async () => {
-    try {
-      const data = await getStores();
-      setStores(data);
-    } catch {
-      toast.error("Không thể tải danh sách cửa hàng!");
-    }
-  };
+    // Hàm format ngày kiểu Việt Nam (Tái sử dụng từ component trên)
+    const formatDateTime = (isoString?: string) => {
+        if (!isoString) return "N/A";
+        const date = new Date(isoString);
+        return date.toLocaleString("vi-VN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        });
+    };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" });
-  };
-
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!form.store_name.trim()) newErrors.store_name = "Tên cửa hàng không được bỏ trống";
-    if (!form.address.trim()) newErrors.address = "Địa chỉ không được bỏ trống";
-    if (!form.phone.trim()) newErrors.phone = "Số điện thoại không được bỏ trống";
-    else if (!/^\d+$/.test(form.phone)) newErrors.phone = "Số điện thoại chỉ được chứa số";
-    return newErrors;
-  };
-
-  const handleSubmit = async () => {
-    const newErrors = validate();
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      toast.error("Vui lòng kiểm tra lại thông tin!");
-      return;
-    }
-
-    try {
-      if (editingId) {
-        await updateStore(editingId, form);
-        toast.success("Cập nhật cửa hàng thành công!");
+    // Hồi lại giá trị mặc định và ẩn form/tắt chế độ sửa
+    const resetFormState = useCallback(() => {
+        setForm(defaultForm);
         setEditingId(null);
-      } else {
-        await addStore(form);
-        toast.success("Thêm cửa hàng thành công!");
-      }
-      setForm({ store_name: "", address: "", phone: "" });
-      fetchStores();
-    } catch (error) {
-      console.error(error);
-      toast.error("Có lỗi xảy ra trong quá trình lưu!");
+        setErrors({});
+        setShowForm(false);
+    }, []);
+
+    useEffect(() => {
+        fetchStores();
+    }, []);
+
+    const fetchStores = async () => {
+        try {
+            const data = await getStores();
+            setStores(data);
+            setCurrentPage(1); // Reset về trang 1 khi tải lại dữ liệu
+        } catch {
+            toast.error("Không thể tải danh sách cửa hàng!");
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+        setErrors({ ...errors, [e.target.name]: "" });
+    };
+
+    const validate = () => {
+        const newErrors: { [key: string]: string } = {};
+        if (!form.store_name.trim()) newErrors.store_name = "Tên cửa hàng không được bỏ trống";
+        if (!form.address.trim()) newErrors.address = "Địa chỉ không được bỏ trống";
+        if (!form.phone.trim()) newErrors.phone = "Số điện thoại không được bỏ trống";
+        else if (!/^\d{9,11}$/.test(form.phone.trim())) newErrors.phone = "Số điện thoại không hợp lệ (9-11 chữ số)";
+        return newErrors;
+    };
+
+    const handleSubmit = async () => {
+        const newErrors = validate();
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            toast.error("Vui lòng kiểm tra lại thông tin!");
+            return;
+        }
+
+        try {
+            if (editingId) {
+                await updateStore(editingId, form);
+                toast.success("Cập nhật cửa hàng thành công!");
+            } else {
+                await addStore(form);
+                toast.success("Thêm cửa hàng thành công!");
+            }
+            resetFormState(); // Đặt lại form sau khi thành công
+            fetchStores();
+        } catch (error) {
+            console.error(error);
+            toast.error("Có lỗi xảy ra trong quá trình lưu!");
+        }
+    };
+
+    const handleEdit = (store: Store) => {
+        setForm(store);
+        setEditingId(store.id || null);
+        setErrors({});
+        setShowForm(true); // Bật form khi chỉnh sửa
+        toast("Chỉnh sửa cửa hàng đang được bật", { icon: "✏️" });
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Bạn có chắc muốn xoá cửa hàng này?")) return;
+        try {
+            await deleteStore(id);
+            toast.success("Xoá cửa hàng thành công!");
+            // Nếu đang chỉnh sửa item vừa xóa, thì reset form
+            if (editingId === id) {
+                resetFormState();
+            }
+            fetchStores();
+        } catch {
+            toast.error("Không thể xoá cửa hàng!");
+        }
+    };
+    
+    const handleCancelEdit = () => {
+        resetFormState();
     }
-  };
+    
+    // Pagination logic
+    const totalPages = Math.ceil(stores.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const currentStores = stores.slice(startIndex, startIndex + pageSize);
 
-  const handleEdit = (store: Store) => {
-    setForm(store);
-    setEditingId(store.id || null);
-    setErrors({});
-    toast("Chỉnh sửa cửa hàng đang được bật", { icon: "✏️" });
-  };
+    return (
+        <div className="min-h-screen bg-gray-100 p-8">
+            <Toaster position="top-right" />
+            <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+                    Quản lý Cửa hàng
+                </h2>
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Bạn có chắc muốn xoá cửa hàng này?")) return;
-    try {
-      await deleteStore(id);
-      toast.success("Xoá cửa hàng thành công!");
-      fetchStores();
-    } catch {
-      toast.error("Không thể xoá cửa hàng!");
-    }
-  };
+                {/* Component Form */}
+                <StoreForm
+                    form={form}
+                    errors={errors}
+                    editingId={editingId}
+                    showForm={showForm}
+                    onToggleForm={() => setShowForm(p => !p)}
+                    onChange={handleChange}
+                    onSubmit={handleSubmit}
+                    onCancelEdit={handleCancelEdit}
+                />
 
-  // Pagination logic
-  const totalPages = Math.ceil(stores.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const currentStores = stores.slice(startIndex, startIndex + pageSize);
+                {/* Table - Đã áp dụng CSS thống nhất */}
+                <div className="overflow-x-auto">
+                    {/* Bảng sử dụng shadow lớn hơn và border mềm mại */}
+                    <table className="w-full border-collapse bg-white rounded-xl shadow-lg text-sm text-gray-800">
+                        <thead>
+                            {/* Header sử dụng gradient nhẹ và font đậm, căn chỉnh padding px-5 py-3 */}
+                            <tr className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 uppercase text-xs font-bold border-b border-gray-200">
+                                <th className="px-5 py-3 text-center w-[60px] rounded-tl-xl">ID</th>
+                                <th className="px-5 py-3 text-left min-w-[150px]">Tên cửa hàng</th>
+                                <th className="px-5 py-3 text-left min-w-[200px]">Địa chỉ</th>
+                                <th className="px-5 py-3 text-center w-[120px]">Điện thoại</th>
+                                <th className="px-5 py-3 text-center w-[140px]">Ngày tạo</th>
+                                <th className="px-5 py-3 text-center w-[140px]">Ngày cập nhật</th>
+                                <th className="px-5 py-3 text-center w-[120px] rounded-tr-xl">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentStores.map((store) => (
+                                <tr
+                                    key={store.id}
+                                    className={`border-b border-gray-100 last:border-b-0 ${
+                                        editingId === store.id ? "bg-yellow-50/50" : "hover:bg-blue-50/30"
+                                    } transition-colors duration-150`}
+                                >
+                                    <td className="px-5 py-3 font-medium text-gray-600 text-center">{store.id}</td>
+                                    <td className="px-5 py-3 font-semibold text-gray-800 truncate" title={store.store_name}>{store.store_name}</td>
+                                    <td className="px-5 py-3 text-gray-600 truncate" title={store.address}>{store.address}</td>
+                                    <td className="px-5 py-3 text-center text-gray-700 font-mono">{store.phone}</td>
+                                    
+                                    {/* Sử dụng formatDateTime */}
+                                    <td className="px-5 py-3 text-center text-xs text-gray-500">
+                                        {formatDateTime(store.created_at)}
+                                    </td>
+                                    <td className="px-5 py-3 text-center text-xs text-gray-500">
+                                        {formatDateTime(store.updated_at)}
+                                    </td>
+                                    
+                                    {/* Hành động - Sử dụng style badge button và icons */}
+                                    <td className="px-5 py-3 text-center space-x-2">
+                                        <button
+                                            title='Sửa'
+                                            onClick={() => handleEdit(store)}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 transition duration-150 shadow-sm"
+                                        >
+                                            <Pencil size={15} />
+                                        </button>
+                                        <button
+                                            title='Xoá'
+                                            onClick={() => store.id && handleDelete(store.id)}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition duration-150 shadow-sm"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {stores.length === 0 && (
+                                <tr>
+                                    <td colSpan={7} className="text-center py-12 text-gray-500 italic bg-gray-50 rounded-b-xl">
+                                        Không có cửa hàng nào
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-1">
-      <Toaster position="top-right" />
-      <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">
-          Quản lý cửa hàng
-        </h2>
-
-        {/* Form */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tên cửa hàng</label>
-            <input
-              name="store_name"
-              placeholder="Nhập tên cửa hàng"
-              value={form.store_name}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.store_name && <p className="text-red-500 text-xs mt-1">{errors.store_name}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-            <input
-              name="address"
-              placeholder="Nhập địa chỉ"
-              value={form.address}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Điện thoại</label>
-            <input
-              name="phone"
-              placeholder="Nhập số điện thoại"
-              value={form.phone}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-          </div>
+                {/* Pagination */}
+                <div className="flex items-center justify-between mt-6">
+                    <p className="text-sm text-gray-600">
+                        Hiển thị {startIndex + 1} -{" "}
+                        {Math.min(startIndex + pageSize, stores.length)} trên{" "}
+                        <span className="font-bold">{stores.length}</span> cửa hàng
+                    </p>
+                    <div className="flex gap-2 items-center">
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 bg-gray-200 rounded-lg text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition"
+                        >
+                            Trước
+                        </button>
+                        <span className="px-3 py-1.5 font-bold text-blue-600 text-sm">
+                            {currentPage} / {totalPages || 1}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            className="px-3 py-1.5 bg-gray-200 rounded-lg text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition"
+                        >
+                            Sau
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={handleSubmit}
-            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-              editingId
-                ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
-          >
-            {editingId ? "Cập nhật" : "Thêm"}
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
-            <thead>
-              <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Tên cửa hàng</th>
-                <th className="px-4 py-3 text-left">Địa chỉ</th>
-                <th className="px-4 py-3 text-left">Điện thoại</th>
-                <th className="px-4 py-3 text-left">Ngày tạo</th>
-                <th className="px-4 py-3 text-left">Ngày cập nhật</th>
-                <th className="px-4 py-3 text-center">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentStores.map((store, idx) => (
-                <tr
-                  key={store.id}
-                  className={`${
-                    idx % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  } hover:bg-blue-50 transition`}
-                >
-                  <td className="px-4 py-3">{store.id}</td>
-                  <td className="px-4 py-3">{store.store_name}</td>
-                  <td className="px-4 py-3">{store.address}</td>
-                  <td className="px-4 py-3">{store.phone}</td>
-                  <td className="px-4 py-3">
-                    {store.created_at?.split("T")[0] || ""}
-                  </td>
-                  <td className="px-4 py-3">
-                    {store.updated_at?.split("T")[0] || ""}
-                  </td>
-                  <td className="px-4 py-3 flex gap-2 justify-center">
-                    <button
-                      onClick={() => handleEdit(store)}
-                      className="px-3 py-1 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-white font-medium shadow"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => store.id && handleDelete(store.id)}
-                      className="px-3 py-1 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow"
-                    >
-                      Xoá
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {stores.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center py-4 text-gray-500">
-                    Không có cửa hàng nào
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-gray-600">
-            Hiển thị {startIndex + 1} -{" "}
-            {Math.min(startIndex + pageSize, stores.length)} trên{" "}
-            {stores.length} cửa hàng
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-            >
-              Trước
-            </button>
-            <span className="px-3 py-1 font-medium text-gray-700">
-              Trang {currentPage}/{totalPages || 1}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-            >
-              Sau
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }

@@ -14,6 +14,7 @@ export interface Product {
     name: string;
     description: string;
     price: number;
+    quantity?: number; // <<-- ĐÃ THÊM TRƯỜNG NÀY
     category_id?: number; // Trường này dùng để lọc
     images: ProductImage[];
     main_image?: string | null;
@@ -23,8 +24,8 @@ export interface Product {
 }
 
 // Định nghĩa kiểu dữ liệu cho payload gửi lên (Không bao gồm ID, quantity và các trường meta)
-type ProductPayload = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'category'>;
-
+// Thêm 'quantity' vào Omit
+type ProductPayload = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'category' | 'quantity'>; // <<-- ĐÃ THÊM 'quantity'
 
 
 // Lấy danh sách sản phẩm
