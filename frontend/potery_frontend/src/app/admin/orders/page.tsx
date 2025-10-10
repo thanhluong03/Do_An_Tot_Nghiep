@@ -1,7 +1,7 @@
 // src/app/admin/orders/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { listOrders, Order } from '@/api/services/orderService';
+import { getOrderDetail, listOrders, Order } from '@/api/services/orderService';
 import OrderTable from '@/components/adminOrder/OrderTable'; 
 import OrderDetailModal from '@/components/adminOrder/OrderDetailModal';
 import { PlusCircle, Search } from 'lucide-react';
@@ -37,20 +37,24 @@ export default function AdminOrderPage() {
         fetchOrders(1, pagination.size, searchTerm);
     };
 
-    const handleViewOrder = (order: Order) => {
-        // Mở modal chi tiết khi nhấn nút Xem Chi tiết
-        setSelectedOrder(order);
-    };
-
+  const handleViewOrder = async (order: Order) => {
+    setSelectedOrder(order); 
+    
+    try {
+        const detailData = await getOrderDetail(order.id);
+        setSelectedOrder(detailData); 
+        
+    } catch (error) {
+        console.error("Lỗi khi tải chi tiết đơn hàng:", error);
+    }
+};
     const handleEditStatus = (order: Order) => {
-        // TODO: Mở modal chỉ cho phép chỉnh sửa trạng thái
         console.log('Chỉnh sửa trạng thái đơn hàng:', order.id);
         setSelectedOrder(order);
     };
 
     const handleDeleteOrder = async (id: number) => {
         if (window.confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${id}?`)) {
-            // TODO: Triển khai logic gọi deleteOrder
             console.log('Xóa đơn hàng:', id);
         }
     };
