@@ -1,7 +1,8 @@
-// src/components/common/CheckboxList.tsx
+// src/components/common/CheckboxList.tsx (Đã thêm hiển thị ảnh)
 
 import React from "react";
-import { SelectOption } from "@/api/services/inventoryService"; // Import Type SelectOption
+// Import Product và getProductImageUrl
+import { SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService"; 
 
 interface CheckboxListProps {
     name: "product_id" | "store_id";
@@ -10,9 +11,23 @@ interface CheckboxListProps {
     selectedValues: string | string[] | undefined;
     onChange: (name: "product_id" | "store_id", value: string | string[] | undefined) => void;
     error: string | undefined;
+    // THÊM: Danh sách Product đầy đủ cho việc hiển thị ảnh
+    allProducts: Product[]; 
 }
 
-const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selectedValues, onChange, error }) => {
+// HÀM TRỢ GIÚP: Tìm URL ảnh
+const findProductImage = (id: number, allProducts: Product[]): string => {
+    if (id === null || id === undefined) return "/no-image.jpg";
+    const product = allProducts.find(p => p.id === id);
+    if (product) {
+        // Sử dụng hàm chuẩn getProductImageUrl từ service
+        return getProductImageUrl(product);
+    }
+    return "/no-image.jpg";
+}
+
+
+const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selectedValues, onChange, error, allProducts }) => {
     const selectedIds: string[] = React.useMemo(() => {
         if (Array.isArray(selectedValues)) {
             return selectedValues.filter(val => val !== 'all');
@@ -43,7 +58,6 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
                 newSelectedIds = newSelectedIds.filter(id => id !== value);
             }
 
-            // Gán lại là array hoặc undefined
             newValue = newSelectedIds.length > 0 ? newSelectedIds : undefined;
         }
 
@@ -71,9 +85,18 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
                 </div>
 
                 {/* Options List */}
-                <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className="grid grid-cols-1 gap-2 mt-1"> {/* Đổi thành col-span-1 để dễ hiển thị ảnh/tên */}
                     {options.map((opt) => (
                         <div key={opt.id} className="flex items-center">
+                            {/* HIỂN THỊ ẢNH CHO SẢN PHẨM */}
+                            {name === 'product_id' && (
+                                <img
+                                    src={findProductImage(opt.id, allProducts)}
+                                    alt={opt.name}
+                                    className="w-6 h-6 object-cover rounded mr-2"
+                                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/no-image.jpg"; }}
+                                />
+                            )}
                             <input
                                 type="checkbox"
                                 id={`${name}-${opt.id}`}

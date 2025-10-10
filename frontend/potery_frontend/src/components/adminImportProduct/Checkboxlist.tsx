@@ -1,16 +1,13 @@
 // src/components/common/Checkboxlist.tsx
 
 import React from "react";
-// Import SelectOption từ Import Product Service để dùng chung
 import { SelectOption } from "@/api/services/importProductsService"; 
 
 interface CheckboxListProps {
-    // Thay đổi type name để chấp nhận cả 'product_id' và 'supplier_id'
     name: "product_id" | "supplier_id" | "store_id"; 
     label: string;
     options: SelectOption[];
     selectedValues: string | string[] | undefined;
-    // Cập nhật kiểu trả về cho onChange để bao gồm tất cả các name có thể
     onChange: (name: "product_id" | "supplier_id" | "store_id", value: string | string[] | undefined) => void;
     error: string | undefined;
 }
@@ -34,10 +31,8 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
         let newValue: string | string[] | undefined;
 
         if (value === 'all') {
-            // Khi chọn/bỏ chọn "Tất cả"
             newValue = checked ? 'all' : undefined;
         } else {
-            // Xử lý khi chọn/bỏ chọn từng mục
             let newSelectedIds = [...selectedIds];
 
             if (checked) {
@@ -48,14 +43,12 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
                 newSelectedIds = newSelectedIds.filter(id => id !== value);
             }
 
-            // Gán lại là array hoặc undefined
             newValue = newSelectedIds.length > 0 ? newSelectedIds : undefined;
         }
 
         onChange(name, newValue);
     };
     
-    // Tự động xác định tên hiển thị cho tùy chọn "TẤT CẢ"
     const allLabel = name === 'product_id' 
         ? 'SẢN PHẨM' 
         : (name === 'supplier_id' ? 'NHÀ CUNG CẤP' : 'CỬA HÀNG');
@@ -81,9 +74,14 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
                 </div>
 
                 {/* Options List */}
-                <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className="grid grid-cols-1 gap-1 mt-1"> 
                     {options.map((opt) => (
-                        <div key={opt.id} className="flex items-center">
+                        <div 
+                            key={opt.id} 
+                            className={`flex items-center p-1.5 rounded-md transition-colors ${
+                                isAllSelected ? 'bg-gray-100' : (selectedIds.includes(String(opt.id)) ? 'bg-blue-50' : 'hover:bg-gray-50')
+                            }`}
+                        >
                             <input
                                 type="checkbox"
                                 id={`${name}-${opt.id}`}
@@ -92,9 +90,29 @@ const CheckboxList: React.FC<CheckboxListProps> = ({ name, label, options, selec
                                 disabled={isAllSelected}
                                 checked={isAllSelected || selectedIds.includes(String(opt.id))}
                                 onChange={handleCheckboxChange}
-                                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200"
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200 flex-shrink-0"
                             />
-                            <label htmlFor={`${name}-${opt.id}`} className={`ml-2 text-sm text-gray-700 ${isAllSelected ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'}`}>
+                            
+                            {/* HIỂN THỊ ẢNH (Chỉ cho Sản phẩm) */}
+                            {name === 'product_id' && opt.imageUrl && (
+                                <img
+                                    src={opt.imageUrl}
+                                    alt={opt.name}
+                                    className="w-7 h-7 object-cover rounded ml-2 flex-shrink-0"
+                                    onError={(e) => { 
+                                        e.currentTarget.onerror = null; 
+                                        e.currentTarget.src = "/no-image.jpg"; // Ảnh lỗi
+                                    }}
+                                />
+                            )}
+
+                            <label 
+                                htmlFor={`${name}-${opt.id}`} 
+                                className={`ml-2 text-sm text-gray-700 truncate flex-grow ${
+                                    isAllSelected ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'
+                                }`}
+                                title={opt.name}
+                            >
                                 {opt.name}
                             </label>
                         </div>

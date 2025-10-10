@@ -54,12 +54,28 @@ export default function ImportProductPage() {
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    
+    const [isAdding, setIsAdding] = useState(false); 
 
-    const getDisplayName = useCallback((list: SelectOption[], id: number | string | undefined): string => {
+    const getDisplayName = useCallback((list: SelectOption[], id: number | string | string[] | undefined): string => {
         if (id === undefined || id === null) return "";
-        const numericId = Number(id);
-        if (isNaN(numericId)) return "";
-        const found = list.find((item) => Number(item.id) === numericId);
+        
+        if (id === 'all') return "Tất cả"; 
+
+        if (Array.isArray(id)) {
+             if (id.length === 0) return "";
+             const names = id.slice(0, 3).map(idStr => {
+                 const numericId = Number(idStr);
+                 const found = list.find((item) => Number(item.id) === numericId);
+                 return found?.name || `ID: ${idStr}`;
+             }).join(', ');
+             return id.length > 3 ? `${names}, ... (${id.length} mục)` : names;
+        }
+
+        const idValue = Number(id);
+        if (isNaN(idValue)) return "";
+        
+        const found = list.find((item) => Number(item.id) === idValue);
         return found?.name || `ID: ${id}`;
     }, []);
 
@@ -92,6 +108,7 @@ export default function ImportProductPage() {
 
     const fetchDropdownData = async () => {
         try {
+            // listDropdownProducts đã được cập nhật để trả về SelectOption có imageUrl
             const [productRes, supplierRes] = await Promise.all([listDropdownProducts(), listDropdownSuppliers()]);
             setProducts(Array.isArray(productRes) ? productRes : []);
             setSuppliers(Array.isArray(supplierRes) ? supplierRes : []);
@@ -121,7 +138,6 @@ export default function ImportProductPage() {
             setTotalItems(0);
         } finally {
             setLoading(false);
-            fetchAllProducts();
         }
     };
 
@@ -159,17 +175,30 @@ export default function ImportProductPage() {
         setForm((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: "" }));
     };
+    
+    const toggleAddMode = () => {
+        if (editingId !== null) {
+            handleCancelEdit();
+        }
+        if (!isAdding) {
+             setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
+             setErrors({});
+        }
+        setIsAdding(prev => !prev);
+    };
 
     const handleCancelEdit = () => {
         setEditingId(null);
         setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
         setErrors({});
+        setIsAdding(false); 
     };
 
     const handleEdit = (item: ImportProduct) => {
+        setIsAdding(false); 
         setEditingId(item.id);
         setForm({
-            product_id: String(item.product_id),
+            product_id: String(item.product_id), 
             supplier_id: String(item.supplier_id),
             import_quantity: item.import_quantity || 0,
         });
@@ -210,11 +239,13 @@ export default function ImportProductPage() {
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
         if (isCreating) {
-            if (!form.product_id || (Array.isArray(form.product_id) && form.product_id.length === 0)) {
-                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm.";
+            if (form.product_id === undefined || form.product_id === null || 
+                (Array.isArray(form.product_id) && form.product_id.length === 0)) {
+                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm (hoặc Tất cả).";
             }
-            if (!form.supplier_id || (Array.isArray(form.supplier_id) && form.supplier_id.length === 0)) {
-                newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp.";
+            if (form.supplier_id === undefined || form.supplier_id === null || 
+                (Array.isArray(form.supplier_id) && form.supplier_id.length === 0)) {
+                newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp (hoặc Tất cả).";
             }
         }
         if (form.import_quantity <= 0) {
@@ -230,8 +261,8 @@ export default function ImportProductPage() {
         try {
             if (isCreating) {
                 const createDto: CreateImportProductDto = {
-                    product_id: form.product_id,
-                    supplier_id: form.supplier_id,
+                    product_id: form.product_id, 
+                    supplier_id: form.supplier_id, 
                     import_quantity: form.import_quantity,
                 };
                 await createImportProduct(createDto);
@@ -241,9 +272,9 @@ export default function ImportProductPage() {
                 await updateImportProduct(editingId!, updateDto);
                 toast.success(`Cập nhật phiếu nhập kho ID ${editingId} thành công!`);
             }
-            handleCancelEdit();
+            handleCancelEdit(); 
             fetchData();
-            fetchAllProducts();
+            fetchAllProducts(); 
         } catch (error: any) {
             const message = error.response?.data?.message || error.message || "Lỗi không xác định";
             toast.error("Lỗi xảy ra khi xử lý: " + message);
@@ -291,27 +322,42 @@ export default function ImportProductPage() {
                     Quản lý Nhập kho (Import Product)
                 </h2>
 
-                <ImportProductForm
-                    form={form as any}
-                    editingId={editingId}
-                    errors={errors}
-                    products={products}
-                    suppliers={suppliers}
-                    getDisplayName={getDisplayName as any}
-                    handleValueChange={handleValueChange as any}
-                    handleNumberChange={handleNumberChange as any}
-                    handleSubmit={handleSubmit}
-                    handleCancelEdit={handleCancelEdit}
-                />
+                <div className="mb-6 flex justify-end">
+                    {editingId === null && (
+                        <button
+                            onClick={toggleAddMode}
+                            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition text-white ${
+                                isAdding ? 'bg-red-500 hover:bg-red-600' : 'bg-[#F54900] hover:bg-orange-600'
+                            }`}
+                        >
+                            {isAdding ? "Hủy Thêm mới" : "Thêm Phiếu Nhập kho"}
+                        </button>
+                    )}
+                </div>
 
-                {/* --- BỘ LỌC --- */}
+                {(isAdding || editingId !== null) && (
+                    <ImportProductForm
+                        form={form}
+                        editingId={editingId}
+                        errors={errors}
+                        products={products}
+                        suppliers={suppliers}
+                        allProducts={allProducts} 
+                        getDisplayName={getDisplayName as any} 
+                        handleValueChange={handleValueChange}
+                        handleNumberChange={handleNumberChange}
+                        handleSubmit={handleSubmit}
+                        handleCancelEdit={handleCancelEdit}
+                        isAdding={isAdding} 
+                    />
+                )}
+
                 <div className="flex flex-wrap justify-between items-end mb-6 p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4 w-full flex items-center gap-2">
                         <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
                         Bộ lọc & Tìm kiếm (Phiếu nhập)
                     </h3>
 
-                    {/* Nhà cung cấp */}
                     <div className="w-full md:w-1/4 mb-4">
                         <label className="block text-sm font-medium text-gray-600 mb-1">
                             Nhà cung cấp
@@ -331,7 +377,6 @@ export default function ImportProductPage() {
                         </select>
                     </div>
 
-                    {/* Bộ lọc ngày */}
                     <div className="w-full md:w-1/3 flex gap-3 mb-4">
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-600 mb-1">
@@ -359,7 +404,6 @@ export default function ImportProductPage() {
                         </div>
                     </div>
 
-                    {/* Tìm kiếm */}
                     <div className="w-full md:w-1/3 mb-4">
                         <label className="block text-sm font-medium text-gray-600 mb-1">
                             Tìm kiếm
@@ -403,6 +447,7 @@ export default function ImportProductPage() {
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
                         totalItems={filteredImportProducts.length}
+                        allProducts={allProducts} 
                     />
                 )}
 

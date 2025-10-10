@@ -50,19 +50,19 @@ const dashboardItems: MenuItem[] = [
 
 // 2. QUẢN LÝ BÁN HÀNG & VẬN HÀNH (Sales & Operations)
 const salesOperationsItems: MenuItem[] = [
-   { name: "Import Products", icon: faWarehouse, href: "/admin/importproduct", color: "bg-yellow-100 text-yellow-600" },
-    { name: "Inventory", icon: faWarehouse, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
-    { name: "Stores", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
-    { name: "Suppliers", icon: faTruckIcon, href: "/admin/supplier", color: "bg-blue-100 text-blue-600" }, // Dùng icon Truck
-    { name: "Orders", icon: faShoppingCart, href: "#", color: "bg-red-100 text-red-600" },
+   { name: "Nhập kho", icon: faWarehouse, href: "/admin/importproduct", color: "bg-yellow-100 text-yellow-600" },
+    { name: "Tồn kho", icon: faWarehouse, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
+    { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
+    { name: "Nhà cung cấp", icon: faTruckIcon, href: "/admin/supplier", color: "bg-blue-100 text-blue-600" }, // Dùng icon Truck
+    { name: "Đơn hàng", icon: faShoppingCart, href: "#", color: "bg-red-100 text-red-600" },
 ];
 
 // 3. QUẢN LÝ NỘI DUNG & TÀI NGUYÊN (Content & Resources)
 const contentResourcesItems: MenuItem[] = [
-    { name: "Product Management", icon: faBox, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
-    { name: "Categories", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
-    { name: "News/Blog", icon: faNewspaper, href: "/admin/news", color: "bg-red-100 text-red-600" },
-    { name: "Reviews", icon: faStar, href: "#", color: "bg-yellow-100 text-yellow-600" },
+    { name: "Quản lý sản phẩm", icon: faBox, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
+    { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
+    { name: "Tin tức/Bài viết", icon: faNewspaper, href: "/admin/news", color: "bg-red-100 text-red-600" },
+    { name: "Đánh giá", icon: faStar, href: "#", color: "bg-yellow-100 text-yellow-600" },
 ];
 
 // 4. MARKETING & PHÂN TÍCH (Marketing & Analytics)
