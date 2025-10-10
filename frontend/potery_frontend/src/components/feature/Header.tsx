@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts';
 import { cn } from '../../utils/cn'; // Giả định bạn có cn (classnames helper)
+import router from 'next/router';
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
@@ -57,12 +58,12 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
             </div>
             {/* Tùy chọn Profile */}
             <a
-              href="/profile" // Thay bằng route trang thông tin cá nhân của bạn
-              className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
-              onClick={() => setIsOpen(false)}
-            >
-              Thông tin cá nhân
-            </a>
+  href="/profile"
+  className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
+  onClick={() => setIsOpen(false)}
+>
+  Trang cá nhân
+</a>
             {/* Tùy chọn Đăng xuất */}
             <button
               onClick={handleLogout}

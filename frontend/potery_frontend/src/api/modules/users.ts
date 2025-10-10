@@ -106,14 +106,61 @@ export const userApi = {
     },
 
   // Cập nhật profile
-  updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
-    try {
-      const response = await api.put('/users/profile', data);
-      return response.data;
-    } catch (error) {
-      throw handleAxiosError(error, 'Failed to update profile');
-    }
-  },
+  // Cập nhật profile
+   // Cập nhật profile
+   updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
+  try {
+    const token = getToken();
+    if (!token) throw new Error('Không tìm thấy token đăng nhập.');
+
+    const customerId =
+      typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
+    if (!customerId) throw new Error('Không tìm thấy ID người dùng.');
+
+    // 🧹 Làm sạch dữ liệu trước khi gửi
+    const d = data as any;
+    const payload: Record<string, any> = {
+      full_name: d.full_name || d.name || '',
+      email: d.email || '',
+      phone_number: d.phone || d.phone_number || '',
+      address: d.address || '',
+      avatar_image: d.avatar_image || null,
+    };
+
+    // Gọi API PUT
+    const response = await axios.put(
+      `http://localhost:3000/customers/updatecustomer/${customerId}`,
+      payload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const updatedUser = response.data;
+
+    // 🔄 Chuẩn hóa về UserProfile cho frontend
+    const normalizedUser = {
+      id: updatedUser.id || customerId,
+      name: updatedUser.full_name || updatedUser.name || '',
+      email: updatedUser.email || '',
+      phone: updatedUser.phone_number || '',
+      address: updatedUser.address || '',
+      avatar_image: updatedUser.avatar_image || null,
+    } as unknown as UserProfile;
+
+    // Cập nhật localStorage
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+
+    return normalizedUser;
+  } catch (error) {
+    console.error('❌ Lỗi update profile:', error);
+    throw handleAxiosError(error, 'Không thể cập nhật thông tin người dùng.');
+  }
+},
+
 
   // Đăng ký (backend: POST /login/register)
     register: async (data: {
