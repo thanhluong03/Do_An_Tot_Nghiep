@@ -90,6 +90,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                     e.currentTarget.src = "/no-image.jpg";
                   }}
                 />
+
               </td>
 
               <td

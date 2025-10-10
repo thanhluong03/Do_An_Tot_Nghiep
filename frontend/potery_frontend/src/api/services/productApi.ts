@@ -26,6 +26,7 @@ export interface Product {
 type ProductPayload = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'category'>;
 
 
+
 // Lấy danh sách sản phẩm
 export const getProducts = async (): Promise<Product[]> => {
     const res = await axios.get(`${API_URL}/listproduct`);
