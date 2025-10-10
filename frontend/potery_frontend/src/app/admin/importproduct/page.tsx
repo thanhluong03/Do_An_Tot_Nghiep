@@ -54,12 +54,36 @@ export default function ImportProductPage() {
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    
+    // State mới để quản lý việc hiển thị form thêm mới
+    const [isAdding, setIsAdding] = useState(false); 
 
-    const getDisplayName = useCallback((list: SelectOption[], id: number | string | undefined): string => {
+    /**
+     * Cập nhật hàm getDisplayName để xử lý string, number, string[] và giá trị 'all'.
+     */
+    const getDisplayName = useCallback((list: SelectOption[], id: number | string | string[] | undefined): string => {
         if (id === undefined || id === null) return "";
-        const numericId = Number(id);
-        if (isNaN(numericId)) return "";
-        const found = list.find((item) => Number(item.id) === numericId);
+        
+        // Trường hợp 'Tất cả'
+        if (id === 'all') return "Tất cả"; 
+
+        // Trường hợp mảng (chế độ tạo hàng loạt)
+        if (Array.isArray(id)) {
+             if (id.length === 0) return "";
+             // Chỉ lấy 3 tên đầu để hiển thị ngắn gọn
+             const names = id.slice(0, 3).map(idStr => {
+                 const numericId = Number(idStr);
+                 const found = list.find((item) => Number(item.id) === numericId);
+                 return found?.name || `ID: ${idStr}`;
+             }).join(', ');
+             return id.length > 3 ? `${names}, ... (${id.length} mục)` : names;
+        }
+
+        // Trường hợp 1 ID (chế độ sửa)
+        const idValue = Number(id);
+        if (isNaN(idValue)) return "";
+        
+        const found = list.find((item) => Number(item.id) === idValue);
         return found?.name || `ID: ${id}`;
     }, []);
 
@@ -159,17 +183,36 @@ export default function ImportProductPage() {
         setForm((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: "" }));
     };
+    
+    // Hàm chuyển đổi chế độ thêm mới
+    const toggleAddMode = () => {
+        // Nếu đang sửa, hủy sửa trước khi bật/tắt thêm mới
+        if (editingId !== null) {
+            handleCancelEdit();
+        }
+        // Reset form khi chuyển sang chế độ thêm mới
+        if (!isAdding) {
+             setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
+             setErrors({});
+        }
+        setIsAdding(prev => !prev);
+    };
 
     const handleCancelEdit = () => {
         setEditingId(null);
         setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
         setErrors({});
+        // Khi hủy sửa, TẮT chế độ thêm mới
+        setIsAdding(false); 
     };
 
     const handleEdit = (item: ImportProduct) => {
+        // Khi bắt đầu sửa, TẮT chế độ thêm mới
+        setIsAdding(false); 
         setEditingId(item.id);
+        // Khi sửa, product_id và supplier_id chỉ là một ID duy nhất (string)
         setForm({
-            product_id: String(item.product_id),
+            product_id: String(item.product_id), 
             supplier_id: String(item.supplier_id),
             import_quantity: item.import_quantity || 0,
         });
@@ -210,11 +253,14 @@ export default function ImportProductPage() {
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
         if (isCreating) {
-            if (!form.product_id || (Array.isArray(form.product_id) && form.product_id.length === 0)) {
-                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm.";
+            // Kiểm tra: Phải chọn 'all' (string) hoặc array có items
+            if (form.product_id === undefined || form.product_id === null || 
+                (Array.isArray(form.product_id) && form.product_id.length === 0)) {
+                newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm (hoặc Tất cả).";
             }
-            if (!form.supplier_id || (Array.isArray(form.supplier_id) && form.supplier_id.length === 0)) {
-                newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp.";
+            if (form.supplier_id === undefined || form.supplier_id === null || 
+                (Array.isArray(form.supplier_id) && form.supplier_id.length === 0)) {
+                newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp (hoặc Tất cả).";
             }
         }
         if (form.import_quantity <= 0) {
@@ -230,18 +276,19 @@ export default function ImportProductPage() {
         try {
             if (isCreating) {
                 const createDto: CreateImportProductDto = {
-                    product_id: form.product_id,
-                    supplier_id: form.supplier_id,
+                    product_id: form.product_id, // string | string[] | undefined
+                    supplier_id: form.supplier_id, // string | string[] | undefined
                     import_quantity: form.import_quantity,
                 };
                 await createImportProduct(createDto);
                 toast.success("Thêm phiếu nhập kho thành công!");
             } else {
+                // Khi sửa, chỉ cho phép sửa số lượng
                 const updateDto: UpdateImportProductDto = { import_quantity: form.import_quantity };
                 await updateImportProduct(editingId!, updateDto);
                 toast.success(`Cập nhật phiếu nhập kho ID ${editingId} thành công!`);
             }
-            handleCancelEdit();
+            handleCancelEdit(); // Tự động đóng form sau khi submit thành công
             fetchData();
             fetchAllProducts();
         } catch (error: any) {
@@ -291,18 +338,36 @@ export default function ImportProductPage() {
                     Quản lý Nhập kho (Import Product)
                 </h2>
 
-                <ImportProductForm
-                    form={form as any}
-                    editingId={editingId}
-                    errors={errors}
-                    products={products}
-                    suppliers={suppliers}
-                    getDisplayName={getDisplayName as any}
-                    handleValueChange={handleValueChange as any}
-                    handleNumberChange={handleNumberChange as any}
-                    handleSubmit={handleSubmit}
-                    handleCancelEdit={handleCancelEdit}
-                />
+                {/* NÚT THÊM MỚI (chỉ hiện khi không ở chế độ sửa) */}
+                <div className="mb-6 flex justify-end">
+                    {editingId === null && (
+                        <button
+                            onClick={toggleAddMode}
+                            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition text-white ${
+                                isAdding ? 'bg-red-500 hover:bg-red-600' : 'bg-[#F54900] hover:bg-orange-600'
+                            }`}
+                        >
+                            {isAdding ? "Hủy Thêm mới" : "Thêm Phiếu Nhập kho"}
+                        </button>
+                    )}
+                </div>
+
+                {/* FORM THÊM/SỬA (chỉ hiện khi đang Thêm Mới HOẶC đang Chỉnh Sửa) */}
+                {(isAdding || editingId !== null) && (
+                    <ImportProductForm
+                        form={form}
+                        editingId={editingId}
+                        errors={errors}
+                        products={products}
+                        suppliers={suppliers}
+                        getDisplayName={getDisplayName} 
+                        handleValueChange={handleValueChange}
+                        handleNumberChange={handleNumberChange}
+                        handleSubmit={handleSubmit}
+                        handleCancelEdit={handleCancelEdit}
+                        isAdding={isAdding} // Truyền state isAdding
+                    />
+                )}
 
                 {/* --- BỘ LỌC --- */}
                 <div className="flex flex-wrap justify-between items-end mb-6 p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
