@@ -65,7 +65,7 @@ export default function ProductsTable({
                         <th className="p-4 text-left font-semibold">Tên sản phẩm</th>
                         <th className="p-4 text-left font-semibold">Giá</th>
                         <th className="p-4 text-left font-semibold">Số lượng</th>
-                        <th className="p-4 text-left font-semibold">Trạng thái</th> {/* <<-- CỘT MỚI */}
+                        <th className="p-4 text-left font-semibold">Trạng thái</th>
                         <th className="p-4 text-left font-semibold">Danh mục</th>
                         <th className="p-4 text-center font-semibold">Hành động</th>
                     </tr>

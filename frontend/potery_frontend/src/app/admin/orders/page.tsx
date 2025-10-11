@@ -7,12 +7,18 @@ import {
   deleteOrder,
   Order,
   OrderItem,
+  listDropdownStores,
 } from "@/api/services/orderService";
 import OrderTable from "@/components/adminOrder/OrderTable";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
 import { PlusCircle, Search } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+
+interface SelectOption {
+  id: number;
+  name: string;
+}
 
 interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
   total_amount: number;
@@ -21,6 +27,8 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
 
 export default function AdminOrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [stores, setStores] = useState<SelectOption[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, size: 10, total: 0 });
@@ -28,11 +36,30 @@ export default function AdminOrderPage() {
   const [selectedOrder, setSelectedOrder] = useState<FullOrderDetails | null>(null);
   const [editingOrder, setEditingOrder] = useState<FullOrderDetails | null>(null);
 
-  const fetchOrders = useCallback(async (page: number, size: number, key: string) => {
+  // 🔹 Lấy danh sách cửa hàng cho dropdown filter
+  useEffect(() => {
+    async function fetchStores() {
+      try {
+        const data = await listDropdownStores();
+        console.log("📦 Stores:", data);
+        setStores(data);
+      } catch (err) {
+        console.error("Lỗi tải cửa hàng:", err);
+        toast.error("Không thể tải danh sách cửa hàng!");
+      }
+    }
+    fetchStores();
+  }, []);
+
+
+  // 🔹 Lấy danh sách đơn hàng
+  const fetchOrders = useCallback(async (page: number, size: number, key: string, storeId?: number | "") => {
     setLoading(true);
     setError(null);
     try {
-      const data = await listOrders({ page, size, key });
+      const params: any = { page, size, key };
+      if (storeId) params.store_id = storeId;
+      const data = await listOrders(params);
       setOrders(data);
     } catch (err: any) {
       const message = "Không thể tải danh sách đơn hàng!";
@@ -44,15 +71,25 @@ export default function AdminOrderPage() {
   }, []);
 
   useEffect(() => {
-    fetchOrders(pagination.page, pagination.size, searchTerm);
-  }, [fetchOrders, pagination.page, pagination.size, searchTerm]);
+    fetchOrders(pagination.page, pagination.size, searchTerm, selectedStoreId);
+  }, [fetchOrders, pagination.page, pagination.size, searchTerm, selectedStoreId]);
 
+  // 🔹 Tìm kiếm đơn hàng
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPagination((prev) => ({ ...prev, page: 1 }));
-    fetchOrders(1, pagination.size, searchTerm);
+    fetchOrders(1, pagination.size, searchTerm, selectedStoreId);
   };
 
+  // 🔹 Lọc theo cửa hàng
+  const handleFilterByStore = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const value = e.target.value;
+  const storeId = value ? Number(value) : "";
+  setSelectedStoreId(storeId);
+};
+
+
+  // 🔹 Xem chi tiết
   const handleViewOrder = async (order: Order) => {
     setLoading(true);
     try {
@@ -75,6 +112,7 @@ export default function AdminOrderPage() {
     }
   };
 
+  // 🔹 Sửa trạng thái
   const handleEditStatus = async (order: Order) => {
     try {
       const detailData = await getOrderDetail(order.id);
@@ -93,6 +131,7 @@ export default function AdminOrderPage() {
     }
   };
 
+  // 🔹 Cập nhật đơn hàng
   const handleUpdateOrder = async (
     id: number,
     data: { status?: string; payment_status?: string; payment_method?: string }
@@ -101,7 +140,7 @@ export default function AdminOrderPage() {
     try {
       await updateOrder(id, data);
       toast.success("Cập nhật đơn hàng thành công!");
-      await fetchOrders(pagination.page, pagination.size, searchTerm);
+      await fetchOrders(pagination.page, pagination.size, searchTerm, selectedStoreId);
       setEditingOrder(null);
     } catch {
       toast.error("Cập nhật đơn hàng thất bại!");
@@ -110,14 +149,15 @@ export default function AdminOrderPage() {
     }
   };
 
+  // 🔹 Xóa đơn hàng
   const handleDeleteOrder = async (id: number) => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${id}?`)) {
       try {
         await deleteOrder(id);
         toast.success("🗑️ Xóa đơn hàng thành công!");
-        await fetchOrders(pagination.page, pagination.size, searchTerm);
+        await fetchOrders(pagination.page, pagination.size, searchTerm, selectedStoreId);
       } catch {
-        toast.error(" Xóa đơn hàng thất bại!");
+        toast.error("❌ Xóa đơn hàng thất bại!");
       }
     }
   };
@@ -125,10 +165,12 @@ export default function AdminOrderPage() {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <Toaster position="top-right" reverseOrder={false} />
+
       <h1 className="text-3xl font-bold text-gray-900 mb-8 tracking-tight">
         Quản lý Đơn hàng
       </h1>
 
+      {/* Thanh công cụ tìm kiếm + lọc */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
         <form onSubmit={handleSearch} className="flex items-center space-x-3">
           <div className="relative">
@@ -141,6 +183,21 @@ export default function AdminOrderPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
+          <select
+            value={selectedStoreId === "" ? "" : String(selectedStoreId)}
+            onChange={handleFilterByStore}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
+          >
+            <option value="">Tất cả cửa hàng</option>
+            {stores.map((store) => (
+              <option key={store.id} value={String(store.id)}>
+                {store.name}
+              </option>
+            ))}
+          </select>
+
+
           <button
             type="submit"
             className="px-5 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition duration-150"
@@ -158,6 +215,7 @@ export default function AdminOrderPage() {
         </button>
       </div>
 
+      {/* Hiển thị danh sách */}
       {loading && <p className="text-center text-indigo-600 py-10 font-medium">Đang tải danh sách đơn hàng...</p>}
       {error && <p className="text-center text-red-600 py-10 font-medium">Lỗi: {error}</p>}
 
@@ -170,6 +228,7 @@ export default function AdminOrderPage() {
         />
       )}
 
+      {/* Modal chi tiết */}
       {selectedOrder && (
         <OrderDetailModal
           order={selectedOrder as Order}
@@ -177,6 +236,7 @@ export default function AdminOrderPage() {
         />
       )}
 
+      {/* Modal sửa trạng thái */}
       {editingOrder && (
         <OrderStatusModal
           orderId={editingOrder.id}
