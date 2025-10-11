@@ -2,35 +2,170 @@
 
 import React from 'react';
 import { BaseLayout } from '../../../layouts';
+import Image from 'next/image';
+import Link from 'next/link';
 
-export default function AboutPage() {
+export default function NewsPage() {
+  const articles = [
+    {
+      id: 1,
+      title: 'Nghệ thuật gốm Việt trong không gian sống hiện đại',
+      description:
+        'Khám phá cách gốm sứ thủ công truyền thống được ứng dụng tinh tế trong nội thất hiện đại, mang lại cảm giác ấm cúng và gần gũi.',
+      image: '/about10.jpg',
+      date: '20/09/2025',
+    },
+    {
+      id: 2,
+      title: 'Workshop làm gốm – trải nghiệm sáng tạo từ đất và lửa',
+      description:
+        'Buổi workshop tháng 9 mang đến cho người tham gia cơ hội tự tay nặn gốm, cảm nhận sự tĩnh lặng và kết nối với thiên nhiên.',
+      image: '/about11.jpg',
+      date: '05/09/2025',
+    },
+    {
+      id: 3,
+      title: 'Gốm thủ công và giá trị bền vững',
+      description:
+        'Tìm hiểu về quy trình sản xuất thân thiện môi trường và cách Tiệm Gốm Nhà Gạo gìn giữ nghề truyền thống Việt Nam.',
+      image: '/about12.jpg',
+      date: '18/08/2025',
+    },
+  ];
+
   return (
     <BaseLayout>
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#2C2A24] mb-6">Về Chúng Tôi</h1>
-        <p className="text-lg text-[#65604E] leading-relaxed mb-6">
-          Chúng tôi là những người đam mê nghệ thuật gốm sứ, gìn giữ và phát triển kỹ thuật
-          thủ công truyền thống, mang tới các tác phẩm tinh tế cho không gian sống hiện đại.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[#2C2A24]">Sứ mệnh</h2>
-            <p className="text-[#65604E]">
-              Gắn kết cộng đồng nghệ nhân với người yêu gốm, tạo ra giá trị bền vững cho văn hóa Việt.
-            </p>
+      {/* --- BANNER --- */}
+      <section className="relative w-full -mt-[100px] md:-mt-[120px]">
+        <img
+          src="/bg-about.jpg"
+          alt="Tin tức Tiệm Gốm Nhà Gạo"
+          className="w-full h-[360px] md:h-[500px] object-cover"
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/40">
+          <h1 className="text-3xl md:text-5xl font-serif font-bold mb-3">
+            Tin tức Tiệm Gốm Nhà Gạo
+          </h1>
+          <p className="text-lg md:text-xl">
+            Cập nhật những câu chuyện và hoạt động mới nhất của Nhà Gạo
+          </p>
+        </div>
+      </section>
+
+      {/* --- PHẦN GIỚI THIỆU BLOG --- */}
+      <section className="bg-[#FDF9F6] py-16 px-4 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-serif font-semibold mb-4 text-[#2C2A24]">
+            Chia sẻ từ Nhà Gạo
+          </h2>
+          <p className="text-[#65604E] text-lg leading-relaxed">
+            Nơi chúng tôi kể lại hành trình làm gốm, những câu chuyện về con người, cảm hứng sáng tạo
+            và cách những sản phẩm thủ công Việt được tạo nên với cả trái tim.  
+            <br />
+            Mỗi bài viết là một lát cắt nhỏ trong bức tranh văn hóa và nghệ thuật Việt Nam.
+          </p>
+        </div>
+      </section>
+
+      {/* --- DANH SÁCH BÀI VIẾT --- */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 className="text-3xl font-serif font-semibold text-center mb-10 text-[#2C2A24]">
+          Bài viết mới nhất
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {articles.map((article) => (
+            <div
+              key={article.id}
+              className="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-4 flex flex-col"
+            >
+              <div className="relative w-full h-[220px] mb-4 overflow-hidden rounded-xl">
+                <Image
+                  src={article.image}
+                  alt={article.title}
+                  fill
+                  className="object-cover hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+              <p className="text-sm text-[#A45A3F] mb-1">{article.date}</p>
+              <h3 className="text-xl font-serif font-semibold text-[#2C2A24] mb-3">
+                {article.title}
+              </h3>
+              <p className="text-[#65604E] flex-grow">{article.description}</p>
+              <Link
+                href={`/news/${article.id}`}
+                className="mt-4 inline-block text-[#A45A3F] font-medium hover:underline"
+              >
+                Xem chi tiết →
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* --- GÓC CẢM HỨNG / HÌNH ẢNH --- */}
+      <section className="bg-[#F3EEE9] py-20">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center px-6">
+          <div className="relative h-[350px] md:h-[420px] rounded-2xl overflow-hidden shadow-md">
+            <Image
+              src="/about13.jpg"
+              alt="Góc cảm hứng Nhà Gạo"
+              fill
+              className="object-cover"
+            />
           </div>
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[#2C2A24]">Giá trị</h2>
-            <ul className="list-disc pl-5 text-[#65604E] space-y-2">
-              <li>Thủ công tỉ mỉ</li>
-              <li>Vật liệu an toàn</li>
-              <li>Thiết kế tinh tế</li>
-            </ul>
+          <div>
+            <h2 className="text-3xl font-serif font-semibold mb-4 text-[#2C2A24]">
+              Góc cảm hứng
+            </h2>
+            <p className="text-[#65604E] text-lg leading-relaxed mb-4">
+              Mỗi sản phẩm của Nhà Gạo không chỉ là vật dụng – mà còn là kết tinh của đất, lửa và bàn tay người thợ.
+              <br />
+              <br />
+              Chúng tôi hy vọng bạn sẽ tìm thấy nguồn cảm hứng sống chậm, sống đẹp và trân trọng giá trị thủ công trong từng câu chuyện được kể.
+            </p>
+            <Link
+              href="/about"
+              className="inline-block mt-4 bg-[#A45A3F] text-white px-5 py-2 rounded-full hover:bg-[#8b4e35] transition"
+            >
+              Khám phá thêm
+            </Link>
           </div>
         </div>
+      </section>
+
+      {/* --- THEO DÕI NHÀ GẠO / SOCIAL --- */}
+      <section className="bg-[#2C2A24] text-white py-16 text-center">
+        <h2 className="text-3xl font-serif font-semibold mb-4">Theo dõi Nhà Gạo</h2>
+        <p className="text-[#D8D3CA] mb-8 text-lg">
+          Cùng cập nhật các workshop, bộ sưu tập và ưu đãi đặc biệt mới nhất từ chúng tôi
+        </p>
+        <div className="flex justify-center gap-4 mb-8">
+          <a href="#" className="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition">
+            <Image src="/facebook.png" alt="Facebook" width={20} height={20} />
+          </a>
+          <a href="#" className="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition">
+            <Image src="/instagram.png" alt="Instagram" width={20} height={20} />
+          </a>
+          <a href="#" className="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition">
+            <Image src="/tiktok.png" alt="Tiktok" width={20} height={20} />
+          </a>
+        </div>
+
+        <form className="max-w-md mx-auto flex gap-2">
+          <input
+            type="email"
+            placeholder="Nhập email của bạn..."
+            className="flex-grow px-4 py-2 rounded-full text-black outline-none"
+          />
+          <button
+            type="submit"
+            className="bg-[#A45A3F] text-white px-6 py-2 rounded-full hover:bg-[#8b4e35] transition"
+          >
+            Đăng ký
+          </button>
+        </form>
       </section>
     </BaseLayout>
   );
 }
-
-

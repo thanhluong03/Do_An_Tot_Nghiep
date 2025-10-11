@@ -65,19 +65,15 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   }
 
   return (
-    <div className={cn(
-      'grid gap-6',
-      gridCols[columns],
-      className
-    )}>
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          onAddToCart={onAddToCart}
-          onViewDetails={onViewDetails}
-        />
-      ))}
-    </div>
+    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+  {products.map((product) => (
+    <ProductCard
+      key={product.id}
+      product={product}
+      onAddToCart={onAddToCart}
+      onViewDetails={onViewDetails}
+    />
+  ))}
+</div>
   );
 };
