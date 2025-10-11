@@ -1,6 +1,6 @@
 // src/api/services/orderService.ts
 import axios from 'axios';
-
+const API_URL_STORES = "http://localhost:3000/stores"; 
 export interface OrderItem {
     product_id: number;
     store_id?: number;
@@ -62,6 +62,21 @@ export interface UpdateOrderPayload {
     shipping_address?: string;
     payment_method?: PaymentMethod;
 }
+export interface Store {
+  id: number;
+  name: string;
+}
+
+export const listDropdownStores = async (): Promise<Store[]> => {
+  const res = await axios.get(`${API_URL_STORES}/liststore`);
+  const storesData = res.data.stores || res.data;
+  const stores: Store[] = Array.isArray(storesData) ? storesData : [];
+  return stores.map(s => ({
+    id: s.id as number,
+    name: s.name || s.store_name || s.storeName || "Không rõ tên"
+  }));
+};
+
 
 const API_URL = 'http://localhost:3000/orders'; 
 
