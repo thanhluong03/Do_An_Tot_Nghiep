@@ -140,13 +140,14 @@ export default function ProductsTable({
                                         {p.quantity ?? 'N/A'}
                                     </td>
                                     <td className="p-4 text-left">
-                                        {getStatusBadge(p.quantity)} {/* <<-- HIỂN THỊ TRẠNG THÁI */}
+                                        {getStatusBadge(p.quantity)}
                                     </td>
                                     <td className="p-4 text-gray-600">
                                         {getCategoryName(p)}
                                     </td>
                                     <td className="p-4 text-center space-x-2">
-                                        <button
+                                        <button 
+                                            title="edt"
                                             onClick={() => openEditModal(p)}
                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
                                         >
@@ -154,6 +155,7 @@ export default function ProductsTable({
                                             
                                         </button>
                                         <button
+                                            title="del"
                                             onClick={() => handleDelete(p.id!)}
                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
                                         >
