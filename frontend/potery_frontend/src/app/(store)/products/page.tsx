@@ -138,16 +138,31 @@ export default function ProductsPage() {
 
   return (
     <BaseLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-serif font-bold mb-6">Tất cả sản phẩm</h1>
+      {/* --- BANNER BỘ SƯU TẬP --- */}
+      <div className="relative w-screen left-1/2 right-1/2 -mx-[50vw]">
+        <img
+          src="/bg-product.jpg"
+          alt="Bộ sưu tập sản phẩm"
+          className="w-full h-[300px] md:h-[450px] object-cover"
+        />
+        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 text-white text-center px-4">
+          <h2 className="text-3xl md:text-5xl font-serif font-bold mb-3">
+            Bộ sưu tập sản phẩm
+          </h2>
+          <p className="text-lg md:text-xl">
+            Tinh tế – Mộc mạc – Đậm hơi thở thủ công Việt
+          </p>
+        </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* --- THANH TÌM KIẾM --- */}
-        <div className="mb-6 flex gap-3">
+        <div className="text-center mb-6">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nhập từ khóa tìm kiếm..."
-            className="border rounded px-3 py-2 w-full"
+            placeholder="Tìm kiếm sản phẩm gốm bạn yêu thích..."
+            className="w-full md:w-2/3 mx-auto border rounded-full px-6 py-3 focus:ring-2 focus:ring-[#c4975a] outline-none"
           />
         </div>
 
