@@ -31,11 +31,17 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    // Defer to backend Google OAuth route from usersApi
-    // Using window.location to initiate OAuth flow
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    window.location.href = `${API_BASE_URL}/login/google`;
-  };
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  let redirectUrl = window.location.origin;
+
+  // Fix tạm thời nếu backend thêm "/" sai
+  if (redirectUrl.endsWith('/')) {
+    redirectUrl = redirectUrl.slice(0, -1);
+  }
+
+  window.location.href = `${API_BASE_URL}/login/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
+};
+
 
   return (
     <div className="space-y-6">

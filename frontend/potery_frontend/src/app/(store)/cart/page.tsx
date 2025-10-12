@@ -205,7 +205,6 @@ export default function CartPage() {
         ) : (
           <div className="text-center text-gray-500 mt-12 text-lg">Chưa có sản phẩm trong giỏ hàng.</div>
         )}
-
         {/* Tổng tiền */}
         <div className="mt-12 flex justify-end">
           <div className="border rounded-2xl p-6 w-full md:w-1/3 shadow-sm">

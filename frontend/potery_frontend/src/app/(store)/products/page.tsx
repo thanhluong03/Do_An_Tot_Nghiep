@@ -119,7 +119,6 @@ export default function ProductsPage() {
         (p.description && p.description.toLowerCase().includes(lowerCaseQuery));
       return searchMatch;
     });
-
     if (filters.minPrice !== undefined) {
       result = result.filter((p) => p.price >= filters.minPrice!);
     }
@@ -154,7 +153,6 @@ export default function ProductsPage() {
           </p>
         </div>
       </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* --- THANH TÌM KIẾM --- */}
         <div className="text-center mb-6">

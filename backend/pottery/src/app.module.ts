@@ -40,6 +40,7 @@ import { PaymenttransactionModule } from '../libs/paymenttransaction/src/payment
 import { DatabaseModule } from '../libs/database/src/database.module';
 import { ImportProductController } from './import_product/import_product.controller';
 import { ImportProductModule } from '@app/import_product';
+import { ConversationModule } from './conversation/conversation.module';
 import { DeliveryProofController } from './delivery_proof/delivery_proof.controller';
 import { DeliveryProofModule } from '@app/delivery_proof';
 @Module({
@@ -66,6 +67,7 @@ import { DeliveryProofModule } from '@app/delivery_proof';
     CategoryModule,
     PaymenttransactionModule,
     ImportProductModule,
+    ConversationModule,
     DeliveryProofModule
   ],
   controllers: [

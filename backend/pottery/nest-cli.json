@@ -34,6 +34,15 @@
         "tsConfigPath": "libs/common/tsconfig.lib.json"
       }
     },
+    "conversation": {
+      "type": "library",
+      "root": "libs/conversation",
+      "entryFile": "index",
+      "sourceRoot": "libs/conversation/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/conversation/tsconfig.lib.json"
+      }
+    },
     "customer": {
       "type": "library",
       "root": "libs/customer",
@@ -185,6 +194,15 @@
       "sourceRoot": "libs/user/src",
       "compilerOptions": {
         "tsConfigPath": "libs/user/tsconfig.lib.json"
+      }
+    },
+    "voucher": {
+      "type": "library",
+      "root": "libs/voucher",
+      "entryFile": "index",
+      "sourceRoot": "libs/voucher/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/voucher/tsconfig.lib.json"
       }
     },
     "voucher": {

@@ -58,12 +58,19 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
             </div>
             {/* Tùy chọn Profile */}
             <a
-  href="/profile"
-  className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
-  onClick={() => setIsOpen(false)}
->
-  Trang cá nhân
-</a>
+              href="/profile"
+              className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
+              onClick={() => setIsOpen(false)}
+            >
+              Trang cá nhân
+            </a>
+            <a
+              href="/orders"
+              className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
+              onClick={() => setIsOpen(false)}
+            >
+              Đơn hàng
+            </a>
             {/* Tùy chọn Đăng xuất */}
             <button
               onClick={handleLogout}

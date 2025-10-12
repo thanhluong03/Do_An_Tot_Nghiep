@@ -4,11 +4,105 @@ import { config } from 'dotenv';
 config();
 
 import { DatabaseService } from './database.service';
-import { ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, VoucherEntity, VoucherCustomerEntity, CustomerEntity, OrderEntity, OrderItemEntity, InventoryEntity, NewsEntity, CartItemEntity, CategoryEntity, PaymentTransactionEntity, ImportProductEntity, ActorChangeStatusOrderEntity, OrderStatusHistoryEntity, DeliveryProofEntity } from './entities';
-import { ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, VoucherRepository, VoucherCustomerRepository, CustomerRepository, OrderRepository, InventoryRepository, NewsRepository, CartItemRepository, CategoryRepository, PaymentTransactionRepository, ImportProductRepository, OrderStatusHistoryRepository, ActorChangeStatusOrderRepository, DeliveryProofRepository } from './repositories';
+import {
+  ProductEntity,
+  ProductImageEntity,
+  SupplierEntity,
+  RoleEntity,
+  PermissionEntity,
+  StoreEntity,
+  UserEntity,
+  ReviewEntity,
+  PromotionEntity,
+  ProductPromotionEntity,
+  VoucherEntity,
+  VoucherCustomerEntity,
+  CustomerEntity,
+  OrderEntity,
+  OrderItemEntity,
+  InventoryEntity,
+  NewsEntity,
+  CartItemEntity,
+  CategoryEntity,
+  PaymentTransactionEntity,
+  ImportProductEntity,
+  MessageEntity,
+  ConversationEntity,
+  ActorChangeStatusOrderEntity, OrderStatusHistoryEntity, DeliveryProofEntity
+} from './entities';
+import {
+  ProductRepository,
+  ProductImageRepository,
+  SupplierRepository,
+  RoleRepository,
+  PermissionRepository,
+  StoreRepository,
+  UserRepository,
+  ReviewRepository,
+  PromotionRepository,
+  ProductPromotionRepository,
+  VoucherRepository,
+  VoucherCustomerRepository,
+  CustomerRepository,
+  OrderRepository,
+  InventoryRepository,
+  NewsRepository,
+  CartItemRepository,
+  CategoryRepository,
+  PaymentTransactionRepository,
+  ImportProductRepository,
+  OrderStatusHistoryRepository, ActorChangeStatusOrderRepository, DeliveryProofRepository
+} from './repositories';
 
-const postgresRepositories = [ProductRepository, ProductImageRepository, SupplierRepository, RoleRepository, PermissionRepository, StoreRepository, UserRepository, ReviewRepository, PromotionRepository, ProductPromotionRepository, VoucherRepository, VoucherCustomerRepository, CustomerRepository, OrderRepository, InventoryRepository, NewsRepository, CartItemRepository, CategoryRepository, PaymentTransactionRepository, ImportProductRepository, OrderStatusHistoryRepository, ActorChangeStatusOrderRepository, DeliveryProofRepository];
-const postgresEntities = [ProductEntity, ProductImageEntity, SupplierEntity, RoleEntity, PermissionEntity, StoreEntity, UserEntity, ReviewEntity, PromotionEntity, ProductPromotionEntity, VoucherEntity, VoucherCustomerEntity, CustomerEntity, OrderEntity, OrderItemEntity, InventoryEntity, NewsEntity, CartItemEntity, CategoryEntity, PaymentTransactionEntity, ImportProductEntity, OrderStatusHistoryEntity, ActorChangeStatusOrderEntity, DeliveryProofEntity];
+const postgresRepositories = [
+  ProductRepository,
+  ProductImageRepository,
+  SupplierRepository,
+  RoleRepository,
+  PermissionRepository,
+  StoreRepository,
+  UserRepository,
+  ReviewRepository,
+  PromotionRepository,
+  ProductPromotionRepository,
+  VoucherRepository,
+  VoucherCustomerRepository,
+  CustomerRepository,
+  OrderRepository,
+  InventoryRepository,
+  NewsRepository,
+  CartItemRepository,
+  CategoryRepository,
+  PaymentTransactionRepository,
+  ImportProductRepository,
+  OrderStatusHistoryRepository, ActorChangeStatusOrderRepository, DeliveryProofRepository
+];
+const postgresEntities = [
+  ProductEntity,
+  ProductImageEntity,
+  SupplierEntity,
+  RoleEntity,
+  PermissionEntity,
+  StoreEntity,
+  UserEntity,
+  ReviewEntity,
+  PromotionEntity,
+  ProductPromotionEntity,
+  VoucherEntity,
+  VoucherCustomerEntity,
+  CustomerEntity,
+  OrderEntity,
+  OrderItemEntity,
+  InventoryEntity,
+  NewsEntity,
+  CartItemEntity,
+  CategoryEntity,
+  PaymentTransactionEntity,
+  ImportProductEntity,
+  MessageEntity,
+  ConversationEntity,
+  OrderStatusHistoryEntity, ActorChangeStatusOrderEntity, DeliveryProofEntity
+];
 @Module({
   imports: [
     TypeOrmModule.forRoot({
