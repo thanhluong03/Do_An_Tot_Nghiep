@@ -127,6 +127,21 @@ export class UpdateOrderDto {
     @ValidateNested({ each: true })
     @Type(() => OrderItemDto)
     items?: OrderItemDto[];
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    user_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    customer_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    actor_type?: string;
 }
 export class OrderResponseDto {
     @Expose()

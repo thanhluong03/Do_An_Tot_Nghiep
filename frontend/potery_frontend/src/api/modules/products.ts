@@ -22,49 +22,49 @@ export interface ProductDetail extends Product {
     promotion: any;           // Dữ liệu promotion (nếu có)
 }
 const mapProductDetail = (p: any): ProductDetail => {
-    // 1. Ánh xạ các trường chung
-    const baseProduct = mapProduct(p); 
-    
-    // 2. Ánh xạ danh sách cửa hàng (stores)
-    const stores: StoreInventory[] = Array.isArray(p.stores)
-        ? p.stores.map((s: any) => ({
-            store_id: String(s.store_id ?? ''),
-            store_name: s.store_name ?? 'Cửa hàng',
-            store_address: s.store_address ?? '',
-            quantity_stock: Number(s.quantity_stock ?? 0),
-        }))
-        : [];
+  const baseProduct = mapProduct(p);
 
-    // 3. Xử lý Promotion và Giá
-    const originalPrice = Number(p.price ?? 0);
-    // Giả định promotion là một object có trường 'price' là giá khuyến mãi
-    const promotionPrice = p.promotion?.price ? Number(p.promotion.price) : undefined;
-    const hasPromotion = Boolean(p.promotion);
+  const stores: StoreInventory[] = Array.isArray(p.stores)
+    ? p.stores.map((s: any) => ({
+        store_id: String(s.store_id ?? ''),
+        store_name: s.store_name ?? 'Cửa hàng',
+        store_address: s.store_address ?? '',
+        quantity_stock: Number(s.quantity_stock ?? 0),
+      }))
+    : [];
 
-    // Giá hiển thị sẽ là giá khuyến mãi, nếu không có thì là giá gốc
-    const currentPrice = promotionPrice ?? originalPrice;
+  const originalPrice = Number(p.price ?? 0);
+  let currentPrice = originalPrice;
 
-    // Tính toán lại tổng tồn kho (stock) dựa trên tất cả cửa hàng (nếu cần)
-    const totalStock = stores.reduce((sum, s) => sum + s.quantity_stock, 0);
+  // Nếu có promotion → tính toán giảm giá
+  if (p.promotion && p.promotion.discount_type && p.promotion.discount_value) {
+    const discountValue = Number(p.promotion.discount_value);
+    if (p.promotion.discount_type === 'PERCENTAGE') {
+      currentPrice = originalPrice * (1 - discountValue / 100);
+    } else if (p.promotion.discount_type === 'FIXED') {
+      currentPrice = Math.max(0, originalPrice - discountValue);
+    }
+  }
 
-    return {
-        ...baseProduct,
-        id: String(p.id ?? p._id ?? ''),
-        name: p.name ?? 'Sản phẩm',
-        description: p.description ?? '',
-        price: currentPrice,            // Giá sau khuyến mãi (hoặc giá gốc)
-        originalPrice: hasPromotion ? originalPrice : undefined, // Giá gốc (chỉ hiển thị nếu có KM)
-        discount: hasPromotion ? (originalPrice - currentPrice) / originalPrice : undefined,
-        
-        // Cập nhật tồn kho và thông tin cửa hàng chi tiết
-        stock: totalStock, 
-        stores: stores,
-        promotion: p.promotion,
-        isFlashSale: hasPromotion, // Giả định mọi promotion đều là FlashSale cho tiện hiển thị
-        flashSalePrice: promotionPrice,
-        flashSaleEndTime: p.promotion?.end_time ? new Date(p.promotion.end_time) : undefined,
-    };
+  const totalStock = stores.reduce((sum, s) => sum + s.quantity_stock, 0);
+
+  return {
+    ...baseProduct,
+    id: String(p.id ?? p._id ?? ''),
+    name: p.name ?? 'Sản phẩm',
+    description: p.description ?? '',
+    price: currentPrice, // ✅ giá sau giảm
+    originalPrice: currentPrice < originalPrice ? originalPrice : undefined, // hiển thị nếu có giảm
+    discount: currentPrice < originalPrice ? (originalPrice - currentPrice) / originalPrice : undefined,
+    stock: totalStock,
+    stores,
+    promotion: p.promotion,
+    isFlashSale: Boolean(p.promotion),
+    flashSalePrice: currentPrice < originalPrice ? currentPrice : undefined,
+    flashSaleEndTime: p.promotion?.end_date ? new Date(p.promotion.end_date) : undefined,
+  };
 };
+
 // Hàm ánh xạ (mapping) sản phẩm từ API raw data sang kiểu Product frontend
 // Lưu ý: Trường 'stock' sẽ được set tạm bằng 0 và được cập nhật sau từ Inventory API trong getProducts
 const mapProduct = (p: any): Product => {
@@ -265,38 +265,6 @@ export const productApi = {
         }
     },
 
-  // getFlashSaleProducts: async (): Promise<FlashSale[]> => {
-  //       try {
-  //           const response = await api.get('/flashsales/listflashsales');
-  //           const data = response.data;
-            
-  //           const inventoryList = await getInventoryList();
-  //           const inventoryMap = inventoryList.reduce((map, item) => {
-  //               map.set(item.product_id, item.quantity);
-  //               return map;
-  //           }, new Map<string, number>());
-
-  //           return (Array.isArray(data) ? data : []).map((fs: any): FlashSale => ({
-  //               id: String(fs.id ?? fs._id ?? ''),
-  //               title: fs.title ?? fs.name ?? 'Flash Sale',
-  //               description: fs.description ?? '',
-  //               startTime: fs.start_time ? new Date(fs.start_time) : new Date(),
-  //               endTime: fs.end_time ? new Date(fs.end_time) : new Date(),
-  //               isActive: Boolean(fs.is_active ?? true),
-  //               products: Array.isArray(fs.products) 
-  //                   ? fs.products.map((p: any) => {
-  //                       // Ánh xạ sản phẩm và CẬP NHẬT STOCK ở đây
-  //                       const product = mapProduct(p);
-  //                       const stock = inventoryMap.get(product.id) ?? 0;
-  //                       return { ...product, stock };
-  //                   }) 
-  //                   : [],
-  //           }));
-  //       } catch (error) {
-  //           console.error('Failed to fetch flash sale products:', error);
-  //           throw new Error('Failed to fetch flash sale products');
-  //       }
-  // },
 
   getFeaturedProducts: async (limit: number = 8): Promise<Product[]> => {
     const { products } = await productApi.getProducts({ page: 1, limit });

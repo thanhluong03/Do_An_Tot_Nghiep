@@ -139,6 +139,12 @@
       "@app/voucher/*": [
         "libs/voucher/src/*"
       ],
+      "@app/delivery_proof": [
+        "libs/delivery_proof/src"
+      ],
+      "@app/delivery_proof/*": [
+        "libs/delivery_proof/src/*"
+      ],
       "@app/conversation": [
         "libs/conversation/src"
       ],

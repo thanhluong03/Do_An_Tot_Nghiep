@@ -28,6 +28,7 @@ import {
   ImportProductEntity,
   MessageEntity,
   ConversationEntity,
+  ActorChangeStatusOrderEntity, OrderStatusHistoryEntity, DeliveryProofEntity
 } from './entities';
 import {
   ProductRepository,
@@ -50,6 +51,7 @@ import {
   CategoryRepository,
   PaymentTransactionRepository,
   ImportProductRepository,
+  OrderStatusHistoryRepository, ActorChangeStatusOrderRepository, DeliveryProofRepository
 } from './repositories';
 
 const postgresRepositories = [
@@ -73,6 +75,7 @@ const postgresRepositories = [
   CategoryRepository,
   PaymentTransactionRepository,
   ImportProductRepository,
+  OrderStatusHistoryRepository, ActorChangeStatusOrderRepository, DeliveryProofRepository
 ];
 const postgresEntities = [
   ProductEntity,
@@ -98,6 +101,7 @@ const postgresEntities = [
   ImportProductEntity,
   MessageEntity,
   ConversationEntity,
+  OrderStatusHistoryEntity, ActorChangeStatusOrderEntity, DeliveryProofEntity
 ];
 @Module({
   imports: [

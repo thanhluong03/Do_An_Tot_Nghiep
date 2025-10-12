@@ -93,46 +93,97 @@ export class PromotionService {
             promotion: pp.promotion,
         }));
     }
+    
 
-    async setProductPromotion(assignments: { productId: number, promotionId: number }[]): Promise<{ message: string }> {
-        const currentAssignments = await this.productPromotionRepository.findAll();
-        const currentProductIds = currentAssignments.map(a => a.product_id);
-        const newProductIds = assignments.map(a => a.productId);
+    // async setProductPromotion(assignments: { productId: number, promotionId: number }[]): Promise<{ message: string }> {
+    //     const currentAssignments = await this.productPromotionRepository.findAll();
+    //     const currentProductIds = currentAssignments.map(a => a.product_id);
+    //     const newProductIds = assignments.map(a => a.productId);
 
-        const productsToRemove = currentProductIds.filter(id => !newProductIds.includes(id));
-        for (const productId of productsToRemove) {
-            await this.productPromotionRepository.softDeleteByProductId(productId);
-        }
+    //     const productsToRemove = currentProductIds.filter(id => !newProductIds.includes(id));
+    //     for (const productId of productsToRemove) {
+    //         await this.productPromotionRepository.softDeleteByProductId(productId);
+    //     }
 
-        for (const newAssignment of assignments) {
-            const existingAssignment = currentAssignments.find(
-                ca => ca.product_id === newAssignment.productId
-            );
+    //     for (const newAssignment of assignments) {
+    //         const existingAssignment = currentAssignments.find(
+    //             ca => ca.product_id === newAssignment.productId
+    //         );
 
-            if (newAssignment.promotionId == null) {
-                await this.productPromotionRepository.softDeleteByProductId(newAssignment.productId);
-                continue;
-            }
+    //         if (newAssignment.promotionId == null) {
+    //             await this.productPromotionRepository.softDeleteByProductId(newAssignment.productId);
+    //             continue;
+    //         }
 
+    //         if (existingAssignment) {
+    //             if (existingAssignment.promotion_id !== newAssignment.promotionId) {
+    //                 console.log(`Updating promotion for product ${newAssignment.productId}: ${existingAssignment.promotion_id} -> ${newAssignment.promotionId}`);
+    //                 await this.productPromotionRepository.updatePromotionForProduct(
+    //                     newAssignment.productId,
+    //                     newAssignment.promotionId
+    //                 );
+    //             } else {
+    //                 console.log(`Skipping product ${newAssignment.productId} - no change needed`);
+    //             }
+    //         } else {
+    //             await this.productPromotionRepository.createMany([{
+    //                 product_id: newAssignment.productId,
+    //                 promotion_id: newAssignment.promotionId
+    //             }]);
+    //         }
+    //     }
+
+    //     return { message: `Synced ${assignments.length} product assignments successfully!` };
+    // }
+    async setProductPromotion(assignments: { productId: number, promotionId: number | null }[]): Promise<{ message: string }> {
+    
+    // 1. Chỉ lấy các bản ghi gán hiện tại (existingAssignment) của CÁC SẢN PHẨM CÓ TRONG PAYLOAD.
+    const productIdsInPayload = assignments.map(a => a.productId);
+    
+    // 💡 GIẢ ĐỊNH: ProductPromotionRepository CÓ HÀM findByProductIds(number[])
+    const currentAssignments = await this.productPromotionRepository.findByProductIds(productIdsInPayload);
+    
+    // ⚠️ Loại bỏ hoàn toàn logic xóa các sản phẩm không có trong payload.
+
+    for (const newAssignment of assignments) {
+        const existingAssignment = currentAssignments.find(
+            // Lấy bản ghi gán hiện tại (nếu có)
+            ca => ca.product_id === newAssignment.productId
+        );
+
+        // Trường hợp 1: HỦY GÁN (promotionId == null)
+        if (newAssignment.promotionId === null) {
+            // Nếu sản phẩm đang có gán, thực hiện xóa mềm
             if (existingAssignment) {
-                if (existingAssignment.promotion_id !== newAssignment.promotionId) {
-                    console.log(`Updating promotion for product ${newAssignment.productId}: ${existingAssignment.promotion_id} -> ${newAssignment.promotionId}`);
-                    await this.productPromotionRepository.updatePromotionForProduct(
-                        newAssignment.productId,
-                        newAssignment.promotionId
-                    );
-                } else {
-                    console.log(`Skipping product ${newAssignment.productId} - no change needed`);
-                }
-            } else {
-                await this.productPromotionRepository.createMany([{
-                    product_id: newAssignment.productId,
-                    promotion_id: newAssignment.promotionId
-                }]);
+                await this.productPromotionRepository.softDeleteByProductId(newAssignment.productId);
             }
+            continue;
         }
+        
+        // --- Trường hợp 2: GÁN/CẬP NHẬT GÁN (promotionId là một số) ---
+        
+        if (existingAssignment) {
+            // Cập nhật nếu ID khuyến mãi thay đổi
+            if (existingAssignment.promotion_id !== newAssignment.promotionId) {
+                console.log(`Updating promotion for product ${newAssignment.productId}: ${existingAssignment.promotion_id} -> ${newAssignment.promotionId}`);
+                await this.productPromotionRepository.updatePromotionForProduct(
+                    newAssignment.productId,
+                    // Đã kiểm tra newAssignment.promotionId không null ở trên
+                    newAssignment.promotionId as number 
+                );
+            } else {
+                console.log(`Skipping product ${newAssignment.productId} - no change needed`);
+            }
+        } else {
+            // Tạo mới gán
+            await this.productPromotionRepository.createMany([{
+                product_id: newAssignment.productId,
+                promotion_id: newAssignment.promotionId as number // Đã kiểm tra không null
+            }]);
+        }
+    }
 
-        return { message: `Synced ${assignments.length} product assignments successfully!` };
+        return { message: `Cập nhật gán cho ${assignments.length} sản phẩm thành công (Không ảnh hưởng các sản phẩm khác)!` };
     }
 
 }

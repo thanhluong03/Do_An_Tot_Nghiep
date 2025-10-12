@@ -37,6 +37,7 @@ export default function ProductsPage() {
     main_image: "",
     category_id: 0,
     images: [] as ProductImage[],
+    // KHÔNG THÊM 'quantity' VÀO ĐÂY, VÌ NÓ KHÔNG CÓ TRONG FORM
   } as Product);
 
   useEffect(() => {
@@ -131,12 +132,14 @@ export default function ProductsPage() {
       main_image: "",
       images: [],
       category_id: categories[0]?.id || 0,
+      // Không cần quantity
     } as Product);
     setIsModalOpen(true);
   };
 
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
+    // Khi chỉnh sửa, lấy các thông tin cần thiết từ product, bỏ qua quantity
     setFormData({
       ...product,
       category_id: product.category_id || product.category?.id || 0,
@@ -147,7 +150,11 @@ export default function ProductsPage() {
   const handleSave = async (form: FormData) => {
     try {
       if (editingProduct) {
-        await updateProduct(editingProduct.id!, form);
+        // Cần đảm bảo rằng editingProduct.id có giá trị
+        if (!editingProduct.id) {
+          throw new Error("Không tìm thấy ID sản phẩm để cập nhật.");
+        }
+        await updateProduct(editingProduct.id, form);
         toast.success("Cập nhật sản phẩm thành công!");
       } else {
         await addProduct(form);
@@ -156,6 +163,7 @@ export default function ProductsPage() {
       await fetchProducts();
       setIsModalOpen(false);
     } catch (error) {
+      console.error(error);
       toast.error("Lưu sản phẩm thất bại!");
     }
   };
@@ -209,7 +217,7 @@ export default function ProductsPage() {
       <Toaster position="top-center" />
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-8xl">
         <div className="flex justify-center mb-6">
-          <h1 className="text-3xl font-extrabold text-indigo-700">
+          <h1 className="text-3xl font-extrabold text-black">
             Quản lý sản phẩm
           </h1>
         </div>
@@ -217,10 +225,10 @@ export default function ProductsPage() {
 
         {/* Nút thêm */}
         <div className="flex justify-end mb-4">
-       
+        
           <button
             onClick={openAddModal}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md transition"
+            className="px-4 py-2 bg-[#F54900] hover:bg-orange-600 text-white rounded-lg shadow-md transition"
           >
             + Thêm sản phẩm
           </button>
@@ -229,7 +237,7 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <input
             type="text"
-            placeholder="🔍 Tìm theo tên hoặc mô tả..."
+            placeholder="Tìm theo tên hoặc mô tả..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="border border-gray-300 rounded-xl p-2 px-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -330,14 +338,13 @@ export default function ProductsPage() {
 
       {/* Modal thêm/sửa */}
       <ProductFormModal
-        isModalOpen={isModalOpen}
-        editingProduct={editingProduct}
-        formData={formData}
-        setFormData={setFormData}
-        handleSave={handleSave}
-        setIsModalOpen={setIsModalOpen}
-        categories={categories}
-      />
+              isModalOpen={isModalOpen}
+              editingProduct={editingProduct}
+              formData={formData}
+              setFormData={setFormData}
+              handleSave={handleSave}
+              setIsModalOpen={setIsModalOpen}
+              categories={categories} suppliers={[]}      />
     </div>
   );
 }

@@ -1,5 +1,9 @@
+// src/components/inventory/InventoryTable.tsx (Đã thêm cột Ảnh và sửa lỗi Null)
+
 import React from 'react';
-import { Inventory, SelectOption } from "@/api/services/inventoryService";
+// Import Product, getProductImageUrl
+import { Inventory, SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService";
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface InventoryTableProps {
     inventories: Inventory[];
@@ -9,6 +13,8 @@ interface InventoryTableProps {
     handleEdit: (item: Inventory) => void;
     handleDelete: (id: number) => Promise<void>;
     totalItems: number;
+    // THÊM: Danh sách Product đầy đủ
+    allProducts: Product[]; 
 }
 
 const formatDateTime = (isoString: string) => {
@@ -24,6 +30,18 @@ const formatDateTime = (isoString: string) => {
     });
 };
 
+// HÀM TRỢ GIÚP: Tìm và trả về URL ảnh sản phẩm
+const getInventoryProductImageUrl = (productId: number, allProducts: Product[]): string => {
+    const product = allProducts.find(p => p.id === productId);
+    
+    if (product) {
+        // Giả định hàm getProductImageUrl tồn tại và hoạt động
+        return getProductImageUrl(product); 
+    }
+    return "/no-image.jpg"; 
+};
+
+
 const InventoryTable: React.FC<InventoryTableProps> = ({
     inventories,
     products,
@@ -32,9 +50,11 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     handleEdit,
     handleDelete,
     totalItems,
+    allProducts, // Sử dụng allProducts
 }) => {
     return (
         <>
+            {/* Giữ nguyên phần thông báo rỗng */}
             {inventories.length === 0 && totalItems > 0 && (
                 <div className="text-center py-4 text-gray-500">
                     Không tìm thấy tồn kho cho trang này.
@@ -47,55 +67,87 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             )}
 
             {inventories.length > 0 && (
-                <div className="overflow-x-auto rounded-lg shadow-md">
+                // CẬP NHẬT: Container với bo góc và bóng tinh tế hơn
+                <div className="overflow-x-auto rounded-xl shadow-lg mt-6 border border-gray-100"> 
                     <table className="min-w-full border-collapse bg-white table-fixed">
+                        {/* CẬP NHẬT: Đầu bảng hiện đại hơn */}
                         <thead>
-                            <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
-                                <th className="px-4 py-3 text-left w-1/12">ID</th>
-                                <th className="px-4 py-3 text-left w-2/12">Sản phẩm</th>
-                                <th className="px-4 py-3 text-left w-2/12">Cửa hàng</th>
-                                <th className="px-4 py-3 text-center w-1/12">Tồn kho</th>
-                                <th className="px-4 py-3 text-center w-1/12">Đã bán</th>
-                                <th className="px-4 py-3 text-left w-2/12">Ngày tạo</th>
-                                <th className="px-4 py-3 text-left w-2/12">Cập nhật</th>
-                                <th className="px-4 py-3 text-center w-2/12">Hành động</th>
+                            <tr className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider font-bold border-b border-gray-200">
+                                <th className="px-4 py-3 text-left w-[50px] rounded-tl-xl">ID</th>
+                                <th className="px-2 py-3 text-center w-[60px]">Ảnh</th> 
+                                <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th> 
+                                <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th> 
+                                <th className="px-4 py-3 text-center w-[90px]">Trong kho</th>
+                                <th className="px-4 py-3 text-center w-[90px]">Đã bán</th>
+                                <th className="px-4 py-3 text-left w-[150px]">Ngày tạo</th>
+                                <th className="px-4 py-3 text-left w-[150px]">Cập nhật</th>
+                                <th className="px-4 py-3 text-center w-[120px] rounded-tr-xl">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
                             {inventories.map((item) => (
                                 <tr
                                     key={item.id}
-                                    className="border-t hover:bg-gray-50 text-sm text-gray-600"
+                                    // CẬP NHẬT: Hiệu ứng hover tinh tế và đường kẻ mỏng
+                                    className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
                                 >
-                                    <td className="px-4 py-3 font-medium truncate">{item.id}</td>
+                                    {/* THAY ĐỔI: Tăng padding và font-weight cho ID */}
+                                    <td className="px-4 py-3 font-semibold text-gray-800 truncate">{item.id}</td>
+                                    
+                                    {/* CỘT ẢNH */}
+                                    <td className="px-2 py-2 text-center">
+                                        <div className="flex justify-center">
+                                            <img
+                                                src={getInventoryProductImageUrl(item.product_id, allProducts)}
+                                                alt={getDisplayName(products, item.product_id)}
+                                                // CẬP NHẬT: Ảnh bo góc, shadow nhẹ
+                                                className="w-9 h-9 object-cover rounded-md shadow-sm"
+                                                onError={(e) => { 
+                                                    e.currentTarget.onerror = null; 
+                                                    e.currentTarget.src = "/no-image.jpg"; 
+                                                }}
+                                            />
+                                        </div>
+                                    </td>
+                                    
                                     <td
-                                        className="px-4 py-3 truncate"
+                                        className="px-4 py-3 truncate text-sm"
                                         title={getDisplayName(products, item.product_id)}
                                     >
                                         {getDisplayName(products, item.product_id)}
                                     </td>
                                     <td
-                                        className="px-4 py-3 truncate"
+                                        className="px-4 py-3 truncate text-sm"
                                         title={getDisplayName(stores, item.store_id)}
                                     >
                                         {getDisplayName(stores, item.store_id)}
                                     </td>
-                                    <td className="px-4 py-3 text-center">{item.quantity_stock}</td>
-                                    <td className="px-4 py-3 text-center">{item.quantity_sold}</td>
-                                    <td className="px-4 py-3">{formatDateTime(item.created_at)}</td>
-                                    <td className="px-4 py-3">{formatDateTime(item.updated_at)}</td>
-                                    <td className="px-4 py-3 text-center">
+                                    
+                                    {/* CẬP NHẬT: Tồn kho/Đã bán dùng text-lg và màu sắc hiện đại */}
+                                    <td className="px-4 py-3 text-center text-base font-extrabold text-teal-600">
+                                        {(item.quantity_stock ?? 0).toLocaleString()} 
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-base font-extrabold text-red-500">
+                                        {(item.quantity_sold ?? 0).toLocaleString()}
+                                    </td>
+                                    
+                                    {/* CẬP NHẬT: Ngày tháng dùng text-xs và màu xám nhạt */}
+                                    <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.created_at)}</td>
+                                    <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updated_at)}</td>
+                                    
+                                    {/* CẬP NHẬT: Nút hành động với style thống nhất */}
+                                    <td className="px-4 py-3 text-center space-x-1">
                                         <button
                                             onClick={() => handleEdit(item)}
-                                            className="text-yellow-600 hover:text-yellow-800 font-medium mr-3"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
                                         >
-                                            Sửa
+                                            <Pencil size={15} />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(item.id)}
-                                            className="text-red-600 hover:text-red-800 font-medium"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
                                         >
-                                            Xoá
+                                           <Trash2 size={15} />
                                         </button>
                                     </td>
                                 </tr>
