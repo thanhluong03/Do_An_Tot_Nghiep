@@ -152,61 +152,70 @@ export default function CheckoutPage() {
   };
 
   /** ===================== TẠO ĐƠN HÀNG ===================== */
-  const handleCreate = async () => {
-    if (!isAuthenticated || !user?.id) return setError('❌ Vui lòng đăng nhập để thanh toán');
-    if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
-    const cartItems = serverItems.length > 0 ? serverItems : items;
-    if (!cartItems.length) return setError('❌ Giỏ hàng trống');
-    if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
+const handleCreate = async () => {
+  if (!isAuthenticated || !user?.id) return setError('❌ Vui lòng đăng nhập để thanh toán');
+  if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
+  const cartItems = serverItems.length > 0 ? serverItems : items;
+  if (!cartItems.length) return setError('❌ Giỏ hàng trống');
+  if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
 
-    setCreating(true);
-    setError(null);
+  setCreating(true);
+  setError(null);
 
-    try {
-      const payloadItems = cartItems.map(ci => {
-        const pid = 'product_id' in ci && typeof (ci as any).product_id !== 'undefined'
-          ? Number((ci as any).product_id)
-          : Number((ci as any).product?.id ?? 0);
+  try {
+    const totalBeforeDiscount = total;
+    const totalAfterDiscount = finalTotal;
+    const discount = totalBeforeDiscount - totalAfterDiscount;
 
-        return {
-          product_id: pid,
-          quantity: ci.quantity,
-          price_at_order: Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0),
-        };
-      });
+    // Nếu có giảm giá, chia phần giảm đều theo tỷ lệ
+    const payloadItems = cartItems.map(ci => {
+      const pid = 'product_id' in ci && typeof (ci as any).product_id !== 'undefined'
+        ? Number((ci as any).product_id)
+        : Number((ci as any).product?.id ?? 0);
 
-      const payload = {
-        customer_id: Number(user.id),
-        shipping_address: address,
-        voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
-        payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-        items: payloadItems,
-        total_amount: finalTotal,
-        discount_amount: discountAmount,
-        original_amount: total,
+      const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
+      const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
+      const discountedPrice = basePrice - (share * discount) / ci.quantity;
+
+      return {
+        product_id: pid,
+        quantity: ci.quantity,
+        price_at_order: Math.round(discountedPrice), // giá đã giảm cho từng sp
       };
+    });
 
-      const res = await orderApi.createOrder(payload);
-      const createdId = Number(res?.data?.id ?? res?.id);
-      if (!createdId) throw new Error('Không lấy được ID đơn hàng');
-      setOrderId(createdId);
+    const payload = {
+      customer_id: Number(user.id),
+      shipping_address: address,
+      voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
+      payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
+      items: payloadItems,
+      total_amount: totalAfterDiscount,  // tổng sau giảm
+      discount_amount: discount,
+      original_amount: totalBeforeDiscount,
+    };
 
-      if (paymentMethod === 'VNPAY') {
-        const returnUrl = `${window.location.origin}/store/orders`;
-        const pay = await paymentApi.createVnPayPayment(createdId, finalTotal, returnUrl);
-        const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
-        if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
-        window.location.href = paymentUrl;
-      } else {
-        clearCart();
-        window.location.href = '/store/orders';
-      }
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng');
-    } finally {
-      setCreating(false);
+    const res = await orderApi.createOrder(payload);
+    const createdId = Number(res?.data?.id ?? res?.id);
+    if (!createdId) throw new Error('Không lấy được ID đơn hàng');
+    setOrderId(createdId);
+
+    if (paymentMethod === 'VNPAY') {
+      const returnUrl = `${window.location.origin}/store/orders`;
+      const pay = await paymentApi.createVnPayPayment(createdId, totalAfterDiscount, returnUrl);
+      const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
+      if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
+      window.location.href = paymentUrl;
+    } else {
+      clearCart();
+      window.location.href = '/orders';
     }
-  };
+  } catch (e: any) {
+    setError(e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng');
+  } finally {
+    setCreating(false);
+  }
+};
 
   return (
     <BaseLayout>

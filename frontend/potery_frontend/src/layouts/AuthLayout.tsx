@@ -13,10 +13,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
         {/* Logo */}
         <div className="text-center">
           <div className="flex justify-center items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-[#65604E] rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2L3 7v11h14V7l-7-5zM8 15H6v-2h2v2zm0-4H6V9h2v2zm0-4H6V5h2v2zm6 8h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2z"/>
-              </svg>
+            <div className="w-12 h-12 bg-[#65604E] rounded-full overflow-hidden flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="Tiệm Gốm Nhà Gạo Logo"
+                className="w-full h-full object-cover rounded-full"
+              />
             </div>
             <div>
               <h1 className="text-2xl font-serif font-bold text-[#2C2A24]">

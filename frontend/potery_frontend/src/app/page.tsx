@@ -86,8 +86,9 @@ export default function HomePage() {
           {isChatOpen && (
             <ChatModal
               isOpen={isChatOpen}
-              onClose={() => setIsChatOpen(false)}
-            />
+              onClose={() => setIsChatOpen(false)} 
+              userId={Number(user.id)}
+              storeId={0}            />
           )}
 
           {/* Floating Buttons */}

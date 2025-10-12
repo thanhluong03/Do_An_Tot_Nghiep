@@ -70,7 +70,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     <ProductCard
       key={product.id}
       product={product}
-      onAddToCart={onAddToCart}
       onViewDetails={onViewDetails}
     />
   ))}
