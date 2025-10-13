@@ -35,4 +35,7 @@ export interface IListOrder {
     size: number;
     key?: string;
     customer_id?: number;
+    store_id?: number; // Thêm store_id (number)
+    status?: OrderStatus; // ✅ ĐÃ SỬA: Dùng OrderStatus enum
+    payment_status?: PaymentStatus; 
 }
