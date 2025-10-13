@@ -14,24 +14,36 @@ const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 };
 
-const getStatusColor = (status: OrderStatus | PaymentStatus) => {
+const getStatusColor = (status: OrderStatus | PaymentStatus ) => {
   switch (status) {
-    case "DELIVERED":
-    case "PAID":
-      return "bg-green-100 text-green-700";
-    case "SHIPPING":
-    case "PENDING":
-      return "bg-yellow-100 text-yellow-700";
+    // ✅ Trạng thái đơn hàng
     case "CREATED":
       return "bg-blue-100 text-blue-700";
+    case "CONFIRMED":
+      return "bg-indigo-100 text-indigo-700";
+    case "SHIPPING":
+      return "bg-yellow-100 text-yellow-700";
+    case "DELIVERED":
+      return "bg-green-100 text-green-700";
     case "CANCELED":
-    case "UNPAID":
-    case "REFUNDED":
       return "bg-red-100 text-red-700";
+    case "REJECTED":
+      return "bg-gray-200 text-gray-700";
+
+    // ✅ Trạng thái thanh toán
+    case "UNPAID":
+      return "bg-red-100 text-red-700";
+    case "PENDING":
+      return "bg-yellow-100 text-yellow-700";
+    case "PAID":
+      return "bg-green-100 text-green-700";
+    case "REFUNDED":
+      return "bg-purple-100 text-purple-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
 };
+
 
 export default function OrderTable({ orders, onView, onEditStatus, onDelete }: OrderTableProps) {
   return (

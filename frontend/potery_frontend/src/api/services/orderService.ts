@@ -15,7 +15,7 @@ export interface OrderItem {
     store_address?: string;
 }
 
-export type OrderStatus = 'CREATED' | 'PENDING' | 'SHIPPING' | 'DELIVERED' | 'CANCELED';
+export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELED' | 'REJECTED';
 export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED';
 export type PaymentMethod = 'ONSITE' | 'BANK_TRANSFER' | 'CARD';
 
