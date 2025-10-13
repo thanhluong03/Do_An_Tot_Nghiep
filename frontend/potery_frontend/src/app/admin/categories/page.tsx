@@ -52,7 +52,7 @@ export default function CategoryPage() {
               setEditingCategory(null);
               setShowModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition"
           >
             <Plus size={18} /> Thêm danh mục
           </button>
@@ -114,7 +114,7 @@ export default function CategoryPage() {
 
       {/* Modal Xoá */}
       {confirmDeleteId && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-80">
             <p className="text-gray-800 mb-5 text-center">
               Bạn có chắc muốn xoá danh mục ID {confirmDeleteId} không?

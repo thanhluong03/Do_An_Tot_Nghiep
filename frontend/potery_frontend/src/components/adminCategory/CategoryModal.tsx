@@ -103,7 +103,7 @@ export default function CategoryModal({ open, onClose, editingCategory, onSucces
           <button
             onClick={handleSubmit}
             className={`px-4 py-2 rounded text-white font-semibold ${
-              editingCategory ? "bg-yellow-500 hover:bg-yellow-600" : "bg-blue-500 hover:bg-blue-600"
+              editingCategory ? "bg-yellow-500 hover:bg-yellow-600" : "bg-orange-500 hover:bg-orange-600"
             }`}
           >
             {editingCategory ? "Cập nhật" : "Thêm mới"}

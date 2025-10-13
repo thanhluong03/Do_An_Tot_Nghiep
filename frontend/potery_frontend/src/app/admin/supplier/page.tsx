@@ -8,19 +8,23 @@ import {
   deleteSupplier,
   Supplier,
 } from "@/api/services/supplierService";
+import { Pencil, Trash2 } from "lucide-react";
+
+const initialFormState: Supplier = {
+  name: "",
+  address: "",
+  phone: "",
+  email: "",
+};
 
 export default function SupplierPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [form, setForm] = useState<Supplier>({
-    name: "",
-    address: "",
-    phone: "",
-    email: "",
-  });
+  const [form, setForm] = useState<Supplier>(initialFormState);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(5); // số dòng / trang
+  const [pageSize] = useState(5);
 
   useEffect(() => {
     fetchSuppliers();
@@ -62,14 +66,15 @@ export default function SupplierPage() {
       if (editingId) {
         await updateSupplier(editingId, form);
         toast.success("Cập nhật nhà cung cấp thành công!");
-        setEditingId(null);
       } else {
         await addSupplier(form);
         toast.success("Thêm nhà cung cấp thành công!");
       }
-      setForm({ name: "", address: "", phone: "", email: "" });
+      setShowModal(false);
+      setEditingId(null);
+      setForm(initialFormState);
       fetchSuppliers();
-    } catch (error) {
+    } catch {
       toast.error("Đã xảy ra lỗi khi lưu nhà cung cấp!");
     }
   };
@@ -78,7 +83,7 @@ export default function SupplierPage() {
     setForm(supplier);
     setEditingId(supplier.id || null);
     setErrors({});
-    toast("Đang chỉnh sửa thông tin nhà cung cấp...");
+    setShowModal(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -115,59 +120,28 @@ export default function SupplierPage() {
     );
   };
 
-  // Pagination logic
+  // Pagination
   const totalPages = Math.ceil(suppliers.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const currentSuppliers = suppliers.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-1">
-      <Toaster position="top-center" containerStyle={{
-    top: '50%',
-    transform: 'translateY(-50%)',
-  }} reverseOrder={false} />
-
-      <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center">
-          Quản lý Nhà cung cấp
-        </h2>
-
-        {/* Form */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {["name", "address", "phone", "email"].map((field) => (
-            <div key={field}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {{
-                  name: "Tên",
-                  address: "Địa chỉ",
-                  phone: "Điện thoại",
-                  email: "Email",
-                }[field]}
-              </label>
-              <input
-                name={field}
-                placeholder={`Nhập ${
-                  { name: "tên", address: "địa chỉ", phone: "số điện thoại", email: "email" }[field]
-                }`}
-                value={(form as any)[field]}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end mb-6">
+    <div className="min-h-screen bg-gray-100 p-4 relative">
+      <Toaster position="top-center" />
+      <div className="bg-white p-6 rounded-2xl shadow-lg">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-700">
+            Quản lý Nhà cung cấp
+          </h2>
           <button
-            onClick={handleSubmit}
-            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-              editingId
-                ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
+            onClick={() => {
+              setShowModal(true);
+              setEditingId(null);
+              setForm(initialFormState);
+            }}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium shadow hover:bg-orange-600"
           >
-            {editingId ? "Cập nhật" : "Thêm"}
+            + Thêm Nhà cung cấp
           </button>
         </div>
 
@@ -197,16 +171,18 @@ export default function SupplierPage() {
                   <td className="px-4 py-3">{s.email}</td>
                   <td className="px-4 py-3 flex gap-2 justify-center">
                     <button
+                      title="sua"
                       onClick={() => handleEdit(s)}
-                      className="px-3 py-1 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-white font-medium shadow"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 transition duration-150 shadow-sm"
                     >
-                      Sửa
+                      <Pencil size={15} />
                     </button>
                     <button
+                      title="xoa"
                       onClick={() => handleDelete(s.id!)}
-                      className="px-3 py-1 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition duration-150 shadow-sm"
                     >
-                      Xoá
+                      <Trash2 size={15} />
                     </button>
                   </td>
                 </tr>
@@ -249,6 +225,65 @@ export default function SupplierPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal thêm/sửa */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white/40 z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-lg">
+            <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center">
+              {editingId ? "Sửa Nhà cung cấp" : "Thêm Nhà cung cấp"}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              {["name", "address", "phone", "email"].map((field) => (
+                <div key={field}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {{
+                      name: "Tên",
+                      address: "Địa chỉ",
+                      phone: "Điện thoại",
+                      email: "Email",
+                    }[field]}
+                  </label>
+                  <input
+                    name={field}
+                    value={(form as any)[field]}
+                    onChange={handleChange}
+                    placeholder={`Nhập ${{ name: "tên", address: "địa chỉ", phone: "số điện thoại", email: "email" }[field]
+                      }`}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  {errors[field] && (
+                    <p className="text-red-500 text-xs mt-1">{errors[field]}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setForm(initialFormState);
+                  setEditingId(null);
+                  setErrors({});
+                }}
+                className="px-5 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmit}
+                className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${editingId
+                    ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                    : "bg-blue-500 hover:bg-blue-600 text-white"
+                  }`}
+              >
+                {editingId ? "Cập nhật" : "Thêm mới"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
