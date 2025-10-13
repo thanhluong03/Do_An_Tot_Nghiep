@@ -38,28 +38,28 @@ const dashboardItems: MenuItem[] = [
 const salesOperationsItems: MenuItem[] = [
    { name: "Nhập kho", icon: faWarehouse, href: "/admin/importproduct", color: "bg-yellow-100 text-yellow-600" },
     { name: "Tồn kho", icon: faWarehouse, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
+    { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },
+     { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
     { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
     { name: "Nhà cung cấp", icon: faTruckIcon, href: "/admin/supplier", color: "bg-blue-100 text-blue-600" },
+   
+];
+
+
+const orderItems: MenuItem[] = [
     { name: "Đơn hàng", icon: faShoppingCart, href: "/admin/orders", color: "bg-red-100 text-red-600" },
-];
-
-const contentResourcesItems: MenuItem[] = [
-    { name: "Quản lý sản phẩm", icon: faBox, href: "/admin/products", color: "bg-gray-100 text-gray-600" },
-    { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
-    { name: "Tin tức/Bài viết", icon: faNewspaper, href: "/admin/news", color: "bg-red-100 text-red-600" },
-    { name: "Đánh giá", icon: faStar, href: "#", color: "bg-yellow-100 text-yellow-600" },
-];
-
-const marketingAnalyticsItems: MenuItem[] = [
     { name: "Promotions", icon: faTagsIcon, href: "/admin/promotions", color: "bg-red-100 text-red-600" },
     { name: "Vouchers", icon: faBolt, href: "/admin/vouchers", color: "bg-orange-100 text-orange-600" },
-    { name: "Sales Analytics", icon: faChartArea, href: "#" },
-    { name: "Product Performance", icon: faChartBar, href: "#" },
+   
 ];
+const contentResourcesItems: MenuItem[] = [
+    { name: "Tin tức/Bài viết", icon: faNewspaper, href: "/admin/news", color: "bg-red-100 text-red-600" },
+];
+
 const systemItems: MenuItem[] = [
-    { name: "Roles", icon: faUserShield, href: "/admin/roles" },
-    { name: "Permissions", icon: faUserShield, href: "/admin/permissions" },
-    { name: "Users", icon: faUser, href: "/admin/users" },
+    { name: "Vai trò", icon: faUserShield, href: "/admin/roles" },
+    { name: "Quyền hạn", icon: faUserShield, href: "/admin/permissions" },
+    { name: "Người dùng", icon: faUser, href: "/admin/users" },
 ];
 
 
@@ -112,10 +112,10 @@ export default function AdminSidebar() {
             </div>
             <nav className="p-4 flex-1 space-y-4">
                 {renderMenuSection("Tổng Quan", dashboardItems)}
-                {renderMenuSection("Quản Lý Vận Hành", salesOperationsItems)}
-                {renderMenuSection("Quản Lý Nội Dung", contentResourcesItems)}
-                {renderMenuSection("Marketing & Phân Tích", marketingAnalyticsItems)}
-                {renderMenuSection("Hệ Thống", systemItems)}
+                {renderMenuSection("Đơn hàng", orderItems)}
+                {renderMenuSection("Sản phẩm", salesOperationsItems)}
+                {renderMenuSection("Marketing", contentResourcesItems)}
+                {renderMenuSection("Phân quyền", systemItems)}
             </nav>
         </div>
     );

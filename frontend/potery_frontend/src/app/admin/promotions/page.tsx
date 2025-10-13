@@ -13,6 +13,7 @@ import {
     getAllProductsWithPromotions, setProductPromotionAssignments, 
     Promotion, DiscountType, ProductPromotionAssignment, 
 } from "@/api/services/promotionService"; 
+import { Pencil, Trash2 } from "lucide-react";
 
 // Helper function để chuyển đổi ISO Date sang datetime-local format
 const toDatetimeLocal = (isoDateString?: Date | string) => {
@@ -262,7 +263,7 @@ export default function PromotionPage() {
                             setForm(initialFormState);
                             setIsFormVisible(true); // Mở form
                         }}
-                        className="px-6 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg transition transform hover:scale-105" // Nút hiện đại, bo tròn
+                        className="px-6 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-lg transition transform hover:scale-105" // Nút hiện đại, bo tròn
                     >
                         + Thêm Promotion mới
                     </button>
@@ -272,17 +273,15 @@ export default function PromotionPage() {
                 {/* 1. KHU VỰC FORM CRUD PROMOTION - Chỉ hiển thị khi isFormVisible = true */}
                 {isFormVisible && (
                     <>  
-                    <div className="relative border border-gray-200 p-6 rounded-xl shadow-md bg-white mb-8"> {/* Bọc form trong 1 container */}
-                        {/* NÚT ĐÓNG FORM */}
+                    <div className="relative border border-gray-200 p-6 rounded-xl shadow-md bg-white mb-8">
                         <button
-                            onClick={handleCancelEdit} // Dùng hàm Hủy/Đóng
+                            onClick={handleCancelEdit}
                             className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-2xl font-light transition"
                             title="Đóng Form"
                         >
                             &times; 
                         </button>
                         
-                        {/* Tiêu đề form */}
                         <h3 className="text-xl font-semibold mb-6 text-gray-700 border-b pb-2">
                             {editingId ? `Chỉnh Sửa Khuyến mãi ID: ${editingId}` : "Thêm Khuyến mãi Mới"}
                         </h3>
@@ -291,7 +290,7 @@ export default function PromotionPage() {
                             form={form} errors={errors} editingId={editingId}
                             handleChange={handleChange} 
                             handleSubmit={handleSubmit} 
-                            handleCancelEdit={handleCancelEdit} // Giờ dùng để đóng form/hủy sửa
+                            handleCancelEdit={handleCancelEdit}
                         />
                     </div>
                     <hr className="my-8 border-gray-200" />
@@ -303,7 +302,7 @@ export default function PromotionPage() {
                     Danh sách Khuyến mãi (CRUD View)
                 </h2>
                 
-                <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-100"> {/* Bọc bảng trong container có shadow và bo góc */}
+                <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-100">
                     <table className="w-full border-collapse bg-white"><thead>
                         <tr className="bg-gray-200 text-black text-sm font-semibold uppercase tracking-wider"> 
                             <th className="px-5 py-3 text-left rounded-tl-xl">ID</th>
@@ -345,13 +344,20 @@ export default function PromotionPage() {
                                 </td>
                                 <td className="px-5 py-3 flex gap-2 justify-center">
                                     <button 
+                                        title="sua"
                                         onClick={() => handleEdit(promo)} 
-                                        className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 rounded-lg text-white font-medium text-sm transition shadow-md"
-                                    >Sửa</button>
+                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
+                                        >
+                                            <Pencil size={14} />
+                                            
+                                        </button>
                                     <button 
+                                    title="xoa"
                                         onClick={() => promo.id && handleDelete(promo.id)} 
-                                        className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium text-sm transition shadow-md"
-                                    >Xoá</button>
+                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -366,7 +372,6 @@ export default function PromotionPage() {
                     </table>
                 </div>
 
-                {/* 2. KHU VỰC GÁN KHUYẾN MÃI CHO SẢN PHẨM (DÙNG CheckboxList) */}
                 <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center mt-10">
                     Gán Khuyến mãi hàng loạt cho Sản phẩm
                 </h2>
@@ -409,7 +414,7 @@ export default function PromotionPage() {
                                 className={`w-full mt-3 px-6 py-2 rounded-lg font-semibold shadow-md transition transform hover:scale-[1.02] ${
                                     (isSavingAssignments || selectedPromotionId === null || selectedProductIds.length === 0)
                                     ? "bg-indigo-300 text-gray-600 cursor-not-allowed shadow-none hover:scale-100" 
-                                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    : "bg-orange-600 hover:bg-orange-700 text-white"
                                 }`}
                             >
                                 {isSavingAssignments ? "Đang Lưu..." : "Lưu Gán Khuyến mãi"}
@@ -442,18 +447,17 @@ export default function PromotionPage() {
                 <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center mt-10">
                     Tình trạng Gán Khuyến mãi của Sản phẩm
                 </h2>
-                <div className="overflow-x-auto max-h-[400px] border border-gray-100 rounded-lg shadow-inner"> {/* Thêm shadow-inner để trông cao cấp hơn */}
-                    {/* 👇 ĐÃ SỬA: Đưa <thead> lên cùng dòng với <table> */}
+                <div className="overflow-x-auto max-h-[400px] border border-gray-100 rounded-lg shadow-inner">
                     <table className="w-full border-collapse bg-white modern-table"><thead> 
-                        <tr className="bg-gray-50 text-gray-600 text-sm font-medium uppercase sticky top-0 z-10 border-b border-gray-200"> {/* Header nhẹ nhàng hơn */}
-                            <th className="px-5 py-3 text-left w-[120px]">ID Sản phẩm</th> {/* Tăng padding */}
+                        <tr className="bg-gray-50 text-gray-600 text-sm font-medium uppercase sticky top-0 z-10 border-b border-gray-200">
+                            <th className="px-5 py-3 text-left w-[120px]">ID Sản phẩm</th>
                             <th className="px-5 py-3 text-left">Tên Sản phẩm</th>
                             <th className="px-5 py-3 text-left w-1/3">Khuyến mãi hiện tại</th>
                         </tr>
                     </thead>
                     <tbody>
                         {productAssignments.map((assignment, idx) => (
-                            <tr key={assignment.productId} className={`border-b border-gray-100 transition hover:bg-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}> {/* Hover tinh tế, border mỏng */}
+                            <tr key={assignment.productId} className={`border-b border-gray-100 transition hover:bg-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
                                 <td className="px-5 py-3 text-sm font-mono text-gray-600">{assignment.productId}</td>
                                 <td className="px-5 py-3 font-semibold text-gray-800">
                                     {assignment.product?.name || `Product ID ${assignment.productId} (Không tên)`} 
@@ -471,7 +475,7 @@ export default function PromotionPage() {
                         {productAssignments.length === 0 && (
                             <tr>
                                 <td colSpan={3} className="text-center py-4 text-red-500 font-medium">
-                                    ⚠️ Không có sản phẩm nào được tải.
+                                    Không có sản phẩm nào được tải.
                                 </td>
                             </tr>
                         )}
