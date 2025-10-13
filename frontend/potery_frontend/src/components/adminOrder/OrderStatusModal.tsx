@@ -42,7 +42,7 @@ export default function OrderStatusModal({
     <div className="fixed inset-0 bg-black/30 z-[1100] flex justify-center items-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
         <button
-         title="close"
+          title="close"
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
         >
@@ -55,16 +55,17 @@ export default function OrderStatusModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái đơn hàng</label>
             <select
-                title="change"
+              title="change"
               value={status}
               onChange={(e) => setStatus(e.target.value as OrderStatus)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="CREATED">CREATED - Mới tạo</option>
-              <option value="PENDING">PENDING - Đang xử lý</option>
+              <option value="CONFIRMED">CONFIRMED - Đã xác nhận</option>
               <option value="SHIPPING">SHIPPING - Đang giao</option>
               <option value="DELIVERED">DELIVERED - Đã giao</option>
               <option value="CANCELED">CANCELED - Đã hủy</option>
+              <option value="REJECTED">REJECTED - Từ chối</option>
             </select>
           </div>
 
@@ -86,7 +87,7 @@ export default function OrderStatusModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Phương thức thanh toán</label>
             <select
-                title="change"
+              title="change"
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
