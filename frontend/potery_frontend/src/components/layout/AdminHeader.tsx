@@ -12,22 +12,20 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
     const parts = pathname.split('/').filter(part => part && part !== 'admin');
 
     const nameMap: { [key: string]: string } = {
-        'dashboard': 'Dashboard Overview',
-        'products': 'Product Management',
-        'inventory': 'Inventory',
-        'stores': 'Stores',
-        'supplier': 'Suppliers',
-        'orders': 'Orders',
-        'categories': 'Categories',
-        'news': 'News/Blog',
-        'reviews': 'Reviews',
-        'promotions': 'Promotions/Vouchers',
-        'flashsales': 'Flash Sales',
-        'settings': 'Settings',
-        'support': 'Support',
-        'analytics': 'Analytics',
-        'sales': 'Sales Analytics',
-        // Thêm các mục khác nếu cần
+        'dashboard': 'Tổng quan Dashboard',
+        'products': 'Quản lý sản phẩm',
+        'inventory': 'Tồn kho',
+        'stores': 'Cửa hàng',
+        'supplier': 'Nhà cung cấp',
+        'orders': 'Đơn hàng',
+        'categories': 'Danh mục',
+        'news': 'Tin tức/Bài viết',
+        'reviews': 'Đánh giá',
+        'promotions': 'Khuyến mãi/Vouchers',
+        'settings': 'Cài đặt',
+        'roles': 'Vai trò',
+        'permissions': 'Quyền hạn',
+        'importproduct': 'Nhập kho',
     };
 
 
@@ -57,7 +55,7 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
 
     return { 
         title, 
-        breadcrumb: breadcrumbParts.join(' > ') 
+        breadcrumb: breadcrumbParts.join('>') 
     };
 };
 
@@ -72,7 +70,7 @@ export default function AdminHeader() {
                 <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
                 <nav className="hidden sm:flex items-center text-sm text-gray-500">
                     <span className="text-gray-400">Home</span>
-                    <span className="mx-2 text-gray-400">{'>'}</span>
+                    <span className="mx-2 text-gray-400">{'/'}</span>
                     {breadcrumb.split(' > ').map((item, index, array) => (
                         <span 
                             key={index} 

@@ -14,6 +14,7 @@ import {
     ListVoucherRequestDto 
 } from '@/api/services/voucherService';
 import { VoucherForm } from '@/components/adminVoucher/VoucherForm'; 
+import { Pencil, Trash2 } from 'lucide-react';
 
 const AdminVoucherPage: React.FC = () => {
     const [vouchers, setVouchers] = useState<VoucherResponseDto[]>([]);
@@ -148,7 +149,7 @@ const AdminVoucherPage: React.FC = () => {
                 {/* Nút tạo mới */}
                 <button
                     onClick={() => { setIsFormOpen(true); setEditingVoucher(undefined); }}
-                    className="px-5 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150"
+                    className="px-5 py-3 bg-orange-600 text-white font-semibold rounded-lg shadow-lg hover:bg-orange-700 transition duration-150"
                 >
                     + Tạo Voucher Mới
                 </button>
@@ -207,17 +208,20 @@ const AdminVoucherPage: React.FC = () => {
                                     </td>
                                     <td className="py-3 px-6 text-center space-x-3">
                                         <button 
+                                            title='sua'
                                             onClick={() => handleEditClick(voucher.id)}
-                                            className="text-blue-600 hover:text-blue-800 font-semibold"
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
                                         >
-                                            Sửa
+                                            <Pencil size={14} />
+                                            
                                         </button>
                                         <button 
+                                            title='xoa'
                                             onClick={() => handleDelete(voucher.id)}
-                                            className="text-red-600 hover:text-red-800 font-semibold"
-                                        >
-                                            Xóa
-                                        </button>
+                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                     </td>
                                 </tr>
                             ))}
