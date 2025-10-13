@@ -54,6 +54,9 @@ export interface ListOrderParams {
     size?: number;
     key?: string;
     customer_id?: number;
+ store_id?: number | "";
+    status?: OrderStatus | ""; // Trạng thái đơn hàng
+    payment_status?: PaymentStatus | ""; 
 }
 
 export interface UpdateOrderPayload {

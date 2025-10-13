@@ -147,6 +147,7 @@ export class OrderService {
         return this.orderRepository.findAll(params);
     }
 
+    
     async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
         const order = await this.orderRepository.findById(id);
         if (!order || (order as any).deleted_at) {
