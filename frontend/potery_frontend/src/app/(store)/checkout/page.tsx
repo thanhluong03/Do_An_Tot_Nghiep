@@ -10,6 +10,7 @@ import { formatPrice } from '../../../utils/format';
 import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
 import { voucherApi, Voucher } from '../../../api/modules/voucher';
+import toast from 'react-hot-toast';
 
 export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
@@ -28,7 +29,9 @@ export default function CheckoutPage() {
   const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [loadingVouchers, setLoadingVouchers] = useState(false);
-
+  
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   /** ===================== LOAD CART & VOUCHERS ===================== */
   useEffect(() => {
     let mounted = true;
@@ -37,7 +40,7 @@ export default function CheckoutPage() {
 
       try {
         setLoadingCart(true);
-        const data = await cartApi.getByCustomer(user.id);
+        const data = await cartApi.getByCustomer(user.id as string);
         if (!mounted) return;
 
         const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
@@ -54,7 +57,7 @@ export default function CheckoutPage() {
 
       try {
         setLoadingVouchers(true);
-        const vouchersData = await voucherApi.fetchCustomerVouchers(user.id);
+        const vouchersData = await voucherApi.fetchCustomerVouchers(user.id as string);
         if (!mounted) return;
 
         const normalizedVouchers = vouchersData.map((v: any) => {
@@ -201,7 +204,7 @@ const handleCreate = async () => {
     setOrderId(createdId);
 
     if (paymentMethod === 'VNPAY') {
-      const returnUrl = `${window.location.origin}/store/orders`;
+      const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${createdId}`;
       const pay = await paymentApi.createVnPayPayment(createdId, totalAfterDiscount, returnUrl);
       const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
       if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
@@ -216,7 +219,61 @@ const handleCreate = async () => {
     setCreating(false);
   }
 };
+/** ===================== CHECK PAYMENT RETURN ===================== */
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const paymentStatus = params.get('payment');
+  const orderId = params.get('order_id');
 
+  if (paymentStatus === 'success' && orderId) {
+    (async () => {
+      try {
+        // ✅ Cập nhật trạng thái đơn hàng thành CONFIRMED + PAID
+        await orderApi.updateOrder(Number(orderId), {
+          status: 'CONFIRMED',
+          payment_status: 'PAID',
+        });
+
+        clearCart();
+        setError(null);
+        alert('✅ Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.');
+        window.history.replaceState({}, '', '/orders');
+        window.location.href = '/orders'; // chuyển sang trang danh sách đơn
+      } catch (err) {
+        console.error('❌ Lỗi cập nhật trạng thái đơn hàng sau thanh toán:', err);
+        setError('Không thể cập nhật trạng thái đơn hàng.');
+      }
+    })();
+  }
+}, []);
+   /** ===================== CHECK PAYMENT SUCCESS ===================== */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+
+    if (paymentStatus === 'success') {
+      toast.success('🎉 Thanh toán thành công!');
+      window.history.replaceState({}, '', '/orders'); // xóa query để tránh toast lặp
+    } else if (paymentStatus === 'failed') {
+      toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
+      window.history.replaceState({}, '', '/orders');
+    }
+  }, [])
+   /** ===================== LOAD ORDERS ===================== */
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await orderApi.getOrdersByCustomer(user.id as string);
+        setOrders(res?.data || []);
+      } catch (err) {
+        console.error('Lỗi khi tải đơn hàng:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [isAuthenticated, user?.id]);
   return (
     <BaseLayout>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -367,3 +424,7 @@ const handleCreate = async () => {
     </BaseLayout>
   );
 }
+function setLoading(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}
+

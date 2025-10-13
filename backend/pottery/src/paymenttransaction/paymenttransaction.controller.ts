@@ -1,4 +1,4 @@
-import { PaymentStatus } from '../../libs/database/src/entities/order.entity';
+import { PaymentStatus, OrderStatus } from '../../libs/database/src/entities/order.entity';
 import {
     Controller,
     Post,
@@ -54,8 +54,11 @@ export class PaymentTransactionController {
     async vnpayCallback(
         @Query() query: Record<string, string>,
         @Res() res: Response,
+        
+
     ) {
         try {
+            console.log('[VNPAY CALLBACK] 🔔 Received callback:', query);
             const configService = this.paymentService['configService'];
             const secretKey = (configService.get<string>('VNPAY_HASH_SECRET') || '').trim();
             const vnp_SecureHash = query['vnp_SecureHash'];
@@ -127,15 +130,28 @@ export class PaymentTransactionController {
             });
 
             if (status === 'SUCCESS' && order_id) {
-                const order = await this.orderRepository.findById(order_id);
+            const order = await this.orderRepository.findById(order_id);
                 if (order) {
-                    const currentOrder = { ...order.current_order, payment_status: PaymentStatus.PAID };
-                    await this.orderRepository.update(order_id, {
-                        payment_status: PaymentStatus.PAID,
-                        current_order: currentOrder
-                    });
-                }
+                order.payment_status = PaymentStatus.PAID;
+                order.status = OrderStatus.CONFIRMED; // use OrderStatus enum instead of string literal
+                order.current_order = order.current_order
+                ? { ...order.current_order, payment_status: PaymentStatus.PAID }
+                : { payment_status: PaymentStatus.PAID };
+
+                await this.orderRepository.save(order);
+
+                console.log(`[VNPAY] ✅ Order #${order_id} marked as PAID`);
+                return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=success&order_id=${order_id}`);
+            } else {
+                console.warn(`[VNPAY] ⚠️ Order #${order_id} not found`);
+                return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
             }
+            } else {
+            console.log(`[VNPAY] ❌ Payment failed for order #${order_id}`);
+            return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
+            }
+
+
 
             return res.status(HttpStatus.OK).json({
                 message: 'Payment processed successfully',

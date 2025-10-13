@@ -12,7 +12,9 @@ export class OrderRepository {
         @InjectRepository(OrderItemEntity)
         private readonly orderItemRepository: Repository<OrderItemEntity>,
     ) { }
-
+    async save(order: Partial<OrderEntity>): Promise<OrderEntity> {
+        return await this.orderRepository.save(order);
+    }
     async createOrder(
         data: Partial<OrderEntity>,
         items: Partial<OrderItemEntity>[],

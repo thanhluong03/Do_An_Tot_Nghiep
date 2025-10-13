@@ -19,6 +19,7 @@ export interface CreateOrderPayload {
 export const orderApi = {
   async createOrder(payload: CreateOrderPayload) {
     const res = await api.post('/orders/createorder', payload);
+    console.log("Orders API result:", res);
     return res.data; // { success, message, data }
   },
   async getOrderDetail(id: number | string) {
@@ -29,6 +30,10 @@ export const orderApi = {
     const res = await api.get(`/orders/customer/${customerId}`, { params: { page, size } });
     return res.data; // { success, data }
   },
+  async updateOrder(id: number | string, data: any) {
+  const res = await api.put(`/orders/updateorder/${id}`, data);
+  return res.data;
+},
 };
 
 
