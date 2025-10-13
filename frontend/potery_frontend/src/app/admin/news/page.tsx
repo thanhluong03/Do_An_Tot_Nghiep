@@ -11,6 +11,7 @@ import {
     UpdateNewsDto,
     ListNewsDto,
 } from "@/api/services/newService";
+import { Pencil, Trash2 } from "lucide-react";
 
 const initialFormState: CreateNewsDto = {
     title: "",
@@ -38,6 +39,7 @@ export default function NewsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchKey, setSearchKey] = useState("");
+    const [showForm, setShowForm] = useState(false);
 
     const fetchNews = useCallback(async () => {
         setLoading(true);
@@ -105,6 +107,7 @@ export default function NewsPage() {
 
             setForm(initialFormState);
             setErrors({});
+            setShowForm(false);
             fetchNews();
         } catch (error) {
             console.error("Lỗi CRUD:", error);
@@ -122,12 +125,21 @@ export default function NewsPage() {
         setForm(editableNews);
         setEditingId(news.id);
         setErrors({});
+        setShowForm(true);
     };
 
-    const handleCancelEdit = () => {
+    const handleAdd = () => {
+        setForm(initialFormState);
+        setEditingId(null);
+        setErrors({});
+        setShowForm(true);
+    };
+
+    const handleCancel = () => {
         setEditingId(null);
         setForm(initialFormState);
         setErrors({});
+        setShowForm(false);
     };
 
     const handleDelete = async (id: number) => {
@@ -176,7 +188,6 @@ export default function NewsPage() {
     };
 
     const totalPages = Math.ceil(totalItems / pageSize);
-    const startIndex = (currentPage - 1) * pageSize;
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -186,184 +197,197 @@ export default function NewsPage() {
                     Quản lý Bài đăng Tin tức
                 </h2>
 
-                {/* --- Form Thêm/Sửa --- */}
-                <div
-                    className={`border p-6 rounded-lg mb-8 ${
-                        editingId ? "border-yellow-400" : "border-blue-400"
-                    }`}
-                >
-                    <h3 className="text-xl font-semibold mb-4 text-gray-700">
-                        {editingId
-                            ? `Sửa Bài viết ID: ${editingId}`
-                            : "Thêm Bài viết mới"}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Tiêu đề
-                            </label>
-                            <input
-                                name="title"
-                                placeholder="Nhập tiêu đề"
-                                value={form.title || ""}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
-                            {errors.title && (
-                                <p className="text-red-500 text-xs mt-1">
-                                    {errors.title}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Ngày xuất bản
-                            </label>
-                            <input
-                                name="published_at"
-                                type="date"
-                                value={
-                                    form.published_at
-                                        ? formatDate(form.published_at.toString())
-                                        : ""
-                                }
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
-                        </div>
-
-                        <div className="md:col-span-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Nội dung
-                            </label>
-                            <textarea
-                                name="content"
-                                placeholder="Nhập nội dung"
-                                value={form.content || ""}
-                                onChange={handleChange}
-                                rows={4}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                            />
-                            {errors.content && (
-                                <p className="text-red-500 text-xs mt-1">
-                                    {errors.content}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2 md:col-span-3">
-                            <input
-                                id="is_published"
-                                name="is_published"
-                                type="checkbox"
-                                checked={!!form.is_published}
-                                onChange={handleChange}
-                                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                            />
-                            <label
-                                htmlFor="is_published"
-                                className="text-sm font-medium text-gray-700"
-                            >
-                                Đã xuất bản
-                            </label>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3">
-                        {editingId && (
-                            <button
-                                onClick={handleCancelEdit}
-                                className="px-5 py-2 rounded-lg font-semibold shadow-md transition bg-gray-400 hover:bg-gray-500 text-white"
-                            >
-                                Hủy Sửa
-                            </button>
-                        )}
+                {/* Nút Thêm mới */}
+                {!showForm && (
+                    <div className="flex justify-end mb-4">
                         <button
-                            onClick={handleSubmit}
-                            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-                                editingId
-                                    ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                                    : "bg-blue-500 hover:bg-blue-600 text-white"
-                            }`}
+                            onClick={handleAdd}
+                            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700"
                         >
-                            {editingId ? "Cập nhật" : "Thêm mới"}
+                            + Thêm bài viết
                         </button>
                     </div>
-                </div>
+                )}
 
-                {/* Bảng hiển thị tin tức */}
-                {loading ? (
-                    <div className="text-center py-8 text-blue-500 font-medium">
-                        Đang tải dữ liệu...
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
-                            <thead>
-                                <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
-                                    <th className="px-4 py-3 text-left">ID</th>
-                                    <th className="px-4 py-3 text-left">Tiêu đề</th>
-                                    <th className="px-4 py-3 text-left">Trạng thái</th>
-                                    <th className="px-4 py-3 text-left">Ngày XB</th>
-                                    <th className="px-4 py-3 text-center">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {newsList.map((news, idx) => (
-                                    <tr
-                                        key={news.id}
-                                        className={`${
-                                            idx % 2 === 0 ? "bg-gray-50" : "bg-white"
-                                        } hover:bg-blue-50 transition`}
-                                    >
-                                        <td className="px-4 py-3">{news.id}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-800 line-clamp-2">
-                                            {news.title}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span
-                                                className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                                    news.is_published
-                                                        ? "bg-green-100 text-green-800"
-                                                        : "bg-red-100 text-red-800"
-                                                }`}
-                                            >
-                                                {news.is_published ? "Đã XB" : "Nháp"}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">
-                                            {formatDate(news.published_at)}
-                                        </td>
-                                        <td className="px-4 py-3 flex gap-2 justify-center">
-                                            <button
-                                                onClick={() => handleEdit(news)}
-                                                className="px-3 py-1 text-sm rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-medium shadow"
-                                            >
-                                                Sửa
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(news.id)}
-                                                className="px-3 py-1 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium shadow"
-                                            >
-                                                Xoá
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {newsList.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={6}
-                                            className="text-center py-4 text-gray-500"
-                                        >
-                                            Không có bài viết nào
-                                        </td>
-                                    </tr>
+                {/* --- Form Thêm/Sửa --- */}
+                {showForm && (
+                    <div
+                        className={`border p-6 rounded-lg mb-8 ${editingId ? "border-yellow-400" : "border-blue-400"
+                            }`}
+                    >
+                        <h3 className="text-xl font-semibold mb-4 text-gray-700">
+                            {editingId
+                                ? `Sửa Bài viết ID: ${editingId}`
+                                : "Thêm Bài viết mới"}
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tiêu đề
+                                </label>
+                                <input
+                                    name="title"
+                                    placeholder="Nhập tiêu đề"
+                                    value={form.title || ""}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                {errors.title && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.title}</p>
                                 )}
-                            </tbody>
-                        </table>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Ngày xuất bản
+                                </label>
+                                <input
+                                    title="s"
+                                    name="published_at"
+                                    type="date"
+                                    value={
+                                        form.published_at
+                                            ? formatDate(form.published_at.toString())
+                                            : ""
+                                    }
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+
+                            <div className="md:col-span-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Nội dung
+                                </label>
+                                <textarea
+                                    name="content"
+                                    placeholder="Nhập nội dung"
+                                    value={form.content || ""}
+                                    onChange={handleChange}
+                                    rows={4}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                />
+                                {errors.content && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.content}</p>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2 md:col-span-3">
+                                <input
+                                    id="is_published"
+                                    name="is_published"
+                                    type="checkbox"
+                                    checked={!!form.is_published}
+                                    onChange={handleChange}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                />
+                                <label
+                                    htmlFor="is_published"
+                                    className="text-sm font-medium text-gray-700"
+                                >
+                                    Đã xuất bản
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={handleCancel}
+                                className="px-5 py-2 rounded-lg font-semibold shadow-md transition bg-gray-400 hover:bg-gray-500 text-white"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${editingId
+                                        ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                                        : "bg-blue-500 hover:bg-blue-600 text-white"
+                                    }`}
+                            >
+                                {editingId ? "Cập nhật" : "Thêm mới"}
+                            </button>
+                        </div>
                     </div>
+                )}
+
+                {/* Bảng danh sách tin tức */}
+                {!showForm && (
+                    <>
+                        {loading ? (
+                            <div className="text-center py-8 text-blue-500 font-medium">
+                                Đang tải dữ liệu...
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
+                                    <thead>
+                                        <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
+                                            <th className="px-4 py-3 text-left">ID</th>
+                                            <th className="px-4 py-3 text-left">Tiêu đề</th>
+                                            <th className="px-4 py-3 text-left">Trạng thái</th>
+                                            <th className="px-4 py-3 text-left">Ngày XB</th>
+                                            <th className="px-4 py-3 text-center">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {newsList.map((news, idx) => (
+                                            <tr
+                                                key={news.id}
+                                                className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"
+                                                    } hover:bg-blue-50 transition`}
+                                            >
+                                                <td className="px-4 py-3">{news.id}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-800 line-clamp-2">
+                                                    {news.title}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span
+                                                        className={`px-2 py-1 text-xs font-semibold rounded-full ${news.is_published
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-red-100 text-red-800"
+                                                            }`}
+                                                    >
+                                                        {news.is_published ? "Đã xuất bản" : "Nháp"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-600">
+                                                    {formatDate(news.published_at)}
+                                                </td>
+                                                <td className="px-4 py-3 flex gap-2 justify-center">
+                                                    <button
+                                                        title="sua"
+                                                        onClick={() => handleEdit(news)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 transition duration-150 shadow-sm"
+                                                    >
+                                                        <Pencil size={15} />
+
+                                                    </button>
+                                                    <button
+                                                        title="xoa"
+                                                        onClick={() => handleDelete(news.id)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition duration-150 shadow-sm"
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {newsList.length === 0 && (
+                                            <tr>
+                                                <td
+                                                    colSpan={6}
+                                                    className="text-center py-4 text-gray-500"
+                                                >
+                                                    Không có bài viết nào
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
