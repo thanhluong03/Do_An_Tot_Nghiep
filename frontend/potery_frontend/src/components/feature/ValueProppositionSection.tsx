@@ -96,16 +96,6 @@ export function ValuePropositionSection() {
                                     {item.description}
                                 </p>
                                 
-                                {/* Nút/Link Tìm Hiểu Thêm (Chỉ có ở Card 3) */}
-                                {index === 2 && (
-                                    <a 
-                                        href="#" 
-                                        className="text-[#65604E] text-base font-medium flex items-center space-x-1 hover:text-[#2C2A24] transition"
-                                    >
-                                        <span>Tìm hiểu thêm</span>
-                                        <span className="ml-1 text-lg">→</span> 
-                                    </a>
-                                )}
                             </div>
                         </div>
                     ))}

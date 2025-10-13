@@ -153,6 +153,20 @@ export default function CheckoutPage() {
     setError(null);
     setSelectedVoucher(selectedVoucher?.id === voucher.id ? null : voucher);
   };
+const handlePayment = async (orderId: number, amount: number) => {
+  const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${orderId}`;
+
+  try {
+    const pay = await paymentApi.createVnPayPayment(orderId, amount, returnUrl);
+    const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
+
+    if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
+    window.location.href = paymentUrl;
+  } catch (error) {
+    console.error('❌ Lỗi khi tạo thanh toán VNPay:', error);
+    toast.error('Không thể khởi tạo thanh toán VNPay');
+  }
+};
 
   /** ===================== TẠO ĐƠN HÀNG ===================== */
 const handleCreate = async () => {
@@ -204,15 +218,11 @@ const handleCreate = async () => {
     setOrderId(createdId);
 
     if (paymentMethod === 'VNPAY') {
-      const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${createdId}`;
-      const pay = await paymentApi.createVnPayPayment(createdId, totalAfterDiscount, returnUrl);
-      const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
-      if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
-      window.location.href = paymentUrl;
-    } else {
-      clearCart();
-      window.location.href = '/orders';
-    }
+  await handlePayment(createdId, totalAfterDiscount);
+} else {
+  clearCart();
+  window.location.href = '/orders';
+}
   } catch (e: any) {
     setError(e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng');
   } finally {

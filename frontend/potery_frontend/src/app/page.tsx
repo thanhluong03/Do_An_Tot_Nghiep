@@ -125,52 +125,6 @@ export default function HomePage() {
       <FeaturedProductSection />
       <LifestyleSection />
 
-      <CategorySection
-        categories={categories}
-        loading={categoriesLoading}
-        error={categoriesError}
-        onCategoryClick={handleCategoryClick}
-      />
-
-      {/* Featured Products Section */}
-      <section className="py-20 bg-[#FBFBFB]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#2C2A24] mb-6">
-              Sản Phẩm Nổi Bật
-            </h2>
-            <p className="text-xl text-[#65604E] max-w-3xl mx-auto leading-relaxed">
-              Những tác phẩm gốm sứ được yêu thích nhất, được chọn lọc kỹ lưỡng từ các nghệ nhân tài hoa
-            </p>
-          </div>
-
-          <ProductGrid
-            products={featuredProducts}
-            loading={featuredLoading}
-            error={featuredError}
-            onAddToCart={handleAddToCart}
-            onViewDetails={handleViewDetails}
-            columns={4}
-          />
-
-          <div className="text-center mt-16 flex items-center justify-center gap-4">
-            <a
-              href="/products"
-              className="inline-flex items-center px-8 py-4 bg-[#65604E] text-white font-semibold rounded-lg hover:bg-[#3D3A2F] transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              Xem Tất Cả Sản Phẩm
-              <img src="/pott.jpg" alt="arrow" className="ml-2 w-4 h-4" />
-            </a>
-            <a
-              href="/cart"
-              className="inline-flex items-center px-6 py-4 border-2 border-[#65604E] text-[#65604E] font-semibold rounded-lg hover:bg-[#F5F1EB] transition-colors duration-200"
-            >
-              Đi tới Giỏ Hàng
-            </a>
-          </div>
-        </div>
-      </section>
-
       <TestimonialsSection />
       <JournalSection />
       <NewsletterSection />
