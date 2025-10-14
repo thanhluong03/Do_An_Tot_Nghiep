@@ -4,6 +4,12 @@ export interface IOrderItem {
     quantity: number;
     price_at_order: number;
     product_name?: string;
+    product_images?: {
+        id?: number;
+        image_data: string;
+        is_main_image?: boolean;
+        priority?: number;
+    }[];
     description?: string;
     price?: number;
     category_id?: number;
@@ -35,7 +41,7 @@ export interface IListOrder {
     size: number;
     key?: string;
     customer_id?: number;
-    store_id?: number; // Thêm store_id (number)
-    status?: OrderStatus; // ✅ ĐÃ SỬA: Dùng OrderStatus enum
-    payment_status?: PaymentStatus; 
+    store_id?: number;
+    status?: OrderStatus;
+    payment_status?: PaymentStatus;
 }
