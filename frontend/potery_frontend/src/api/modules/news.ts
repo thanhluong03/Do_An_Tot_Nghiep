@@ -1,40 +1,40 @@
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const api = axios.create({ baseURL: API_BASE_URL, headers: { 'Content-Type': 'application/json' } });
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
 
 export interface NewsItem {
   id: string;
   title: string;
   content: string;
   published_at: string | number | Date;
+  image?: string;
   is_published?: number | boolean;
   user?: { id: string; name: string; logo?: string };
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
 }
 
 const mapNews = (n: any): NewsItem => ({
   id: String(n.id ?? n._id ?? ''),
   title: n.title ?? n.name ?? '',
   content: n.content ?? n.description ?? '',
+  image: n.image ?? '/pott.jpg',
   published_at: n.published_at ?? n.createdAt ?? new Date(),
   is_published: n.is_published ?? 1,
-  user: n.user ? { id: String(n.user.id ?? ''), name: n.user.name ?? 'Tác giả', logo: n.user.logo } : undefined,
-  createdAt: n.createdAt ?? new Date(),
-  updatedAt: n.updatedAt ?? new Date(),
+  user: n.user ? { id: String(n.user.id ?? ''), name: n.user.name ?? 'Tác giả' } : undefined,
 });
 
 export const newsApi = {
-  async list(): Promise<NewsItem[]> {
-    const res = await api.get('/news/listnews');
+  async list(page = 1, limit = 6): Promise<{ items: NewsItem[]; total: number }> {
+    const res = await api.get(`/news/listnews?page=${page}&limit=${limit}`);
     const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
-    return data.map(mapNews);
+    const total = res.data?.total ?? data.length;
+    return { items: data.map(mapNews), total };
   },
   async detail(id: string): Promise<NewsItem> {
     const res = await api.get(`/news/newsdetail/${id}`);
     return mapNews(res.data);
   },
 };
-
-

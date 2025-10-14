@@ -6,13 +6,31 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { orderApi } from '../../../api/modules/orders';
 import Image from 'next/image';
 import Link from 'next/link';
-
+import { productApi } from '../../../api/modules/products';
 export default function MyOrdersPage() {
   const { user, isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+const [productMap, setProductMap] = useState<Record<number, any>>({});
 
+useEffect(() => {
+  const fetchProducts = async () => {
+    const productIds = orders.flatMap(o => o.items?.map((i: any) => i.product_id)).filter(Boolean);
+    const uniqueIds = [...new Set(productIds)];
+    const result: Record<number, any> = {};
+
+    await Promise.all(uniqueIds.map(async id => {
+      try {
+        const data = await productApi.getProductById(String(id));
+        result[id] = data;
+      } catch {}
+    }));
+    setProductMap(result);
+  };
+
+  if (orders.length > 0) fetchProducts();
+}, [orders]);
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
     (async () => {
@@ -47,21 +65,21 @@ export default function MyOrdersPage() {
     switch (status?.toLowerCase()) {
       case 'created':
       case 'pending':
-        return 'text-yellow-700 bg-yellow-50';
+        return 'text-yellow-700 bg-yellow-100';
       case 'completed':
       case 'delivered':
-        return 'text-green-700 bg-green-50';
+        return 'text-green-700 bg-green-100';
       case 'cancelled':
-        return 'text-red-700 bg-red-50';
+        return 'text-red-700 bg-red-100';
       default:
-        return 'text-gray-700 bg-gray-50';
+        return 'text-gray-700 bg-gray-100';
     }
   };
 
   return (
     <BaseLayout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-semibold mb-6 text-[#2C2A24]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <h1 className="text-2xl font-semibold mb-8 text-[#2C2A24] text-center">
           Đơn hàng của tôi
         </h1>
 
@@ -74,14 +92,14 @@ export default function MyOrdersPage() {
               <Image
                 src="/empty-box.png"
                 alt="Chưa có đơn hàng"
-                width={120}
-                height={120}
+                width={150}
+                height={150}
                 className="mx-auto mb-4 opacity-70"
               />
               <p>Chưa có đơn hàng nào.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {orders.map((order) => {
                 const id = order.id ?? order._id;
                 const info = order.current_order || order;
@@ -91,17 +109,14 @@ export default function MyOrdersPage() {
                 return (
                   <div
                     key={id}
-                    className="bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                    className="bg-white rounded-2xl border border-[#E5E2D8] shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300"
                   >
                     {/* Header */}
-                    <div className="flex justify-between items-center border-b p-4 bg-gray-50">
+                    <div className="flex justify-between items-center border-b p-5 bg-[#F9F8F4]">
                       <div>
-                        <span className="text-gray-700 font-medium">
-                          Mã đơn hàng:
-                        </span>{' '}
-                        <span className="text-[#2C2A24] font-semibold">
-                          #{id}
-                        </span>
+                        <div className="font-medium text-[#2C2A24]">
+                          Mã đơn hàng: <span className="font-bold">#{id}</span>
+                        </div>
                         <div className="text-sm text-gray-500 mt-1">
                           Ngày đặt: {new Date(order.order_date).toLocaleString('vi-VN')}
                         </div>
@@ -113,79 +128,62 @@ export default function MyOrdersPage() {
                       </span>
                     </div>
 
-                    {/* Shipping & Payment Info */}
-                    <div className="flex flex-wrap justify-between items-start gap-4 p-4 bg-gray-50 border-b text-sm text-gray-700">
-                      <div>
-                        <p>
-                          <strong>Địa chỉ giao hàng:</strong>{' '}
-                          {info.shipping_address || order.shipping_address || '—'}
-                        </p>
-                        <p>
-                          <strong>Phương thức thanh toán:</strong>{' '}
-                          {info.payment_method || 'Không rõ'}
-                        </p>
-                      </div>
-                      <div>
-                        <p>
-                          <strong>Trạng thái thanh toán:</strong>{' '}
-                          {info.payment_status || 'Không rõ'}
-                        </p>
-                      </div>
+                    {/* Thông tin giao hàng & thanh toán */}
+                    <div className="bg-[#FDFCF9] border-b p-4 text-sm text-gray-700 grid sm:grid-cols-2 gap-2">
+                      <p><strong>Địa chỉ giao hàng:</strong> {info.shipping_address || '—'}</p>
+                      <p><strong>Phương thức thanh toán:</strong> {info.payment_method || 'Không rõ'}</p>
+                      <p><strong>Trạng thái thanh toán:</strong> {info.payment_status || 'Không rõ'}</p>
                     </div>
 
-                    {/* Products */}
+                    {/* Danh sách sản phẩm */}
                     <div className="divide-y">
                       {items.map((item: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="flex gap-4 items-center p-4"
-                        >
-                          <Image
-                            src={item.image || '/default-product.jpg'}
-                            alt={item.product_name || 'Sản phẩm'}
-                            width={80}
-                            height={80}
-                            className="rounded-md border object-cover"
+                        <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4">
+                          <div className="w-24 h-24 relative flex-shrink-0">
+                            <Image
+                            src={productMap[item.product_id]?.images?.[0] || '/default-product.jpg'}
+                            alt={productMap[item.product_id]?.name || item.product_name || 'Sản phẩm'}
+                            fill
+                            className="object-cover rounded-lg border border-gray-200"
                           />
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-800">
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-[#2C2A24] truncate">
                               {item.product_name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 truncate">
                               {item.description || ''}
                             </div>
                             <div className="text-sm text-gray-500">
-                              Cửa hàng: {item.store_name} - {item.store_address}
+                              Cửa hàng: {item.store_name} – {item.store_address}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              SL: {item.quantity}
-                            </div>
+                            <div className="text-sm text-gray-500">Số lượng: {item.quantity}</div>
                           </div>
-                          <div className="text-right text-gray-700 font-medium">
+                          <div className="text-right font-medium text-[#2C2A24] whitespace-nowrap">
                             {formatPrice(item.price_at_order * item.quantity)}
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex justify-between items-center p-4 border-t bg-gray-50">
+                    {/* Tổng cộng */}
+                    <div className="flex justify-between items-center p-5 border-t bg-[#F9F8F4]">
                       <div className="text-sm text-gray-600">
-                        Thanh toán: {info.payment_method || 'Chưa rõ'}
+                        Thanh toán: <strong>{info.payment_method || '—'}</strong>
                       </div>
                       <div className="text-right">
-                        <div className="text-gray-600 text-sm">Tổng tiền:</div>
+                        <div className="text-sm text-gray-600">Tổng tiền:</div>
                         <div className="text-xl font-semibold text-[#2C2A24]">
                           {formatPrice(total)}
                         </div>
                       </div>
                     </div>
 
-                    {/* Action */}
+                    {/* Nút hành động */}
                     <div className="flex justify-end p-4">
                       <Link
                         href={`/orders/${id}`}
-                        className="px-4 py-2 text-sm font-medium border rounded-lg hover:bg-gray-100 text-[#2C2A24]"
+                        className="px-5 py-2 text-sm font-medium border rounded-full hover:bg-[#F5F1EB] text-[#2C2A24] transition"
                       >
                         Xem chi tiết
                       </Link>

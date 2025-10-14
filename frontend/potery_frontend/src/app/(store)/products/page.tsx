@@ -5,99 +5,14 @@ import { useRouter } from 'next/navigation';
 import { BaseLayout } from '../../../layouts';
 import { ProductGrid } from '../../../components/feature/ProductGrid';
 import { useProducts, useCategories } from '../../../hooks/useProducts';
-import { Product } from '../../../types';
-
-function ProductFilters({
-  onChange,
-  initial,
-}: {
-  onChange: (filters: {
-    category?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }) => void;
-  initial?: {
-    category?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  };
-}) {
-  const { categories } = useCategories();
-  const [category, setCategory] = useState(initial?.category ?? '');
-  const [minPrice, setMinPrice] = useState(initial?.minPrice?.toString() ?? '');
-  const [maxPrice, setMaxPrice] = useState(initial?.maxPrice?.toString() ?? '');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initial?.sortOrder ?? 'asc');
-
-  const apply = () => {
-    onChange({
-      category: category || undefined,
-      minPrice: minPrice ? Number(minPrice) : undefined,
-      maxPrice: maxPrice ? Number(maxPrice) : undefined,
-      sortOrder,
-    });
-  };
-
-  return (
-    <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-3">
-      <select
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        className="border rounded px-3 py-2"
-      >
-        <option value="">Tất cả danh mục</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id.toString()}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      <input
-        value={minPrice}
-        onChange={(e) => setMinPrice(e.target.value)}
-        placeholder="Giá tối thiểu"
-        className="border rounded px-3 py-2"
-        type="number"
-      />
-      <input
-        value={maxPrice}
-        onChange={(e) => setMaxPrice(e.target.value)}
-        placeholder="Giá tối đa"
-        className="border rounded px-3 py-2"
-        type="number"
-      />
-      <select
-        title="Thứ tự"
-        value={sortOrder}
-        onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-        className="border rounded px-3 py-2"
-      >
-        <option value="asc">Tăng dần</option>
-        <option value="desc">Giảm dần</option>
-      </select>
-      <button onClick={apply} className="bg-[#65604E] text-white px-4 rounded">
-        Lọc
-      </button>
-    </div>
-  );
-}
 
 export default function ProductsPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [limit] = useState(12);
+  const limit = 6;
+  const { categories } = useCategories();
 
-  const [filters, setFilters] = useState<{
-    category?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }>({});
-
+  const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 'desc' }>({});
   const [search, setSearch] = useState('');
 
   const { products, loading, error, total } = useProducts({
@@ -108,101 +23,113 @@ export default function ProductsPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
-  // ✅ SEARCH + FILTER + SORT LOCAL
   const filteredProducts = useMemo(() => {
-    const lowerCaseQuery = search.toLowerCase().trim();
-
-    let result = products.filter((p) => {
-      const searchMatch =
-        !lowerCaseQuery ||
-        p.name.toLowerCase().includes(lowerCaseQuery) ||
-        (p.description && p.description.toLowerCase().includes(lowerCaseQuery));
-      return searchMatch;
-    });
-    if (filters.minPrice !== undefined) {
-      result = result.filter((p) => p.price >= filters.minPrice!);
+    let result = products;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description && p.description.toLowerCase().includes(q))
+      );
     }
-    if (filters.maxPrice !== undefined) {
-      result = result.filter((p) => p.price <= filters.maxPrice!);
-    }
-
     if (filters.sortOrder) {
       result = result.sort((a, b) =>
         filters.sortOrder === 'asc' ? a.price - b.price : b.price - a.price
       );
     }
-
     return result;
-  }, [products, search, filters]);
+  }, [products, filters, search]);
 
   return (
     <BaseLayout>
-      {/* --- BANNER BỘ SƯU TẬP --- */}
+      {/* Banner */}
       <div className="relative w-screen left-1/2 right-1/2 -mx-[50vw]">
         <img
           src="/bg-product.jpg"
           alt="Bộ sưu tập sản phẩm"
-          className="w-full h-[300px] md:h-[450px] object-cover"
+          className="w-full h-[260px] md:h-[340px] object-cover"
         />
-        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 text-white text-center px-4">
-          <h2 className="text-3xl md:text-5xl font-serif font-bold mb-3">
+        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 text-white text-center">
+          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-2">
             Bộ sưu tập sản phẩm
           </h2>
-          <p className="text-lg md:text-xl">
-            Tinh tế – Mộc mạc – Đậm hơi thở thủ công Việt
-          </p>
+          <p className="text-base md:text-lg">Tinh tế – Mộc mạc – Đậm hơi thở thủ công Việt</p>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* --- THANH TÌM KIẾM --- */}
-        <div className="text-center mb-6">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm kiếm sản phẩm gốm bạn yêu thích..."
-            className="w-full md:w-2/3 mx-auto border rounded-full px-6 py-3 focus:ring-2 focus:ring-[#c4975a] outline-none"
-          />
+
+      {/* Nội dung chính */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        {/* Thanh tìm kiếm riêng */}
+        <div className="flex justify-center mb-6 relative w-full">
+          <div className="relative w-full md:w-11/12">
+            {/* Logo hoặc icon tìm kiếm */}
+            <img
+              src="/MagnifyingGlass.png" // 👉 thay bằng đường dẫn logo của bạn
+              alt="Logo"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 opacity-70"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm kiếm sản phẩm gốm bạn yêu thích..."
+              className="w-full border rounded-full pl-12 pr-5 py-3 text-base focus:ring-2 focus:ring-[#c4975a] outline-none shadow-sm"
+            />
+          </div>
         </div>
 
-        {/* --- LỌC NÂNG CAO --- */}
-        <ProductFilters
-          onChange={(f) => {
-            setPage(1);
-            setFilters(f);
-          }}
-          initial={filters}
-        />
+        {/* Bộ sưu tập và sắp xếp ở dưới */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+          {/* Bộ sưu tập */}
+          <div className="flex items-center gap-2">
+            <label className="text-gray-700 text-lg font-bold">Bộ sưu tập</label>
+            <select
+              value={filters.category || ''}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, category: e.target.value || undefined }))
+              }
+              className="border rounded px-3 py-2 text-sm bg-white"
+            >
+              <option value="">Tất cả</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id.toString()}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* --- GRID SẢN PHẨM --- */}
+          {/* Sắp xếp */}
+          <div className="flex items-center gap-2">
+            <label className="text-gray-700 text-lg font-bold">Sắp xếp</label>
+            <select
+              value={filters.sortOrder || ''}
+              onChange={(e) =>
+                setFilters((f) => ({
+                  ...f,
+                  sortOrder: e.target.value
+                    ? (e.target.value as 'asc' | 'desc')
+                    : undefined,
+                }))
+              }
+              className="border rounded px-3 py-2 text-sm bg-white"
+            >
+              <option value="">Giá</option>
+              <option value="asc">Giá tăng dần</option>
+              <option value="desc">Giá giảm dần</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Lưới sản phẩm */}
         <ProductGrid
           products={filteredProducts}
           loading={loading}
           error={error}
-          onAddToCart={() => {}}
           onViewDetails={(p) => router.push(`/products/${p.id}`)}
-          columns={4}
+          columns={3}
         />
-
-        {/* --- PHÂN TRANG --- */}
-        <div className="flex items-center justify-center gap-3 mt-8">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="px-3 py-2 border rounded disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>
-            {page} / {totalPages}
-          </span>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-3 py-2 border rounded disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
       </div>
     </BaseLayout>
   );

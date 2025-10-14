@@ -3,105 +3,83 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Product } from '../../types';
-import { formatPrice, calculateDiscount } from '../../utils/format';
+import { formatPrice } from '../../utils/format';
 import { useAuth } from '../../contexts/AuthContext';
 import { cartApi } from '../../api/modules/cart';
 
-interface ProductCardProps {
-  product: Product;
-  onViewDetails?: (product: Product) => void;
-  className?: string;
-}
-
-export const ProductCard: React.FC<ProductCardProps> = ({
+export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Product) => void }> = ({
   product,
   onViewDetails,
-  className,
 }) => {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const discount = product.originalPrice
-    ? calculateDiscount(product.originalPrice, product.price)
-    : 0;
-
-  const handleNavigateToDetail = (product: Product) => {
-    if (onViewDetails) {
-      onViewDetails(product);
-      return;
-    }
-    router.push(`/products/${product.id}`);
-  };
-
-  // ✅ Hàm thêm vào giỏ hàng — dùng logic bạn gửi
   const handleAdd = async () => {
-    if (loading) return;
-    if (!isAuthenticated || !user || !user.id) {
-      setMessage('Vui lòng đăng nhập để thêm vào giỏ hàng');
-      return;
-    }
+    if (!isAuthenticated || !user) return alert('Vui lòng đăng nhập');
+    if (!user.id) return alert('Tài khoản không hợp lệ (missing id)');
+    const storeId = product.store?.id;
+    if (!storeId) return alert('Cửa hàng không hợp lệ');
 
     setLoading(true);
-    setMessage(null);
     try {
-      const storeId = product.store?.id;
-      const customerId = user.id as string;
       await cartApi.add({
-        customer_id: customerId,
+        customer_id: user.id,
         product_id: product.id,
         store_id: storeId,
         quantity: 1,
       });
-      setMessage('Đã thêm vào giỏ hàng');
-    } catch (e) {
-      console.error(e);
-      setMessage('Không thể thêm vào giỏ hàng');
+      alert('Đã thêm vào giỏ hàng!');
+    } catch {
+      alert('Không thể thêm sản phẩm.');
     } finally {
       setLoading(false);
-      setTimeout(() => setMessage(null), 2000);
     }
   };
 
   return (
-    <div
-      className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${className || ''}`}
-    >
+    <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-all">
       <div
-        className="aspect-[4/5] relative cursor-pointer"
-        onClick={() => handleNavigateToDetail(product)}
+        className="relative aspect-[4/3] cursor-pointer"
+        onClick={() => onViewDetails?.(product)}
       >
         <img
           src={product.images[0] || '/placeholder-product.jpg'}
           alt={product.name}
-          className="object-cover w-full h-full transition-transform duration-500 hover:scale-105"
+          className="object-cover w-full h-full"
         />
+        <button className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full p-2 shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
       </div>
 
-      <div className="p-4 text-center space-y-2">
-        <div className="text-xs text-gray-500">{product.category}</div>
-        <h3 className="font-medium text-gray-900">{product.name}</h3>
-        <div className="text-[#c4975a] font-semibold">{formatPrice(product.price)}</div>
+      <div className="p-5 text-left">
+        <p className="text-sm text-black-500 mb-1">{product.category}</p>
+        <h3 className="font-semibold text-2xl text-gray-900 mb-2">{product.name}</h3>
 
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[#c4975a] font-semibold text-base">
+            {formatPrice(product.price)}
+          </span>
+        </div>
+
+       <div className="flex flex-col gap-3">
         <button
-          onClick={() => handleNavigateToDetail(product)}
-          className="w-full mt-2 bg-[#c4975a] hover:bg-[#a3764a] text-white py-2 rounded transition-all"
+          onClick={() => onViewDetails?.(product)}
+          className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold transition"
         >
           Xem chi tiết
         </button>
-
         <button
           onClick={handleAdd}
           disabled={loading}
-          className="w-full mt-2 bg-[#c4975a] hover:bg-[#a3764a] text-white py-2 rounded transition-all disabled:opacity-50"
+          className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold disabled:opacity-50 transition"
         >
-          {loading ? 'Đang thêm...' : 'Thêm vào giỏ'}
+          {loading ? 'Đang thêm...' : 'Mua ngay'}
         </button>
-
-        {message && (
-          <p className="text-sm text-gray-600 mt-2">{message}</p>
-        )}
+      </div>
       </div>
     </div>
   );
