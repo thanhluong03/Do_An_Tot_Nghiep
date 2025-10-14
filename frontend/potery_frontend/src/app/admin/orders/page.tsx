@@ -31,12 +31,15 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
 export default function AdminOrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [stores, setStores] = useState<SelectOption[]>([]);
+  
 
   // STATE LỌC
   const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatus | "">("");
+
   // END STATE LỌC
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +83,7 @@ export default function AdminOrderPage() {
 
       const data = await listOrders(params);
       setOrders(data);
+      setAllOrders(data);
     } catch (err: any) {
       const message = "Không thể tải danh sách đơn hàng!";
       setError(message);
@@ -278,11 +282,12 @@ return (
       {/* 📊 Tabs trạng thái */}
       <div className="p-4 border-b border-gray-200">
         <OrderStatusTabs
-          currentOrderStatus={orderStatusFilter}
-          onSelectOrderStatus={handleSelectOrderStatus}
-          currentPaymentStatus={paymentStatusFilter}
-          onSelectPaymentStatus={handleSelectPaymentStatus}
-        />
+        orders={allOrders}
+        currentOrderStatus={orderStatusFilter}
+        onSelectOrderStatus={handleSelectOrderStatus}
+        currentPaymentStatus={paymentStatusFilter}
+        onSelectPaymentStatus={handleSelectPaymentStatus}
+      />
       </div>
 
       {/* 🧾 Danh sách đơn hàng */}
