@@ -22,6 +22,7 @@ import ImportProductForm from "@/components/adminImportProduct/ImportProductForm
 import ImportProductTable from "@/components/adminImportProduct/ImportProductTable";
 import ProductTable from "@/components/adminImportProduct/ProductTable";
 import Pagination from "@/components/inventory/Pagination";
+import { Category, getCategories } from "@/api/services/categoryService";
 
 export interface ImportProductFormState {
     product_id: string | string[] | undefined;
@@ -33,6 +34,9 @@ export type FormName = "product_id" | "supplier_id" | "import_quantity";
 
 export default function ImportProductPage() {
     const [importProducts, setImportProducts] = useState<ImportProduct[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+
+
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
@@ -54,33 +58,53 @@ export default function ImportProductPage() {
 
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
-    
-    const [isAdding, setIsAdding] = useState(false); 
+
+    const [isAdding, setIsAdding] = useState(false);
 
     const getDisplayName = useCallback((list: SelectOption[], id: number | string | string[] | undefined): string => {
         if (id === undefined || id === null) return "";
-        
-        if (id === 'all') return "Tất cả"; 
+
+        if (id === 'all') return "Tất cả";
 
         if (Array.isArray(id)) {
-             if (id.length === 0) return "";
-             const names = id.slice(0, 3).map(idStr => {
-                 const numericId = Number(idStr);
-                 const found = list.find((item) => Number(item.id) === numericId);
-                 return found?.name || `ID: ${idStr}`;
-             }).join(', ');
-             return id.length > 3 ? `${names}, ... (${id.length} mục)` : names;
+            if (id.length === 0) return "";
+            const names = id.slice(0, 3).map(idStr => {
+                const numericId = Number(idStr);
+                const found = list.find((item) => Number(item.id) === numericId);
+                return found?.name || `ID: ${idStr}`;
+            }).join(', ');
+            return id.length > 3 ? `${names}, ... (${id.length} mục)` : names;
         }
 
         const idValue = Number(id);
         if (isNaN(idValue)) return "";
-        
+
         const found = list.find((item) => Number(item.id) === idValue);
         return found?.name || `ID: ${id}`;
     }, []);
 
+    const fetchCategories = async () => {
+        try {
+            const res = await getCategories(); // trả về mảng Category
+            console.log("📦 Danh mục nhận được:", res);
+            setCategories(
+                Array.isArray(res)
+                    ? res.map((c) => ({
+                        id: c.id ?? 0, // fallback khi undefined
+                        name: c.name,
+                    }))
+                    : []
+            );
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Không thể tải danh mục sản phẩm!");
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        fetchCategories();
         fetchDropdownData();
         fetchAllProducts();
     }, [currentPage, pageSize]);
@@ -92,9 +116,11 @@ export default function ImportProductPage() {
         [suppliers, getDisplayName]
     );
 
-    const getCategoryName = useCallback((product: Product): string => {
-        return `Category ID: ${product.category_id || "N/A"}`;
-    }, []);
+    const getCategoryName = (product: Product) => {
+        const category = categories.find((c) => c.id === product.category_id);
+        return category ? category.name : "Không có danh mục";
+    };
+
 
     const fetchAllProducts = async () => {
         try {
@@ -175,14 +201,14 @@ export default function ImportProductPage() {
         setForm((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: "" }));
     };
-    
+
     const toggleAddMode = () => {
         if (editingId !== null) {
             handleCancelEdit();
         }
         if (!isAdding) {
-             setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
-             setErrors({});
+            setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
+            setErrors({});
         }
         setIsAdding(prev => !prev);
     };
@@ -191,14 +217,14 @@ export default function ImportProductPage() {
         setEditingId(null);
         setForm({ product_id: undefined, supplier_id: undefined, import_quantity: 0 });
         setErrors({});
-        setIsAdding(false); 
+        setIsAdding(false);
     };
 
     const handleEdit = (item: ImportProduct) => {
-        setIsAdding(false); 
+        setIsAdding(false);
         setEditingId(item.id);
         setForm({
-            product_id: String(item.product_id), 
+            product_id: String(item.product_id),
             supplier_id: String(item.supplier_id),
             import_quantity: item.import_quantity || 0,
         });
@@ -239,11 +265,11 @@ export default function ImportProductPage() {
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
         if (isCreating) {
-            if (form.product_id === undefined || form.product_id === null || 
+            if (form.product_id === undefined || form.product_id === null ||
                 (Array.isArray(form.product_id) && form.product_id.length === 0)) {
                 newErrors.product_id = "Vui lòng chọn ít nhất 1 Sản phẩm (hoặc Tất cả).";
             }
-            if (form.supplier_id === undefined || form.supplier_id === null || 
+            if (form.supplier_id === undefined || form.supplier_id === null ||
                 (Array.isArray(form.supplier_id) && form.supplier_id.length === 0)) {
                 newErrors.supplier_id = "Vui lòng chọn ít nhất 1 Nhà cung cấp (hoặc Tất cả).";
             }
@@ -261,8 +287,8 @@ export default function ImportProductPage() {
         try {
             if (isCreating) {
                 const createDto: CreateImportProductDto = {
-                    product_id: form.product_id, 
-                    supplier_id: form.supplier_id, 
+                    product_id: form.product_id,
+                    supplier_id: form.supplier_id,
                     import_quantity: form.import_quantity,
                 };
                 await createImportProduct(createDto);
@@ -272,9 +298,9 @@ export default function ImportProductPage() {
                 await updateImportProduct(editingId!, updateDto);
                 toast.success(`Cập nhật phiếu nhập kho ID ${editingId} thành công!`);
             }
-            handleCancelEdit(); 
+            handleCancelEdit();
             fetchData();
-            fetchAllProducts(); 
+            fetchAllProducts();
         } catch (error: any) {
             const message = error.response?.data?.message || error.message || "Lỗi không xác định";
             toast.error("Lỗi xảy ra khi xử lý: " + message);
@@ -326,9 +352,8 @@ export default function ImportProductPage() {
                     {editingId === null && (
                         <button
                             onClick={toggleAddMode}
-                            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition text-white ${
-                                isAdding ? 'bg-red-500 hover:bg-red-600' : 'bg-[#F54900] hover:bg-orange-600'
-                            }`}
+                            className={`px-5 py-2 rounded-lg font-semibold shadow-md transition text-white ${isAdding ? 'bg-red-500 hover:bg-red-600' : 'bg-[#F54900] hover:bg-orange-600'
+                                }`}
                         >
                             {isAdding ? "Hủy Thêm mới" : "Thêm Phiếu Nhập kho"}
                         </button>
@@ -342,13 +367,13 @@ export default function ImportProductPage() {
                         errors={errors}
                         products={products}
                         suppliers={suppliers}
-                        allProducts={allProducts} 
-                        getDisplayName={getDisplayName as any} 
+                        allProducts={allProducts}
+                        getDisplayName={getDisplayName as any}
                         handleValueChange={handleValueChange}
                         handleNumberChange={handleNumberChange}
                         handleSubmit={handleSubmit}
                         handleCancelEdit={handleCancelEdit}
-                        isAdding={isAdding} 
+                        isAdding={isAdding}
                     />
                 )}
 
@@ -363,7 +388,7 @@ export default function ImportProductPage() {
                             Nhà cung cấp
                         </label>
                         <select
-                        title="Lọc theo nhà cung cấp"
+                            title="Lọc theo nhà cung cấp"
                             value={selectedSupplierId}
                             onChange={handleSupplierFilterChange}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-gray-50 hover:bg-white focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none transition-all"
@@ -447,7 +472,7 @@ export default function ImportProductPage() {
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
                         totalItems={filteredImportProducts.length}
-                        allProducts={allProducts} 
+                        allProducts={allProducts}
                     />
                 )}
 
