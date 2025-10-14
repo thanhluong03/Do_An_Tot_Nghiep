@@ -37,6 +37,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
     <div className="relative user-dropdown-container">
       {/* Nút chính / Tên người dùng */}
       <button
+        title='user'
         className="px-3 py-1 text-sm text-[#2C2A24] flex items-center hover:bg-[#F5F1EB] rounded-md transition-colors duration-200"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
@@ -114,35 +115,25 @@ export const Header: React.FC = () => {
     <header className="bg-[#FBFBFB] shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo (giữ nguyên) */}
           <div className="flex items-center space-x-3">
-    {/* Logo Circle with PNG Image */}
-    {/* Thay đổi màu nền và thêm border cho vòng tròn */}
-    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC]"> {/* Màu nền trắng, viền nhạt */}
+    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC]"> 
               <img 
-                  src="/logo.png" // Đảm bảo đây là đường dẫn đúng tới ảnh logo PNG của bạn (ví dụ: cành lúa mì/gạo)
+                  src="/logo.png" 
                   alt="Tiệm Gốm Nhà Gạo Logo" 
-                  className="w-10 h-10 object-contain" // Kích thước và object-contain để ảnh logo không bị cắt
-                  // Lưu ý: Nếu logo PNG của bạn không có màu nâu nhạt, bạn không thể thay đổi nó bằng CSS.
-                  // Bạn cần chuẩn bị file PNG có màu sắc mong muốn.
+                  className="w-10 h-10 object-contain" 
+                  
               />
           </div>
-          {/* Tên thương hiệu */}
           <div>
-              {/* Tiệm Gốm */}
-              <h1 className="text-2xl font-serif text-[#65604E] -mb-1 leading-none"> {/* Kích thước to hơn, màu nâu nhạt hơn */}
+              <h1 className="text-2xl font-serif text-[#65604E] -mb-1 leading-none"> 
                   Tiệm Gốm
               </h1>
-              {/* Nhà Gạo */}
-              <p className="text-sm font-serif italic text-[#65604E]"> {/* Kích thước nhỏ hơn, font italic, màu tương tự */}
+              <p className="text-sm font-serif italic text-[#65604E]">
                   Nhà Gạo
               </p>
           </div>
       </div>
-
-          {/* Desktop Navigation (giữ nguyên) */}
           <nav className="hidden md:flex items-center space-x-8">
-            {/* ... (Menu Code) ... */}
             {menuItems.map((item) => (
                <div key={item.name} className="relative group">
                  <a
@@ -169,20 +160,13 @@ export const Header: React.FC = () => {
                </div>
             ))}
           </nav>
-
-          {/* Icons & Account */}
           <div className="flex items-center space-x-4">
-            {/* Search (giữ nguyên) */}
             <button className="p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                </svg>
             </button>
-
-            {/* Cart (giữ nguyên) */}
             <a href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
-    
-    {/* THAY THẾ ICON SVG BẰNG ẢNH PNG */}
                 <img 
                     src="/Bag.png" // Thay đổi đường dẫn này thành đường dẫn file .png thực tế của bạn
                     alt="Giỏ hàng" 

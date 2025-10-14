@@ -1,7 +1,6 @@
-// src/components/inventory/InventoryTable.tsx (Đã thêm cột Ảnh và sửa lỗi Null)
 
 import React from 'react';
-// Import Product, getProductImageUrl
+import Image from "next/image"; 
 import { Inventory, SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService";
 import { Pencil, Trash2 } from 'lucide-react';
 
@@ -88,25 +87,23 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                             {inventories.map((item) => (
                                 <tr
                                     key={item.id}
-                                    // CẬP NHẬT: Hiệu ứng hover tinh tế và đường kẻ mỏng
                                     className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
                                 >
-                                    {/* THAY ĐỔI: Tăng padding và font-weight cho ID */}
                                     <td className="px-4 py-3 font-semibold text-gray-800 truncate">{item.id}</td>
                                     
-                                    {/* CỘT ẢNH */}
                                     <td className="px-2 py-2 text-center">
                                         <div className="flex justify-center">
-                                            <img
-                                                src={getInventoryProductImageUrl(item.product_id, allProducts)}
-                                                alt={getDisplayName(products, item.product_id)}
-                                                // CẬP NHẬT: Ảnh bo góc, shadow nhẹ
-                                                className="w-9 h-9 object-cover rounded-md shadow-sm"
-                                                onError={(e) => { 
-                                                    e.currentTarget.onerror = null; 
-                                                    e.currentTarget.src = "/no-image.jpg"; 
+                                            <Image
+                                                src={getInventoryProductImageUrl(item.product_id, allProducts) || "/no-image.jpg"}
+                                                alt={getDisplayName(products, item.product_id) || "Product Image"}
+                                                width={36}
+                                                height={36} 
+                                                className="object-cover rounded-md shadow-sm"
+                                                onError={(e) => {
+                                                    const target = e.currentTarget as HTMLImageElement;
+                                                    target.src = "/no-image.jpg";
                                                 }}
-                                            />
+                                                />
                                         </div>
                                     </td>
                                     
@@ -123,7 +120,6 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                         {getDisplayName(stores, item.store_id)}
                                     </td>
                                     
-                                    {/* CẬP NHẬT: Tồn kho/Đã bán dùng text-lg và màu sắc hiện đại */}
                                     <td className="px-4 py-3 text-center text-base font-extrabold text-teal-600">
                                         {(item.quantity_stock ?? 0).toLocaleString()} 
                                     </td>
@@ -131,19 +127,19 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                         {(item.quantity_sold ?? 0).toLocaleString()}
                                     </td>
                                     
-                                    {/* CẬP NHẬT: Ngày tháng dùng text-xs và màu xám nhạt */}
                                     <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.created_at)}</td>
                                     <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updated_at)}</td>
                                     
-                                    {/* CẬP NHẬT: Nút hành động với style thống nhất */}
                                     <td className="px-4 py-3 text-center space-x-1">
                                         <button
+                                            title='edit'
                                             onClick={() => handleEdit(item)}
                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
                                         >
                                             <Pencil size={15} />
                                         </button>
                                         <button
+                                            title='trash'
                                             onClick={() => handleDelete(item.id)}
                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
                                         >
