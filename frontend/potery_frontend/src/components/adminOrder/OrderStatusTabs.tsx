@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { Order, OrderStatus, PaymentStatus } from "@/api/services/orderService";
 
 interface Props {
-  allOrders: Order[]; // 🟢 dùng danh sách toàn bộ đơn hàng
+  allOrders: Order[];
   currentOrderStatus: OrderStatus | "";
   onSelectOrderStatus: (status: OrderStatus | "") => void;
   currentPaymentStatus: PaymentStatus | "";
@@ -21,10 +21,10 @@ const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
 ];
 
 const PAYMENT_TABS: { value: PaymentStatus | ""; label: string }[] = [
-  { value: "", label: "Tất cả TT" },
-  { value: "UNPAID", label: "Chưa TT" },
+  { value: "", label: "Tất cả" },
+  { value: "UNPAID", label: "Chưa thanh toán" },
   { value: "PENDING", label: "Đang xử lý" },
-  { value: "PAID", label: "Đã TT" },
+  { value: "PAID", label: "Đã thanh toán" },
   { value: "REFUNDED", label: "Hoàn tiền" },
 ];
 
@@ -52,7 +52,6 @@ export default function OrderStatusTabs({
 
   return (
     <div className="space-y-2">
-      {/* Trạng thái đơn hàng */}
       <div className="flex flex-wrap items-center border-b border-gray-200 text-sm font-medium">
         {ORDER_TABS.map((tab) => {
           const isActive = currentOrderStatus === tab.value;
@@ -78,7 +77,6 @@ export default function OrderStatusTabs({
         })}
       </div>
 
-      {/* Trạng thái thanh toán */}
       <div className="flex flex-wrap items-center border-b border-gray-200 text-sm font-medium pt-1">
         {PAYMENT_TABS.map((tab) => {
           const isActive = currentPaymentStatus === tab.value;

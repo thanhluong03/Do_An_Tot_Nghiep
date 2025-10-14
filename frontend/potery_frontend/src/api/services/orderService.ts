@@ -1,6 +1,7 @@
 // src/api/services/orderService.ts
 import axios from 'axios';
 const API_URL_STORES = "http://localhost:3000/stores"; 
+const API_URL = 'http://localhost:3000/orders'; 
 export interface OrderItem {
     product_id: number;
     store_id?: number;
@@ -13,6 +14,7 @@ export interface OrderItem {
     category_name?: string;
     store_name?: string;
     store_address?: string;
+
 }
 
 export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELED' | 'REJECTED';
@@ -39,8 +41,10 @@ export interface Order {
     updated_at?: string; 
     deleted_at?: string | null;
     customer_id: number;
+    customer_full_name?: string;  
     order_date: string;
     total_amount: string | number; 
+    customer_name?: string;
     status: OrderStatus;
     shipping_address?: string;
     payment_method: PaymentMethod;
@@ -54,8 +58,8 @@ export interface ListOrderParams {
     size?: number;
     key?: string;
     customer_id?: number;
- store_id?: number | "";
-    status?: OrderStatus | ""; // Trạng thái đơn hàng
+    store_id?: number | "";
+    status?: OrderStatus | "";
     payment_status?: PaymentStatus | ""; 
 }
 
@@ -80,8 +84,6 @@ export const listDropdownStores = async (): Promise<Store[]> => {
   }));
 };
 
-
-const API_URL = 'http://localhost:3000/orders'; 
 
 export async function listOrders(params: ListOrderParams): Promise<Order[]> {
     const res = await axios.get(`${API_URL}/listorders`, { params });

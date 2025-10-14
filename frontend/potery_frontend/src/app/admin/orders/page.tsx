@@ -11,12 +11,14 @@ import {
   OrderStatus,
   PaymentStatus,
 } from "@/api/services/orderService";
+import { listUsers, User } from "@/api/services/userService";
 import OrderTable from "@/components/adminOrder/OrderTable";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
 import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
 import { PlusCircle, Search } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 interface SelectOption {
   id: number;
@@ -26,11 +28,14 @@ interface SelectOption {
 interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
   total_amount: number;
   items: OrderItem[];
+  customer_name?: string;
 }
 
 export default function AdminOrderPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [allOrders, setAllOrders] = useState<Order[]>([]); // 🟢 lưu toàn bộ đơn hàng để tính số lượng
+  const [orders, setOrders] = useState<FullOrderDetails[]>([]);
+  const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+
   const [stores, setStores] = useState<SelectOption[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
@@ -42,17 +47,29 @@ export default function AdminOrderPage() {
   const [selectedOrder, setSelectedOrder] = useState<FullOrderDetails | null>(null);
   const [editingOrder, setEditingOrder] = useState<FullOrderDetails | null>(null);
 
+   const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   useEffect(() => {
-    listDropdownStores()
-      .then(setStores)
-      .catch(() => toast.error("Không thể tải danh sách cửa hàng!"));
+    listUsers()
+      .then(setUsers)
+      .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
   }, []);
 
-  // 🟢 Fetch toàn bộ để hiển thị số lượng trên tabs
   async function fetchAllOrders() {
     try {
       const data = await listOrders({});
-      setAllOrders(data);
+      const ordersWithNames = data.map((order) => ({
+        ...order,
+        customer_name:
+          users.find((u) => u.id === order.customer_id)?.full_name ||
+          `Khách #${order.customer_id}`,
+        total_amount: typeof order.total_amount === "number"
+          ? order.total_amount
+          : parseFloat(order.total_amount as string),
+        items: order.items || [],
+      }));
+      setAllOrders(ordersWithNames);
     } catch {
       toast.error("Không thể tải thống kê đơn hàng!");
     }
@@ -62,7 +79,14 @@ export default function AdminOrderPage() {
     setLoading(true);
     setError(null);
     try {
-      const params: any = {
+      const params: {
+        page: number;
+        size: number;
+        key: string;
+        store_id?: number;
+        status?: OrderStatus;
+        payment_status?: PaymentStatus;
+      } = {
         page: pagination.page,
         size: pagination.size,
         key: searchTerm,
@@ -71,7 +95,17 @@ export default function AdminOrderPage() {
         payment_status: paymentStatusFilter || undefined,
       };
       const data = await listOrders(params);
-      setOrders(data);
+      const ordersWithNames = data.map((order) => ({
+        ...order,
+        customer_name:
+          users.find((u) => u.id === order.customer_id)?.full_name ||
+          `Khách #${order.customer_id}`,
+        total_amount: typeof order.total_amount === "number"
+          ? order.total_amount
+          : parseFloat(order.total_amount as string),
+        items: order.items || [],
+      }));
+      setOrders(ordersWithNames);
     } catch {
       setError("Không thể tải danh sách đơn hàng!");
     } finally {
@@ -80,12 +114,12 @@ export default function AdminOrderPage() {
   }
 
   useEffect(() => {
-    fetchAllOrders();
-  }, []); // 🟢 chỉ gọi 1 lần khi vào trang
+    if (users.length > 0) {
+      fetchAllOrders();
+      fetchOrders();
 
-  useEffect(() => {
-    fetchOrders();
-  }, [pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
+    }
+  }, [users, pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,18 +183,38 @@ export default function AdminOrderPage() {
     }
   };
 
-  const handleDeleteOrder = async (id: number) => {
-    if (window.confirm(`Bạn có chắc muốn xóa đơn hàng #${id}?`)) {
-      try {
+ const handleDeleteOrder = (id: number) => {
+    setOrderToDeleteId(id);
+    setIsDeleteModalOpen(true);
+};
+
+// 💡 THÊM HÀM THỰC THI XÓA: Gọi khi người dùng bấm 'Đồng ý' trong modal
+const handleDeleteConfirmed = async () => {
+    if (orderToDeleteId === null) return;
+
+    const id = orderToDeleteId;
+    
+    // Đóng modal và reset state trước khi gọi API
+    setIsDeleteModalOpen(false);
+    setOrderToDeleteId(null);
+    
+    setLoading(true);
+    try {
         await deleteOrder(id);
-        toast.success("🗑️ Xóa đơn hàng thành công!");
+        toast.success("Xóa đơn hàng thành công!");
         await fetchOrders();
         await fetchAllOrders();
-      } catch {
-        toast.error("❌ Xóa đơn hàng thất bại!");
-      }
+    } catch {
+        toast.error("Xóa đơn hàng thất bại!");
+    } finally {
+        setLoading(false);
     }
-  };
+};
+
+const handleDeleteCancelled = () => {
+    setIsDeleteModalOpen(false);
+    setOrderToDeleteId(null);
+};
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -172,7 +226,6 @@ export default function AdminOrderPage() {
           </h1>
         </div>
 
-        {/* Tìm kiếm */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
           <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 w-full md:w-auto md:flex-grow">
             <div className="relative flex-grow min-w-[200px]">
@@ -211,7 +264,7 @@ export default function AdminOrderPage() {
           </form>
 
           <button
-            onClick={() => toast("🚀 Chức năng tạo đơn hàng đang được phát triển!")}
+            onClick={() => toast("Chức năng tạo đơn hàng đang được phát triển!")}
             className="flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition w-full md:w-auto"
           >
             <PlusCircle className="w-5 h-5" />
@@ -219,8 +272,7 @@ export default function AdminOrderPage() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-gray-200">
           <OrderStatusTabs
             allOrders={allOrders}
             currentOrderStatus={orderStatusFilter}
@@ -233,7 +285,6 @@ export default function AdminOrderPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="p-4">
           {loading && (
             <p className="text-center text-indigo-600 py-6 font-medium">
@@ -272,6 +323,16 @@ export default function AdminOrderPage() {
           onUpdated={(data) => handleUpdateOrder(editingOrder.id, data)}
         />
       )}
+      {isDeleteModalOpen && orderToDeleteId !== null && (
+            <ConfirmDialog
+                title="Xác nhận Xóa Đơn hàng"
+                message={`Bạn có chắc chắn muốn xóa đơn hàng #${orderToDeleteId}? Thao tác này không thể hoàn tác.`}
+                confirmText="Xóa vĩnh viễn"
+                cancelText="Hủy bỏ"
+                onConfirm={handleDeleteConfirmed}
+                onCancel={handleDeleteCancelled}
+            />
+        )}
     </div>
   );
 }

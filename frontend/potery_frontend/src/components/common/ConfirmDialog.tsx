@@ -20,7 +20,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
 }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white/10 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg p-6 w-80">
         <h3 className="text-lg font-semibold text-gray-800 text-center mb-3">
           {title}
@@ -35,7 +35,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded bg-red-500 hover:bg-red-600 text-white"
+            className="px-4 py-2 rounded bg-orange-500 hover:bg-orange-600 text-white"
           >
             {confirmText}
           </button>

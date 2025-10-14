@@ -71,8 +71,8 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
             <th className="px-4 py-3 font-semibold">Mã đơn</th>
             <th className="px-4 py-3 font-semibold">Khách hàng</th>
             <th className="px-4 py-3 font-semibold">Tổng tiền</th>
-            <th className="px-4 py-3 text-center font-semibold">Trạng thái ĐH</th>
-            <th className="px-4 py-3 text-center font-semibold">Trạng thái TT</th>
+            <th className="px-4 py-3 text-center font-semibold">Trạng thái đơn hàng</th>
+            <th className="px-4 py-3 text-center font-semibold">Trạng thái thanh toán</th>
             <th className="px-4 py-3 font-semibold">Ngày đặt</th>
             <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
           </tr>
@@ -85,9 +85,9 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
                 className="border-t border-gray-100 hover:bg-indigo-50 transition-colors duration-100"
               >
                 <td className="px-4 py-3 font-semibold text-indigo-600">#{order.id}</td>
-                <td className="px-4 py-3">{order.customer_id}</td>
+                <td className="px-4 py-3">{order.customer_name || `Khách #${order.customer_id}`}</td>
                 <td className="px-4 py-3 font-medium text-gray-900">
-                  {formatCurrency(order.total_amount)}
+                  {formatCurrency(Number(order.total_amount))}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span
