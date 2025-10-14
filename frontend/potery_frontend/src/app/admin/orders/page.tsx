@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   getOrderDetail,
   listOrders,
@@ -30,169 +30,117 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
 
 export default function AdminOrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]); // 🟢 lưu toàn bộ đơn hàng để tính số lượng
   const [stores, setStores] = useState<SelectOption[]>([]);
-  
-
-  // STATE LỌC
   const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatus | "">("");
-
-  // END STATE LỌC
-  const [allOrders, setAllOrders] = useState<Order[]>([]);
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [pagination, setPagination] = useState({ page: 1, size: 10 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({ page: 1, size: 10, total: 0 });
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<FullOrderDetails | null>(null);
   const [editingOrder, setEditingOrder] = useState<FullOrderDetails | null>(null);
 
-  // 🔹 Lấy danh sách cửa hàng cho dropdown filter
   useEffect(() => {
-    async function fetchStores() {
-      try {
-        const data = await listDropdownStores();
-        setStores(data);
-      } catch (err) {
-        console.error("Lỗi tải cửa hàng:", err);
-        toast.error("Không thể tải danh sách cửa hàng!");
-      }
-    }
-    fetchStores();
+    listDropdownStores()
+      .then(setStores)
+      .catch(() => toast.error("Không thể tải danh sách cửa hàng!"));
   }, []);
 
+  // 🟢 Fetch toàn bộ để hiển thị số lượng trên tabs
+  async function fetchAllOrders() {
+    try {
+      const data = await listOrders({});
+      setAllOrders(data);
+    } catch {
+      toast.error("Không thể tải thống kê đơn hàng!");
+    }
+  }
 
-  // 🔹 Lấy danh sách đơn hàng (Bao gồm logic lọc mới)
-  const fetchOrders = useCallback(async (
-    page: number,
-    size: number,
-    key: string,
-    storeId?: number | "",
-    status?: OrderStatus | "",
-    paymentStatus?: PaymentStatus | ""
-  ) => {
+  async function fetchOrders() {
     setLoading(true);
     setError(null);
     try {
-      const params: any = { page, size, key };
-      // Chỉ thêm tham số vào request nếu giá trị không phải là rỗng ("")
-      if (storeId) params.store_id = storeId;
-      if (status) params.status = status;
-      if (paymentStatus) params.payment_status = paymentStatus;
-
+      const params: any = {
+        page: pagination.page,
+        size: pagination.size,
+        key: searchTerm,
+        store_id: selectedStoreId || undefined,
+        status: orderStatusFilter || undefined,
+        payment_status: paymentStatusFilter || undefined,
+      };
       const data = await listOrders(params);
       setOrders(data);
-      setAllOrders(data);
-    } catch (err: any) {
-      const message = "Không thể tải danh sách đơn hàng!";
-      setError(message);
-      toast.error(message);
+    } catch {
+      setError("Không thể tải danh sách đơn hàng!");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
-  // 🔹 useEffect để gọi fetchOrders khi các tham số thay đổi
-  // => Đây là nơi duy nhất nên gọi API khi các filter state thay đổi (trừ khi nhấn nút Search)
   useEffect(() => {
-    // Gọi fetchOrders mỗi khi có bất kỳ tham số lọc nào thay đổi
-    fetchOrders(
-      pagination.page,
-      pagination.size,
-      searchTerm,
-      selectedStoreId,
-      orderStatusFilter,
-      paymentStatusFilter
-    );
-  }, [fetchOrders, pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
+    fetchAllOrders();
+  }, []); // 🟢 chỉ gọi 1 lần khi vào trang
 
-  // 🔹 Tìm kiếm đơn hàng (khi nhấn nút Tìm kiếm)
+  useEffect(() => {
+    fetchOrders();
+  }, [pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Đặt lại trang về 1 và gọi API ngay lập tức
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    // Gọi API để thấy kết quả ngay lập tức
-    fetchOrders(1, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter);
+    setPagination({ ...pagination, page: 1 });
+    fetchOrders();
   };
 
-  // 🔹 Lọc theo cửa hàng (Chỉ cập nhật state, để useEffect gọi API)
-  const handleFilterByStore = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const storeId = value ? Number(value) : "";
-    setSelectedStoreId(storeId);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    // LOẠI BỎ: fetchOrders() - useEffect sẽ làm việc này
-  };
-
-  // 🔹 Xử lý chọn Trạng thái Đơn hàng (Chỉ cập nhật state, để useEffect gọi API)
   const handleSelectOrderStatus = (status: OrderStatus | "") => {
     setOrderStatusFilter(status);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    // LOẠI BỎ: fetchOrders() - useEffect sẽ làm việc này
+    setPagination({ ...pagination, page: 1 });
   };
 
-  // 🔹 Xử lý chọn Trạng thái Thanh toán (Chỉ cập nhật state, để useEffect gọi API)
-  const handleSelectPaymentStatus = (paymentStatus: PaymentStatus | "") => {
-    setPaymentStatusFilter(paymentStatus);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    // LOẠI BỎ: fetchOrders() - useEffect sẽ làm việc này
+  const handleSelectPaymentStatus = (status: PaymentStatus | "") => {
+    setPaymentStatusFilter(status);
+    setPagination({ ...pagination, page: 1 });
   };
 
-
-  // 🔹 Xem chi tiết (Giữ nguyên)
   const handleViewOrder = async (order: Order) => {
     setLoading(true);
     try {
-      const detailData = await getOrderDetail(order.id);
-      const fullOrderDetails: FullOrderDetails = {
-        ...detailData,
-        items: detailData.current_order?.items || detailData.items || [],
-        total_amount: parseFloat(detailData.total_amount as string),
+      const detail = await getOrderDetail(order.id);
+      const fullOrder: FullOrderDetails = {
+        ...detail,
+        items: detail.current_order?.items || detail.items || [],
+        total_amount: parseFloat(detail.total_amount as string),
       };
-      setSelectedOrder(fullOrderDetails);
+      setSelectedOrder(fullOrder);
     } catch {
       toast.error("Không thể tải chi tiết đơn hàng!");
-      setSelectedOrder({
-        ...order,
-        total_amount: parseFloat(order.total_amount as string),
-        items: order.items || [],
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Sửa trạng thái (Giữ nguyên)
   const handleEditStatus = async (order: Order) => {
     try {
-      const detailData = await getOrderDetail(order.id);
-      const fullOrderDetails: FullOrderDetails = {
-        ...detailData,
-        items: detailData.current_order?.items || detailData.items || [],
-        total_amount: parseFloat(detailData.total_amount as string),
+      const detail = await getOrderDetail(order.id);
+      const fullOrder: FullOrderDetails = {
+        ...detail,
+        items: detail.current_order?.items || detail.items || [],
+        total_amount: parseFloat(detail.total_amount as string),
       };
-      setEditingOrder(fullOrderDetails);
+      setEditingOrder(fullOrder);
     } catch {
-      setEditingOrder({
-        ...order,
-        items: order.items || [],
-        total_amount: parseFloat(order.total_amount as string),
-      });
+      setEditingOrder({ ...order, items: order.items || [], total_amount: parseFloat(order.total_amount as string) });
     }
   };
 
-  // 🔹 Cập nhật đơn hàng (Giữ nguyên logic gọi fetchOrders sau update)
-  const handleUpdateOrder = async (
-    id: number,
-    data: { status?: string; payment_status?: string; payment_method?: string }
-  ) => {
+  const handleUpdateOrder = async (id: number, data: any) => {
     setLoading(true);
     try {
       await updateOrder(id, data);
       toast.success("Cập nhật đơn hàng thành công!");
-      // Gọi fetchOrders với tất cả tham số lọc hiện tại để refresh data
-      await fetchOrders(pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter);
+      await fetchOrders();
+      await fetchAllOrders();
       setEditingOrder(null);
     } catch {
       toast.error("Cập nhật đơn hàng thất bại!");
@@ -201,135 +149,129 @@ export default function AdminOrderPage() {
     }
   };
 
-  // 🔹 Xóa đơn hàng (Giữ nguyên logic gọi fetchOrders sau delete)
   const handleDeleteOrder = async (id: number) => {
-    // Thay window.confirm bằng toast/modal tùy chỉnh sau
-    if (window.confirm(`Bạn có chắc chắn muốn xóa đơn hàng #${id}?`)) {
+    if (window.confirm(`Bạn có chắc muốn xóa đơn hàng #${id}?`)) {
       try {
         await deleteOrder(id);
         toast.success("🗑️ Xóa đơn hàng thành công!");
-        // Gọi fetchOrders với tất cả tham số lọc hiện tại để refresh data
-        await fetchOrders(pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter);
+        await fetchOrders();
+        await fetchAllOrders();
       } catch {
         toast.error("❌ Xóa đơn hàng thất bại!");
       }
     }
   };
 
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <Toaster position="top-right" />
+      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+        <div className="py-6 border-b border-gray-200 text-center bg-gray-50">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Quản lý Đơn hàng
+          </h1>
+        </div>
 
-return (
-  <div className="p-6 bg-gray-50 min-h-screen">
-    <Toaster position="top-right" reverseOrder={false} />
+        {/* Tìm kiếm */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
+          <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 w-full md:w-auto md:flex-grow">
+            <div className="relative flex-grow min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo ID hoặc Khách hàng..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
 
-    {/* 🔹 Khối chứa toàn bộ nội dung đơn hàng */}
-    <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+            <select
+              title="store-filter"
+              value={selectedStoreId === "" ? "" : String(selectedStoreId)}
+              onChange={(e) =>
+                setSelectedStoreId(e.target.value ? Number(e.target.value) : "")
+              }
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 w-full md:w-auto"
+            >
+              <option value="">Tất cả cửa hàng</option>
+              {stores.map((store) => (
+                <option key={store.id} value={String(store.id)}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
 
-      {/* 🌟 Tiêu đề */}
-      <div className="py-6 border-b border-gray-200 text-center bg-gray-50">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-          Quản lý Đơn hàng
-        </h1>
-      </div>
-
-      {/* 🔍 Thanh tìm kiếm + tạo đơn hàng */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
-        <form
-          onSubmit={handleSearch}
-          className="flex flex-wrap items-center gap-3 w-full md:w-auto md:flex-grow"
-        >
-          <div className="relative flex-grow min-w-[200px] md:min-w-0">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo ID hoặc Khách hàng..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <select
-            title="store-filter"
-            value={selectedStoreId === "" ? "" : String(selectedStoreId)}
-            onChange={handleFilterByStore}
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 w-full md:w-auto min-w-[150px]"
-          >
-            <option value="">Tất cả cửa hàng</option>
-            {stores.map((store) => (
-              <option key={store.id} value={String(store.id)}>
-                {store.name}
-              </option>
-            ))}
-          </select>
+            <button
+              type="submit"
+              className="px-5 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition w-full md:w-auto"
+            >
+              Tìm kiếm
+            </button>
+          </form>
 
           <button
-            type="submit"
-            className="px-5 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition duration-150 w-full md:w-auto min-w-[100px]"
+            onClick={() => toast("🚀 Chức năng tạo đơn hàng đang được phát triển!")}
+            className="flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition w-full md:w-auto"
           >
-            Tìm kiếm
+            <PlusCircle className="w-5 h-5" />
+            <span>Tạo Đơn hàng Mới</span>
           </button>
-        </form>
+        </div>
 
-        <button
-          onClick={() => toast("🚀 Chức năng tạo đơn hàng đang được phát triển!")}
-          className="flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition duration-150 w-full md:w-auto min-w-[200px] mt-3 md:mt-0"
-        >
-          <PlusCircle className="w-5 h-5" />
-          <span>Tạo Đơn hàng Mới</span>
-        </button>
-      </div>
-
-      {/* 📊 Tabs trạng thái */}
-      <div className="p-4 border-b border-gray-200">
-        <OrderStatusTabs
-        orders={allOrders}
-        currentOrderStatus={orderStatusFilter}
-        onSelectOrderStatus={handleSelectOrderStatus}
-        currentPaymentStatus={paymentStatusFilter}
-        onSelectPaymentStatus={handleSelectPaymentStatus}
-      />
-      </div>
-
-      {/* 🧾 Danh sách đơn hàng */}
-      <div className="p-4">
-        {loading && (
-          <p className="text-center text-indigo-600 py-6 font-medium">
-            Đang tải danh sách đơn hàng...
-          </p>
-        )}
-        {error && (
-          <p className="text-center text-red-600 py-6 font-medium">Lỗi: {error}</p>
-        )}
-        {!loading && !error && (
-          <OrderTable
-            orders={orders}
-            onView={handleViewOrder}
-            onEditStatus={handleEditStatus}
-            onDelete={handleDeleteOrder}
+        {/* Tabs */}
+        <div className="p-4 border-b border-gray-200">
+          <OrderStatusTabs
+            allOrders={allOrders}
+            currentOrderStatus={orderStatusFilter}
+            onSelectOrderStatus={handleSelectOrderStatus}
+            currentPaymentStatus={paymentStatusFilter}
+            onSelectPaymentStatus={handleSelectPaymentStatus}
           />
-        )}
+          <div className="text-right text-sm text-gray-500 mt-1">
+            Tổng: {allOrders.length} đơn hàng
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="p-4">
+          {loading && (
+            <p className="text-center text-indigo-600 py-6 font-medium">
+              Đang tải danh sách đơn hàng...
+            </p>
+          )}
+          {error && (
+            <p className="text-center text-red-600 py-6 font-medium">
+              Lỗi: {error}
+            </p>
+          )}
+          {!loading && !error && (
+            <OrderTable
+              orders={orders}
+              onView={handleViewOrder}
+              onEditStatus={handleEditStatus}
+              onDelete={handleDeleteOrder}
+            />
+          )}
+        </div>
       </div>
+
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder as Order}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
+      {editingOrder && (
+        <OrderStatusModal
+          orderId={editingOrder.id}
+          currentStatus={editingOrder.status}
+          currentPaymentStatus={editingOrder.payment_status}
+          currentPaymentMethod={editingOrder.payment_method}
+          onClose={() => setEditingOrder(null)}
+          onUpdated={(data) => handleUpdateOrder(editingOrder.id, data)}
+        />
+      )}
     </div>
-
-    {/* Modal chi tiết */}
-    {selectedOrder && (
-      <OrderDetailModal
-        order={selectedOrder as Order}
-        onClose={() => setSelectedOrder(null)}
-      />
-    )}
-
-    {/* Modal sửa trạng thái */}
-    {editingOrder && (
-      <OrderStatusModal
-        orderId={editingOrder.id}
-        currentStatus={editingOrder.status}
-        currentPaymentStatus={editingOrder.payment_status}
-        currentPaymentMethod={editingOrder.payment_method}
-        onClose={() => setEditingOrder(null)}
-        onUpdated={(data) => handleUpdateOrder(editingOrder.id, data)}
-      />
-    )}
-  </div>
-);
+  );
 }
