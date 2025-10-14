@@ -8,7 +8,7 @@ export function AdminFooter() {
     <footer className="w-full bg-white border-t border-gray-200 mt-10 p-4 md:p-6 lg:p-8">
       <div className="mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
         <div className="mb-2 md:mb-0 flex items-center space-x-4">
-          <span>© 2024 Tiệm Gốm Nhà Gạo. All rights reserved.</span>
+          <span>© 2025 Tiệm Gốm Nhà Gạo. All rights reserved.</span>
           <span className="hidden sm:inline-block">|</span>
           <span className="flex items-center">
             Made with <span role="img" aria-label="love" className="mx-1 text-red-500">❤️</span> in Vietnam

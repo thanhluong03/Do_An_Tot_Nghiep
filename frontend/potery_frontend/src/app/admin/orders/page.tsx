@@ -213,20 +213,27 @@ export default function AdminOrderPage() {
   };
 
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <Toaster position="top-right" reverseOrder={false} />
+return (
+  <div className="p-6 bg-gray-50 min-h-screen">
+    <Toaster position="top-right" reverseOrder={false} />
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-6 tracking-tight">
-        Quản lý Đơn hàng
-      </h1>
+    {/* 🔹 Khối chứa toàn bộ nội dung đơn hàng */}
+    <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
 
-      {/* 1. Thanh công cụ tìm kiếm & Nút Tạo Đơn hàng Mới (HÀNG 1 - ĐÃ KHÔI PHỤC NÚT TÌM KIẾM) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+      {/* 🌟 Tiêu đề */}
+      <div className="py-6 border-b border-gray-200 text-center bg-gray-50">
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          Quản lý Đơn hàng
+        </h1>
+      </div>
 
-        {/* KHU VỰC TÌM KIẾM & LỌC CỬA HÀNG */}
-        <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 w-full md:w-auto md:flex-grow">
-          <div className="relative flex-grow min-w-[180px] md:min-w-0"> {/* Input tìm kiếm */}
+      {/* 🔍 Thanh tìm kiếm + tạo đơn hàng */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-wrap items-center gap-3 w-full md:w-auto md:flex-grow"
+        >
+          <div className="relative flex-grow min-w-[200px] md:min-w-0">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="text"
@@ -237,7 +244,7 @@ export default function AdminOrderPage() {
             />
           </div>
 
-          <select /* Dropdown Cửa hàng */
+          <select
             title="store-filter"
             value={selectedStoreId === "" ? "" : String(selectedStoreId)}
             onChange={handleFilterByStore}
@@ -251,8 +258,7 @@ export default function AdminOrderPage() {
             ))}
           </select>
 
-          {/* NÚT TÌM KIẾM ĐÃ KHÔI PHỤC */}
-          <button 
+          <button
             type="submit"
             className="px-5 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition duration-150 w-full md:w-auto min-w-[100px]"
           >
@@ -260,7 +266,6 @@ export default function AdminOrderPage() {
           </button>
         </form>
 
-        {/* KHU VỰC TẠO ĐƠN HÀNG MỚI (Bên phải) */}
         <button
           onClick={() => toast("🚀 Chức năng tạo đơn hàng đang được phát triển!")}
           className="flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition duration-150 w-full md:w-auto min-w-[200px] mt-3 md:mt-0"
@@ -270,8 +275,8 @@ export default function AdminOrderPage() {
         </button>
       </div>
 
-      {/* 2. BỘ LỌC KIỂU TAB (ĐÃ SỬA CSS BỐ CỤC) */}
-      <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+      {/* 📊 Tabs trạng thái */}
+      <div className="p-4 border-b border-gray-200">
         <OrderStatusTabs
           currentOrderStatus={orderStatusFilter}
           onSelectOrderStatus={handleSelectOrderStatus}
@@ -279,41 +284,47 @@ export default function AdminOrderPage() {
           onSelectPaymentStatus={handleSelectPaymentStatus}
         />
       </div>
-      <div className="py-4"></div>
 
-
-      {/* Hiển thị danh sách */}
-      {loading && <p className="text-center text-indigo-600 py-10 font-medium">Đang tải danh sách đơn hàng...</p>}
-      {error && <p className="text-center text-red-600 py-10 font-medium">Lỗi: {error}</p>}
-
-      {!loading && !error && (
-        <OrderTable
-          orders={orders}
-          onView={handleViewOrder}
-          onEditStatus={handleEditStatus}
-          onDelete={handleDeleteOrder}
-        />
-      )}
-
-      {/* Modal chi tiết */}
-      {selectedOrder && (
-        <OrderDetailModal
-          order={selectedOrder as Order}
-          onClose={() => setSelectedOrder(null)}
-        />
-      )}
-
-      {/* Modal sửa trạng thái */}
-      {editingOrder && (
-        <OrderStatusModal
-          orderId={editingOrder.id}
-          currentStatus={editingOrder.status}
-          currentPaymentStatus={editingOrder.payment_status}
-          currentPaymentMethod={editingOrder.payment_method}
-          onClose={() => setEditingOrder(null)}
-          onUpdated={(data) => handleUpdateOrder(editingOrder.id, data)}
-        />
-      )}
+      {/* 🧾 Danh sách đơn hàng */}
+      <div className="p-4">
+        {loading && (
+          <p className="text-center text-indigo-600 py-6 font-medium">
+            Đang tải danh sách đơn hàng...
+          </p>
+        )}
+        {error && (
+          <p className="text-center text-red-600 py-6 font-medium">Lỗi: {error}</p>
+        )}
+        {!loading && !error && (
+          <OrderTable
+            orders={orders}
+            onView={handleViewOrder}
+            onEditStatus={handleEditStatus}
+            onDelete={handleDeleteOrder}
+          />
+        )}
+      </div>
     </div>
-  );
+
+    {/* Modal chi tiết */}
+    {selectedOrder && (
+      <OrderDetailModal
+        order={selectedOrder as Order}
+        onClose={() => setSelectedOrder(null)}
+      />
+    )}
+
+    {/* Modal sửa trạng thái */}
+    {editingOrder && (
+      <OrderStatusModal
+        orderId={editingOrder.id}
+        currentStatus={editingOrder.status}
+        currentPaymentStatus={editingOrder.payment_status}
+        currentPaymentMethod={editingOrder.payment_method}
+        onClose={() => setEditingOrder(null)}
+        onUpdated={(data) => handleUpdateOrder(editingOrder.id, data)}
+      />
+    )}
+  </div>
+);
 }
