@@ -78,7 +78,7 @@ export default function OrderStatusModal({
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="UNPAID">UNPAID - Chưa thanh toán</option>
-              <option value="PENDING">PENDING - Đang xử lý</option>
+              {/* <option value="PENDING">PENDING - Đang xử lý</option> */}
               <option value="PAID">PAID - Đã thanh toán</option>
               <option value="REFUNDED">REFUNDED - Hoàn tiền</option>
             </select>
