@@ -20,12 +20,14 @@ export interface ListCategoryDto {
 }
 
 export const getCategories = async (dto?: ListCategoryDto): Promise<Category[]> => {
-    // Backend API là /listcategory
     const res = await axios.get(`${API_URL}/listcategory`, { params: dto });
 
-    const categoriesData = res.data.data || res.data;
+    const data = res.data.data;
 
-    return Array.isArray(categoriesData) ? categoriesData : []; 
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+
+    return [];
 };
 
 export const addCategory = async (category: Category | Category[]): Promise<Category[]> => {

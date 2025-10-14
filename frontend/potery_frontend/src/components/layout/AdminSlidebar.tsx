@@ -18,11 +18,12 @@ import {
     faNewspaper,
     faTruck,
     faTags,
-    faUserShield,
+    faUserShield, // Giữ lại icon này cho mục cha
     faUser,
     faChevronDown,
     faChevronUp,
     faGift,
+    faUsersCog, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -63,10 +64,17 @@ const contentResourcesItems: MenuItem[] = [
     { name: "Tin tức/Bài viết", icon: faNewspaper, href: "/admin/news", color: "bg-red-100 text-red-600" },
 ];
 
+// 💡 SỬA ĐỔI: Gộp Vai trò và Quyền hạn vào mục con "Phân quyền"
 const systemItems: MenuItem[] = [
-    { name: "Vai trò", icon: faUserShield, href: "/admin/roles" },
-    { name: "Quyền hạn", icon: faUserShield, href: "/admin/permissions" },
     { name: "Người dùng", icon: faUser, href: "/admin/users" },
+    {
+        name: "Phân quyền", // Tên mục cha mới
+        icon: faUsersCog, // Icon cho Phân quyền (Users with Cog/Gear)
+        children: [
+            { name: "Vai trò", icon: faUserShield, href: "/admin/roles" },
+            { name: "Quyền hạn", icon: faUserShield, href: "/admin/permissions" },
+        ],
+    },
 ];
 
 const SidebarItem = ({
@@ -76,7 +84,14 @@ const SidebarItem = ({
     item: MenuItem;
     currentPath: string;
 }) => {
-    const [open, setOpen] = useState(false);
+    // Thêm logic để tự động mở/đóng mục cha nếu mục con active
+    const isChildActive = item.children?.some(
+        (child) => child.href && currentPath.startsWith(child.href)
+    );
+    
+    // 💡 Tự động mở nếu có mục con đang active
+    const [open, setOpen] = useState(!!isChildActive); 
+    
     const isActive = item.href
         ? currentPath === item.href ||
           (currentPath.startsWith(item.href + "/") &&
@@ -88,17 +103,14 @@ const SidebarItem = ({
         : "text-gray-600 hover:bg-gray-100";
 
     if (item.children && item.children.length > 0) {
-        const isChildActive = item.children.some(
-            (child) => child.href && currentPath.startsWith(child.href)
-        );
-
+        // Sử dụng isChildActive để xác định màu nền cho mục cha
+        const parentActiveClass = isChildActive ? "text-[#B95D26] font-semibold bg-orange-50" : "text-gray-600 hover:bg-gray-100";
+        
         return (
             <div>
                 <button
                     onClick={() => setOpen(!open)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors ${
-                        isChildActive ? "text-[#B95D26] font-semibold bg-orange-50" : "text-gray-600 hover:bg-gray-100"
-                    }`}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors ${parentActiveClass}`}
                 >
                     <div className="flex items-center space-x-3">
                         <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
@@ -122,6 +134,7 @@ const SidebarItem = ({
                                 }`}
                             >
                                 <div className="flex items-center space-x-2">
+                                    {/* Sử dụng icon của mục con */}
                                     <FontAwesomeIcon
                                         icon={child.icon}
                                         className="w-4 h-4"
