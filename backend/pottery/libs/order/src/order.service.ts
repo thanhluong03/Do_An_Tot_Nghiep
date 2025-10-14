@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository } from '@app/database';
+import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryRepository, ActorChangeStatusOrderRepository } from '@app/database';
@@ -22,6 +22,8 @@ export class OrderService {
         private readonly userRepository: UserRepository,
         @Inject(CustomerRepository)
         private readonly customerRepository: CustomerRepository,
+        @Inject(ProductImageRepository)
+        private readonly productImageRepository: ProductImageRepository,
     ) { }
 
     async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -52,6 +54,16 @@ export class OrderService {
                 );
                 categoryName = category?.name;
             }
+            let product_images: any[] = [];
+            if (product?.id) {
+                const images = await this.productImageRepository.findByProductId(product.id);
+                product_images = images.map((img: any) => ({
+                    id: img.id,
+                    image_data: img.image_data ? img.image_data.toString('base64') : null,
+                    is_main_image: img.is_main_image ?? false,
+                    priority: img.priority ?? 0,
+                }));
+            }
             enrichedItems.push({
                 ...item,
                 product_name: product?.name,
@@ -61,6 +73,7 @@ export class OrderService {
                 category_name: categoryName,
                 store_name: store?.store_name,
                 store_address: store?.address,
+                product_images,
             });
             total_amount += item.price_at_order * item.quantity;
             inventory.quantity_stock -= item.quantity;
@@ -93,6 +106,35 @@ export class OrderService {
     async getOrderById(id: number): Promise<any> {
         const order = await this.orderRepository.findById(id);
         if (!order) return null;
+        let itemsWithImages: any[] = [];
+        const currentOrder: any = order.current_order as any;
+        if (currentOrder?.items && Array.isArray(currentOrder.items)) {
+            itemsWithImages = await Promise.all(currentOrder.items.map(async (item: any) => {
+                let product_images = item.product_images;
+                if (!product_images || !Array.isArray(product_images) || product_images.length === 0) {
+                    const images = await this.productImageRepository.findByProductId(item.product_id);
+                    product_images = images.map((img: any) => ({
+                        id: img.id,
+                        image_data: img.image_data ? img.image_data.toString('base64') : null,
+                        is_main_image: img.is_main_image ?? false,
+                        priority: img.priority ?? 0,
+                    }));
+                } else {
+                    product_images = product_images.map((img: any) => ({
+                        ...img,
+                        image_data: img.image_data && Buffer.isBuffer(img.image_data)
+                            ? img.image_data.toString('base64')
+                            : img.image_data,
+                    }));
+                }
+                const main_image = product_images.find((img: any) => img.is_main_image) || null;
+                return {
+                    ...item,
+                    product_images,
+                    main_image,
+                };
+            }));
+        }
         const statusHistoryRaw = await this.orderStatusHistoryRepository.getHistoryByOrderId(id);
         const statusHistory: any[] = [];
         for (const history of statusHistoryRaw) {
@@ -139,6 +181,10 @@ export class OrderService {
         }
         return {
             ...order,
+            current_order: {
+                ...order.current_order,
+                items: itemsWithImages,
+            },
             statusHistory,
         };
     }
@@ -146,7 +192,6 @@ export class OrderService {
     async getOrders(params: IListOrder): Promise<OrderEntity[]> {
         return this.orderRepository.findAll(params);
     }
-
     
     async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
         const order = await this.orderRepository.findById(id);
