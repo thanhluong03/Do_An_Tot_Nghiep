@@ -13,10 +13,16 @@ export const Footer: React.FC = () => {
             {/* Column 1 - Logo & Description */}
             <div className="space-y-6">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-[#65604E] rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 2L3 7v11h14V7l-7-5zM8 15H6v-2h2v2zm0-4H6V9h2v2zm0-4H6V5h2v2zm6 8h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2z"/>
-                  </svg>
+                
+                  <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC]"> {/* Màu nền trắng, viền nhạt */}
+              <img 
+                  src="/logo.png" // Đảm bảo đây là đường dẫn đúng tới ảnh logo PNG của bạn (ví dụ: cành lúa mì/gạo)
+                  alt="Tiệm Gốm Nhà Gạo Logo" 
+                  className="w-10 h-10 object-contain" // Kích thước và object-contain để ảnh logo không bị cắt
+                  // Lưu ý: Nếu logo PNG của bạn không có màu nâu nhạt, bạn không thể thay đổi nó bằng CSS.
+                  // Bạn cần chuẩn bị file PNG có màu sắc mong muốn.
+              />
+          
                 </div>
                 <div>
                   <h3 className="text-xl font-serif font-bold">Tiệm Gốm Nhà Gạo</h3>

@@ -280,7 +280,8 @@ export function JournalSection() {
     (async () => {
       try {
         const data = await newsApi.list();
-        if (mounted) setNews(data);
+        // newsApi.list() returns { items: NewsItem[]; total: number }, so use data.items
+        if (mounted) setNews(data.items ?? []);
       } finally {
         if (mounted) setLoading(false);
       }

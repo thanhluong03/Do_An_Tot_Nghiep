@@ -28,7 +28,7 @@ export const FeaturedCollectionsSection: React.FC = () => {
 
     return (
         // Màu nền trắng nhẹ (FBFBFB) và padding trên/dưới lớn hơn một chút
-        <section className="py-32 bg-[#FBFBFB]">
+        <section className="py-20 bg-[#FBFBFB]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
                 {/* Header */}
