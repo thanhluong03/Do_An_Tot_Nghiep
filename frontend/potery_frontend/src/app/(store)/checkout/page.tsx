@@ -245,17 +245,24 @@ useEffect(() => {
         });
 
         clearCart();
-        setError(null);
-        alert('✅ Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.');
-        window.history.replaceState({}, '', '/orders');
-        window.location.href = '/orders'; // chuyển sang trang danh sách đơn
+        toast.success('🎉 Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.', { duration: 4000 });
+
+        // ✅ Chờ 2 giây rồi chuyển hướng sang /orders
+        setTimeout(() => {
+          window.location.href = '/orders';
+        }, 2000);
       } catch (err) {
         console.error('❌ Lỗi cập nhật trạng thái đơn hàng sau thanh toán:', err);
-        setError('Không thể cập nhật trạng thái đơn hàng.');
+        toast.error('Không thể cập nhật trạng thái đơn hàng.');
       }
     })();
+  } else if (paymentStatus === 'failed') {
+    toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
+    // Dọn query cho sạch
+    window.history.replaceState({}, '', '/checkout');
   }
 }, []);
+
    /** ===================== CHECK PAYMENT SUCCESS ===================== */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

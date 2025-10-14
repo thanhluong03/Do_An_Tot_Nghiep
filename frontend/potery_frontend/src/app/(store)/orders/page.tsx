@@ -89,13 +89,6 @@ useEffect(() => {
         {!loading && !error && (
           orders.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
-              <Image
-                src="/empty-box.png"
-                alt="Chưa có đơn hàng"
-                width={150}
-                height={150}
-                className="mx-auto mb-4 opacity-70"
-              />
               <p>Chưa có đơn hàng nào.</p>
             </div>
           ) : (
@@ -141,11 +134,18 @@ useEffect(() => {
                         <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4">
                           <div className="w-24 h-24 relative flex-shrink-0">
                             <Image
-                            src={productMap[item.product_id]?.images?.[0] || '/default-product.jpg'}
-                            alt={productMap[item.product_id]?.name || item.product_name || 'Sản phẩm'}
-                            fill
-                            className="object-cover rounded-lg border border-gray-200"
-                          />
+                              src={
+                                item?.product_images?.[0]?.image_data
+                                  ? `data:image/avif;base64,${item.product_images[0].image_data}`
+                                  : productMap[item.product_id]?.images?.[0]
+                                    ? productMap[item.product_id].images[0]
+                                    : '/no-image.png'
+                              }
+                              alt={item.product_name || 'Sản phẩm'}
+                              fill
+                              unoptimized
+                              className="object-cover rounded-lg border border-gray-200"
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-[#2C2A24] truncate">
