@@ -15,6 +15,9 @@ import {
 
 import ImportProductForm from "@/components/adminImportProduct/ImportProductForm";
 import ImportProductTable from "@/components/adminImportProduct/ImportProductTable";
+// 💡 Import thêm icon History/RotateCw
+import { History, PlusCircle, RotateCw } from 'lucide-react'; 
+
 interface Product { 
     id: string | number;
     name: string;
@@ -45,7 +48,11 @@ export default function ImportProductPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [loading, setLoading] = useState(false);
     
+    // 💡 STATE MỚI: Kiểm soát việc hiển thị bảng lịch sử nhập kho
+    const [showTable, setShowTable] = useState(false); 
+    
     const [editingItem, setEditingItem] = useState<ImportProduct | null>(null);
+    
     const fetchAllProducts = async () => {
         try {
             const res = await listProducts({ page: 1, size: 1000 }); 
@@ -83,11 +90,11 @@ export default function ImportProductPage() {
     useEffect(() => {
         fetchDropdownData();
         fetchImportProducts();
-        fetchAllProducts(); // 💡 Tải toàn bộ sản phẩm
+        fetchAllProducts(); 
     }, []);
 
     // ----------------------------------------------------
-    // 💡 LOGIC LỌC SẢN PHẨM THEO NHÀ CUNG CẤP (QUAN TRỌNG)
+    // LOGIC LỌC SẢN PHẨM THEO NHÀ CUNG CẤP
     // ----------------------------------------------------
     useEffect(() => {
         const supplierId = selectedSupplier;
@@ -101,7 +108,6 @@ export default function ImportProductPage() {
             const newFilteredOptions: SelectOption[] = productsOfSelectedSupplier.map(p => ({
                 id: String(p.id), 
                 name: p.name,
-                // Không cần thêm imageUrl ở đây, vì ImportProductForm sẽ tự tìm
             }));
             
             // Chỉ set state nếu danh sách có thay đổi
@@ -146,7 +152,7 @@ export default function ImportProductPage() {
                  if (!isAnyChecked) return prev; 
 
                  const newSelection = Object.fromEntries(
-                    Object.keys(prev).map(id => [id, { checked: false, quantity: "", price: "" }])
+                     Object.keys(prev).map(id => [id, { checked: false, quantity: "", price: "" }])
                  ) as ProductSelectionState;
                  
                  return newSelection;
@@ -243,7 +249,7 @@ export default function ImportProductPage() {
         }
     };
     
-    // --- TABLE HANDLERS (Giữ nguyên) ---
+    // --- TABLE HANDLERS ---
 
     const handleEdit = (item: ImportProduct) => {
         if (item.items && item.items.length > 1) {
@@ -268,7 +274,7 @@ export default function ImportProductPage() {
         }
     };
     
-    // Hàm hỗ trợ tìm tên SP/NCC cho Table (Giữ nguyên)
+    // Hàm hỗ trợ tìm tên SP/NCC cho Table 
     const getProductName = (id: number | string | undefined): string => {
         if (!id) return "N/A";
         const found = allProducts.find(p => String(p.id) === String(id));
@@ -281,7 +287,7 @@ export default function ImportProductPage() {
         return found?.name || `ID: ${id}`;
     };
     
-    // 🚀 ĐỊNH NGHĨA HÀM LẤY ẢNH VÀ SỬ DỤNG getProductImageUrl TỪ SERVICE
+    // ĐỊNH NGHĨA HÀM LẤY ẢNH VÀ SỬ DỤNG getProductImageUrl TỪ SERVICE
     const getProductImage = useCallback((id: number | string | undefined): string | undefined => {
         if (!id) return undefined;
         // Tìm toàn bộ thông tin sản phẩm từ allProducts
@@ -300,52 +306,75 @@ export default function ImportProductPage() {
             <Toaster position="top-right" />
             
             <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-                <h1 className="text-3xl font-extrabold text-orange-600 mb-6 border-b-2 border-orange-200 pb-3 text-center">
-                    Quản lý Phiếu Nhập kho
-                </h1>
-
-                <div className="mb-6 flex justify-end">
+                
+                {/* 💡 HEADER MỚI: Giống như "Quản lý kho hàng" */}
+                <div className="flex justify-between items-center mb-6 border-b-2 border-gray-200 pb-3">
+                    <h1 className="text-2xl font-bold text-gray-800">
+                        Quản lý nhập kho sản phẩm
+                    </h1>
                     <button
                         onClick={() => {
                             if (isAdding) resetForm();
                             setIsAdding(prev => !prev);
+                            // 💡 Nếu đang tạo phiếu mới, ẩn bảng lịch sử đi
+                            if (!isAdding) setShowTable(false); 
                         }}
-                        className={`px-5 py-2 rounded-lg font-semibold shadow-md transition text-white ${isAdding ? 'bg-red-500 hover:bg-orange-600' : 'bg-orange-600 hover:bg-orange-700'}`}
+                        // 💡 Đổi màu sắc và text để giống với ảnh
+                        className={`px-4 py-2 rounded-lg font-semibold shadow-md transition text-white flex items-center ${isAdding ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-600 hover:bg-orange-700'}`}
                     >
-                        {isAdding ? "Hủy Thêm mới" : "+ Tạo Phiếu Nhập mới"}
+                        <PlusCircle size={20} className="mr-2" />
+                        {isAdding ? "Hủy Thêm mới" : "Thêm nhập kho"}
                     </button>
                 </div>
+                {/* ---------------------------------------------------- */}
 
                 {isAdding && (
-                    <ImportProductForm
-                        suppliers={suppliers}
-                        products={filteredProducts} 
-                        selectedSupplier={selectedSupplier}
-                        selectedProducts={selectedProducts}
-                        setSelectedSupplier={setSelectedSupplier}
-                        handleCheckboxChange={handleCheckboxChange}
-                        handleInputChange={handleInputChange}
-                        handleSubmit={handleSubmit}
-                        getProductImage={getProductImage} 
-                    />
+                    <div className="mb-8 p-6 border border-green-200 rounded-xl bg-green-50/50">
+                        <ImportProductForm
+                            suppliers={suppliers}
+                            products={filteredProducts} 
+                            selectedSupplier={selectedSupplier}
+                            selectedProducts={selectedProducts}
+                            setSelectedSupplier={setSelectedSupplier}
+                            handleCheckboxChange={handleCheckboxChange}
+                            handleInputChange={handleInputChange}
+                            handleSubmit={handleSubmit}
+                            getProductImage={getProductImage} 
+                        />
+                    </div>
                 )}
                 
-                <div className="mt-10">
-                    <h2 className="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">
-                        Lịch sử nhập kho của các sản phẩm({importProducts.length})
-                    </h2>
-                    
-                    {loading ? (
-                        <div className="text-center py-10 text-gray-500">Đang tải dữ liệu...</div>
-                    ) : (
-                        <ImportProductTable
-                            importProducts={importProducts}
-                            getProductName={getProductName}
-                            getSupplierName={getSupplierName}
-                            getProductImage={getProductImage}
-                            handleEdit={handleEdit}
-                            handleDelete={handleDelete}
-                        />
+                <div className="mt-6">
+                    {/* 💡 KHU VỰC TIÊU ĐỀ BẢNG VÀ NÚT TOGGLE */}
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-700">
+                            Lịch sử Nhập kho ({importProducts.length})
+                        </h2>
+                        <button 
+                            onClick={() => setShowTable(prev => !prev)}
+                            className="text-orange-600 hover:text-orange-700 p-2 transition duration-150"
+                            title={showTable ? "Ẩn danh sách" : "Hiển thị danh sách"}
+                        >
+                            {/* 💡 Icon Đồng hồ quay ngược/Refresh */}
+                            <RotateCw size={24} className={showTable ? "animate-spin-slow" : ""} />
+                        </button>
+                    </div>
+                    {/* ------------------------------------------- */}
+
+                    {/* 💡 CHỈ HIỂN THỊ BẢNG KHI showTable là true */}
+                    {showTable && (
+                        loading ? (
+                            <div className="text-center py-10 text-gray-500">Đang tải dữ liệu...</div>
+                        ) : (
+                            <ImportProductTable
+                                importProducts={importProducts}
+                                getProductName={getProductName}
+                                getSupplierName={getSupplierName}
+                                getProductImage={getProductImage}
+                                handleEdit={handleEdit}
+                                handleDelete={handleDelete}
+                            />
+                        )
                     )}
                 </div>
 
