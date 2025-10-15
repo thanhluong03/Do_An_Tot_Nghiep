@@ -77,23 +77,59 @@ export class LoginService {
         return `${frontendUrl}/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}`;
     }
 
+    // async adminLogin(adminLoginDto: { username: string; password: string }) {
+    //     const { username, password } = adminLoginDto;
+    //     const user = (await this.userRepository.findOne({
+    //         where: { username },
+    //         relations: ['role', 'role.permissions'],
+    //     })) as UserEntity;
+    //     if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
+    //     const isMatch = await bcryptjs.compare(password, user.password_hash as string);
+    //     if (!isMatch) throw new UnauthorizedException('Mật khẩu không đúng');
+    //     const role = user.role as RoleEntity;
+    //     if (!role) throw new UnauthorizedException('Không tìm thấy role');
+    //     const permissions = (role.permissions as PermissionEntity[] ?? []).map((p) => ({ id: p.id, name: p.name }));
+    //     return {
+    //         message: 'Bạn đã đăng nhập thành công',
+    //         roleId: role.id,
+    //         roleName: role.name,
+    //         permissions: permissions.map(p => p.name),
+    //     };
+    // }
     async adminLogin(adminLoginDto: { username: string; password: string }) {
         const { username, password } = adminLoginDto;
-        const user = (await this.userRepository.findOne({
+
+        const user = await this.userRepository.findOne({
             where: { username },
             relations: ['role', 'role.permissions'],
-        })) as UserEntity;
+        });
+
         if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
+
         const isMatch = await bcryptjs.compare(password, user.password_hash as string);
         if (!isMatch) throw new UnauthorizedException('Mật khẩu không đúng');
+
         const role = user.role as RoleEntity;
         if (!role) throw new UnauthorizedException('Không tìm thấy role');
-        const permissions = (role.permissions as PermissionEntity[] ?? []).map((p) => ({ id: p.id, name: p.name }));
+
+        const permissions = (role.permissions as PermissionEntity[] ?? []).map(p => p.name);
+
+        //JWT token
+        const token = this.jwtService.sign({
+            id: user.id,
+            username: user.username,
+            role: role.name,
+        });
+
         return {
             message: 'Bạn đã đăng nhập thành công',
+            token,
+            adminName:user.full_name,
             roleId: role.id,
             roleName: role.name,
-            permissions: permissions.map(p => p.name),
+            permissions,
+            
         };
-    }
+        }
+
 }

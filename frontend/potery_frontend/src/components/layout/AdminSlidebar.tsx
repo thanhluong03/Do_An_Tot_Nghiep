@@ -23,7 +23,10 @@ import {
     faChevronDown,
     faChevronUp,
     faGift,
-    faUsersCog, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
+    faUsersCog,
+    faTruckArrowRight,
+    faBoxesStacked,
+    faClipboardList, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -40,8 +43,14 @@ const dashboardItems: MenuItem[] = [
 ];
 
 const salesOperationsItems: MenuItem[] = [
-    { name: "Nhập kho", icon: faWarehouse, href: "/admin/importproduct", color: "bg-yellow-100 text-yellow-600" },
-    { name: "Tồn kho", icon: faWarehouse, href: "/admin/inventory", color: "bg-yellow-100 text-yellow-600" },
+    {
+        name: "Kho hàng",
+        icon: faWarehouse,
+        children: [
+            { name: "Nhập kho", icon: faTruckArrowRight, href: "/admin/importproduct" },
+            { name: "Tồn kho", icon: faClipboardList, href: "/admin/inventory" },
+        ],
+    },
     { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },
     { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
     { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
