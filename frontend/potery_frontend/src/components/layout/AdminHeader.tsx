@@ -49,10 +49,11 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
 
 export default function AdminHeader() {
   const pathname = usePathname() || "/admin/dashboard";
+  const pathname1 = usePathname() ?? "";
   const { title, breadcrumb } = getTitleAndBreadcrumb(pathname);
-
-  const [adminName, setAdminName] = useState("Admin");
-  const [adminRole, setAdminRole] = useState("Administrator");
+    
+  const [adminName, setAdminName] = useState("Chưa đăng nhập");
+  const [adminRole, setAdminRole] = useState("Guest");
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,10 +61,10 @@ export default function AdminHeader() {
   // 🧠 Lấy tên admin từ localStorage
   useEffect(() => {
     const role = localStorage.getItem("adminRole");
-    const name = localStorage.getItem("adminName") || "Admin";
-    setAdminName(name || role || "Administrator");
-    setAdminRole(role || "Administrator");
-  }, []);
+    const name = localStorage.getItem("adminName") || "Chưa đăng nhập";
+    setAdminName(name )
+    setAdminRole(role || "Guest");
+  }, [pathname1]);
 
   // 🧩 Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -91,7 +92,6 @@ export default function AdminHeader() {
   localStorage.removeItem("adminRole");
   localStorage.removeItem("adminPermissions");
   localStorage.removeItem("adminName");
-
   // 🔁 Chuyển hướng về trang login
   router.push("/admin/login");
 };
@@ -128,9 +128,7 @@ export default function AdminHeader() {
             onClick={() => setShowDropdown((prev) => !prev)}
           >
             <div className="flex flex-col text-right leading-tight">
-              <p className="text-sm font-semibold text-gray-800">
-                {adminName}
-              </p>
+              <p className="text-sm font-semibold text-gray-800">{adminName}</p>
               <p className="text-xs text-gray-500">{adminRole}</p>
             </div>
             <Image
