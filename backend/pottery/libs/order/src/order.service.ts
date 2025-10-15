@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository } from '@app/database';
+import { ProductRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryRepository } from '@app/database';
@@ -22,6 +23,8 @@ export class OrderService {
         private readonly customerRepository: CustomerRepository,
         @Inject(ProductImageRepository)
         private readonly productImageRepository: ProductImageRepository,
+        @Inject(ProductRepository)
+        private readonly productRepository: ProductRepository,
     ) { }
 
     async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -45,6 +48,15 @@ export class OrderService {
             }
             const product = inventory.product;
             const store = inventory.store;
+            if (product && typeof product.quantity === 'number') {
+                if (product.quantity < item.quantity) {
+                    throw new NotFoundException(
+                        `Số lượng sản phẩm tổng không đủ cho sản phẩm ${item.product_id}`,
+                    );
+                }
+                product.quantity -= item.quantity;
+                await this.productRepository.update(product.id, { quantity: product.quantity });
+            }
             let categoryName: string | undefined = undefined;
             if (product && product.category_id) {
                 const category = await this.categoryRepository.findById(
