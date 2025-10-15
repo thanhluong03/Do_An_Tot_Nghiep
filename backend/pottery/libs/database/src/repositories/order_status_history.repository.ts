@@ -10,13 +10,14 @@ export class OrderStatusHistoryRepository {
         private readonly orderStatusHistoryRepository: Repository<OrderStatusHistoryEntity>,
     ) { }
 
-    async logStatusChange(order_id: number, status: OrderStatusHistory, actorChangeId: number): Promise<void> {
-        const history = this.orderStatusHistoryRepository.create({
+    async logStatusChange(order_id: number, status: OrderStatusHistory, user_id?: number, customer_id?: number): Promise<void> {
+        const history: Partial<OrderStatusHistoryEntity> = {
             order_id,
             status,
-            actor_id: actorChangeId,
-        });
-        await this.orderStatusHistoryRepository.save(history);
+            ...(user_id ? { user_id } : customer_id ? { customer_id } : {}),
+        };
+        const entity = this.orderStatusHistoryRepository.create(history);
+        await this.orderStatusHistoryRepository.save(entity);
     }
 
     async getHistoryByOrderId(order_id: number): Promise<OrderStatusHistoryEntity[]> {

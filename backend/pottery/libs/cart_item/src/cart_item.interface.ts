@@ -3,7 +3,6 @@ export class ICreateCartItem {
     customer_id: number
     store_id: number
     quantity?: number
-    total_amount?: number
 }
 
 export interface IUpdateCartItem {
@@ -11,7 +10,6 @@ export interface IUpdateCartItem {
     customer_id: number
     store_id: number
     quantity?: number
-    total_amount?: number
 }
 
 export interface IListCartItem {

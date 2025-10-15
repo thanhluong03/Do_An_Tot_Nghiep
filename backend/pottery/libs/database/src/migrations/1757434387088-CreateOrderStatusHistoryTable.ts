@@ -24,8 +24,8 @@ export class CreateOrderStatusHistoryTable1757434387088 implements MigrationInte
                             generationStrategy: 'increment',
                         },
                         { name: 'order_id', type: 'int', isNullable: false },
-                        { name: 'user_id', type: 'int', isNullable: false },
-                        { name: 'customer_id', type: 'int', isNullable: false },
+                        { name: 'user_id', type: 'int', isNullable: true },
+                        { name: 'customer_id', type: 'int', isNullable: true },
                         {
                             name: 'status',
                             type: 'enum',

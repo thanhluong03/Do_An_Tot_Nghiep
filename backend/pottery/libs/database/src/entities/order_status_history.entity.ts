@@ -16,10 +16,10 @@ export class OrderStatusHistoryEntity extends BaseEntity {
     @Column({ type: 'integer', nullable: false })
     order_id: number
 
-    @Column({ type: 'integer', nullable: false })
+    @Column({ type: 'integer', nullable: true })
     user_id: number
 
-    @Column({ type: 'integer', nullable: false })
+    @Column({ type: 'integer', nullable: true })
     customer_id: number
 
     @Column({
