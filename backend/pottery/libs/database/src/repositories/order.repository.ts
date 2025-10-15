@@ -103,6 +103,10 @@ export class OrderRepository {
         await this.orderRepository.update(id, data);
     }
 
+    async getOrderItemsByOrderId(orderId: number): Promise<OrderItemEntity[]> {
+        return this.orderItemRepository.find({ where: { order_id: orderId } });
+    }
+
     async softDelete(id: number): Promise<void> {
         await this.orderRepository.softDelete(id);
     }
