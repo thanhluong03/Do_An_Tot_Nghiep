@@ -45,7 +45,6 @@ const salesOperationsItems: MenuItem[] = [
     { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },
     { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
     { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
-    { name: "Nhà cung cấp", icon: faTruck, href: "/admin/supplier", color: "bg-blue-100 text-blue-600" },
 ];
 
 const orderItems: MenuItem[] = [
@@ -58,6 +57,10 @@ const orderItems: MenuItem[] = [
             { name: "Vouchers", icon: faBolt, href: "/admin/vouchers" },
         ],
     },
+];
+const usersItems: MenuItem[] = [
+    { name: "Nhà cung cấp", icon: faTruck, href: "/admin/supplier", color: "bg-blue-100 text-blue-600" },
+    { name: "Khách hàng", icon: faUser, href: "/admin/customers", color: "bg-red-100 text-red-600" },
 ];
 
 const contentResourcesItems: MenuItem[] = [
@@ -134,7 +137,7 @@ const SidebarItem = ({
                                 }`}
                             >
                                 <div className="flex items-center space-x-2">
-                                    {/* Sử dụng icon của mục con */}
+                                
                                     <FontAwesomeIcon
                                         icon={child.icon}
                                         className="w-4 h-4"
@@ -205,6 +208,7 @@ export default function AdminSidebar() {
                 {renderMenuSection("Tổng Quan", dashboardItems)}
                 {renderMenuSection("Đơn hàng", orderItems)}
                 {renderMenuSection("Sản phẩm", salesOperationsItems)}
+                {renderMenuSection("Người dùng", usersItems)}
                 {renderMenuSection("Marketing", contentResourcesItems)}
                 {renderMenuSection("Phân quyền", systemItems)}
             </nav>
