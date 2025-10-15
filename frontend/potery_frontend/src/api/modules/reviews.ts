@@ -7,53 +7,61 @@ const api = axios.create({
 });
 
 export interface ReviewItem {
-  id: string;
-  product_id: string | number;
+  id?: string;
+  product_id?: string | number;
   customer_id?: string | number;
-  rating: number; // ✅ luôn number
+  rating: number;
   comment?: string;
   created_at?: string | Date;
 }
 
-// ✅ Ép rating thành number khi map dữ liệu từ API
 const mapReview = (r: any): ReviewItem => ({
   id: String(r.id ?? r._id ?? ''),
-  product_id: r.product_id,
-  customer_id: r.customer_id,
-  rating: Number(r.rating ?? 5), // ✅ ép sang number
-  comment: r.comment ?? r.content ?? '',
+  product_id: r.product_id ?? r.productId,
+  customer_id: r.customer_id ?? r.customerId,
+  rating: Number(r.rating ?? 5),
+  comment: r.comment ?? '',
   created_at: r.created_at ?? r.createdAt ?? new Date(),
 });
 
 export const reviewsApi = {
+  // ✅ Lấy danh sách review theo product_id
   async list(productId: string | number): Promise<ReviewItem[]> {
-    const res = await api.get('/reviews/listreview', { params: { product_id: productId } });
+    const res = await api.get(`/reviews/by-product/${productId}`);
     console.log('📥 ListReview API trả về:', res.data);
-    const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+
+    const data = Array.isArray(res.data) ? res.data : res.data?.reviews || [];
     return data.map(mapReview);
   },
 
-  async create(payload: {
-  product_id: string;
-  customer_id?: string;
-  rating: number;
-  comment?: string;
-}) {
-  const body = {
-    product_id: String(payload.product_id),
-    customer_id: String(payload.customer_id),
-    rating: Number(payload.rating), // vẫn gửi number
-    comment: String(payload.comment ?? ''),
-  };
+  // ✅ Gửi review mới — backend yêu cầu mảng CreateReviewDto[]
+  async create(payloads: Array<{
+    orderitem_id: number;
+    customer_id: number;
+    rating: number;
+    comment?: string;
+  }>) {
+    const body = Array.isArray(payloads) ? payloads : [payloads];
+    console.log('📦 Gửi review tới API (body):', body);
 
-  console.log('📦 Gửi review tới API:', body);
+    const res = await api.post('/reviews/createreview', body);
+    console.log('✅ API trả về raw:', res.data);
 
-  // 🔹 Sửa ở đây: gửi mảng để backend không lỗi .map()
-  const res = await api.post('/reviews/createreview', [body]);
+    // Chuẩn hóa phản hồi
+    const raw = res?.data;
+    const dataArray = Array.isArray(raw)
+      ? raw
+      : raw
+      ? [raw]
+      : [];
 
-  const data = Array.isArray(res.data) ? res.data[0] : res.data;
-  console.log('✅ API trả về:', data);
+    if (dataArray.length === 0 || !dataArray[0]?.id) {
+      console.error('❌ API trả về null hoặc không hợp lệ:', raw);
+      throw new Error('Không nhận được phản hồi hợp lệ từ API');
+    }
 
-  return mapReview(data);
-},
+    const first = mapReview(dataArray[0]);
+    console.log('✅ Review đã chuẩn hóa:', first);
+    return first;
+  },
 };
