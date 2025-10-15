@@ -35,6 +35,11 @@ export class CreateProductDto {
 
   @Expose()
   @IsOptional()
+  @IsNumber()
+  supplier_id?: number;
+
+  @Expose()
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProductImageDto)
@@ -64,6 +69,11 @@ export class UpdateProductDto {
 
   @Expose()
   @IsOptional()
+  @IsNumber()
+  supplier_id?: number;
+
+  @Expose()
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProductImageDto)
@@ -85,6 +95,9 @@ export class ProductResponseDto {
 
   @Expose()
   category_id?: number;
+
+  @Expose()
+  supplier_id?: number;
 
   @Expose()
   created_at: Date;
