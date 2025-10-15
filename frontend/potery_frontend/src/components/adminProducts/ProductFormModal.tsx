@@ -57,13 +57,10 @@ export default function ProductFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/30 transition-opacity"
         onClick={() => setIsModalOpen(false)}
       />
-
-      {/* Modal */}
       <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 animate-[fadeIn_0.2s_ease-in-out]">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center justify-between">
           {editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}
@@ -76,7 +73,6 @@ export default function ProductFormModal({
         </h2>
 
         <div className="space-y-4">
-          {/* Tên sản phẩm */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Tên sản phẩm
@@ -92,7 +88,7 @@ export default function ProductFormModal({
             />
           </div>
 
-          {/* Giá */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Giá (VNĐ)
@@ -108,7 +104,6 @@ export default function ProductFormModal({
             />
           </div>
 
-          {/* Mô tả */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Mô tả
@@ -124,12 +119,12 @@ export default function ProductFormModal({
             />
           </div>
 
-          {/* Danh mục */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Danh mục
             </label>
             <select
+              title="danh mục"
               value={formData.category_id ?? 0}
               onChange={(e) =>
                 setFormData({
@@ -154,6 +149,7 @@ export default function ProductFormModal({
               Nhà cung cấp
             </label>
             <select
+              title="ncc"
               value={formData.supplier_id ?? 0}
               onChange={(e) =>
                 setFormData({
@@ -172,12 +168,13 @@ export default function ProductFormModal({
             </select>
           </div>
 
-          {/* Upload ảnh */}
+      
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Ảnh sản phẩm
             </label>
             <input
+              title="file"
               type="file"
               multiple
               accept="image/*"
@@ -188,7 +185,6 @@ export default function ProductFormModal({
             />
           </div>
 
-          {/* Preview ảnh */}
           {previewImages.length > 0 && (
             <div className="flex flex-wrap gap-3 mt-2">
               {previewImages.map((src, i) => (
@@ -207,7 +203,6 @@ export default function ProductFormModal({
           )}
         </div>
 
-        {/* Nút hành động */}
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={() => setIsModalOpen(false)}
