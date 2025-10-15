@@ -33,26 +33,10 @@ export const AboutSection: React.FC = () => {
                             
                             {/* Hình ảnh nền */}
                             <img 
-                                src="./about.png" // Thay thế bằng hình ảnh phù hợp với ảnh mẫu
+                                src="./tiemgom.jpg" // Thay thế bằng hình ảnh phù hợp với ảnh mẫu
                                 alt="Pottery Workshop" 
                                 className="w-full h-full object-cover"
                             />
-
-                            {/* Lớp Overlay xám mờ (opacity) */}
-                            <div className="absolute inset-0 bg-[#65604E] opacity-50"></div>
-                            
-                            {/* Nội dung tĩnh trên lớp overlay (DON'T MISS IT, CHÚNG MÌNH CÓ HẸN, DECEMBER 01...) */}
-                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-8">
-                                <span className="text-xs tracking-widest text-white/80 uppercase mb-4 opacity-50">DON'T MISS IT</span>
-                                <h2 className="text-5xl md:text-6xl font-serif font-bold text-white leading-snug">
-                                    CHÚNG MÌNH <br/> CÓ HẸN!
-                                </h2>
-                                <div className="mt-8 text-white">
-                                    <p className="text-4xl font-bold">01</p>
-                                    <p className="text-sm uppercase tracking-widest border-t border-white/50 pt-1 mt-1">DECEMBER</p>
-                                </div>
-                                {/* Thêm chi tiết khác nếu cần: Meet us on... */}
-                            </div>
                         </div>
 
                         {/* Thẻ 3+ NĂM (Absolute) */}

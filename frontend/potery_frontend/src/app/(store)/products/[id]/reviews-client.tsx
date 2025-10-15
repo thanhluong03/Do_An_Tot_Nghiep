@@ -112,7 +112,7 @@ export function ReviewsClient({
               {[...Array(5)].map((_, i) => (
                 <img
                   key={i}
-                  src={i < Math.floor(productRating) ? '/heart.png' : '/leaf.png'}
+                  src={i < Math.floor(productRating) ? '/star.png' : '/star-empti.png'}
                   alt="star"
                   className="w-5 h-5"
                 />
@@ -125,7 +125,7 @@ export function ReviewsClient({
 
         {/* 🔹 Form và danh sách đánh giá */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Form nhập đánh giá */}
+          {/* Form nhập đánh giá 
           <div className="p-6 rounded-2xl bg-white shadow space-y-3">
             {isAuthenticated ? (
               <>
@@ -183,7 +183,7 @@ export function ReviewsClient({
               </div>
             )}
           </div>
-
+*/}
           {/* Danh sách đánh giá */}
           {loading && (
             <div className="p-6 rounded-2xl bg-white shadow text-gray-600">Đang tải đánh giá…</div>
@@ -205,7 +205,7 @@ export function ReviewsClient({
                     {[...Array(5)].map((_, i) => (
                       <img
                         key={i}
-                        src={i < Math.floor(r.rating) ? '/heart.png' : '/leaf.png'}
+                        src={i < Math.floor(r.rating) ? '/star.png' : '/star-empti.png'}
                         alt="star"
                         className="w-4 h-4"
                       />

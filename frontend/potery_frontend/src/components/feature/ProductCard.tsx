@@ -67,12 +67,6 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
 
        <div className="flex flex-col gap-3">
         <button
-          onClick={() => onViewDetails?.(product)}
-          className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold transition"
-        >
-          Xem chi tiết
-        </button>
-        <button
           onClick={handleAdd}
           disabled={loading}
           className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold disabled:opacity-50 transition"

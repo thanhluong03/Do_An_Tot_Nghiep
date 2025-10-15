@@ -22,7 +22,7 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
 
-  const [serverItems, setServerItems] = useState<Array<{ id: string; product_id: number; quantity: number }>>([]);
+  const [serverItems, setServerItems] = useState<Array<{ id: string; product_id: number; quantity: number ;store_id:number}>>([]);
   const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[] }>>({});
   const [loadingCart, setLoadingCart] = useState(false);
 
@@ -41,14 +41,21 @@ export default function CheckoutPage() {
       try {
         setLoadingCart(true);
         const data = await cartApi.getByCustomer(user.id as string);
+        console.log("🧾 CART DATA:", data);
+
         if (!mounted) return;
 
         const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
           id: String(ci.id ?? ci._id ?? ''),
           product_id: Number(ci.product_id),
           quantity: Number(ci.quantity ?? 1),
+           store_id: Number(ci.store?.id ?? ci.store_id ?? 0),
         }));
+        console.log("✅ CART MAPPED:", mapped);
+
         setServerItems(mapped);
+        console.log("✅ CART MAPPED:", mapped);
+
       } catch (e) {
         console.error('Lỗi tải giỏ hàng:', e);
       } finally {
@@ -193,11 +200,13 @@ const handleCreate = async () => {
       const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
       const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
       const discountedPrice = basePrice - (share * discount) / ci.quantity;
-
+       const storeId =
+    'store_id' in ci ? Number((ci as any).store_id) : 1; 
       return {
         product_id: pid,
         quantity: ci.quantity,
         price_at_order: Math.round(discountedPrice), // giá đã giảm cho từng sp
+        store_id: Number(storeId),
       };
     });
 
@@ -230,6 +239,7 @@ const handleCreate = async () => {
   }
 };
 /** ===================== CHECK PAYMENT RETURN ===================== */
+/** ===================== CHECK PAYMENT RETURN ===================== */
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
   const paymentStatus = params.get('payment');
@@ -238,43 +248,59 @@ useEffect(() => {
   if (paymentStatus === 'success' && orderId) {
     (async () => {
       try {
-        // ✅ Cập nhật trạng thái đơn hàng thành CONFIRMED + PAID
+        // ... (Giữ nguyên logic cập nhật API và clearCart) ...
         await orderApi.updateOrder(Number(orderId), {
           status: 'CONFIRMED',
           payment_status: 'PAID',
         });
-
         clearCart();
-        toast.success('🎉 Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.', { duration: 4000 });
+        
+        // 1. GỌI TOAST TRƯỚC HẾT
+        toast.success('🎉 Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            border: '2px solid #22c55e',
+            padding: '16px',
+            color: '#166534',
+            fontWeight: '600',
+            borderRadius: '10px',
+            background: '#dcfce7',
+          },
+        });
 
-        // ✅ Chờ 2 giây rồi chuyển hướng sang /orders
+        // 2. XÓA QUERY NGAY LẬP TỨC ĐỂ NGĂN useEffect LẶP LẠI
+        window.history.replaceState({}, '', '/orders'); 
+
+        // 3. THIẾT LẬP TIMEOUT CHO VIỆC CHUYỂN HƯỚNG CỨNG (NẾU CẦN)
+        // Nếu bạn muốn người dùng thấy thông báo trên trang Orders sau khi chuyển
+        // thì không cần chuyển hướng cứng nữa vì đã replaceState ở bước 2.
+        // NHƯNG nếu bạn muốn chuyển đến trang /orders SAU KHI thấy toast, hãy dùng setTimeout.
+        // Giữ nguyên setTimeout để cho phép người dùng thấy toast
         setTimeout(() => {
-          window.location.href = '/orders';
-        }, 2000);
+           window.location.href = '/orders'; // Chuyển hướng cứng để tải lại trang Orders
+        }, 2000); 
+
       } catch (err) {
         console.error('❌ Lỗi cập nhật trạng thái đơn hàng sau thanh toán:', err);
-        toast.error('Không thể cập nhật trạng thái đơn hàng.');
+        toast.error('Không thể cập nhật trạng thái đơn hàng.', {
+          position: 'top-right',
+        });
+        // Quan trọng: Nếu lỗi, xóa query và quay lại /checkout để người dùng thử lại
+        window.history.replaceState({}, '', '/checkout'); 
       }
     })();
+    // THÊM DÒNG NÀY: Dọn dẹp query param ngay lập tức (trước khi async/await kết thúc)
+    // Tùy chọn, vì nó đã có trong logic async ở trên, nhưng có thể giúp ngăn race condition
+    window.history.replaceState({}, '', '/orders'); 
   } else if (paymentStatus === 'failed') {
-    toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
-    // Dọn query cho sạch
+    toast.error('❌ Thanh toán thất bại, vui lòng thử lại!', {
+      position: 'top-right',
+    });
     window.history.replaceState({}, '', '/checkout');
   }
 }, []);
-   /** ===================== CHECK PAYMENT SUCCESS ===================== */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment');
-
-    if (paymentStatus === 'success') {
-      toast.success('🎉 Thanh toán thành công!');
-      window.history.replaceState({}, '', '/orders'); // xóa query để tránh toast lặp
-    } else if (paymentStatus === 'failed') {
-      toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
-      window.history.replaceState({}, '', '/orders');
-    }
-  }, [])
+  
    /** ===================== LOAD ORDERS ===================== */
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
@@ -440,7 +466,5 @@ useEffect(() => {
     </BaseLayout>
   );
 }
-function setLoading(arg0: boolean) {
-  throw new Error('Function not implemented.');
-}
+
 

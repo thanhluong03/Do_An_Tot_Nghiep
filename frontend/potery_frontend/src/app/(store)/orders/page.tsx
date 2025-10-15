@@ -7,13 +7,40 @@ import { orderApi } from '../../../api/modules/orders';
 import Image from 'next/image';
 import Link from 'next/link';
 import { productApi } from '../../../api/modules/products';
+import { useCart } from '@/contexts/CartContext';
+import toast from 'react-hot-toast';
 export default function MyOrdersPage() {
   const { user, isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 const [productMap, setProductMap] = useState<Record<number, any>>({});
+const { clear: clearCart } = useCart();
+useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const orderId = params.get('order_id');
 
+    if (paymentStatus === 'success' && orderId) {
+      (async () => {
+        try {
+          await orderApi.updateOrder(Number(orderId), {
+            status: 'CONFIRMED',
+            payment_status: 'PAID',
+          });
+          clearCart();
+          toast.success('🎉 Thanh toán thành công!');
+          window.history.replaceState({}, '', '/orders');
+        } catch (err) {
+          console.error('❌ Lỗi cập nhật đơn:', err);
+          toast.error('Không thể cập nhật trạng thái đơn hàng.');
+        }
+      })();
+    } else if (paymentStatus === 'failed') {
+      toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
+      window.history.replaceState({}, '', '/orders');
+    }
+  }, []);
 useEffect(() => {
   const fetchProducts = async () => {
     const productIds = orders.flatMap(o => o.items?.map((i: any) => i.product_id)).filter(Boolean);

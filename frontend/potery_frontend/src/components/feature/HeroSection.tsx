@@ -38,9 +38,9 @@ export const HeroSection: React.FC = () => {
 
                 {/* Main Heading - Đã sửa màu và cấu trúc để khớp ảnh */}
                 <div className="space-y-4">
-                    <h1 className="text-5xl lg:text-7xl font-serif font-bold text-[#2C2A24] leading-tight">
+                    <h1 className="text-5xl lg:text-6xl font-serif font-bold text-[#2C2A24] leading-tight inline">
                         Nghệ Thuật 
-                        <span className="block text-[#65604E] inline">Gốm Sứ</span>
+                        <span className="block text-[#65604E] ">Gốm Sứ</span>
                         <span className="block text-[#2C2A24]">Đương Đại</span>
                     </h1>
                     <p className="text-base md:text-lg text-[#65604E] leading-relaxed max-w-md">
