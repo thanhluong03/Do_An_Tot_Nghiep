@@ -27,7 +27,7 @@ export class CreateReviewDto {
     @Expose()
     @IsOptional()
     @IsPositive()
-    product_id?: number;
+    orderitem_id?: number;
 }
 
 export class UpdateReviewDto {
@@ -48,7 +48,7 @@ export class UpdateReviewDto {
     @Expose()
     @IsPositive()
     @IsNumber()
-    product_id?: number;
+    orderitem_id?: number;
 }
 
 export class ReviewResponseDto {
@@ -65,7 +65,7 @@ export class ReviewResponseDto {
     customer_id?: number;
 
     @Expose()
-    product_id?: number;
+    orderitem_id?: number;
 
     @Expose()
     created_at: Date;

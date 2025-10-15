@@ -1,5 +1,6 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { OrderItemEntity } from './order_item.entity'
 
 @Entity('reviews')
 export class ReviewEntity extends BaseEntity {
@@ -15,4 +16,8 @@ export class ReviewEntity extends BaseEntity {
 
     @Column({ type: 'text', nullable: true })
     comment: string
+
+    @ManyToOne(() => OrderItemEntity, orderItem => orderItem.reviews, { nullable: false })
+    @JoinColumn({ name: 'orderitem_id' })
+    order_item: OrderItemEntity
 }

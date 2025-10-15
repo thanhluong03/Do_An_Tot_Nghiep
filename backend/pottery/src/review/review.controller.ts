@@ -19,6 +19,11 @@ import { plainToInstance } from 'class-transformer';
 
 @Controller('reviews')
 export class ReviewController {
+    @Get('by-product/:productId')
+    async getReviewsByProduct(@Param('productId') productId: number) {
+        const result = await this.reviewService.findByProductId(Number(productId));
+        return result.reviews;
+    }
     constructor(private readonly reviewService: ReviewService) { }
 
     @Post('createreview')
@@ -36,13 +41,9 @@ export class ReviewController {
     }
 
     @Get('listreview')
-    async findAll(@Query() query: ListReviewRequestDto): Promise<ReviewResponseDto[]> {
+    async findAll(@Query() query: ListReviewRequestDto) {
         const result = await this.reviewService.findAll(query);
-        return result.reviews.map(review =>
-            plainToInstance(ReviewResponseDto, review, {
-                excludeExtraneousValues: true,
-            }),
-        );
+        return result.reviews;
     }
 
     @Get('reviewdetail/:id')
