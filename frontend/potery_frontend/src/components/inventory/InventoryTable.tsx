@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Image from "next/image"; 
 import { Inventory, SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService";
@@ -12,7 +11,6 @@ interface InventoryTableProps {
     handleEdit: (item: Inventory) => void;
     handleDelete: (id: number) => Promise<void>;
     totalItems: number;
-    // THÊM: Danh sách Product đầy đủ
     allProducts: Product[]; 
 }
 
@@ -29,12 +27,10 @@ const formatDateTime = (isoString: string) => {
     });
 };
 
-// HÀM TRỢ GIÚP: Tìm và trả về URL ảnh sản phẩm
 const getInventoryProductImageUrl = (productId: number, allProducts: Product[]): string => {
     const product = allProducts.find(p => p.id === productId);
     
     if (product) {
-        // Giả định hàm getProductImageUrl tồn tại và hoạt động
         return getProductImageUrl(product); 
     }
     return "/no-image.jpg"; 
@@ -49,11 +45,10 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     handleEdit,
     handleDelete,
     totalItems,
-    allProducts, // Sử dụng allProducts
+    allProducts, 
 }) => {
     return (
         <>
-            {/* Giữ nguyên phần thông báo rỗng */}
             {inventories.length === 0 && totalItems > 0 && (
                 <div className="text-center py-4 text-gray-500">
                     Không tìm thấy tồn kho cho trang này.
@@ -66,17 +61,15 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             )}
 
             {inventories.length > 0 && (
-                // CẬP NHẬT: Container với bo góc và bóng tinh tế hơn
                 <div className="overflow-x-auto rounded-xl shadow-lg mt-6 border border-gray-100"> 
                     <table className="min-w-full border-collapse bg-white table-fixed">
-                        {/* CẬP NHẬT: Đầu bảng hiện đại hơn */}
                         <thead>
                             <tr className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider font-bold border-b border-gray-200">
-                                <th className="px-4 py-3 text-left w-[50px] rounded-tl-xl">ID</th>
+                                <th className="px-4 py-3 text-left w-[50px] rounded-tl-xl">STT</th>
                                 <th className="px-2 py-3 text-center w-[60px]">Ảnh</th> 
                                 <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th> 
                                 <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th> 
-                                <th className="px-4 py-3 text-center w-[90px]">Trong kho</th>
+                                <th className="px-4 py-3 text-center w-[90px]">Trong kho cửa hàng</th>
                                 <th className="px-4 py-3 text-center w-[90px]">Đã bán</th>
                                 <th className="px-4 py-3 text-left w-[150px]">Ngày tạo</th>
                                 <th className="px-4 py-3 text-left w-[150px]">Cập nhật</th>
@@ -84,12 +77,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {inventories.map((item) => (
+                            {inventories.map((item, index) => ( 
                                 <tr
                                     key={item.id}
                                     className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
                                 >
-                                    <td className="px-4 py-3 font-semibold text-gray-800 truncate">{item.id}</td>
+                                    <td className="px-4 py-3 font-semibold text-gray-800 truncate">
+                                        {index + 1}
+                                    </td>
                                     
                                     <td className="px-2 py-2 text-center">
                                         <div className="flex justify-center">
@@ -103,7 +98,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                                     const target = e.currentTarget as HTMLImageElement;
                                                     target.src = "/no-image.jpg";
                                                 }}
-                                                />
+                                            />
                                         </div>
                                     </td>
                                     
@@ -143,7 +138,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                             onClick={() => handleDelete(item.id)}
                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
                                         >
-                                           <Trash2 size={15} />
+                                            <Trash2 size={15} />
                                         </button>
                                     </td>
                                 </tr>
