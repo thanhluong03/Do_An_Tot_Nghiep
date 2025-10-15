@@ -1,113 +1,170 @@
 "use client";
 
-import { Search, Bell, Mail } from 'lucide-react';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
+import { LogOut } from "lucide-react";
+
 interface HeaderInfo {
-    title: string;
-    breadcrumb: string;
+  title: string;
+  breadcrumb: string;
 }
 
 const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
-    const parts = pathname.split('/').filter(part => part && part !== 'admin');
+  const parts = pathname.split("/").filter((p) => p && p !== "admin");
 
-    const nameMap: { [key: string]: string } = {
-        'dashboard': 'Tổng quan Dashboard',
-        'products': 'Quản lý sản phẩm',
-        'inventory': 'Tồn kho',
-        'stores': 'Cửa hàng',
-        'supplier': 'Nhà cung cấp',
-        'orders': 'Đơn hàng',
-        'categories': 'Danh mục',
-        'news': 'Tin tức/Bài viết',
-        'reviews': 'Đánh giá',
-        'promotions': 'Khuyến mãi/Vouchers',
-        'settings': 'Cài đặt',
-        'roles': 'Vai trò',
-        'permissions': 'Quyền hạn',
-        'importproduct': 'Nhập kho',
-    };
+  const nameMap: Record<string, string> = {
+    dashboard: "Tổng quan Dashboard",
+    products: "Quản lý sản phẩm",
+    inventory: "Tồn kho",
+    stores: "Cửa hàng",
+    supplier: "Nhà cung cấp",
+    orders: "Đơn hàng",
+    categories: "Danh mục",
+    news: "Tin tức/Bài viết",
+    reviews: "Đánh giá",
+    promotions: "Khuyến mãi/Vouchers",
+    settings: "Cài đặt",
+    roles: "Vai trò",
+    permissions: "Quyền hạn",
+    importproduct: "Nhập kho",
+  };
 
+  if (parts.length === 0 || parts[0] === "dashboard") {
+    return { title: nameMap["dashboard"], breadcrumb: "Dashboard" };
+  }
 
-    if (parts.length === 0 || parts[0] === 'dashboard') {
-        return { 
-            title: nameMap['dashboard'] || "Dashboard Overview", 
-            breadcrumb: "Dashboard" 
-        };
-    }
+  const breadcrumbParts = parts.map((p) => nameMap[p] || p);
+  const lastPart = parts[parts.length - 1];
+  const title =
+    nameMap[lastPart] ||
+    breadcrumbParts[breadcrumbParts.length - 1] ||
+    "Trang";
 
-    // Lấy phần tử cuối cùng
-    const lastPart = parts[parts.length - 1];
-    
-    const breadcrumbParts = parts.map(part => {
-        if (nameMap[part]) return nameMap[part];
-        
-        return part.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    });
-
-    let title = breadcrumbParts[breadcrumbParts.length - 1] || "Trang";
-    if (!nameMap[lastPart] && !isNaN(parseInt(lastPart))) {
-        const parentName = breadcrumbParts[breadcrumbParts.length - 2];
-        title = parentName ? `${parentName} (Chi tiết)` : `${title} (Chi tiết)`;
-    } else {
-        title = nameMap[lastPart] || title;
-    }
-
-    return { 
-        title, 
-        breadcrumb: breadcrumbParts.join('>') 
-    };
+  return {
+    title,
+    breadcrumb: breadcrumbParts.join(" > "),
+  };
 };
 
 export default function AdminHeader() {
-    const pathname = usePathname() || '/admin/dashboard'; 
-    const { title, breadcrumb } = getTitleAndBreadcrumb(pathname);
+  const pathname = usePathname() || "/admin/dashboard";
+  const { title, breadcrumb } = getTitleAndBreadcrumb(pathname);
 
-    return (
-        <header className="sticky top-0 z-50 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
+  const [adminName, setAdminName] = useState("Admin");
+  const [adminRole, setAdminRole] = useState("Administrator");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const router = useRouter();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-            <div className="flex items-center space-x-4">
-                <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
-                <nav className="hidden sm:flex items-center text-sm text-gray-500">
-                    <span className="text-gray-400">Home</span>
-                    <span className="mx-2 text-gray-400">{'/'}</span>
-                    {breadcrumb.split(' > ').map((item, index, array) => (
-                        <span 
-                            key={index} 
-                            className={index === array.length - 1 ? "text-[#B95D26] font-medium" : "text-gray-500"}
-                        >
-                            {item}
-                            {index < array.length - 1 && <span className="mx-2 text-gray-400">{'>'}</span>}
-                        </span>
-                    ))}
-                </nav>
+  // 🧠 Lấy tên admin từ localStorage
+  useEffect(() => {
+    const role = localStorage.getItem("adminRole");
+    const name = localStorage.getItem("adminName") || "Admin";
+    setAdminName(name || role || "Administrator");
+    setAdminRole(role || "Administrator");
+  }, []);
+
+  // 🧩 Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+  try {
+    // 🔥 Gọi API backend để xoá cookie HttpOnly
+    await fetch("http://localhost:3000/admin/logout", {
+      method: "POST",
+      credentials: "include", // bắt buộc gửi cookie
+    });
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
+
+  // 🧹 Xoá thông tin còn lại ở localStorage
+  localStorage.removeItem("adminRole");
+  localStorage.removeItem("adminPermissions");
+  localStorage.removeItem("adminName");
+
+  // 🔁 Chuyển hướng về trang login
+  router.push("/admin/login");
+};
+
+
+  return (
+    <header className="sticky top-0 z-50 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
+      <div className="flex items-center space-x-4">
+        <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
+        <nav className="hidden sm:flex items-center text-sm text-gray-500">
+          <span className="text-gray-400">Home</span>
+          <span className="mx-2 text-gray-400">/</span>
+          {breadcrumb.split(">").map((item, i, arr) => (
+            <span
+              key={i}
+              className={
+                i === arr.length - 1
+                  ? "text-[#B95D26] font-medium"
+                  : "text-gray-500"
+              }
+            >
+              {item.trim()}
+              {i < arr.length - 1 && (
+                <span className="mx-2 text-gray-400">{">"}</span>
+              )}
+            </span>
+          ))}
+        </nav>
+      </div>
+
+     <div className="relative flex items-center space-x-3" ref={dropdownRef}>
+          <div
+            className="flex items-center space-x-3 cursor-pointer select-none transition hover:bg-gray-50 rounded-2xl px-3 py-2"
+            onClick={() => setShowDropdown((prev) => !prev)}
+          >
+            <div className="flex flex-col text-right leading-tight">
+              <p className="text-sm font-semibold text-gray-800">
+                {adminName}
+              </p>
+              <p className="text-xs text-gray-500">{adminRole}</p>
             </div>
+            <Image
+              src="/images/avaa.jpg"
+              alt="User Avatar"
+              width={42}
+              height={42}
+              className="rounded-full object-cover border-2 border-orange-100"
+            />
+            <svg
+              className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                showDropdown ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
 
-            <div className="flex items-center space-x-6">
-                
-                <div className="flex items-center space-x-3 pl-6 border-gray-200">
-                    <div className="flex flex-col text-right">
-                        <p className="text-sm font-medium text-gray-800 leading-none">Mai Ngọc</p>
-                        <p className="text-xs text-gray-500 leading-none mt-1">Administrator</p>
-                    </div>
-                    <Image
-                        src="/images/avaa.jpg" 
-                        alt="User Avatar"
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover border-2 border-orange-100"
-                    />
-                    <svg
-                        className="w-4 h-4 text-gray-500 cursor-pointer"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
+          {showDropdown && (
+            <div className="absolute right-0 top-[60px] w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-fade-in">
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+              >
+                <LogOut className="w-4 h-4 mr-2 text-gray-500" />
+                Đăng xuất
+              </button>
             </div>
-        </header>
-    );
+          )}
+        </div>
+    </header>
+  );
 }
