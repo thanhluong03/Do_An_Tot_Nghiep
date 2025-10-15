@@ -18,14 +18,11 @@ export class CartItemService {
                 return { message: 'Product not found', cartItem: null };
             }
             const quantity = data.quantity ?? 1;
-            const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
-            const total_amount = price * quantity;
             const cartItem = await this.cartItemRepository.create({
                 product_id: data.product_id,
                 customer_id: data.customer_id,
                 store_id: data.store_id,
                 quantity,
-                total_amount,
             });
             return {
                 message: 'Cart item created successfully',
@@ -106,12 +103,9 @@ export class CartItemService {
         const product = await this.productRepository.findById(data.product_id);
         if (!product) throw new NotFoundException('Product not found');
         const quantity = data.quantity ?? 1;
-        const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
-        const total_amount = price * quantity;
         await this.cartItemRepository.update(id, {
             ...data,
             quantity,
-            total_amount,
         });
         const cartItem = await this.cartItemRepository.findById(id);
         if (!cartItem) throw new NotFoundException('Cart item not found');
