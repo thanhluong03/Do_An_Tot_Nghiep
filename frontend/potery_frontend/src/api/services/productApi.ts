@@ -14,13 +14,15 @@ export interface Product {
     name: string;
     description: string;
     price: number;
-    quantity?: number; // <<-- ĐÃ THÊM TRƯỜNG NÀY
-    category_id?: number; // Trường này dùng để lọc
+    quantity?: number;
+    category_id?: number;
     images: ProductImage[];
     main_image?: string | null;
     created_at?: string;
     updated_at?: string;
-    category?: { id: number; name: string }; // Trường này dùng để hiển thị tên
+    category?: { id: number; name: string };
+    supplier_id?: number;
+    supplier?: { id: number; name: string };
 }
 
 // Định nghĩa kiểu dữ liệu cho payload gửi lên (Không bao gồm ID, quantity và các trường meta)
