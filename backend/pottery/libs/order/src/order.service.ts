@@ -110,6 +110,15 @@ export class OrderService {
             },
             items
         );
+        if (order && order.id) {
+            const orderItems = await this.orderRepository.getOrderItemsByOrderId(order.id);
+            for (let i = 0; i < current_order.items.length; i++) {
+                if (orderItems[i] && orderItems[i].id) {
+                    (current_order.items[i] as any).orderitem_id = orderItems[i].id;
+                }
+            }
+            await this.orderRepository.update(order.id, { current_order });
+        }
         return order;
     }
 
