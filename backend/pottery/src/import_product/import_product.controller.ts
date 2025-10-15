@@ -14,9 +14,8 @@ export class ImportProductController {
     @Post('createimportproduct')
     async create(@Body() dto: CreateImportProductDto) {
         return await this.importProductService.create({
-            ...dto,
-            product_id: dto.product_id,
             supplier_id: dto.supplier_id,
+            items: dto.items,
         });
     }
 

@@ -1,6 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProductRepository, SupplierRepository, ImportProductRepository } from '@app/database';
-import { CreateImportProductInput, UpdateImportProductInput, ListImportProductInput } from './import_product.interface';
+import {
+    ProductRepository,
+    SupplierRepository,
+    ImportProductRepository,
+} from '@app/database';
+import {
+    CreateImportProductInput,
+    UpdateImportProductInput,
+    ListImportProductInput,
+} from './import_product.interface';
 
 @Injectable()
 export class ImportProductService {
@@ -11,48 +19,29 @@ export class ImportProductService {
     ) { }
 
     async create(data: CreateImportProductInput) {
-        let productIds: number[] = [];
-        let supplierIds: number[] = [];
-        if (data.product_id === 'all') {
-            const products = await this.productRepository.findAll({ size: 1000, page: 1 });
-            productIds = products.map((p) => p.id);
-        } else if (Array.isArray(data.product_id)) {
-            productIds = data.product_id.map((id) => Number(id));
-        } else if (!isNaN(Number(data.product_id))) {
-            productIds = [Number(data.product_id)];
-        }
-        if (data.supplier_id === 'all') {
-            const suppliers = await this.supplierRepository.findAll({ size: 1000, page: 1 });
-            supplierIds = suppliers.map((s) => s.id);
-        } else if (Array.isArray(data.supplier_id)) {
-            supplierIds = data.supplier_id.map((id) => Number(id));
-        } else if (!isNaN(Number(data.supplier_id))) {
-            supplierIds = [Number(data.supplier_id)];
-        }
-        for (const pid of productIds) {
-            let totalImportQuantity = 0;
-            for (const sid of supplierIds) {
-                const existed = await this.importProductRepository.findByProductAndSupplier(pid, sid);
-                if (existed) {
-                    existed.import_quantity = data.import_quantity;
-                    await this.importProductRepository.create(existed);
-                    totalImportQuantity += data.import_quantity;
-                } else {
-                    await this.importProductRepository.create({
-                        product_id: pid,
-                        supplier_id: sid,
-                        import_quantity: data.import_quantity,
-                    });
-                    totalImportQuantity += data.import_quantity;
-                }
-            }
+        const supplierId = Number(data.supplier_id);
+        for (const item of data.items) {
+            const pid = Number(item.product_id);
+            await this.importProductRepository.create({
+                product_id: pid,
+                supplier_id: supplierId,
+                import_quantity: item.import_quantity,
+                import_price: item.import_price,
+            });
             const product = await this.productRepository.findById(pid);
             if (product) {
-                product.quantity = Number(product.quantity) + totalImportQuantity;
-                await this.productRepository.update(pid, { quantity: product.quantity });
+                product.quantity = Number(product.quantity) + item.import_quantity;
+                product.total_quantity_divided = Number(product.total_quantity_divided) + item.import_quantity;
+                await this.productRepository.update(pid, {
+                    quantity: product.quantity,
+                    total_quantity_divided: product.total_quantity_divided
+                });
             }
         }
-        const { data: allImportProducts } = await this.list({ page: 1, size: 1000 });
+        const { data: allImportProducts } = await this.list({
+            page: 1,
+            size: 1000,
+        });
         return {
             importProducts: allImportProducts,
         };
@@ -72,7 +61,11 @@ export class ImportProductService {
         const product = await this.productRepository.findById(importProduct.product_id);
         if (product) {
             product.quantity = Number(product.quantity) - oldImportQuantity + newImportQuantity;
-            await this.productRepository.update(product.id, { quantity: product.quantity });
+            product.total_quantity_divided = Number(product.total_quantity_divided) - oldImportQuantity + newImportQuantity;
+            await this.productRepository.update(product.id, {
+                quantity: product.quantity,
+                total_quantity_divided: product.total_quantity_divided
+            });
         }
         return this.importProductRepository.create(importProduct);
     }
@@ -85,7 +78,11 @@ export class ImportProductService {
         const product = await this.productRepository.findById(importProduct.product_id);
         if (product) {
             product.quantity = Number(product.quantity) - (importProduct.import_quantity || 0);
-            await this.productRepository.update(product.id, { quantity: product.quantity });
+            product.total_quantity_divided = Number(product.total_quantity_divided) - (importProduct.import_quantity || 0);
+            await this.productRepository.update(product.id, {
+                quantity: product.quantity,
+                total_quantity_divided: product.total_quantity_divided
+            });
         }
         await this.importProductRepository.softDelete(id);
         return { deleted: true };
@@ -133,6 +130,7 @@ export class ImportProductService {
             supplier_id: inv.supplier_id,
             supplier_name: inv.supplier?.name,
             import_quantity: inv.import_quantity,
+            import_price: inv.import_price,
             created_at: inv.created_at,
             updated_at: inv.updated_at,
         }));

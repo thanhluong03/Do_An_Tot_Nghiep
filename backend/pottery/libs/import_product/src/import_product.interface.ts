@@ -5,10 +5,15 @@ export interface ListImportProductInput {
     product_id?: number;
     supplier_id?: number;
 }
-export interface CreateImportProductInput {
-    product_id: number | string | number[] | string[];
-    supplier_id: number | string | number[] | string[];
+export interface ImportProductItemInput {
+    product_id: number | string;
     import_quantity: number;
+    import_price?: number;
+}
+
+export interface CreateImportProductInput {
+    supplier_id: number | string;
+    items: ImportProductItemInput[];
 }
 
 export interface UpdateImportProductInput {
