@@ -21,6 +21,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.6.0",
+    "react-select": "^5.10.2",
     "recharts": "^3.2.1",
     "tailwind-merge": "^2.6.0"
   },
@@ -30,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-select": "^5.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
