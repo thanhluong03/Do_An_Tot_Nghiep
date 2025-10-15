@@ -20,6 +20,8 @@ import {
 
 import InventoryForm from "@/components/inventory/InventoryForm";
 import InventoryTable from "@/components/inventory/InventoryTable";
+import { getCategories, Category } from "@/api/services/categoryService";
+
 import Pagination from "@/components/inventory/Pagination";
 
 // Interface cho state của form
@@ -32,6 +34,8 @@ export interface InventoryFormState {
 export type FormName = "product_id" | "store_id" | "quantity_stock" | "quantity_sold";
 
 export default function InventoryPage() {
+    const [categories, setCategories] = useState<Category[]>([]);
+
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [stores, setStores] = useState<SelectOption[]>([]);
@@ -94,6 +98,7 @@ export default function InventoryPage() {
                 listDropdownProducts(),
                 listDropdownStores(),
                 listAllProducts(),
+                 getCategories()
             ]);
 
             setProducts(Array.isArray(productRes) ? productRes : []);
@@ -104,6 +109,7 @@ export default function InventoryPage() {
             setProducts([]);
             setStores([]);
             setAllProducts([]);
+            setCategories([]);
         }
     };
 
@@ -319,6 +325,7 @@ export default function InventoryPage() {
                         editingId={editingId}
                         isAdding={isAdding} // Truyền trạng thái thêm mới
                         errors={errors}
+                         categories={categories}
                         products={products}
                         stores={stores}
                         allProducts={allProducts} // TRUYỀN DANH SÁCH PRODUCT ĐẦY ĐỦ

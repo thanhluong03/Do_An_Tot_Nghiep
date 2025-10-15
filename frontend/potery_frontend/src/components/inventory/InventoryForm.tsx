@@ -5,6 +5,8 @@ import { SelectOption, Product } from "@/api/services/inventoryService";
 import { InventoryFormState, FormName } from "@/app/admin/inventory/page";
 import CheckboxList from "./Checkboxlist"; 
 import { Package, Store, Box, MinusCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
+import { getCategories, Category } from "@/api/services/categoryService";
+
 
 interface InventoryFormProps {
     form: InventoryFormState;
@@ -21,6 +23,7 @@ interface InventoryFormProps {
 }
 
 const InventoryForm: React.FC<InventoryFormProps> = ({
+    
     form,
     editingId,
     errors,
@@ -59,6 +62,19 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
         const id = typeof form.product_id === 'string' ? Number(form.product_id) : null;
         return allProducts.find(p => p.id === id);
     }, [form.product_id, allProducts]);
+    const [categories, setCategories] = React.useState<Category[]>([]);
+
+    React.useEffect(() => {
+    const fetchCategories = async () => {
+        try {
+        const data = await getCategories();
+        setCategories(data);
+        } catch (error) {
+        console.error("Lỗi khi tải danh mục:", error);
+        }
+    };
+    fetchCategories();
+    }, []);
 
     // Đổi màu sắc: Primary (Thêm mới) là Orange, Accent (Sửa) là Red-Orange/Red
     const PRIMARY_COLOR_CLASS = 'orange'; // Dùng orange-600
@@ -112,6 +128,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                     onChange={handleValueChange}
                                     error={errors.product_id}
                                     allProducts={allProducts}
+                                    categories={categories} 
                                     
                                 />
                             </div>
