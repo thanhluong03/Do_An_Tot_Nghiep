@@ -108,7 +108,7 @@ export default function ProductsPage() {
 
     // Sắp xếp theo thời gian tạo (nếu có)
     if (dateSort) {
-      result.sort((a: any, b: any) => {
+      result.sort((a: Product, b: Product) => {
         const timeA = new Date(a.created_at || 0).getTime();
         const timeB = new Date(b.created_at || 0).getTime();
         return dateSort === "newest" ? timeB - timeA : timeA - timeB;
@@ -281,7 +281,7 @@ export default function ProductsPage() {
             <select
               title="Lọc theo giá"
               value={priceSort}
-              onChange={(e) => setPriceSort(e.target.value as any)}
+              onChange={(e) => setPriceSort(e.target.value as "asc" | "desc" | "")}
               className="border border-gray-300 rounded-xl p-2 flex-1 focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Sắp xếp theo giá</option>
@@ -292,7 +292,7 @@ export default function ProductsPage() {
             <select
                 title="Lọc theo thời gian"
               value={dateSort}
-              onChange={(e) => setDateSort(e.target.value as any)}
+              onChange={(e) => setDateSort(e.target.value as "newest" | "oldest" | "")}
               className="border border-gray-300 rounded-xl p-2 flex-1 focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Sắp xếp theo thời gian</option>

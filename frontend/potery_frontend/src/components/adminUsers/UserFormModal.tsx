@@ -1,8 +1,9 @@
-// src/components/adminUsers/UserFormModal.tsx
 "use client";
 import React, { useEffect, useState } from "react";
 import { User } from "@/api/services/userService";
 import toast from "react-hot-toast";
+import Image from "next/image"; 
+import { getRoles, Role } from "@/api/services/roleService";
 
 interface UserFormModalProps {
     user: User | null;
@@ -23,10 +24,24 @@ export default function UserFormModal({
     const [fullName, setFullName] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");
-    const [roleId, setRoleId] = useState(1);
+    const [roleId, setRoleId] = useState<number>(1);
+    const [roles, setRoles] = useState<Role[]>([]);
     const [isActive, setIsActive] = useState(true);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string>("");
+
+    useEffect(() => {
+        async function fetchRoles() {
+            try {
+                const data = await getRoles({ page: 1, size: 100, key: "" });
+                setRoles(data);
+            } catch (err) {
+                console.error(err);
+                toast.error("Không thể tải danh sách vai trò.");
+            }
+        }
+        fetchRoles();
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -37,10 +52,13 @@ export default function UserFormModal({
             setAddress(user.address || "");
             setRoleId(user.role_id);
             setIsActive(user.is_active ?? true);
-            setAvatarPreview(user.avatar_image || "");
-            setPassword(""); // password luôn rỗng khi edit
+            setAvatarPreview(
+                typeof user.avatar_image === "string"
+                    ? user.avatar_image
+                    : ""
+            );
+            setPassword("");
         } else {
-            // reset
             setUsername("");
             setPassword("");
             setEmail("");
@@ -83,12 +101,14 @@ export default function UserFormModal({
         } else {
             onCreate(formData);
         }
+        onClose();
     };
 
-    const inputClasses = "mt-1 w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150";
+    const inputClasses =
+        "mt-1 w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150";
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"> 
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60" onClick={onClose} />
             <div className="relative bg-white rounded-xl w-full max-w-lg p-6 shadow-2xl animate-fade-in">
                 <h2 className="text-xl font-bold mb-5 text-gray-800">
@@ -96,10 +116,13 @@ export default function UserFormModal({
                 </h2>
 
                 <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-3">
+                    {/* Username */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Tên đăng nhập *</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Tên đăng nhập *
+                        </label>
                         <input
-                            title="username"
+                            title="ten-dang-nhap"
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -108,21 +131,25 @@ export default function UserFormModal({
                         />
                     </div>
 
-                    {!user && (
+                    {/* Password */}
+                    {!user ? (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Mật khẩu *</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Mật khẩu *
+                            </label>
                             <input
+                                title="mat-khau"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className={inputClasses}
-                                placeholder="Để trống nếu không muốn thay đổi" // Gợi ý rõ ràng
                             />
                         </div>
-                    )}
-                    {user && (
+                    ) : (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Mật khẩu (Mới)</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Mật khẩu (Mới)
+                            </label>
                             <input
                                 type="password"
                                 value={password}
@@ -133,8 +160,11 @@ export default function UserFormModal({
                         </div>
                     )}
 
+                    {/* Email */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Email
+                        </label>
                         <input
                             title="email"
                             type="email"
@@ -144,10 +174,13 @@ export default function UserFormModal({
                         />
                     </div>
 
+                    {/* Full name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Họ và Tên</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Họ và Tên
+                        </label>
                         <input
-                            title="fullName"
+                            title="ho-ten"
                             type="text"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
@@ -156,9 +189,11 @@ export default function UserFormModal({
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Số điện thoại
+                        </label>
                         <input
-                            title="phone"
+                            title="so-dien-thoai"
                             type="text"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
@@ -167,54 +202,74 @@ export default function UserFormModal({
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Địa chỉ</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Địa chỉ
+                        </label>
                         <input
-                            title="address"
+                            title="e"
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
                             className={inputClasses}
                         />
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">ID Vai trò (Role ID)</label>
-                        <input
-                            title="number"
-                            type="number"
+                        <label className="block text-sm font-medium text-gray-700">
+                            Vai trò (Role)
+                        </label>
+                        <select
+                            title="vai-tro"
                             value={roleId}
                             onChange={(e) => setRoleId(Number(e.target.value))}
-                            className={inputClasses}
-                            min={1}
-                        />
+                            className={`${inputClasses} bg-white`}
+                        >
+                            {roles.length === 0 ? (
+                                <option value="">Đang tải...</option>
+                            ) : (
+                                roles.map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                        {r.name}
+                                    </option>
+                                ))
+                            )}
+                        </select>
                     </div>
 
                     <div className="flex items-center space-x-3 pt-2">
                         <input
-                            title="checkbox"
+                            title="kich-hoat"
                             type="checkbox"
                             checked={isActive}
                             onChange={() => setIsActive(!isActive)}
                             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />
-                        <label className="text-sm font-medium text-gray-700">Kích hoạt (Active)</label>
+                        <label className="text-sm font-medium text-gray-700">
+                            Kích hoạt (Active)
+                        </label>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Ảnh đại diện</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Ảnh đại diện
+                        </label>
                         <input
-                            title="avatar"
+                            title="anh"
                             type="file"
                             accept="image/*"
                             onChange={handleAvatarChange}
-                            className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                        /> 
+                            className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full 
+                            file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                        />
                         {avatarPreview && (
-                            <img
+                             <div className="mt-3 relative h-20 w-20">
+                            <Image
                                 src={avatarPreview}
                                 alt="avatar preview"
-                                className="mt-3 h-20 w-20 rounded-full object-cover border-2 border-indigo-200 shadow-md"
-                            /> 
+                                fill  
+                                className="rounded-full object-cover border-2 border-indigo-200 shadow-md"
+                                sizes="80px"  
+                            />
+                        </div>
                         )}
                     </div>
                 </div>
