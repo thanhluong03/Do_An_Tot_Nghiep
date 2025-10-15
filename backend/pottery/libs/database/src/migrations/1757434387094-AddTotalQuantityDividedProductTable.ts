@@ -1,21 +1,21 @@
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
-export class AddQuantityProductTable1757434387084 implements MigrationInterface {
+export class AddTotalQuantityDividedProductTable1757434387094 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         const table = await queryRunner.getTable('products');
         if (table) {
-            const quantityColumn = table.findColumnByName('quantity');
-            if (!quantityColumn) {
+            const totalQuantityDividedColumn = table.findColumnByName('total_quantity_divided');
+            if (!totalQuantityDividedColumn) {
                 await queryRunner.addColumn(
                     'products',
                     new TableColumn({
-                        name: 'quantity',
+                        name: 'total_quantity_divided',
                         type: 'int',
                         isNullable: true,
                     }),
                 );
             } else {
-                console.log('⚠️  Column "quantity" already exists in "products" table — skipping add.');
+                console.log('⚠️  Column "total_quantity_divided" already exists in "products" table — skipping add.');
             }
         } else {
             console.log('⚠️  Table "products" does not exist — skipping add.');
@@ -25,11 +25,11 @@ export class AddQuantityProductTable1757434387084 implements MigrationInterface 
     public async down(queryRunner: QueryRunner): Promise<void> {
         const table = await queryRunner.getTable('products');
         if (table) {
-            const quantityColumn = table.findColumnByName('quantity');
-            if (quantityColumn) {
-                await queryRunner.dropColumn('products', 'quantity');
+            const totalQuantityDividedColumn = table.findColumnByName('total_quantity_divided');
+            if (totalQuantityDividedColumn) {
+                await queryRunner.dropColumn('products', 'total_quantity_divided');
             } else {
-                console.log('⚠️  Column "quantity" does not exist in "products" table — skipping drop.');
+                console.log('⚠️  Column "total_quantity_divided" does not exist in "products" table — skipping drop.');
             }
         } else {
             console.log('⚠️  Table "products" does not exist — skipping drop.');

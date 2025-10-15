@@ -2,27 +2,46 @@ import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 't
 
 export class AddStoreIdCartitemTable1757434387086 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.addColumn(
-            'cart_items',
-            new TableColumn({
-                name: 'store_id',
-                type: 'int',
-                isNullable: false,
-            }),
-        );
-
-        await queryRunner.createForeignKey(
-            'cart_items',
-            new TableForeignKey({
-                columnNames: ['store_id'],
-                referencedColumnNames: ['id'],
-                referencedTableName: 'stores',
-                onDelete: 'SET NULL',
-            }),
-        );
+        const table = await queryRunner.getTable('cart_items');
+        if (table) {
+            const storeIdColumn = table.findColumnByName('store_id');
+            if (!storeIdColumn) {
+                await queryRunner.addColumn(
+                    'cart_items',
+                    new TableColumn({
+                        name: 'store_id',
+                        type: 'int',
+                        isNullable: false,
+                    }),
+                );
+                await queryRunner.createForeignKey(
+                    'cart_items',
+                    new TableForeignKey({
+                        columnNames: ['store_id'],
+                        referencedColumnNames: ['id'],
+                        referencedTableName: 'stores',
+                        onDelete: 'SET NULL',
+                    }),
+                );
+            } else {
+                console.log('⚠️  Column "store_id" already exists in "cart_items" table — skipping add.');
+            }
+        } else {
+            console.log('⚠️  Table "cart_items" does not exist — skipping add.');
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropColumn('cart_items', 'store_id');
+        const table = await queryRunner.getTable('cart_items');
+        if (table) {
+            const storeIdColumn = table.findColumnByName('store_id');
+            if (storeIdColumn) {
+                await queryRunner.dropColumn('cart_items', 'store_id');
+            } else {
+                console.log('⚠️  Column "store_id" does not exist in "cart_items" table — skipping drop.');
+            }
+        } else {
+            console.log('⚠️  Table "cart_items" does not exist — skipping drop.');
+        }
     }
 }

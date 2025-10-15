@@ -22,7 +22,13 @@ export class ProductEntity extends BaseEntity {
   quantity: number
 
   @Column({ type: 'integer', nullable: false })
+  total_quantity_divided: number
+
+  @Column({ type: 'integer', nullable: false })
   category_id: number
+
+  @Column({ type: 'integer', nullable: false })
+  supplier_id: number
 
   @OneToMany(() => ProductImageEntity, (productImage) => productImage.product, {
     cascade: true,
