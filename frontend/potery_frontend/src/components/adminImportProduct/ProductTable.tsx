@@ -1,4 +1,4 @@
-// src/components/adminImportProduct/ProductListTable.tsx
+// src/components/adminImportProduct/ProductTable.tsx
 import React from 'react';
 import { Image as ImageIcon, Tag, Hash, Box } from 'lucide-react';
 
@@ -42,7 +42,6 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-white border-b-2 border-gray-200">
                     <tr>
-                        {/* Đã giảm py-3 thành py-2 */}
                         <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-16">ID</th>
                         <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-16">Ảnh</th>
                         <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/4">TÊN SẢN PHẨM</th>
@@ -70,14 +69,11 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
 
                             return (
                                 <tr key={product.id} className="hover:bg-gray-50 transition duration-150">
-                                    {/* Đã giảm py-3 thành py-2 */}
                                     <td className="px-3 py-2 whitespace-nowrap text-center text-sm font-medium text-gray-600">
                                         {product.id}
                                     </td>
-                                    {/* Nội dung ảnh */}
                                     <td className="px-3 py-2 text-sm">
                                         <div className="flex justify-center items-center">
-                                            {/* Giảm kích thước ảnh từ w-10 h-10 xuống w-8 h-8 để tiết kiệm không gian đứng */}
                                             <div className="w-8 h-8 relative flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                                                 {imageUrl && imageUrl !== "/no-image.jpg" ? (
                                                     <img

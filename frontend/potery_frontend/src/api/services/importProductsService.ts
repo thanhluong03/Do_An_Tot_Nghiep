@@ -168,12 +168,17 @@ export const deleteImportProduct = async (id: number): Promise<void> => {
 
 
 export const listProducts = async (dto: { page: number, size: number }): Promise<{ data: Product[]; total: number; page: number; size: number }> => {
+    // Đảm bảo params page và size được truyền đúng
     const res = await axios.get(`${API_URL_PRODUCTS}/listproduct`, { params: dto });
-    
     const responseData = res.data.data || res.data;
-    const list: Product[] = Array.isArray(responseData) ? responseData : [];
+    const list: Product[] = Array.isArray(responseData.data) ? responseData.data : Array.isArray(responseData.items) ? responseData.items : Array.isArray(responseData) ? responseData : [];
 
-    return { data: list, total: res.data.total || list.length, page: res.data.page || 1, size: res.data.size || 1000 };
+    return { 
+        data: list, 
+        total: responseData.total || res.data.total || list.length, 
+        page: responseData.page || res.data.page || dto.page || 1, 
+        size: responseData.size || res.data.size || dto.size || 10,
+    };
 };
 
 export const listDropdownProducts = async (): Promise<SelectOption[]> => {

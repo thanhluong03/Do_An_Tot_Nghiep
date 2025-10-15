@@ -32,7 +32,7 @@ export default function InventoryPage() {
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [stores, setStores] = useState<SelectOption[]>([]);
-    const [allProducts, setAllProducts] = useState<Product[]>([]); // THÊM STATE CHO DANH SÁCH PRODUCT ĐẦY ĐỦ
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -61,7 +61,7 @@ export default function InventoryPage() {
     const getDisplayName = useCallback(
         (list: SelectOption[], id: number | string | undefined): string => {
             if (id === undefined || id === null) return "";
-            if (typeof id === 'string' && id === 'all') return "TẤT CẢ"; // Xử lý trường hợp 'all'
+            if (typeof id === 'string' && id === 'all') return "TẤT CẢ";
             const numericId = Number(id);
             if (isNaN(numericId)) return "";
             const found = list.find((item) => Number(item.id) === numericId);
@@ -298,6 +298,7 @@ export default function InventoryPage() {
                                 Cửa hàng
                             </label>
                             <select
+                                title="c"
                                 value={selectedStoreId}
                                 onChange={(e) => setSelectedStoreId(Number(e.target.value))}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
@@ -329,6 +330,7 @@ export default function InventoryPage() {
                                 Từ ngày
                             </label>
                             <input
+                                title="date"
                                 type="date"
                                 value={fromDate}
                                 onChange={(e) => setFromDate(e.target.value)}
@@ -341,6 +343,7 @@ export default function InventoryPage() {
                                 Đến ngày
                             </label>
                             <input
+                                title="date"
                                 type="date"
                                 value={toDate}
                                 onChange={(e) => setToDate(e.target.value)}
@@ -348,20 +351,7 @@ export default function InventoryPage() {
                             />
                         </div>
                     </div>
-
-                    {/* <div className="mt-4 text-sm text-gray-600 flex justify-end gap-6">
-                        <p>
-                            Tổng số mục:{" "}
-                            <span className="font-semibold text-gray-800">{totalItems}</span>
-                        </p>
-                        <p>
-                            Đang hiển thị:{" "}
-                            <span className="font-semibold text-gray-800">{inventories.length}</span>
-                        </p>
-                    </div> */}
                 </div>
-
-                {/* --- BẢNG DỮ LIỆU --- */}
                 {loading ? (
                     <div className="text-center py-10 text-lg text-gray-500">
                         Đang tải dữ liệu...
@@ -371,7 +361,7 @@ export default function InventoryPage() {
                         inventories={inventories}
                         products={products}
                         stores={stores}
-                        allProducts={allProducts} // TRUYỀN VÀO ĐỂ HIỂN THỊ ẢNH
+                        allProducts={allProducts}
                         getDisplayName={getDisplayName}
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
