@@ -45,7 +45,6 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                 <thead className="bg-orange-50/70">
                     <tr>
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-16">ID</th>
-                        {/* 🚀 THAY ĐỔI: CỘT ẢNH ĐƯỢC ĐẶT SAU ID */}
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-16">Ảnh</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-1/4">Sản phẩm & SL</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-1/6">Nhà Cung cấp</th>
@@ -159,7 +158,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                             {isExpanded ? <ChevronUp size={18} /> : <Eye size={18} />}
                                         </button>
                                         
-                                        {/* Nút Sửa */}
+                                        {/* Nút Sửa
                                         <button
                                             onClick={() => handleEdit(item)}
                                             className={`text-blue-600 hover:text-blue-800 p-1 rounded-full transition ${finalItemsList.length > 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -167,7 +166,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                             disabled={finalItemsList.length > 1}
                                         >
                                             <Edit size={18} />
-                                        </button>
+                                        </button> */}
                                         
                                         {/* Nút Xóa */}
                                         <button
