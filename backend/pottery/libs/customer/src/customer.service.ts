@@ -20,7 +20,7 @@ export class CustomerService {
         };
     }
 
-    async createCustomer(data: ICreateCustomer): Promise<{ message: string, customer: any | null }> {
+    async createCustomer(data: ICreateCustomer): Promise<{ message: string, customer: any | null }> {a
         if (data.password_hash) {
             const saltRounds = 10;
             data.password_hash = await bcrypt.hash(data.password_hash, saltRounds);

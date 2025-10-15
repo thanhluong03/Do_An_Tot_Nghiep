@@ -1,153 +1,228 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Product } from "@/api/services/productApi";
 import { Supplier } from "@/api/services/supplierService";
-import { Category } from "@/api/services/categoryService"; 
+import { Category } from "@/api/services/categoryService";
 
 interface ProductFormModalProps {
-    isModalOpen: boolean;
-    editingProduct: Product | null;
-    formData: Product;
-    setFormData: React.Dispatch<React.SetStateAction<Product>>;
-    handleSave: (formData: FormData) => Promise<void>;
-    setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    // suppliers: Supplier[]; // Không cần thiết cho form này
-    categories: Category[];
-    suppliers: Supplier[]; // Thêm mảng suppliers
+  isModalOpen: boolean;
+  editingProduct: Product | null;
+  formData: Product;
+  setFormData: React.Dispatch<React.SetStateAction<Product>>;
+  handleSave: (formData: FormData) => Promise<void>;
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  categories: Category[];
+  suppliers: Supplier[];
 }
 
 export default function ProductFormModal({
-    isModalOpen,
-    editingProduct,
-    formData,
-    setFormData,
-    handleSave,
-    setIsModalOpen,
-    categories,
-    suppliers,
+  isModalOpen,
+  editingProduct,
+  formData,
+  setFormData,
+  handleSave,
+  setIsModalOpen,
+  categories,
+  suppliers,
 }: ProductFormModalProps) {
-    const [previewImages, setPreviewImages] = useState<string[]>([]);
-    const [files, setFiles] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
 
-    // Cần reset state khi mở modal, đặc biệt là khi chuyển từ Edit sang Add
-    React.useEffect(() => {
-        if (isModalOpen) {
-            // Nếu là edit, hiển thị ảnh cũ (nếu có) và không có file mới
-            if (editingProduct) {
-                // Chúng ta giả định backend trả về URL hoặc chúng ta đã có cơ chế xử lý ở đây
-                // Tạm thời, ta chỉ hiển thị ảnh mới được chọn
-                setPreviewImages([]);
-            } else {
-                setPreviewImages([]);
-            }
-            setFiles([]);
-        }
-    }, [isModalOpen, editingProduct]);
+  React.useEffect(() => {
+    if (isModalOpen) {
+      setFiles([]);
+      setPreviewImages([]);
+    }
+  }, [isModalOpen, editingProduct]);
 
-    if (!isModalOpen) return null;
+  if (!isModalOpen) return null;
 
-    // Khi chọn ảnh
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files) return;
-        const newFiles = Array.from(e.target.files);
-        setFiles(newFiles);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newFiles = Array.from(e.target.files);
+    setFiles(newFiles);
+    setPreviewImages(newFiles.map((f) => URL.createObjectURL(f)));
+  };
 
-        // Hiện preview
-        const previews = newFiles.map((f) => URL.createObjectURL(f));
-        setPreviewImages(previews);
-    };
+  const onSave = async () => {
+    const form = new FormData();
+    form.append("name", formData.name);
+    form.append("price", formData.price.toString());
+    form.append("description", formData.description || "");
+    form.append("category_id", (formData.category_id || 0).toString());
+    form.append("supplier_id", (formData.supplier_id || 0).toString());
 
-    const onSave = async () => {
-        const form = new FormData();
-        form.append("name", formData.name);
-        form.append("price", formData.price.toString());
-        form.append("description", formData.description || "");
-        form.append("category_id", (formData.category_id || 0).toString());
-        form.append("supplier_id", (formData.supplier_id || 0).toString());
+    files.forEach((file) => form.append("images", file));
+    await handleSave(form);
+  };
 
-        // CHÚ Ý: Không thêm trường 'quantity' vào FormData
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-black/30 transition-opacity"
+        onClick={() => setIsModalOpen(false)}
+      />
 
-        files.forEach((file) => {
-            form.append("images", file);
-        });
+      {/* Modal */}
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 animate-[fadeIn_0.2s_ease-in-out]">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center justify-between">
+          {editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}
+          <button
+            onClick={() => setIsModalOpen(false)}
+            className="text-gray-400 hover:text-gray-600 transition"
+          >
+            ✕
+          </button>
+        </h2>
 
-        await handleSave(form);
-    };
+        <div className="space-y-4">
+          {/* Tên sản phẩm */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tên sản phẩm
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+              placeholder="Nhập tên sản phẩm..."
+            />
+          </div>
 
-    return (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="absolute inset-0 bg-black/30" onClick={() => setIsModalOpen(false)} />
+          {/* Giá */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Giá (VNĐ)
+            </label>
+            <input
+              type="number"
+              value={formData.price}
+              onChange={(e) =>
+                setFormData({ ...formData, price: Number(e.target.value) })
+              }
+              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+              placeholder="Nhập giá sản phẩm..."
+            />
+          </div>
 
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6 z-10 overflow-y-auto max-h-[90vh]">
-                <h2 className="text-xl font-semibold mb-4">{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
+          {/* Mô tả */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mô tả
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+              placeholder="Nhập mô tả sản phẩm..."
+            />
+          </div>
 
-                <div className="space-y-3">
-                    {/* Tên sản phẩm */}
-                    <label className="block text-sm">Tên sản phẩm</label>
-                    <input title='Tên sản phẩm' type="text" value={formData.name} 
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full border rounded p-2" />
+          {/* Danh mục */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Danh mục
+            </label>
+            <select
+              value={formData.category_id ?? 0}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  category_id: Number(e.target.value),
+                })
+              }
+              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+            >
+              <option value={0}>-- Chọn danh mục --</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-                    {/* Giá */}
-                    <label className="block text-sm">Giá</label>
-                    <input title='Giá sản phẩm' type="number" value={formData.price} 
-                        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                        className="w-full border rounded p-2" />
+          {/* Nhà cung cấp */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nhà cung cấp
+            </label>
+            <select
+              value={formData.supplier_id ?? 0}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  supplier_id: Number(e.target.value),
+                })
+              }
+              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+            >
+              <option value={0}>-- Chọn nhà cung cấp --</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-                    {/* Mô tả */}
-                    <label className="block text-sm">Mô tả</label>
-                    <textarea title='Mô tả sản phẩm' value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full border rounded p-2" />
-                    
-                    {/* Danh mục */}
-                    <label className="block text-sm">Danh mục</label>
-                    <select 
-                        title='Danh mục' 
-                        value={formData.category_id ?? 0} 
-                        onChange={(e) => setFormData({ ...formData, category_id: Number(e.target.value) })} 
-                        className="w-full border rounded p-2">
-                        <option value={0}>-- Chọn danh mục --</option>
-                        {categories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.name}
-                            </option>
-                        ))}
-                    </select>
-                    {/* Nhà cung cấp */}
-                    <label className="block text-sm">Nhà cung cấp</label>
-                    <select
-                        title='Nhà cung cấp'
-                        value={formData.supplier_id ?? 0}
-                        onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })}
-                        className="w-full border rounded p-2"
-                    >
-                        <option value={0}>-- Chọn nhà cung cấp --</option>
-                        {suppliers.map((s) => (
-                            <option key={s.id} value={s.id}>
-                                {s.name}
-                            </option>
-                        ))}
-                    </select>
+          {/* Upload ảnh */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ảnh sản phẩm
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileChange}
+              className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 
+              file:rounded-lg file:border-0 file:text-sm file:font-medium 
+              file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+            />
+          </div>
 
-                    {/* Upload ảnh */}
-                    <label className="block text-sm">Ảnh sản phẩm</label>
-                    <input title='Ảnh sản phẩm' type="file" multiple accept="image/*" onChange={handleFileChange} />
-
-                    {/* Preview ảnh */}
-                    {previewImages.length > 0 && (
-                        <div className="flex gap-2 flex-wrap mt-2">
-                            {previewImages.map((src, i) => (
-                                <img key={i} src={src} alt="preview" className="w-20 h-20 object-cover rounded border" />
-                            ))}
-                        </div>
-                    )}
+          {/* Preview ảnh */}
+          {previewImages.length > 0 && (
+            <div className="flex flex-wrap gap-3 mt-2">
+              {previewImages.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 shadow-sm"
+                >
+                  <img
+                    src={src}
+                    alt="preview"
+                    className="object-cover w-full h-full"
+                  />
                 </div>
-
-                <div className="flex justify-end gap-3 mt-5">
-                    <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
-                    <button onClick={onSave} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Lưu</button>
-                </div>
+              ))}
             </div>
+          )}
         </div>
-    );
+
+        {/* Nút hành động */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={() => setIsModalOpen(false)}
+            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition font-medium"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onSave}
+            className="px-5 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm transition"
+          >
+            Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
