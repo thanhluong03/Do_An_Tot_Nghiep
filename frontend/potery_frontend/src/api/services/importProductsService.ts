@@ -39,13 +39,13 @@ export interface UpdateImportProductDto {
 export interface ImportProduct {
     id: number;
     supplier_id: number;
-    items: {
-        product_id: number;
-        import_quantity: number;
-        import_price?: number;
-    }[];
+    product_id: number;
+    import_quantity: number;
+    import_price?: number;
     created_at?: string;
     updated_at?: string;
+    // Thêm trường items để xử lý trường hợp API trả về nhiều items trong 1 phiếu nhập (nếu có)
+    items?: ImportProductItemDto[]; 
 }
 
 export interface SelectOption {
@@ -59,11 +59,21 @@ export interface Product {
     name: string;
     price: number;
     quantity: number;
+    total_quantity_divided: number;
     supplier_id: number | string; 
     category_id?: number;
     images?: { url?: string; image_data?: string | { data: number[] } }[];
     main_image?: string | { data: number[] };
 }
+
+// 💡 INTERFACE MỚI: Định nghĩa cấu trúc response có phân trang
+export interface ListResponse<T> {
+    data: T[];
+    total: number;
+    page: number;
+    size: number;
+}
+
 
 // --- HÀM TRỢ GIÚP CHUYỂN BUFFER -> BASE64 (Giữ nguyên) ---
 const bufferToBase64 = (buffer: { data: number[] }): string | null => {
@@ -114,20 +124,27 @@ export const getProductImageUrl = (product: Product): string => {
 
 // --- API Calls ---
 
+// 💡 CẬP NHẬT: Hàm listImportProducts trả về ListResponse có phân trang
 export const listImportProducts = async (
     dto: ListImportProductDto
-): Promise<{ data: ImportProduct[]; total: number; page: number; size: number }> => {
+): Promise<ListResponse<ImportProduct>> => {
     const res = await axios.get(`${API_URL_IMPORTPRODUCT}/list`, {
         params: dto
     });
     
     const responseData = res.data;
-    if (responseData && (Array.isArray(responseData.data) || Array.isArray(responseData.items))) {
-           return responseData;
+    
+    // Logic xử lý response để luôn trả về đúng format ListResponse
+    const dataItems = responseData.data || responseData.items || responseData;
+    const total = responseData.total || (Array.isArray(dataItems) ? dataItems.length : 0);
+    const page = responseData.page || dto.page || 1;
+    const size = responseData.size || dto.size || 10;
+    
+    if (Array.isArray(dataItems)) {
+        return { data: dataItems, total, page, size };
     }
-    if (Array.isArray(responseData)) {
-        return { data: responseData, total: responseData.length, page: dto.page || 1, size: dto.size || 10 };
-    }
+    
+    // Nếu không có dữ liệu trả về, vẫn trả về ListResponse rỗng
     return { data: [], total: 0, page: 1, size: 10 };
 };
 

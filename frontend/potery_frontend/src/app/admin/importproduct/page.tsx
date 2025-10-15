@@ -11,21 +11,18 @@ import {
     deleteImportProduct,
     listProducts,
     getProductImageUrl, 
+    // 💡 Import ListImportProductDto
+    ListImportProductDto,
+    Product,
 } from "@/api/services/importProductsService";
 
 import ImportProductForm from "@/components/adminImportProduct/ImportProductForm";
 import ImportProductTable from "@/components/adminImportProduct/ImportProductTable";
 // 💡 Import thêm icon History/RotateCw
-import { History, PlusCircle, RotateCw } from 'lucide-react'; 
+import { PlusCircle, RotateCw } from 'lucide-react'; 
+import ProductListTable from "@/components/adminImportProduct/ProductTable";
 
-interface Product { 
-    id: string | number;
-    name: string;
-    supplier_id: string | number;
-    // Thêm các trường cần thiết cho hàm getProductImageUrl
-    images?: { url?: string; image_data?: string | { data: number[] } }[];
-    main_image?: string | { data: number[] };
-}
+
 
 export interface SelectedProductItem {
     checked: boolean;
@@ -41,6 +38,11 @@ export default function ImportProductPage() {
     const [filteredProducts, setFilteredProducts] = useState<SelectOption[]>([]);
 
     const [importProducts, setImportProducts] = useState<ImportProduct[]>([]);
+    
+    // 💡 STATE PHÂN TRANG MỚI
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(10); // Kích thước trang cố định là 10
+    const [totalItems, setTotalItems] = useState(0); 
     
     // Form state
     const [selectedSupplier, setSelectedSupplier] = useState<string>("");
@@ -74,27 +76,43 @@ export default function ImportProductPage() {
         }
     };
     
-    const fetchImportProducts = async () => {
+    // 💡 CẬP NHẬT HÀM FETCH VỚI PHÂN TRANG
+    const fetchImportProducts = async (page: number, size: number) => {
         setLoading(true);
         try {
-            const res = await listImportProducts({ page: 1, size: 100 }); 
+            const dto: ListImportProductDto = { page, size };
+            const res = await listImportProducts(dto); 
             setImportProducts(Array.isArray(res.data) ? res.data : []);
+            setTotalItems(res.total); 
+            setCurrentPage(res.page); // Cập nhật lại trang hiện tại (phòng trường hợp API trả về trang khác)
         } catch {
             toast.error("Không thể tải danh sách phiếu nhập!");
             setImportProducts([]);
+            setTotalItems(0);
         } finally {
             setLoading(false);
         }
     };
+    
+    // 💡 HANDLE PAGE CHANGE
+    const handlePageChange = (page: number) => {
+        if (page < 1 || page > Math.ceil(totalItems / pageSize)) return;
+        setCurrentPage(page);
+    };
 
     useEffect(() => {
         fetchDropdownData();
-        fetchImportProducts();
         fetchAllProducts(); 
     }, []);
-
+    
+    // 💡 EFFECT MỚI: Gọi API khi currentPage hoặc pageSize thay đổi
+    useEffect(() => {
+        if (showTable) { // Chỉ tải khi bảng hiển thị
+            fetchImportProducts(currentPage, pageSize);
+        }
+    }, [currentPage, pageSize, showTable]); 
     // ----------------------------------------------------
-    // LOGIC LỌC SẢN PHẨM THEO NHÀ CUNG CẤP
+    // LOGIC LỌC SẢN PHẨM THEO NHÀ CUNG CẤP (Giữ nguyên)
     // ----------------------------------------------------
     useEffect(() => {
         const supplierId = selectedSupplier;
@@ -112,7 +130,7 @@ export default function ImportProductPage() {
             
             // Chỉ set state nếu danh sách có thay đổi
             if (JSON.stringify(newFilteredOptions) !== JSON.stringify(filteredProducts)) {
-                 setFilteredProducts(newFilteredOptions);
+                   setFilteredProducts(newFilteredOptions);
             }
 
             // 3. Reset các mục đã chọn nếu chúng không còn thuộc NCC này nữa
@@ -162,7 +180,7 @@ export default function ImportProductPage() {
     // ----------------------------------------------------
 
 
-    // --- FORM HANDLERS ---
+    // --- FORM HANDLERS (Giữ nguyên) ---
     const handleCheckboxChange = (productId: string) => {
         setSelectedProducts((prev) => {
             const currentItem = prev[productId] || { checked: false, quantity: "", price: "" };
@@ -241,23 +259,17 @@ export default function ImportProductPage() {
             await createImportProduct(payload);
             toast.success(`Tạo phiếu nhập kho với ${selectedItems.length} sản phẩm thành công!`);
             resetForm();
-            fetchImportProducts(); 
+            await fetchAllProducts(); 
+            setCurrentPage(1); 
+            // Không cần gọi fetchImportProducts ở đây vì useEffect sẽ gọi khi currentPage thay đổi
             setIsAdding(false);
+            
         } catch (err: any) {
             const msg = err.response?.data?.message || "Lỗi khi lưu!";
             toast.error(msg);
         }
     };
     
-    // --- TABLE HANDLERS ---
-
-    const handleEdit = (item: ImportProduct) => {
-        if (item.items && item.items.length > 1) {
-            toast.error("Không thể sửa phiếu nhập nhiều sản phẩm!");
-            return;
-        }
-        toast("Tính năng sửa đang được phát triển...", { icon: '🛠️' });
-    };
 
     const handleDelete = async (id: number) => {
         if (!window.confirm(`Bạn có chắc chắn muốn xóa phiếu nhập kho ID #${id}?`)) {
@@ -267,14 +279,15 @@ export default function ImportProductPage() {
         try {
             await deleteImportProduct(id);
             toast.success(`Xóa phiếu nhập kho ID #${id} thành công!`);
-            fetchImportProducts();
+            // 💡 Sau khi xóa, load lại trang hiện tại (hoặc trang 1 nếu trang hiện tại bị rỗng)
+            fetchImportProducts(currentPage, pageSize); 
         } catch (err: any) {
             const msg = err.response?.data?.message || "Lỗi khi xóa!";
             toast.error(msg);
         }
     };
     
-    // Hàm hỗ trợ tìm tên SP/NCC cho Table 
+    // Hàm hỗ trợ tìm tên SP/NCC cho Table (Giữ nguyên)
     const getProductName = (id: number | string | undefined): string => {
         if (!id) return "N/A";
         const found = allProducts.find(p => String(p.id) === String(id));
@@ -287,7 +300,7 @@ export default function ImportProductPage() {
         return found?.name || `ID: ${id}`;
     };
     
-    // ĐỊNH NGHĨA HÀM LẤY ẢNH VÀ SỬ DỤNG getProductImageUrl TỪ SERVICE
+    // ĐỊNH NGHĨA HÀM LẤY ẢNH VÀ SỬ DỤNG getProductImageUrl TỪ SERVICE (Giữ nguyên)
     const getProductImage = useCallback((id: number | string | undefined): string | undefined => {
         if (!id) return undefined;
         // Tìm toàn bộ thông tin sản phẩm từ allProducts
@@ -303,12 +316,12 @@ export default function ImportProductPage() {
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
-            <Toaster position="top-right" />
+            <Toaster position="top-center" />
             
             <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-8">
                 
                 {/* 💡 HEADER MỚI: Giống như "Quản lý kho hàng" */}
-                <div className="flex justify-between items-center mb-6 border-b-2 border-gray-200 pb-3">
+                <div className="flex justify-between items-center mb-6  border-gray-200 pb-3">
                     <h1 className="text-2xl font-bold text-gray-800">
                         Quản lý nhập kho sản phẩm
                     </h1>
@@ -346,12 +359,16 @@ export default function ImportProductPage() {
                 
                 <div className="mt-6">
                     {/* 💡 KHU VỰC TIÊU ĐỀ BẢNG VÀ NÚT TOGGLE */}
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-gray-700">
-                            Lịch sử Nhập kho ({importProducts.length})
-                        </h2>
+                    <div className="flex justify-end items-center mb-4">
+                        
                         <button 
-                            onClick={() => setShowTable(prev => !prev)}
+                            onClick={() => {
+                                setShowTable(prev => !prev);
+                                // 💡 Khi mở bảng, nếu chưa có data thì tải lại (đã được xử lý bởi useEffect)
+                                if (!showTable) {
+                                    setCurrentPage(1); // Luôn bắt đầu ở trang 1 khi mở
+                                }
+                            }}
                             className="text-orange-600 hover:text-orange-700 p-2 transition duration-150"
                             title={showTable ? "Ẩn danh sách" : "Hiển thị danh sách"}
                         >
@@ -363,7 +380,7 @@ export default function ImportProductPage() {
 
                     {/* 💡 CHỈ HIỂN THỊ BẢNG KHI showTable là true */}
                     {showTable && (
-                        loading ? (
+                        loading && importProducts.length === 0 ? ( // Hiển thị loading chỉ khi chưa có dữ liệu nào
                             <div className="text-center py-10 text-gray-500">Đang tải dữ liệu...</div>
                         ) : (
                             <ImportProductTable
@@ -371,13 +388,28 @@ export default function ImportProductPage() {
                                 getProductName={getProductName}
                                 getSupplierName={getSupplierName}
                                 getProductImage={getProductImage}
-                                handleEdit={handleEdit}
                                 handleDelete={handleDelete}
+                                // 💡 TRUYỀN PROPS PHÂN TRANG
+                                currentPage={currentPage}
+                                pageSize={pageSize}
+                                totalItems={totalItems}
+                                onPageChange={handlePageChange}
                             />
                         )
                     )}
+                    
                 </div>
-
+                    <div className="mt-10">
+                        <h2 className="text-xl text-center mb-4 font-bold text-orange-700">
+                            Danh sách sản phẩm tồn trong kho nhập
+                        </h2>
+                    <ProductListTable
+                        products={allProducts}
+                        loading={loading}
+                        getSupplierName={getSupplierName}
+                        getProductImage={getProductImage}
+                    />
+                    </div>
             </div>
         </div>
     );
