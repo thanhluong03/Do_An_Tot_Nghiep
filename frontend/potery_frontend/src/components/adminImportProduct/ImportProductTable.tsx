@@ -215,6 +215,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                     </tr>
                                 )}
                             </React.Fragment>
+                            
                         );
                     })}
                 </tbody>

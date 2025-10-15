@@ -78,7 +78,6 @@ const bufferToBase64 = (buffer: { data: number[] }): string | null => {
     }
 };
 
-// --- HÀM TRỢ GIÚP LẤY URL ẢNH CHUẨN HÓA (Giữ nguyên) ---
 export const getProductImageUrl = (product: Product): string => {
     const firstImage = product.images?.[0];
 
