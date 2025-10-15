@@ -33,9 +33,18 @@ export default function CartPage() {
             id: String(ci.id ?? ci._id ?? ''),
             product_id: ci.product_id,
             quantity: Number(ci.quantity ?? 1),
+            store_id: ci.store.id,
           }));
           setServerItems(mapped);
+          console.log("🧾 Giỏ hàng từ server:", data);
+        console.log("🧱 Mapped items:", mapped.map(i => ({
+          id: i.id,
+          product_id: i.product_id,
+          quantity: i.quantity,
+          store_id: i.store_id
+        })));
         }
+        
       } catch {
         if (mounted) setError('Không thể tải giỏ hàng');
       } finally {

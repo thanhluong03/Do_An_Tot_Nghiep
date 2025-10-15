@@ -122,11 +122,18 @@ function OrderDetailClient({ id }: { id: string }) {
               <div key={idx} className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-4">
                   <Image
-                    src={it.image || '/default-product.jpg'}
+                    src={
+                      it?.product_images?.[0]?.image_data
+                        ? `data:image/avif;base64,${it.product_images[0].image_data}`
+                        : it?.image
+                          ? it.image
+                          : '/no-image.png'
+                    }
                     alt={it.product_name || 'Sản phẩm'}
-                    width={64}
-                    height={64}
-                    className="rounded border object-cover"
+                    width={96}
+                    height={96}
+                    unoptimized
+                    className="rounded-lg border object-cover w-24 h-24"
                   />
                   <div>
                     <div className="font-medium text-gray-800">{it.product_name}</div>
