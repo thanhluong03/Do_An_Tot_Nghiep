@@ -1,11 +1,10 @@
-// src/components/inventory/InventoryForm.tsx (Đã cập nhật hiển thị nút Hủy/Đóng trong mọi chế độ)
+// src/components/inventory/InventoryForm.tsx (MÀU CHỦ ĐẠO LÀ MÀU CAM)
 
 import React, { useMemo } from 'react';
-import { SelectOption, Product } from "@/api/services/inventoryService"; // Import Product
+import { SelectOption, Product } from "@/api/services/inventoryService";
 import { InventoryFormState, FormName } from "@/app/admin/inventory/page";
-// Đổi đường dẫn import CheckboxList cho đúng
-// Giả định đường dẫn relative đúng là "./CheckboxList"
 import CheckboxList from "./Checkboxlist"; 
+import { Package, Store, Box, MinusCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
 
 interface InventoryFormProps {
     form: InventoryFormState;
@@ -13,7 +12,7 @@ interface InventoryFormProps {
     errors: { [key: string]: string };
     products: SelectOption[];
     stores: SelectOption[];
-    allProducts: Product[]; // THÊM: Danh sách Product đầy đủ
+    allProducts: Product[]; 
     getDisplayName: (list: SelectOption[], id: number | string | undefined) => string; 
     handleValueChange: (name: "product_id" | "store_id", value: string | string[] | undefined) => void;
     handleNumberChange: (name: FormName, value: number) => void;
@@ -27,7 +26,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     errors,
     products,
     stores,
-    allProducts, // Sử dụng allProducts
+    allProducts,
     getDisplayName,
     handleValueChange,
     handleNumberChange,
@@ -39,129 +38,210 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
         const { name, value } = e.target;
         let numericValue = 0;
         if (value !== "" && value !== null && value !== undefined) {
-            const parsed = Number(value);
+            const cleanValue = value.replace(/[^0-9]/g, ''); 
+            const parsed = Number(cleanValue);
             numericValue = isNaN(parsed) ? 0 : parsed;
         }
         handleNumberChange(name as FormName, numericValue);
     };
 
     const productDisplayName = useMemo(() => {
-        const id = form.product_id;
-        // Chỉ lấy tên nếu là chế độ Sửa (editingId !== null)
-        if (editingId !== null && typeof id === 'string') {
-            return getDisplayName(products, id); 
-        }
-        return '';
+        const id = typeof form.product_id === 'string' ? form.product_id : undefined;
+        return editingId && id ? getDisplayName(products, id) : '';
     }, [form.product_id, products, getDisplayName, editingId]);
 
     const storeDisplayName = useMemo(() => {
-        const id = form.store_id;
-        // Chỉ lấy tên nếu là chế độ Sửa (editingId !== null)
-        if (editingId !== null && typeof id === 'string') {
-             return getDisplayName(stores, id);
-        }
-        return '';
+        const id = typeof form.store_id === 'string' ? form.store_id : undefined;
+        return editingId && id ? getDisplayName(stores, id) : '';
     }, [form.store_id, stores, getDisplayName, editingId]);
 
+    const editingProduct = useMemo(() => {
+        const id = typeof form.product_id === 'string' ? Number(form.product_id) : null;
+        return allProducts.find(p => p.id === id);
+    }, [form.product_id, allProducts]);
+
+    // Đổi màu sắc: Primary (Thêm mới) là Orange, Accent (Sửa) là Red-Orange/Red
+    const PRIMARY_COLOR_CLASS = 'orange'; // Dùng orange-600
+    const ACCENT_COLOR_CLASS = 'red'; // Dùng red-600
+
+    const colorClass = editingId ? ACCENT_COLOR_CLASS : PRIMARY_COLOR_CLASS;
+    
+    // Class CSS cho container dựa trên chế độ
+    const modeClass = editingId 
+        ? 'border-red-200 shadow-2xl transition duration-500 hover:shadow-red-500/20' // Màu đỏ cam cho Sửa
+        : 'border-orange-200 shadow-2xl transition duration-500 hover:shadow-orange-500/20'; // Màu cam cho Thêm mới
+
+    // Class CSS cho tiêu đề và các thành phần nhấn
+    const accentColor = editingId ? 'text-red-700' : 'text-orange-700';
+
+    // Class CSS cho nút chính
+    const btnPrimaryClass = editingId 
+        ? "bg-red-600 hover:bg-red-700" 
+        : "bg-orange-600 hover:bg-orange-700";
+    
+    // Class CSS cho Icon
+    const iconColor = editingId ? 'text-red-500' : 'text-orange-500';
 
     return (
-        <div className={`border p-6 rounded-lg mb-8 ${editingId ? 'border-yellow-300 bg-yellow-50' : 'border-blue-300 bg-blue-50'}`}>
-            <h3 className={`text-xl font-semibold mb-4 ${editingId ? 'text-yellow-700' : 'text-blue-700'}`}>
-                {editingId ? `Sửa Tồn kho ID: ${editingId}` : "Thêm Tồn kho Linh hoạt (Tạo Hàng Loạt)"}
+        <div className={`p-10 rounded-2xl bg-white border ${modeClass}`}>
+            
+            <h3 className={`text-3xl font-extrabold mb-8 flex items-center gap-4 ${accentColor} border-b-4 border-gray-100 pb-4`}>
+                <Zap size={30} className={iconColor}/> 
+                {editingId ? `SỬA TỒN KHO ID: ${editingId}` : "QUẢN LÝ TỒN KHO LINH HOẠT"}
             </h3>
 
-            {/* Sử dụng grid-cols-2 cơ bản */}
-            <div className={`grid gap-4 mb-6 ${editingId === null ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}> 
+            {/* Điều chỉnh Grid chính */}
+            <div className={`grid gap-8 ${editingId === null ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}> 
 
-                {/* Hiển thị Checkbox List chỉ trong chế độ THÊM MỚI */}
+                {/* --- KHỐI THÊM MỚI (Card Sản phẩm & Cửa hàng) --- */}
                 {editingId === null ? (
                     <>
-                        <CheckboxList
-                            name="product_id"
-                            label="Sản phẩm (Chọn 1, nhiều hoặc Tất cả)"
-                            options={products}
-                            selectedValues={form.product_id}
-                            onChange={handleValueChange}
-                            error={errors.product_id}
-                            allProducts={allProducts} // TRUYỀN VÀO CHO CHẾ ĐỘ THÊM
-                        />
+                        {/* 1. Card Chọn Sản phẩm (Cột 1) */}
+                        <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
+                            <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
+                                <Package size={18} className="text-orange-500"/>
+                                1. CHỌN SẢN PHẨM
+                            </h4>
+                            <div className="p-4">
+                                {/* Component CheckboxList (Được bọc trong Card) */}
+                                <CheckboxList
+                                    name="product_id"
+                                    label="Sản phẩm"
+                                    options={products}
+                                    selectedValues={form.product_id}
+                                    onChange={handleValueChange}
+                                    error={errors.product_id}
+                                    allProducts={allProducts}
+                                    
+                                />
+                            </div>
+                        </div>
 
-                        <CheckboxList
-                            name="store_id"
-                            label="Cửa hàng (Chọn 1, nhiều hoặc Tất cả)"
-                            options={stores}
-                            selectedValues={form.store_id}
-                            onChange={handleValueChange}
-                            error={errors.store_id}
-                            allProducts={allProducts} // Không cần ảnh cho cửa hàng, nhưng vẫn truyền props
-                        />
-                    </>
-                ) : (
-                    // Hiển thị thông tin Readonly trong chế độ SỬA
-                    <>
-                        {/* Product (Edit mode - Readonly) */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Sản phẩm</label>
-                            <input title={productDisplayName} type="text" value={productDisplayName} readOnly className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"/>
+                        {/* 2. Card Chọn Cửa hàng (Cột 2) */}
+                        <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
+                            <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
+                                <Store size={18} className="text-orange-500"/>
+                                2. CHỌN CỬA HÀNG
+                            </h4>
+                            <div className="p-4">
+                                {/* Component CheckboxList (Được bọc trong Card) */}
+                                <CheckboxList
+                                    name="store_id"
+                                    label="Cửa hàng"
+                                    options={stores}
+                                    selectedValues={form.store_id}
+                                    onChange={handleValueChange}
+                                    error={errors.store_id}
+                                    allProducts={[]} 
+                                    
+                                />
+                            </div>
                         </div>
                         
-                        {/* Store (Edit mode - Readonly) */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cửa hàng</label>
-                            <input title={storeDisplayName} type="text" value={storeDisplayName} readOnly className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"/>
+                        {/* 3. SL Tồn kho (Cột 1, Hàng 2) */}
+                        <div className="col-span-1 pt-4"> 
+                            <label className="block text-sm font-extrabold text-gray-800 mb-2 flex items-center gap-2">
+                                <Box size={18} className="text-orange-500"/> SỐ LƯỢNG TỒN KHO *
+                            </label>
+                            <input
+                                type="number"
+                                name="quantity_stock"
+                                placeholder="Nhập Số lượng Tồn kho"
+                                value={typeof form.quantity_stock === 'number' ? form.quantity_stock : ''}
+                                onChange={onNumberInputChange}
+                                className={`w-full border ${errors.quantity_stock ? 'border-red-500' : 'border-gray-300'} rounded-xl px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-orange-500 outline-none transition duration-150 shadow-sm`}
+                            />
+                            {errors.quantity_stock && <p className="text-red-500 text-xs mt-1 font-medium">{errors.quantity_stock}</p>}
+                        </div>
+                        
+                        {/* 4. Vị trí trống (Cột 2, Hàng 2) */}
+                        <div className="col-span-1 pt-4">
+                            {/* Giữ trống cho cân đối. */}
                         </div>
                     </>
-                )}
+                ) : (
+                    // --- KHỐI SỬA (3 cột) ---
+                    <>
+                        {/* 1. Sản phẩm (Readonly) */}
+                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-md flex flex-col justify-center">
+                            <label className="text-xs uppercase font-bold text-gray-500 mb-2 flex items-center gap-2">
+                                <Package size={14} className="text-gray-400"/> Sản phẩm
+                            </label>
+                            <div className="flex items-center gap-4">
+                                {editingProduct?.image_url && (
+                                    <img 
+                                        src={editingProduct.image_url} 
+                                        alt={productDisplayName} 
+                                        className="w-10 h-10 object-cover rounded-lg shadow-inner border border-gray-300"
+                                    />
+                                )}
+                                <span title={productDisplayName} className="font-extrabold text-lg text-gray-900 truncate">
+                                    {productDisplayName}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {/* 2. Cửa hàng (Readonly) */}
+                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-md flex flex-col justify-center">
+                            <label className="text-xs uppercase font-bold text-gray-500 mb-2 flex items-center gap-2">
+                                <Store size={14} className="text-gray-400"/> Cửa hàng
+                            </label>
+                            <p title={storeDisplayName} className="font-extrabold text-lg text-gray-900 truncate pt-2">
+                                {storeDisplayName}
+                            </p>
+                        </div>
+                        
+                        {/* 3. SL Tồn kho */}
+                        <div> 
+                            <label className="block text-sm font-extrabold text-gray-800 mb-2 flex items-center gap-2">
+                                <Box size={18} className="text-red-500"/> SL TỒN KHO *
+                            </label>
+                            <input
+                                type="number"
+                                name="quantity_stock"
+                                placeholder="Nhập Số lượng Tồn kho"
+                                value={typeof form.quantity_stock === 'number' ? form.quantity_stock : ''}
+                                onChange={onNumberInputChange}
+                                className={`w-full border ${errors.quantity_stock ? 'border-red-500' : 'border-gray-300'} rounded-xl px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-red-500 outline-none transition duration-150 shadow-sm`}
+                            />
+                            {errors.quantity_stock && <p className="text-red-500 text-xs mt-1 font-medium">{errors.quantity_stock}</p>}
+                        </div>
 
-                {/* Quantity Stock (Hiển thị ở cả 2 mode) */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SL Tồn kho</label>
-                    <input
-                        type="number"
-                        name="quantity_stock"
-                        placeholder="Nhập SL Tồn"
-                        value={typeof form.quantity_stock === 'number' ? form.quantity_stock : 0}
-                        onChange={onNumberInputChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    {errors.quantity_stock && <p className="text-red-500 text-xs mt-1">{errors.quantity_stock}</p>}
-                </div>
-
-                {/* Sold quantity (Chỉ hiển thị trong chế độ SỬA) */}
-                {editingId !== null && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">SL Đã bán</label>
-                        <input
-                            type="number"
-                            name="quantity_sold"
-                            placeholder="Nhập SL Bán"
-                            value={typeof form.quantity_sold === 'number' ? form.quantity_sold : 0}
-                            onChange={onNumberInputChange}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        {errors.quantity_sold && <p className="text-red-500 text-xs mt-1">{errors.quantity_sold}</p>}
-                    </div>
+                        {/* 4. SL Đã bán */}
+                        <div className="col-span-1">
+                            <label className="block text-sm font-extrabold text-gray-800 mb-2 flex items-center gap-2">
+                                <MinusCircle size={18} className="text-red-500"/> SL ĐÃ BÁN *
+                            </label>
+                            <input
+                                type="number"
+                                name="quantity_sold"
+                                placeholder="Nhập Số lượng Đã bán"
+                                value={typeof form.quantity_sold === 'number' ? form.quantity_sold : ''}
+                                onChange={onNumberInputChange}
+                                className={`w-full border ${errors.quantity_sold ? 'border-red-500' : 'border-gray-300'} rounded-xl px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-red-500 outline-none transition duration-150 shadow-sm`}
+                            />
+                            {errors.quantity_sold && <p className="text-red-500 text-xs mt-1 font-medium">{errors.quantity_sold}</p>}
+                        </div>
+                    </>
                 )}
             </div>
 
-            {/* Button controls */}
-            <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-                {/* CẬP NHẬT: Luôn hiển thị nút HỦY/ĐÓNG */}
+            {/* --- Button controls --- */}
+            <div className="flex justify-end gap-3 pt-8 border-t mt-8 border-gray-100">
+                
                 <button
                     onClick={handleCancelEdit}
-                    className="px-5 py-2 rounded-lg font-semibold shadow-md transition bg-gray-400 hover:bg-gray-500 text-white"
+                    className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
                 >
-                    {editingId ? "Hủy Sửa" : "Đóng Form"} 
+                     {editingId ? "HỦY BỎ" : "ĐÓNG FORM"} 
                 </button>
                 
-                {/* Nút chính Thêm mới / Cập nhật */}
                 <button
                     onClick={handleSubmit}
-                    className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${
-                        editingId ? "bg-yellow-500 hover:bg-yellow-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
-                    }`}
+                    className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform hover:scale-[1.02] ${btnPrimaryClass}`}
                 >
-                    {editingId ? "Cập nhật" : "Thêm mới"}
+                    
+                    {editingId ? "CẬP NHẬT TỒN KHO" : "THÊM MỚI TỒN KHO"}
                 </button>
             </div>
         </div>
