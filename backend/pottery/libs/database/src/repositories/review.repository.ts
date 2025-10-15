@@ -21,11 +21,89 @@ export class ReviewRepository {
         })
     }
 
-    async findAll(p0: { size: number; page: number; key?: string }): Promise<ReviewEntity[]> {
-        return this.repository.find({
-            where: { deleted_at: IsNull() },
-            order: { created_at: 'DESC' },
-        })
+    async findAll(p0: { size: number; page: number; key?: string }): Promise<any[]> {
+        const raw = await this.repository.createQueryBuilder('review')
+            .innerJoin('review.order_item', 'order_items')
+            .innerJoin('customers', 'customer', 'customer.id = review.customer_id')
+            .innerJoin('products', 'product', 'product.id = order_items.product_id')
+            .where('review.deleted_at IS NULL')
+            .select([
+                'customer.id AS customer_id',
+                'customer.full_name AS customer_name',
+                'order_items.id AS order_items_id',
+                'order_items.product_id AS product_id',
+                'order_items.order_id AS order_id',
+                'product.name AS product_name',
+                'review.id AS review_id',
+                'review.rating AS review_rating',
+                'review.comment AS review_comment'
+            ])
+            .orderBy('review.created_at', 'DESC')
+            .getRawMany();
+
+        const grouped: any = {};
+        raw.forEach(item => {
+            const key = `${item.customer_id}_${item.product_id}`;
+            if (!grouped[key]) {
+                grouped[key] = {
+                    customer: {
+                        id: item.customer_id,
+                        name: item.customer_name
+                    },
+                    product: {
+                        id: item.product_id,
+                        name: item.product_name
+                    },
+                    review: []
+                };
+            }
+            grouped[key].review.push({
+                order_items_id: item.order_items_id,
+                order_id: item.order_id,
+                id: item.review_id,
+                rating: item.review_rating,
+                comment: item.review_comment
+            });
+        });
+        return Object.values(grouped);
+    }
+
+    async findByProductId(productId: number): Promise<any[]> {
+        const raw = await this.repository.createQueryBuilder('review')
+            .innerJoin('review.order_item', 'order_items')
+            .innerJoin('customers', 'customer', 'customer.id = review.customer_id')
+            .innerJoin('products', 'product', 'product.id = order_items.product_id')
+            .where('order_items.product_id = :productId', { productId })
+            .select([
+                'customer.id AS customer_id',
+                'customer.full_name AS customer_name',
+                'order_items.id AS order_items_id',
+                'order_items.product_id AS product_id',
+                'order_items.order_id AS order_id',
+                'product.name AS product_name',
+                'review.id AS review_id',
+                'review.rating AS review_rating',
+                'review.comment AS review_comment'
+            ])
+            .getRawMany();
+
+        return raw.map(item => ({
+            customer: {
+                id: item.customer_id,
+                name: item.customer_name
+            },
+            product: {
+                id: item.product_id,
+                name: item.product_name
+            },
+            order_items_id: item.order_items_id,
+            order_id: item.order_id,
+            review: {
+                id: item.review_id,
+                rating: item.review_rating,
+                comment: item.review_comment
+            }
+        }));
     }
 
     async update(id: number, data: Partial<ReviewEntity>): Promise<void> {

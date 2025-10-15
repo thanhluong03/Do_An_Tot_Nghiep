@@ -15,7 +15,7 @@ export class ReviewService {
                 rating: data.rating,
                 comment: data.comment,
                 customer_id: data.customer_id,
-                product_id: data.product_id,
+                orderitem_id: data.orderitem_id,
             });
             return {
                 message: 'Review created successfully',
@@ -29,12 +29,20 @@ export class ReviewService {
         }
     }
 
-    async findAll(params: IListReview): Promise<{ message: string, reviews: ReviewEntity[] }> {
+    async findAll(params: IListReview): Promise<{ message: string, reviews: any[] }> {
         const reviews = await this.reviewRepository.findAll({
             ...params,
             size: params.size || DEFAULT_PAGE_SIZE,
             page: params.page || DEFAULT_PAGE,
         });
+        return {
+            message: reviews.length > 0 ? 'Reviews fetched successfully' : 'No reviews found',
+            reviews,
+        };
+    }
+
+    async findByProductId(productId: number): Promise<{ message: string, reviews: any[] }> {
+        const reviews = await this.reviewRepository.findByProductId(productId);
         return {
             message: reviews.length > 0 ? 'Reviews fetched successfully' : 'No reviews found',
             reviews,
