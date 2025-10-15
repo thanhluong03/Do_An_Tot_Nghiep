@@ -307,4 +307,24 @@ export class ProductService {
       promotion,
     };
   }
+
+  async findBySupplier(supplier_id: number) {
+    const products = await this.productRepository.findBySupplier(supplier_id);
+    if (!products || products.length === 0) return [];
+
+    return await Promise.all(products.map(async (product) => {
+      const images = await this.productImageRepository.findByProductId(product.id);
+      const processedImages = images.map((image) => ({
+        id: image.id,
+        image_data: image.image_data ? image.image_data.toString('base64') : null,
+        is_main_image: image.is_main_image,
+        priority: image.priority,
+      }));
+      return {
+        ...product,
+        images: processedImages,
+        main_image: processedImages.find((img) => img.is_main_image) || null,
+      };
+    }));
+  }
 }

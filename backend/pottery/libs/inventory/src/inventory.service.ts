@@ -32,8 +32,8 @@ export class InventoryService {
         for (const pid of productIds) {
             let totalQuantity = storeIds.length * data.quantity_stock;
             const product = await this.productRepository.findById(pid);
-            if (product && Number(product.quantity) < totalQuantity) {
-                throw new NotFoundException(`Số lượng sản phẩm không đủ để chia cho các cửa hàng. Sản phẩm còn: ${product.quantity}, yêu cầu chia: ${totalQuantity}`);
+            if (product && Number(product.total_quantity_divided) < totalQuantity) {
+                throw new NotFoundException(`Số lượng sản phẩm không đủ để chia cho các cửa hàng. Sản phẩm còn: ${product.total_quantity_divided}, yêu cầu chia: ${totalQuantity}`);
             }
             for (const sid of storeIds) {
                 const existed = await this.inventoryRepository.findByProductAndStore(
@@ -52,8 +52,8 @@ export class InventoryService {
                 }
             }
             if (product) {
-                product.quantity = Number(product.quantity) - totalQuantity;
-                await this.productRepository.update(pid, { quantity: product.quantity });
+                product.total_quantity_divided = Number(product.total_quantity_divided) - totalQuantity;
+                await this.productRepository.update(pid, { total_quantity_divided: product.total_quantity_divided });
             }
         }
         const { data: allInventories } = await this.list({ page: 1, size: 1000 });
@@ -75,8 +75,8 @@ export class InventoryService {
         inventory.quantity_stock = newQuantity;
         const product = await this.productRepository.findById(inventory.product_id);
         if (product) {
-            product.quantity = Number(product.quantity) + oldQuantity - newQuantity;
-            await this.productRepository.update(product.id, { quantity: product.quantity });
+            product.total_quantity_divided = Number(product.total_quantity_divided) + oldQuantity - newQuantity;
+            await this.productRepository.update(product.id, { total_quantity_divided: product.total_quantity_divided });
         }
         return this.inventoryRepository.create(inventory);
     }
@@ -88,8 +88,8 @@ export class InventoryService {
         }
         const product = await this.productRepository.findById(inventory.product_id);
         if (product) {
-            product.quantity = Number(product.quantity) + (inventory.quantity_stock || 0);
-            await this.productRepository.update(product.id, { quantity: product.quantity });
+            product.total_quantity_divided = Number(product.total_quantity_divided) + (inventory.quantity_stock || 0);
+            await this.productRepository.update(product.id, { total_quantity_divided: product.total_quantity_divided });
         }
         await this.inventoryRepository.softDelete(id);
         return { deleted: true };

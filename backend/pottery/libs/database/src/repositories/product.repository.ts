@@ -8,7 +8,7 @@ export class ProductRepository {
   constructor(
     @InjectRepository(ProductEntity)
     private readonly repository: Repository<ProductEntity>,
-  ) {}
+  ) { }
 
   async create(data: Partial<ProductEntity>): Promise<ProductEntity> {
     return this.repository.save(this.repository.create(data))
@@ -33,5 +33,12 @@ export class ProductRepository {
 
   async softDelete(id: number): Promise<void> {
     await this.repository.softDelete(id)
+  }
+
+  async findBySupplier(supplier_id: number): Promise<ProductEntity[]> {
+    return this.repository.find({
+      where: { supplier_id: supplier_id, deleted_at: IsNull() },
+      order: { created_at: 'DESC' },
+    });
   }
 }

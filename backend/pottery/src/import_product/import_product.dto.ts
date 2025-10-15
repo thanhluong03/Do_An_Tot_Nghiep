@@ -22,16 +22,25 @@ export class ListImportProductDto {
     supplier_id?: number;
 }
 
-export class CreateImportProductDto {
+export class ImportProductItemDto {
     @IsNotEmpty()
     product_id: number | string;
-
-    @IsNotEmpty()
-    supplier_id: number | string;
 
     @IsInt()
     @IsNotEmpty()
     import_quantity: number;
+
+    @IsInt()
+    @IsOptional()
+    import_price?: number;
+}
+
+export class CreateImportProductDto {
+    @IsNotEmpty()
+    supplier_id: number | string;
+
+    @IsNotEmpty()
+    items: ImportProductItemDto[];
 }
 
 export class UpdateImportProductDto {

@@ -130,4 +130,12 @@ export class ProductController {
         }
         return await this.productService.findInventoryDetailByProductId(prodId);
     }
+
+    @Get('listproduct-by-supplier/:supplierId')
+    async findBySupplier(@Param('supplierId') supplierId: number): Promise<ProductResponseDto[]> {
+        const products = await this.productService.findBySupplier(supplierId);
+        return plainToInstance(ProductResponseDto, Array.isArray(products) ? products : [products], {
+            excludeExtraneousValues: true,
+        });
+    }
 }
