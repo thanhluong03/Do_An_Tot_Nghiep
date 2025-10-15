@@ -12,6 +12,7 @@ interface ProductFormModalProps {
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     // suppliers: Supplier[]; // Không cần thiết cho form này
     categories: Category[];
+    suppliers: Supplier[]; // Thêm mảng suppliers
 }
 
 export default function ProductFormModal({
@@ -22,6 +23,7 @@ export default function ProductFormModal({
     handleSave,
     setIsModalOpen,
     categories,
+    suppliers,
 }: ProductFormModalProps) {
     const [previewImages, setPreviewImages] = useState<string[]>([]);
     const [files, setFiles] = useState<File[]>([]);
@@ -60,6 +62,7 @@ export default function ProductFormModal({
         form.append("price", formData.price.toString());
         form.append("description", formData.description || "");
         form.append("category_id", (formData.category_id || 0).toString());
+        form.append("supplier_id", (formData.supplier_id || 0).toString());
 
         // CHÚ Ý: Không thêm trường 'quantity' vào FormData
 
@@ -107,6 +110,21 @@ export default function ProductFormModal({
                         {categories.map((c) => (
                             <option key={c.id} value={c.id}>
                                 {c.name}
+                            </option>
+                        ))}
+                    </select>
+                    {/* Nhà cung cấp */}
+                    <label className="block text-sm">Nhà cung cấp</label>
+                    <select
+                        title='Nhà cung cấp'
+                        value={formData.supplier_id ?? 0}
+                        onChange={(e) => setFormData({ ...formData, supplier_id: Number(e.target.value) })}
+                        className="w-full border rounded p-2"
+                    >
+                        <option value={0}>-- Chọn nhà cung cấp --</option>
+                        {suppliers.map((s) => (
+                            <option key={s.id} value={s.id}>
+                                {s.name}
                             </option>
                         ))}
                     </select>

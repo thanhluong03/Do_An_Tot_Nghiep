@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from "lucide-react";
 
 interface ProductsTableProps {
     products: Product[];
+    getSupplierName: (product: Product) => string;
     getCategoryName: (product: Product) => string;
     openEditModal: (product: Product) => void;
     handleDelete: (id: number) => void;
@@ -51,6 +52,7 @@ const getStatusBadge = (quantity: number | undefined | null) => {
 
 export default function ProductsTable({
     products,
+    getSupplierName,
     getCategoryName,
     openEditModal,
     handleDelete,
@@ -67,6 +69,7 @@ export default function ProductsTable({
                         <th className="p-4 text-left font-semibold">Số lượng</th>
                         <th className="p-4 text-left font-semibold">Trạng thái</th>
                         <th className="p-4 text-left font-semibold">Danh mục</th>
+                        <th className="p-4 text-left font-semibold">Nhà cung cấp</th>
                         <th className="p-4 text-center font-semibold">Hành động</th>
                     </tr>
                 </thead>
@@ -144,6 +147,9 @@ export default function ProductsTable({
                                     </td>
                                     <td className="p-4 text-gray-600">
                                         {getCategoryName(p)}
+                                    </td>
+                                    <td className="p-4 text-gray-600">
+                                        {getSupplierName(p)}
                                     </td>
                                     <td className="p-4 text-center space-x-2">
                                         <button 

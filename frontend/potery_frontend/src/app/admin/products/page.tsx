@@ -12,12 +12,14 @@ import {
 import { getCategories, Category } from "@/api/services/categoryService";
 import ProductFormModal from "@/components/adminProducts/ProductFormModal";
 import ProductsTable from "@/components/adminProducts/ProductsTable";
+import { getSuppliers, Supplier } from "@/api/services/supplierService";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Lọc & tìm kiếm
@@ -36,13 +38,14 @@ export default function ProductsPage() {
     description: "",
     main_image: "",
     category_id: 0,
+    supplier_id: 0,
     images: [] as ProductImage[],
-    // KHÔNG THÊM 'quantity' VÀO ĐÂY, VÌ NÓ KHÔNG CÓ TRONG FORM
   } as Product);
 
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchSuppliers();
   }, []);
 
   const fetchProducts = async () => {
@@ -65,7 +68,14 @@ export default function ProductsPage() {
       toast.error("Không thể tải danh mục!");
     }
   };
-
+  const fetchSuppliers = async () => {
+    try {
+      const data = await getSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      toast.error("Không thể tải nhà cung cấp!");
+    }
+  };
   // Lọc & sắp xếp sản phẩm
   const filteredProducts = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -131,7 +141,9 @@ export default function ProductsPage() {
       price: 0,
       main_image: "",
       images: [],
+      
       category_id: categories[0]?.id || 0,
+      supplier_id: suppliers[0]?.id || 0,
       // Không cần quantity
     } as Product);
     setIsModalOpen(true);
@@ -143,6 +155,7 @@ export default function ProductsPage() {
     setFormData({
       ...product,
       category_id: product.category_id || product.category?.id || 0,
+      supplier_id: product.supplier_id || product.supplier?.id || 0,
     } as Product);
     setIsModalOpen(true);
   };
@@ -209,6 +222,13 @@ export default function ProductsPage() {
     const categoryId = product.category_id;
     return (
       categories.find((c) => c.id === categoryId)?.name || "Chưa phân loại"
+    );
+  };
+  const getSupplierName = (product: Product): string => {
+    if (product.supplier && product.supplier.name) return product.supplier.name;
+    const supplierId = product.supplier_id;
+    return (
+      suppliers.find((s) => s.id === supplierId)?.name || "Chưa phân loại"
     );
   };
 
@@ -290,6 +310,7 @@ export default function ProductsPage() {
             <ProductsTable
               products={paginatedProducts}
               getCategoryName={getCategoryName}
+              getSupplierName={getSupplierName}
               openEditModal={openEditModal}
               handleDelete={handleDelete}
               startIndex={(currentPage - 1) * ITEMS_PER_PAGE}
@@ -344,7 +365,7 @@ export default function ProductsPage() {
               setFormData={setFormData}
               handleSave={handleSave}
               setIsModalOpen={setIsModalOpen}
-              categories={categories} suppliers={[]}      />
+              categories={categories} suppliers={suppliers} />
     </div>
   );
 }
