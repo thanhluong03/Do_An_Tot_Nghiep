@@ -163,23 +163,48 @@ export default function CartPage() {
                                 {formatPrice(product.price)}
                               </p>
                               <div className="flex items-center gap-2 mt-2">
-                                <button
-                                  onClick={() =>
-                                    updateQuantity(product.id, ci.quantity - 1)
-                                  }
-                                  className="border rounded px-2 text-sm"
-                                >
-                                  −
-                                </button>
-                                <span className="px-2">{ci.quantity}</span>
-                                <button
-                                  onClick={() =>
-                                    updateQuantity(product.id, ci.quantity + 1)
-                                  }
-                                  className="border rounded px-2 text-sm"
-                                >
-                                  +
-                                </button>
+                                <div className="flex items-center gap-2 mt-2">
+  <button
+    onClick={async () => {
+      const newQuantity = Math.max(1, ci.quantity - 1);
+      try {
+        await cartApi.update(ci.id, { quantity: newQuantity });
+        setServerItems((prev) =>
+          prev.map((item) =>
+            item.id === ci.id ? { ...item, quantity: newQuantity } : item
+          )
+        );
+      } catch (err) {
+        console.error("Lỗi khi giảm số lượng:", err);
+      }
+    }}
+    className="border rounded px-2 text-sm"
+  >
+    −
+  </button>
+
+  <span className="px-2">{ci.quantity}</span>
+
+  <button
+    onClick={async () => {
+      const newQuantity = ci.quantity + 1;
+      try {
+        await cartApi.update(ci.id, { quantity: newQuantity });
+        setServerItems((prev) =>
+          prev.map((item) =>
+            item.id === ci.id ? { ...item, quantity: newQuantity } : item
+          )
+        );
+      } catch (err) {
+        console.error("Lỗi khi tăng số lượng:", err);
+      }
+    }}
+    className="border rounded px-2 text-sm"
+  >
+    +
+  </button>
+</div>
+
                               </div>
                             </div>
                           </div>

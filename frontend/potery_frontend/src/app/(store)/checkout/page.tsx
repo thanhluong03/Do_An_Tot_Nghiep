@@ -220,7 +220,12 @@ const handleCreate = async () => {
       discount_amount: discount,
       original_amount: totalBeforeDiscount,
     };
-
+    console.group("🧾 [CHECKOUT PAYLOAD]");
+  console.log("👤 Customer:", user?.id);
+  console.log("🛒 Cart items:", serverItems);
+  console.log("💰 Total:", total);
+  console.log("📦 Payload gửi lên API:", JSON.stringify(payload, null, 2));
+  console.groupEnd();
     const res = await orderApi.createOrder(payload);
     const createdId = Number(res?.data?.id ?? res?.id);
     if (!createdId) throw new Error('Không lấy được ID đơn hàng');

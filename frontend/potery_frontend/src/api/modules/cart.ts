@@ -29,8 +29,8 @@ export const cartApi = {
     const data = res.data;
     return Array.isArray(data?.cartItems) ? data.cartItems : [];
   },
-  async update(id: string | number, quantity: number) {
-    const res = await api.put(`/cartitems/updatecartitem/${id}`, { quantity });
+  async update(id: string | number, data: { quantity: number }) {
+    const res = await api.put(`/cartitems/updatecartitem/${id}`, data);
     return res.data;
   },
   async remove(id: string | number) {

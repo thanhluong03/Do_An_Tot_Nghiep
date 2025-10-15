@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { BaseLayout } from '../../../../layouts';
 import { orderApi } from '../../../../api/modules/orders';
+import { reviewsApi } from '../../../../api/modules/reviews';
 import Image from 'next/image';
 import { formatPrice } from '../../../../utils/format';
+import { Star } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -21,14 +23,40 @@ function OrderDetailClient({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // review state
+  const [reviewedProducts, setReviewedProducts] = useState<number[]>([]);
+  const [showReviewInput, setShowReviewInput] = useState<number | null>(null);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+
+  // ---------------- Fetch order detail ----------------
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        setError(null);
         const res = await orderApi.getOrderDetail(id);
         const data = res?.data || res;
+
+        // Ghi log xem cấu trúc thực tế
+        console.log('🧩 Order detail loaded:', data);
+        console.log('🧩 Order items (backend):', data?.current_order?.order_items);
+        console.log('🧩 Items hiển thị:', data?.current_order?.items);
+
         setOrder(data);
+
+        // load danh sách reviewed
+        if (data?.current_order?.items?.length) {
+          const productIds = data.current_order.items.map((it: any) => it.product_id);
+          const reviewed: number[] = [];
+
+          for (const pid of productIds) {
+            const reviews = await reviewsApi.list(pid);
+            if (reviews?.some((r) => String(r.customer_id) === String(data.customer_id))) {
+              reviewed.push(pid);
+            }
+          }
+          setReviewedProducts(reviewed);
+        }
       } catch (e: any) {
         setError(e?.message || 'Không thể tải chi tiết đơn hàng');
       } finally {
@@ -37,6 +65,7 @@ function OrderDetailClient({ id }: { id: string }) {
     })();
   }, [id]);
 
+  // ---------------- Helper ----------------
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'created':
@@ -52,6 +81,30 @@ function OrderDetailClient({ id }: { id: string }) {
     }
   };
 
+  // ---------------- resolveOrderItemId ----------------
+  function resolveOrderItemId(it: any) {
+  // nếu có sẵn id thì dùng luôn
+  if (it.orderitem_id || it.order_item_id || it.id)
+    return it.orderitem_id ?? it.order_item_id ?? it.id;
+
+  // thử lấy trong current_order.items vì backend không có order_items riêng
+  const allItems = order?.current_order?.items ?? [];
+
+  const found = allItems.find(
+    (oi: any) =>
+      String(oi.product_id) === String(it.product_id) &&
+      Number(oi.store_id) === Number(it.store_id)
+  );
+
+  if (found) {
+    return found.id ?? found.orderitem_id ?? found.order_item_id ?? null;
+  }
+
+  console.warn('❌ Không tìm thấy orderitem_id cho sản phẩm:', it);
+  return null;
+}
+
+  // ---------------- UI render ----------------
   if (loading)
     return (
       <BaseLayout>
@@ -79,7 +132,7 @@ function OrderDetailClient({ id }: { id: string }) {
           Chi tiết đơn hàng #{order.id}
         </h1>
 
-        {/* Thông tin trạng thái */}
+        {/* status */}
         <div className="bg-white rounded-xl border p-4 shadow-sm">
           <div className="flex justify-between items-center">
             <div>
@@ -98,13 +151,13 @@ function OrderDetailClient({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* Địa chỉ giao hàng */}
+        {/* shipping */}
         <div className="bg-white rounded-xl border p-4 shadow-sm">
           <h2 className="text-lg font-semibold mb-2">Địa chỉ giao hàng</h2>
           <div className="text-gray-700">{order.shipping_address || 'Chưa có địa chỉ'}</div>
         </div>
 
-        {/* Thông tin thanh toán */}
+        {/* payment */}
         <div className="bg-white rounded-xl border p-4 shadow-sm">
           <h2 className="text-lg font-semibold mb-2">Thanh toán</h2>
           <div className="text-gray-700">
@@ -114,46 +167,130 @@ function OrderDetailClient({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* Sản phẩm trong đơn hàng */}
+        {/* items */}
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <h2 className="text-lg font-semibold mb-4">Sản phẩm</h2>
           <div className="divide-y">
             {items.map((it: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-4">
-                  <Image
-                    src={
-                      it?.product_images?.[0]?.image_data
-                        ? `data:image/avif;base64,${it.product_images[0].image_data}`
-                        : it?.image
+              <div key={idx} className="py-4 border-b last:border-none">
+                <div className="flex justify-between">
+                  <div className="flex items-center gap-4">
+                    <Image
+                      src={
+                        it?.product_images?.[0]?.image_data
+                          ? `data:image/avif;base64,${it.product_images[0].image_data}`
+                          : it?.image
                           ? it.image
                           : '/no-image.png'
-                    }
-                    alt={it.product_name || 'Sản phẩm'}
-                    width={96}
-                    height={96}
-                    unoptimized
-                    className="rounded-lg border object-cover w-24 h-24"
-                  />
-                  <div>
-                    <div className="font-medium text-gray-800">{it.product_name}</div>
-                    <div className="text-sm text-gray-500">{it.description}</div>
-                    <div className="text-sm text-gray-600">
-                      Cửa hàng: <span className="font-medium">{it.store_name}</span>
+                      }
+                      alt={it.product_name || 'Sản phẩm'}
+                      width={96}
+                      height={96}
+                      unoptimized
+                      className="rounded-lg border object-cover w-24 h-24"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-800">{it.product_name}</div>
+                      <div className="text-sm text-gray-500">{it.description}</div>
+                      <div className="text-sm text-gray-600">
+                        Cửa hàng: <span className="font-medium">{it.store_name}</span>
+                      </div>
+                      <div className="text-sm text-gray-500">Địa chỉ: {it.store_address}</div>
+                      <div className="text-sm text-gray-600">Số lượng: {it.quantity}</div>
                     </div>
-                    <div className="text-sm text-gray-500">Địa chỉ: {it.store_address}</div>
-                    <div className="text-sm text-gray-600">Số lượng: {it.quantity}</div>
+                  </div>
+                  <div className="text-right font-semibold text-gray-800">
+                    {formatPrice(it.price_at_order * it.quantity)}
                   </div>
                 </div>
-                <div className="text-right font-semibold text-gray-800">
-                  {formatPrice(it.price_at_order * it.quantity)}
+
+                {/* review UI */}
+                <div className="mt-3 ml-28">
+                  {!reviewedProducts.includes(it.product_id) ? (
+                    showReviewInput === it.product_id ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              onClick={() => setRating(star)}
+                              className={`w-5 h-5 cursor-pointer ${
+                                star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <textarea
+                          placeholder="Nhập nhận xét của bạn..."
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          className="w-full p-2 border rounded-lg text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const orderitem_id = resolveOrderItemId(it);
+                                if (!orderitem_id) {
+                                  alert('Không tìm thấy orderitem_id cho sản phẩm này.');
+                                  console.error('❌ Không tìm thấy orderitem_id:', it);
+                                  return;
+                                }
+
+                                const payload = [
+                                  {
+                                    orderitem_id: Number(orderitem_id),
+                                    customer_id: Number(order.customer_id),
+                                    rating: Number(rating || 5),
+                                    comment: String(comment ?? ''),
+                                  },
+                                ];
+
+                                console.log('📦 Gửi review payload:', payload);
+                                await reviewsApi.create(payload);
+
+                                alert('Đánh giá thành công!');
+                                setReviewedProducts((prev) => [...prev, it.product_id]);
+                                setShowReviewInput(null);
+                                setRating(0);
+                                setComment('');
+                              } catch (err) {
+                                console.error('Gửi đánh giá lỗi:', err);
+                                alert('Không thể gửi đánh giá. Xem console để biết chi tiết.');
+                              }
+                            }}
+                            className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm"
+                          >
+                            Gửi đánh giá
+                          </button>
+                          <button
+                            onClick={() => setShowReviewInput(null)}
+                            className="bg-gray-200 text-gray-800 px-3 py-1 rounded-lg text-sm"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowReviewInput(it.product_id)}
+                        className="mt-2 text-sm text-blue-600 hover:underline"
+                      >
+                        Đánh giá sản phẩm
+                      </button>
+                    )
+                  ) : (
+                    <div className="mt-2 text-sm text-green-600 font-medium">
+                      ✅ Bạn đã đánh giá sản phẩm này
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Lịch sử trạng thái đơn hàng */}
+        {/* status history */}
         {statusHistory.length > 0 && (
           <div className="bg-white rounded-xl border shadow-sm p-4">
             <h2 className="text-lg font-semibold mb-3">Lịch sử trạng thái</h2>
