@@ -14,6 +14,9 @@ export class ImportProductEntity extends BaseEntity {
     @Column({ type: 'integer', nullable: true })
     import_quantity: number
 
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    import_price: number
+
     @ManyToOne(() => ProductEntity, { eager: true })
     @JoinColumn({ name: 'product_id' })
     product: ProductEntity;

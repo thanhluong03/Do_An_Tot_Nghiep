@@ -17,7 +17,10 @@ export class OrderStatusHistoryEntity extends BaseEntity {
     order_id: number
 
     @Column({ type: 'integer', nullable: false })
-    actor_id: number
+    user_id: number
+
+    @Column({ type: 'integer', nullable: false })
+    customer_id: number
 
     @Column({
         type: 'enum',

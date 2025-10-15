@@ -8,7 +8,7 @@ export class ReviewEntity extends BaseEntity {
     customer_id: number
 
     @Column({ type: 'integer', nullable: false })
-    product_id: number
+    orderitem_id: number
 
     @Column({ type: 'integer', nullable: true })
     rating: number

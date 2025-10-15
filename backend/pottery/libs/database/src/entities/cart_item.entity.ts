@@ -15,7 +15,4 @@ export class CartItemEntity extends BaseEntity {
 
     @Column({ type: 'integer', nullable: true })
     quantity: number
-
-    @Column({ type: 'decimal', nullable: true })
-    total_amount: number
 }
