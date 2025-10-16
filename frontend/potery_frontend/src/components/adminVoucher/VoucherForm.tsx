@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CreateVoucherDto, UpdateVoucherDto, VoucherResponseDto } from '@/api/services/voucherService';
+import { XCircle } from 'lucide-react'; // Đã import XCircle
 
 interface VoucherFormProps {
     initialData?: VoucherResponseDto; 
@@ -15,8 +16,8 @@ const initialFormState: CreateVoucherDto = {
     quantity: 1,
     order_conditions: 0,
     is_active: true,
-    
 };
+
 const formatForInput = (date?: Date) => 
     date ? new Date(date).toISOString().slice(0, 16) : '';
 
@@ -52,7 +53,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
         } else if (type === 'checkbox') {
             processedValue = (e.target as HTMLInputElement).checked;
         } else if (type === 'datetime-local') {
-            // Convert chuỗi datetime-local sang Date object
             processedValue = value ? new Date(value) : undefined;
         }
 
@@ -68,8 +68,20 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
     };
 
     return (
-        <form onSubmit={handleSubmit} className="p-6 border rounded-xl shadow-2xl max-w-lg mx-auto bg-white transition-all duration-300">
-            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 border-b pb-2">
+        <form onSubmit={handleSubmit} className="relative p-6 border rounded-xl shadow-2xl max-w-lg mx-auto bg-white transition-all duration-300">
+            
+            {/* NÚT ĐÓNG (X) */}
+            <button
+                type="button"
+                onClick={onCancel}
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition duration-150 p-1 rounded-full"
+                title="Đóng form"
+            >
+                <XCircle size={28} />
+            </button>
+            {/* HẾT NÚT ĐÓNG */}
+
+            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 border-b pb-2 pr-10">
                 {isEditMode ? 'Cập Nhật Voucher' : 'Thêm Mới Voucher'}
             </h2>
             <div className="mb-4">
@@ -123,7 +135,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                     className="w-full p-3 border border-gray-300 rounded-lg"
                 />
             </div>
-            <h3 className="text-lg font-bold mb-3 mt-4 text-gray-800 border-b pb-1">Thời Gian Phát Hành (Tùy chọn)</h3>
+            <h3 className="text-lg font-bold mb-3 mt-4 text-gray-800 pb-1">Thời Gian Phát Hành (Tùy chọn)</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Thời Gian Bắt Đầu PH</label>
@@ -148,7 +160,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                     />
                 </div>
             </div>
-            <h3 className="text-lg font-bold mb-3 mt-4 text-gray-800 border-b pb-1">Thời Gian Hiệu Lực (Tùy chọn)</h3>
+            <h3 className="text-lg font-bold mb-3 mt-4 text-gray-800 pb-1">Thời Gian Hiệu Lực (Tùy chọn)</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Hiệu lực Bắt đầu</label>
@@ -195,7 +207,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 </button>
                 <button
                     type="submit"
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150"
+                    className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg shadow-md hover:bg-orange-700 transition duration-150"
                 >
                     {isEditMode ? 'Lưu Cập Nhật' : 'Tạo Voucher'}
                 </button>
