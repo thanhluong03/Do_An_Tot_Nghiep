@@ -14,6 +14,7 @@ import {
     ListVoucherRequestDto 
 } from '@/api/services/voucherService';
 import { VoucherForm } from '@/components/adminVoucher/VoucherForm'; 
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Pencil, Trash2 } from 'lucide-react';
 
 const AdminVoucherPage: React.FC = () => {
@@ -23,8 +24,8 @@ const AdminVoucherPage: React.FC = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingVoucher, setEditingVoucher] = useState<VoucherResponseDto | undefined>(undefined);
     const [queryParams, setQueryParams] = useState<ListVoucherRequestDto>({ page: 1, size: 10, key: '' });
-    
-    // ✅ Hàm tải danh sách voucher
+    const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
     const fetchVouchers = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -43,28 +44,26 @@ const AdminVoucherPage: React.FC = () => {
         fetchVouchers();
     }, [fetchVouchers]);
 
-    // ✅ Thêm / Sửa
     const handleCreateOrUpdate = async (data: CreateVoucherDto | UpdateVoucherDto) => {
         setIsLoading(true);
         try {
             if (editingVoucher) {
                 await updateVoucher(editingVoucher.id, data as UpdateVoucherDto);
-                toast.success('🎉 Cập nhật voucher thành công!');
+                toast.success('Cập nhật voucher thành công!');
             } else {
                 await createVoucher([data as CreateVoucherDto]);
-                toast.success('✅ Tạo voucher mới thành công!');
+                toast.success('Tạo voucher mới thành công!');
             }
             handleCancel();
             await fetchVouchers();
         } catch (err) {
-            toast.error('❌ Thao tác thất bại!');
+            toast.error('❌ Thao tác thất bại! Kiểm tra console log.');
             console.error(err);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // ✅ Sửa voucher
     const handleEditClick = async (id: number) => {
         setIsLoading(true);
         try {
@@ -78,21 +77,30 @@ const AdminVoucherPage: React.FC = () => {
         }
     };
 
-    // ✅ Xóa (confirm tùy chỉnh)
-    const handleDelete = async (id: number) => {
-        const confirmed = window.confirm('Bạn có chắc chắn muốn xóa voucher này không?');
-        if (!confirmed) return;
+    const handleDeleteClick = (id: number) => {
+        setConfirmDeleteId(id);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (confirmDeleteId === null) return;
+        
+        const idToDelete = confirmDeleteId;
+        setConfirmDeleteId(null);
 
         setIsLoading(true);
         try {
-            await deleteVoucher(id);
-            toast.success('🗑️ Đã xóa voucher thành công!');
+            await deleteVoucher(idToDelete);
+            toast.success(' Đã xóa voucher thành công!');
             await fetchVouchers();
         } catch (err) {
             toast.error('Xóa voucher thất bại!');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmDeleteId(null);
     };
 
     const handleCancel = () => {
@@ -129,9 +137,9 @@ const AdminVoucherPage: React.FC = () => {
             )}
             
             <div className="flex justify-between items-center mb-6">
-                {/* Form tìm kiếm */}
                 <form onSubmit={handleSearch} className="flex space-x-3">
                     <input
+                        title='Nhập tên voucher để tìm kiếm'
                         type="text"
                         placeholder=" Tìm voucher..."
                         value={queryParams.key || ''}
@@ -145,8 +153,6 @@ const AdminVoucherPage: React.FC = () => {
                         Tìm Kiếm
                     </button>
                 </form>
-
-                {/* Nút tạo mới */}
                 <button
                     onClick={() => { setIsFormOpen(true); setEditingVoucher(undefined); }}
                     className="px-5 py-3 bg-orange-600 text-white font-semibold rounded-lg shadow-lg hover:bg-orange-700 transition duration-150"
@@ -155,7 +161,6 @@ const AdminVoucherPage: React.FC = () => {
                 </button>
             </div>
 
-            {/* Modal Form */}
             {isFormOpen && (
                 <div className="fixed inset-0 bg-black/10 backdrop-blur-none flex items-center justify-center z-50 p-4">
                     <VoucherForm 
@@ -165,8 +170,18 @@ const AdminVoucherPage: React.FC = () => {
                     />
                 </div>
             )}
+            
+            {confirmDeleteId !== null && (
+                <ConfirmDialog
+                    title="Xác nhận Xóa Voucher"
+                    message={`Bạn có chắc chắn muốn xóa Voucher có ID: ${confirmDeleteId} không? Hành động này không thể hoàn tác.`}
+                    confirmText="Xác nhận Xóa"
+                    cancelText="Hủy bỏ"
+                    onConfirm={handleConfirmDelete}
+                    onCancel={handleCancelDelete}
+                />
+            )}
 
-            {/* Loading */}
             {isLoading && (
                 <div className="text-center py-10">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
@@ -174,7 +189,6 @@ const AdminVoucherPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Bảng danh sách */}
             {!isLoading && vouchers.length > 0 && (
                 <div className="overflow-x-auto bg-white rounded-xl shadow-2xl">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -185,7 +199,9 @@ const AdminVoucherPage: React.FC = () => {
                                 <th className="py-4 px-6 text-center text-xs font-extrabold text-gray-600 uppercase">Giảm Giá (%)</th>
                                 <th className="py-4 px-6 text-center text-xs font-extrabold text-gray-600 uppercase">Số Lượng</th>
                                 <th className="py-4 px-6 text-right text-xs font-extrabold text-gray-600 uppercase">Min Order (₫)</th>
-                                <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">Hết Hạn</th>
+                                <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">Bắt Đầu PH</th>
+                                <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">Kết Thúc PH</th>
+                                <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">Hết Hạn Hiệu Lực</th>
                                 <th className="py-4 px-6 text-center text-xs font-extrabold text-gray-600 uppercase">Trạng Thái</th>
                                 <th className="py-4 px-6 text-center text-xs font-extrabold text-gray-600 uppercase">Thao Tác</th>
                             </tr>
@@ -198,6 +214,8 @@ const AdminVoucherPage: React.FC = () => {
                                     <td className="py-3 px-6 text-sm text-center text-gray-700">{voucher.voucher_percentage}%</td>
                                     <td className="py-3 px-6 text-sm text-center text-gray-700">{voucher.quantity}</td>
                                     <td className="py-3 px-6 text-sm text-right text-gray-700">{voucher.order_conditions?.toLocaleString() || 0}</td>
+                                    <td className="py-3 px-6 text-sm text-gray-700">{formatTime(voucher.start_time)}</td>
+                                    <td className="py-3 px-6 text-sm text-gray-700">{formatTime(voucher.end_time)}</td>
                                     <td className="py-3 px-6 text-sm text-gray-700">{formatTime(voucher.effective_period_ends)}</td>
                                     <td className="py-3 px-6 text-center">
                                         <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
@@ -217,11 +235,11 @@ const AdminVoucherPage: React.FC = () => {
                                         </button>
                                         <button 
                                             title='xoa'
-                                            onClick={() => handleDelete(voucher.id)}
-                                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                            onClick={() => handleDeleteClick(voucher.id)}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
