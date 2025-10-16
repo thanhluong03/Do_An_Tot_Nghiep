@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import {
   getOrderDetail,
   listOrders,
@@ -16,7 +17,7 @@ import OrderTable from "@/components/adminOrder/OrderTable";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
 import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
-import { PlusCircle, Search } from "lucide-react";
+import { Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
@@ -35,25 +36,25 @@ export default function AdminOrderPage() {
   const [orders, setOrders] = useState<FullOrderDetails[]>([]);
   const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-
   const [stores, setStores] = useState<SelectOption[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatus | "">("");
-  const [searchTerm, setSearchTerm] = useState("");
   const [pagination, setPagination] = useState({ page: 1, size: 10 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<FullOrderDetails | null>(null);
   const [editingOrder, setEditingOrder] = useState<FullOrderDetails | null>(null);
-
-   const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
+  const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     listUsers()
       .then(setUsers)
       .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
+    listDropdownStores()
+      .then(setStores)
+      .catch(() => toast.error("Không thể tải danh sách cửa hàng!"));
   }, []);
 
   async function fetchAllOrders() {
@@ -79,17 +80,10 @@ export default function AdminOrderPage() {
     setLoading(true);
     setError(null);
     try {
-      const params: {
-        page: number;
-        size: number;
-        key: string;
-        store_id?: number;
-        status?: OrderStatus;
-        payment_status?: PaymentStatus;
-      } = {
+      const params = {
         page: pagination.page,
         size: pagination.size,
-        key: searchTerm,
+        key: "",
         store_id: selectedStoreId || undefined,
         status: orderStatusFilter || undefined,
         payment_status: paymentStatusFilter || undefined,
@@ -117,24 +111,126 @@ export default function AdminOrderPage() {
     if (users.length > 0) {
       fetchAllOrders();
       fetchOrders();
-
     }
-  }, [users, pagination.page, pagination.size, searchTerm, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
+  }, [users, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPagination({ ...pagination, page: 1 });
-    fetchOrders();
+    // 🟢 Xuất Excel đầy đủ thông tin đơn + item (fetch từ API chi tiết)
+  const handleExportExcel = async () => {
+    if (allOrders.length === 0) {
+      toast.error("Không có dữ liệu để xuất!");
+      return;
+    }
+
+    setLoading(true);
+    toast.loading("Đang tải chi tiết các đơn hàng...");
+
+    try {
+      // Gọi API lấy chi tiết tất cả đơn hàng song song
+      const detailedOrders = await Promise.all(
+        allOrders.map(async (order) => {
+          try {
+            const detail = await getOrderDetail(order.id);
+            return {
+              ...order,
+              items: detail.current_order?.items || detail.items || [],
+            };
+          } catch {
+            return { ...order, items: [] };
+          }
+        })
+      );
+
+      // Chuẩn bị dữ liệu cho Excel
+      const rows: any[] = [];
+
+      detailedOrders.forEach((order) => {
+        if (order.items && order.items.length > 0) {
+          order.items.forEach((item, idx) => {
+            rows.push({
+              "Mã Đơn hàng": order.id,
+              "Khách hàng": order.customer_name,
+              "Ngày đặt": order.order_date,
+              "Trạng thái đơn": order.status,
+              "Trạng thái thanh toán": order.payment_status,
+              "Phương thức thanh toán": order.payment_method,
+              "Địa chỉ giao hàng": order.shipping_address || "",
+              "Tổng tiền": order.total_amount,
+              "STT SP": idx + 1,
+              "Tên sản phẩm": item.product_name || "",
+              "Mã sản phẩm": item.product_id,
+              "Số lượng": item.quantity,
+              "Giá": item.price_at_order,
+              "Cửa hàng": item.store_name || "",
+              "Danh mục": item.category_name || "",
+              "Mô tả sản phẩm": item.description || "",
+            });
+          });
+        } else {
+          rows.push({
+            "Mã Đơn hàng": order.id,
+            "Khách hàng": order.customer_name,
+            "Ngày đặt": order.order_date,
+            "Trạng thái đơn": order.status,
+            "Trạng thái thanh toán": order.payment_status,
+            "Phương thức thanh toán": order.payment_method,
+            "Địa chỉ giao hàng": order.shipping_address || "",
+            "Tổng tiền": order.total_amount,
+            "STT SP": "",
+            "Tên sản phẩm": "",
+            "Mã sản phẩm": "",
+            "Số lượng": "",
+            "Giá": "",
+            "Cửa hàng": "",
+            "Danh mục": "",
+            "Mô tả sản phẩm": "",
+          });
+        }
+      });
+
+      // Xuất file Excel
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+
+      XLSX.writeFile(workbook, "DanhSachDonHang.xlsx");
+      toast.dismiss();
+      toast.success("Đã xuất file Excel đầy đủ!");
+    } catch (err) {
+      console.error(err);
+      toast.dismiss();
+      toast.error("Không thể xuất file Excel!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSelectOrderStatus = (status: OrderStatus | "") => {
-    setOrderStatusFilter(status);
-    setPagination({ ...pagination, page: 1 });
+
+  const handleDeleteOrder = (id: number) => {
+    setOrderToDeleteId(id);
+    setIsDeleteModalOpen(true);
   };
 
-  const handleSelectPaymentStatus = (status: PaymentStatus | "") => {
-    setPaymentStatusFilter(status);
-    setPagination({ ...pagination, page: 1 });
+  const handleDeleteConfirmed = async () => {
+    if (orderToDeleteId === null) return;
+    const id = orderToDeleteId;
+    setIsDeleteModalOpen(false);
+    setOrderToDeleteId(null);
+    setLoading(true);
+    try {
+      await deleteOrder(id);
+      toast.success("Xóa đơn hàng thành công!");
+      await fetchOrders();
+      await fetchAllOrders();
+    } catch {
+      toast.error("Xóa đơn hàng thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCancelled = () => {
+    setIsDeleteModalOpen(false);
+    setOrderToDeleteId(null);
   };
 
   const handleViewOrder = async (order: Order) => {
@@ -183,39 +279,6 @@ export default function AdminOrderPage() {
     }
   };
 
- const handleDeleteOrder = (id: number) => {
-    setOrderToDeleteId(id);
-    setIsDeleteModalOpen(true);
-};
-
-// 💡 THÊM HÀM THỰC THI XÓA: Gọi khi người dùng bấm 'Đồng ý' trong modal
-const handleDeleteConfirmed = async () => {
-    if (orderToDeleteId === null) return;
-
-    const id = orderToDeleteId;
-    
-    // Đóng modal và reset state trước khi gọi API
-    setIsDeleteModalOpen(false);
-    setOrderToDeleteId(null);
-    
-    setLoading(true);
-    try {
-        await deleteOrder(id);
-        toast.success("Xóa đơn hàng thành công!");
-        await fetchOrders();
-        await fetchAllOrders();
-    } catch {
-        toast.error("Xóa đơn hàng thất bại!");
-    } finally {
-        setLoading(false);
-    }
-};
-
-const handleDeleteCancelled = () => {
-    setIsDeleteModalOpen(false);
-    setOrderToDeleteId(null);
-};
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <Toaster position="top-right" />
@@ -226,19 +289,9 @@ const handleDeleteCancelled = () => {
           </h1>
         </div>
 
+        {/* Bộ lọc + nút Excel */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
-          <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 w-full md:w-auto md:flex-grow">
-            <div className="relative flex-grow min-w-[200px]">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo ID hoặc Khách hàng..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
+          <div className="flex items-center gap-3">
             <select
               title="store-filter"
               value={selectedStoreId === "" ? "" : String(selectedStoreId)}
@@ -254,21 +307,14 @@ const handleDeleteCancelled = () => {
                 </option>
               ))}
             </select>
-
-            <button
-              type="submit"
-              className="px-5 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition w-full md:w-auto"
-            >
-              Tìm kiếm
-            </button>
-          </form>
+          </div>
 
           <button
-            onClick={() => toast("Chức năng tạo đơn hàng đang được phát triển!")}
-            className="flex items-center justify-center space-x-2 px-5 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition w-full md:w-auto"
+            onClick={handleExportExcel}
+            className="flex items-center justify-center space-x-2 px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition w-full md:w-auto"
           >
-            <PlusCircle className="w-5 h-5" />
-            <span>Tạo Đơn hàng Mới</span>
+            <Download className="w-5 h-5" />
+            <span>Tải file Excel</span>
           </button>
         </div>
 
@@ -276,9 +322,9 @@ const handleDeleteCancelled = () => {
           <OrderStatusTabs
             allOrders={allOrders}
             currentOrderStatus={orderStatusFilter}
-            onSelectOrderStatus={handleSelectOrderStatus}
+            onSelectOrderStatus={setOrderStatusFilter}
             currentPaymentStatus={paymentStatusFilter}
-            onSelectPaymentStatus={handleSelectPaymentStatus}
+            onSelectPaymentStatus={setPaymentStatusFilter}
           />
           <div className="text-right text-sm text-gray-500 mt-1">
             Tổng: {allOrders.length} đơn hàng
@@ -286,32 +332,16 @@ const handleDeleteCancelled = () => {
         </div>
 
         <div className="p-4">
-          {loading && (
-            <p className="text-center text-indigo-600 py-6 font-medium">
-              Đang tải danh sách đơn hàng...
-            </p>
-          )}
-          {error && (
-            <p className="text-center text-red-600 py-6 font-medium">
-              Lỗi: {error}
-            </p>
-          )}
+          {loading && <p className="text-center text-indigo-600 py-6 font-medium">Đang tải danh sách đơn hàng...</p>}
+          {error && <p className="text-center text-red-600 py-6 font-medium">Lỗi: {error}</p>}
           {!loading && !error && (
-            <OrderTable
-              orders={orders}
-              onView={handleViewOrder}
-              onEditStatus={handleEditStatus}
-              onDelete={handleDeleteOrder}
-            />
+            <OrderTable orders={orders} onView={handleViewOrder} onEditStatus={handleEditStatus} onDelete={handleDeleteOrder} />
           )}
         </div>
       </div>
 
       {selectedOrder && (
-        <OrderDetailModal
-          order={selectedOrder as Order}
-          onClose={() => setSelectedOrder(null)}
-        />
+        <OrderDetailModal order={selectedOrder as Order} onClose={() => setSelectedOrder(null)} />
       )}
       {editingOrder && (
         <OrderStatusModal
@@ -324,15 +354,15 @@ const handleDeleteCancelled = () => {
         />
       )}
       {isDeleteModalOpen && orderToDeleteId !== null && (
-            <ConfirmDialog
-                title="Xác nhận Xóa Đơn hàng"
-                message={`Bạn có chắc chắn muốn xóa đơn hàng #${orderToDeleteId}? Thao tác này không thể hoàn tác.`}
-                confirmText="Xóa vĩnh viễn"
-                cancelText="Hủy bỏ"
-                onConfirm={handleDeleteConfirmed}
-                onCancel={handleDeleteCancelled}
-            />
-        )}
+        <ConfirmDialog
+          title="Xác nhận Xóa Đơn hàng"
+          message={`Bạn có chắc chắn muốn xóa đơn hàng #${orderToDeleteId}? Thao tác này không thể hoàn tác.`}
+          confirmText="Xóa vĩnh viễn"
+          cancelText="Hủy bỏ"
+          onConfirm={handleDeleteConfirmed}
+          onCancel={handleDeleteCancelled}
+        />
+      )}
     </div>
   );
 }
