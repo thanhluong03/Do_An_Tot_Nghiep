@@ -8,10 +8,16 @@ import { Product } from '../../../../types';
 interface AddToCartClientProps {
   product: Product;
   storeId?: number;
+  quantity?: number; // ✅ thêm prop mới
   disabled?: boolean;
 }
 
-export function AddToCartClient({ product, storeId, disabled }: AddToCartClientProps) {
+export function AddToCartClient({
+  product,
+  storeId,
+  quantity = 1, // ✅ mặc định là 1 nếu chưa chọn
+  disabled,
+}: AddToCartClientProps) {
   const { user, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,10 +40,11 @@ export function AddToCartClient({ product, storeId, disabled }: AddToCartClientP
       await cartApi.add({
         customer_id: user.id,
         product_id: product.id,
-        store_id: Number(storeId), // ✅ lấy từ props, không dùng product.store.id
-        quantity: 1,
+        store_id: Number(storeId),
+        quantity, // ✅ truyền đúng số lượng được chọn
       });
-      setMessage('Đã thêm vào giỏ hàng');
+
+      setMessage(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
     } catch (e) {
       console.error(e);
       setMessage('Không thể thêm vào giỏ hàng');
@@ -55,7 +62,9 @@ export function AddToCartClient({ product, storeId, disabled }: AddToCartClientP
       >
         {loading ? 'Đang thêm…' : 'Thêm vào giỏ'}
       </button>
-      {message && <span className="text-sm text-gray-600">{message}</span>}
+      {message && (
+        <span className="text-sm text-gray-600 transition-all">{message}</span>
+      )}
     </div>
   );
 }

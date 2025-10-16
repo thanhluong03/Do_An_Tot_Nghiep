@@ -12,10 +12,28 @@ interface PageProps {
   params: Promise<{ id: string }> | { id: string };
 }
 
-export default async function OrderDetailPage(props: PageProps) {
-  const resolvedParams = 'then' in props.params ? await props.params : props.params;
-  const { id } = resolvedParams;
-  return <OrderDetailClient id={id} />;
+export default function OrderDetailPage({ params }: PageProps) {
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if ('then' in params) {
+        const resolved = await params;
+        setResolvedId(resolved.id);
+      } else {
+        setResolvedId(params.id);
+      }
+    })();
+  }, [params]);
+
+  if (!resolvedId)
+    return (
+      <BaseLayout>
+        <div className="text-center py-12 text-gray-600">Đang tải dữ liệu...</div>
+      </BaseLayout>
+    );
+
+  return <OrderDetailClient id={resolvedId} />;
 }
 
 function OrderDetailClient({ id }: { id: string }) {
