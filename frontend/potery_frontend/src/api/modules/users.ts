@@ -74,27 +74,30 @@ export const userApi = {
     },
   // Lấy thông tin user hiện tại
   getCurrentUser: async (): Promise<User> => {
-        // Ưu tiên đọc từ localStorage để tránh chớp tắt session
-        if (typeof window !== 'undefined') {
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                try { return JSON.parse(userStr) as User; } catch {}
-            }
-        }
-        // Fallback: nếu có customerId thì lấy chi tiết
-        try {
-            const token = getToken();
-            if (!token) throw new Error('No authentication token found.');
-            const customerId = typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
-            if (customerId) {
-                const response = await api.get(`/customers/customerdetail/${customerId}`);
-                return response.data;
-            }
-            throw new Error('No persisted user found');
-        } catch (error) {
-            throw handleAxiosError(error, 'Failed to fetch current customer/user');
-        }
-    },
+  try {
+    const token = getToken();
+    if (!token) throw new Error('No authentication token found.');
+
+    // ✅ Ưu tiên user cache
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('user');
+      if (cached) return JSON.parse(cached);
+    }
+
+    // ✅ Nếu có customerId → gọi API
+    const customerId = typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
+    if (customerId) {
+      const response = await api.get(`/customers/customerdetail/${customerId}`);
+      return response.data;
+    }
+
+    // 🚨 Fallback: chưa có customerId nhưng vẫn có token
+    return { name: 'Khách', email: null } as unknown as User;
+  } catch (error) {
+    throw handleAxiosError(error, 'Failed to fetch current customer/user');
+  }
+},
+
 
     // Lấy profile user (Dùng chung logic với getCurrentUser)
     getUserProfile: async (): Promise<UserProfile> => {
@@ -190,28 +193,32 @@ export const userApi = {
     },
 
     // Đăng nhập (backend: POST /login)
-    login: async (data: {
-        email: string;
-        password: string;
-    }): Promise<{ user: User; token: string }> => {
-        try {
-            const response = await api.post('/login', data);
-            const { user, token } = response.data || {};
-            // Lưu token
-            localStorage.setItem('token', token);
-            // Tìm id customer theo email từ bảng customers
-            if (user?.email) {
-                const customer = await userApi.getCustomerByEmail(user.email);
-                if (customer?.id) localStorage.setItem('customerId', String(customer.id));
-                const persisted = { id: customer?.id, email: user.email, name: user.name } as User;
-                localStorage.setItem('user', JSON.stringify(persisted));
-                return { user: persisted, token };
-            }
-            return response.data;
-        } catch (error) {
-            throw handleAxiosError(error, 'Failed to login');
-        }
-    },
+    login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
+  try {
+    const response = await api.post('/login', { email, password });
+    const { user, token } = response.data || {};
+
+    if (!token) throw new Error('Không nhận được token đăng nhập.');
+
+    localStorage.setItem('token', token);
+
+    // ✅ Lấy customerId từ email
+    if (user?.email) {
+      const customer = await userApi.getCustomerByEmail(user.email);
+      if (customer?.id) localStorage.setItem('customerId', String(customer.id));
+
+      const persisted = { id: customer?.id, email: user.email, name: user.name } as User;
+      localStorage.setItem('user', JSON.stringify(persisted));
+
+      return { user: persisted, token };
+    }
+
+    return { user, token };
+  } catch (error) {
+    throw handleAxiosError(error, 'Đăng nhập thất bại.');
+  }
+},
+
 
     // Đăng xuất (Bổ sung xóa customerId)
     logout: async (): Promise<void> => {

@@ -7,7 +7,7 @@ import router from 'next/router';
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
-  user: { name?: string; firstName?: string; lastName?: string } | null;
+  user: { name?: string; firstName?: string; lastName?: string;email?: string; } | null;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
@@ -26,7 +26,12 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
   }, []);
 
   // Tính toán tên hiển thị
-  const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Khách Hàng';
+  const displayName =
+  user?.name?.trim() ||
+  `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+  user?.email?.split('@')[0] ||
+  'Khách Hàng';
+
 
   const handleLogout = async () => {
     await logout();

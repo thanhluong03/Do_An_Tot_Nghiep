@@ -74,7 +74,7 @@ export class LoginService {
         }
         const token = this.jwtService.sign({ email: user.email, name: user.name });
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000/';
-        return `${frontendUrl}/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}`;
+        return `${frontendUrl}/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}`;
     }
 
     // async adminLogin(adminLoginDto: { username: string; password: string }) {

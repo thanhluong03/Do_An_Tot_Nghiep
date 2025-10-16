@@ -1,80 +1,58 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { userApi } from '../api/modules/users';
 import { User } from '../types';
-import { useRouter } from 'next/navigation';
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }) => Promise<void>;
-  logout: () => Promise<void>;
-  isAuthenticated: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      const customerId = localStorage.getItem('customerId'); 
-      // Chỉ cần có token là coi như đăng nhập; ID có thể fetch sau
-      if (!token) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('customerId');
-        localStorage.removeItem('user');
-        setLoading(false);
-        return;
-      }
-      try {
-        // Ưu tiên lấy từ local storage để không bị chớp tắt dropdown
-        const cached = localStorage.getItem('user');
-        if (cached) {
-          const parsed = JSON.parse(cached) as User;
-          setUser(parsed);
-        } else {
-          const userData = await userApi.getCurrentUser();
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const cached = localStorage.getItem('user');
+      if (cached) {
+        setUser(JSON.parse(cached));
+      } else {
+        const userData = await userApi.getCurrentUser();
+        if (userData) {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
+        } else {
+          setUser(null);
         }
-      } catch (error) {
-        // Nếu API lỗi (401/404), xóa token và ID
-        localStorage.removeItem('token');
-        localStorage.removeItem('customerId');
-        localStorage.removeItem('user');
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.warn('[Auth] Invalid or expired token:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await userApi.login({ email, password });
-      // userApi.login đã lưu token, customerId, user vào localStorage
+      const response = await userApi.login(email, password);
       setUser(response.user);
       router.push('/');
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      console.error('Login failed:', err);
+      throw err;
     }
   };
 
@@ -85,42 +63,34 @@ export const useAuthState = () => {
     lastName: string;
     phone?: string;
   }) => {
-    try {
-      const payload = {
-        email: data.email,
-        password: data.password,
-        name: `${data.firstName} ${data.lastName}`.trim(),
-        phone: data.phone,
-      };
-      const response = await userApi.register(payload);
-      // userApi.register đã lưu token, customerId, user vào localStorage
-      setUser(response.user);
-      router.push('/'); 
-    } catch (error) {
-      throw error;
-    }
+    const payload = {
+      email: data.email,
+      password: data.password,
+      name: `${data.firstName} ${data.lastName}`.trim(),
+      phone: data.phone,
+    };
+    const response = await userApi.register(payload);
+    setUser(response.user);
+    router.push('/');
   };
 
   const logout = async () => {
-    try {
-      await userApi.logout();
-    } finally {
-      setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('customerId');
-      localStorage.removeItem('user');
-      // userApi.logout() đã xóa cả token và customerId
-      router.push('/'); 
-    }
-  }
+    await userApi.logout();
+    setUser(null);
+    router.push('/');
+  };
+
+  const refreshUser = async () => {
+    await checkAuth();
+  };
 
   return {
     user,
     loading,
+    isAuthenticated: !!user,
     login,
     register,
     logout,
-    // ⭐ TRẠNG THÁI ĐÃ ĐĂNG NHẬP DỰA TRÊN USER ⭐
-    isAuthenticated: !!user,
+    refreshUser,
   };
 };
