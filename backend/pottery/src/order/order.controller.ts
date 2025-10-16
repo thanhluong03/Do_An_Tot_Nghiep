@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { OrderService } from '../../libs/order/src/order.service';
 import { CreateOrderDto, UpdateOrderDto, SuccessResponseDto, ErrorResponseDto } from './order.dto';
-import { OrderStatus, PaymentStatus } from '../../libs/database/src/entities/order.entity'; 
+import { OrderStatus, PaymentStatus } from '../../libs/database/src/entities/order.entity';
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 @Controller('orders')
 export class OrderController {
@@ -56,34 +58,33 @@ export class OrderController {
     //     }
     // }
     @Get('listorders')
-        async getOrders(
-            @Query('page') page = 1, 
-            @Query('size') size = 10, 
-            @Query('key') key?: string,
-            @Query('store_id') store_id?: number, // Thêm store ID
-            @Query('status') status?: string,     // Thêm Order Status (vẫn là string từ query)
-            @Query('payment_status') payment_status?: string // Thêm Payment Status (vẫn là string từ query)
-        ) {
-            try {
-                const orders = await this.orderService.getOrders({ 
-                    page: Number(page), 
-                    size: Number(size), 
-                    key,
-                    store_id: store_id ? Number(store_id) : undefined,
-                    // ✅ SỬA: Ép kiểu string sang Enum để khớp với IListOrder
-                    status: status as OrderStatus,                                            
-                    payment_status: payment_status as PaymentStatus,                                    
-                });
-                return new SuccessResponseDto('Orders fetched successfully', Array.isArray(orders) ? orders : []);
-            } catch (error: any) {
-                return new ErrorResponseDto(
-                    'Failed to fetch orders',
-                    error && typeof error === 'object' && 'message' in error
-                        ? error.message
-                        : error,
-                );
-            }
-        }
+    async getOrders(
+        @Query('page') page = 1,
+        @Query('size') size = 10,
+        @Query('key') key?: string,
+        @Query('store_id') store_id?: number,
+        @Query('status') status?: string,
+        @Query('payment_status') payment_status?: string
+    ) {
+        try {
+            const orders = await this.orderService.getOrders({
+                page: Number(page),
+                size: Number(size),
+                key,
+                store_id: store_id ? Number(store_id) : undefined,
+                status: status as OrderStatus,
+                payment_status: payment_status as PaymentStatus,
+            });
+            return new SuccessResponseDto('Orders fetched successfully', Array.isArray(orders) ? orders : []);
+        } catch (error: any) {
+            return new ErrorResponseDto(
+                'Failed to fetch orders',
+                error && typeof error === 'object' && 'message' in error
+                    ? error.message
+                    : error,
+            );
+        }
+    }
     @Get('customer/:customer_id')
     async getOrdersByCustomer(@Param('customer_id') customer_id: number, @Query('page') page = 1, @Query('size') size = 10) {
         try {
@@ -133,5 +134,10 @@ export class OrderController {
                     : error,
             );
         }
+    }
+
+    @Get('export-excel')
+    async exportOrdersToExcel(@Res() res: Response) {
+        await this.orderService.exportOrdersToExcel(res);
     }
 }
