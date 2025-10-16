@@ -23,10 +23,15 @@ const API = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-export const getAvailablePermissions = async (): Promise<string[]> => {
+export interface PermissionItem {
+  key: string;
+  name: string;
+}
+
+export const getAvailablePermissions = async (): Promise<Record<string, PermissionItem[]>> => {
   const res = await API.get("/permissions/listpermissions");
-  // backend returns { message, permissions: string[] }
-  return res.data?.permissions || [];
+  // backend returns { message, permissions: Record<string, PermissionItem[]> }
+  return res.data?.permissions || {};
 };
 
 export const getPermissionsByRole = async (roleId: number): Promise<PermissionEntity[]> => {

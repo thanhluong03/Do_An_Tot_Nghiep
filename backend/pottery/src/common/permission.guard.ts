@@ -10,10 +10,11 @@ export class PermissionGuard implements CanActivate {
         if (!requiredPermission) return true;
         const request = context.switchToHttp().getRequest();
         const user = request.user;
-        const permissions: string[] = user?.permissions?.map(p => p.name) || [];
-        if (!permissions.includes(requiredPermission)) {
-            throw new ForbiddenException('Bạn không có quyền truy cập. Hãy thêm quyền và quay lại sau.');
-        }
-        return true;
+        const permissions: string[] = Array.isArray(user?.permissions)
+            ? user.permissions.map((p: any) => p.name)
+            : [];
+        if (permissions.includes(requiredPermission)) return true;
+
+        throw new ForbiddenException('Bạn không có quyền truy cập. Hãy thêm quyền và quay lại sau.');
     }
 }

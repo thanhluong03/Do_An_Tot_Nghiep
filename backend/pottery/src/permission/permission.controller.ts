@@ -21,7 +21,7 @@ export class PermissionController {
     @Get('listpermissions')
     async getAvailablePermissions(): Promise<{
         message: string;
-        permissions: string[];
+        permissions: Record<string, { key: string; name: string }[]>;
     }> {
         return this.permissionService.getAllAvailablePermissions();
     }

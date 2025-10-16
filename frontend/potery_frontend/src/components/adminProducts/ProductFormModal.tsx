@@ -28,6 +28,11 @@ export default function ProductFormModal({
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
 
+  const handleRemoveImage = (index: number) => {
+    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setPreviewImages((prevImages) => prevImages.filter((_, i) => i !== index));
+  };
+
   React.useEffect(() => {
     if (isModalOpen) {
       setFiles([]);
@@ -211,6 +216,14 @@ export default function ProductFormModal({
                     alt="preview"
                     className="object-cover w-full h-full"
                   />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(i)}
+                    className="absolute top-1 right-1 bg-white/80 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-500 hover:text-white transition-opacity opacity-80 group-hover:opacity-100"
+                    title="Xóa ảnh"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
