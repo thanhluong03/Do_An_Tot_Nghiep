@@ -17,6 +17,7 @@ export class NewsService {
                 published_at: new Date(),
                 is_published: true,
                 user_id: data.user_id,
+                image_data: data.image_data,
             });
             return {
                 message: 'News created successfully',

@@ -33,6 +33,9 @@ export class CreateNewsDto {
     @IsNumber()
     user_id?: number;
 
+    @Expose()
+    @IsOptional()
+    image_data?: Buffer;
 }
 
 export class UpdateNewsDto {
@@ -59,6 +62,10 @@ export class UpdateNewsDto {
     @IsOptional()
     @IsNumber()
     user_id?: number;
+
+    @Expose()
+    @IsOptional()
+    image_data?: Buffer;
 }
 
 export class NewsResponseDto {
@@ -85,6 +92,9 @@ export class NewsResponseDto {
 
     @Expose()
     updated_at: Date | null;
+
+    @Expose()
+    image_data?: string;
 }
 
 export class ListNewsRequestDto {
