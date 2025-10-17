@@ -26,7 +26,8 @@ import {
     faUsersCog,
     faTruckArrowRight,
     faBoxesStacked,
-    faClipboardList, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
+    faClipboardList,
+    faUserCheck, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -78,7 +79,7 @@ const contentResourcesItems: MenuItem[] = [
 
 // 💡 SỬA ĐỔI: Gộp Vai trò và Quyền hạn vào mục con "Phân quyền"
 const systemItems: MenuItem[] = [
-    { name: "Người dùng", icon: faUser, href: "/admin/users" },
+    { name: "Tài khoản", icon: faUserCheck, href: "/admin/users" },
     {
         name: "Phân quyền", // Tên mục cha mới
         icon: faUsersCog, // Icon cho Phân quyền (Users with Cog/Gear)
