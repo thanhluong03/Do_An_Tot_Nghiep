@@ -19,13 +19,55 @@ export default function NewsDetailPage() {
         const detail = await newsApi.detail(String(id));
         setNews(detail);
 
-        // fetch bài liên quan (ví dụ: 3 bài mới nhất khác bài hiện tại)
-        const { items } = await newsApi.list(1, 3);
-        setRelated(items.filter((x: NewsItem) => x.id !== detail.id));
+        // fetch bài liên quan trực tiếp từ API (fetch)
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+        const res = await fetch(`${API_BASE_URL}/news/listnews?page=1&limit=12`, { cache: 'no-store' });
+        const raw = await res.json();
+        const arr = Array.isArray(raw) ? raw : raw?.data || [];
+
+        // ánh xạ dữ liệu thô thành NewsItem với xử lý published_at an toàn
+        const mapped: NewsItem[] = arr.map((n: any) => {
+          const publishedRaw = n?.published_at ?? n?.created_at ?? n?.createdAt ?? null;
+          // chuyển sang ISO / Date nếu có thể
+          const publishedDate = publishedRaw ? new Date(publishedRaw) : null;
+          const publishedIso = publishedDate && !isNaN(publishedDate.getTime()) ? publishedDate.toISOString() : new Date().toISOString();
+
+          const image =
+            n?.image_data
+              ? `data:image/jpeg;base64,${n.image_data}`
+              : n?.image
+              ? n.image
+              : '/pott.jpg';
+
+          return {
+            id: String(n?.id ?? n?._id ?? ''),
+            title: n?.title ?? n?.name ?? '',
+            content: n?.content ?? n?.description ?? '',
+            image,
+            published_at: publishedIso,
+            is_published: typeof n?.is_published === 'boolean' ? n.is_published : Number(n?.is_published ?? 1) === 1,
+            user: n?.user ? { id: String(n.user.id ?? ''), name: n.user.name ?? 'Tác giả' } : undefined,
+          } as NewsItem;
+        });
+
+        // sắp xếp theo published_at giảm dần (mới nhất trước)
+        const sorted = mapped.sort((a, b) => {
+          const da = new Date(a.published_at).getTime();
+          const db = new Date(b.published_at).getTime();
+          return db - da;
+        });
+
+        // loại bỏ bài hiện tại (so sánh id dưới dạng string) và lấy 3 bài mới nhất
+        const filtered = sorted.filter((x) => String(x.id) !== String(detail.id)).slice(0, 3);
+
+        setRelated(filtered);
+      } catch (err) {
+        console.error('Lỗi fetch news hoặc related:', err);
       } finally {
         setLoading(false);
       }
     };
+
     if (id) fetchNews();
   }, [id]);
 
@@ -51,135 +93,81 @@ export default function NewsDetailPage() {
 
   return (
     <BaseLayout>
-    
-      <section className="bg-[#FBFBFB] py-10 ">
-        <div className="mt-10 border-t border-gray-200 pt-8 pl-100 mb-6">
-                <Link href="/news" className="text-[#A67C52] hover:underline">
-                  ← Quay lại danh sách bài viết
-                </Link>
-              </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-100 p-8 relative grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-10 items-start">
+      <section className="bg-[#FAFAF9] py-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Nút quay lại */}
+          <div className="mb-8">
+            <Link
+              href="/news"
+              className="text-[#A67C52] hover:underline text-sm flex items-center gap-1"
+            >
+              ← Quay lại danh sách tin tức
+            </Link>
+          </div>
 
-            {/* Bên trái: nội dung bài */}
-            <article>
-              <div className="text-sm text-gray-500 mb-3 flex gap-2 items-center">
-                <span>{new Date(news.published_at).toLocaleDateString('vi-VN')}</span>
-                <span>•</span>
-                <span>Tác giả: {  'Admin'}</span>
-              </div>
+          {/* Nội dung bài viết */}
+          <article className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-10">
+            <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#2C2A24] mb-4 leading-snug">
+              {news.title}
+            </h1>
 
-              <h1 className="text-3xl md:text-4xl font-serif text-[#2C2A24] mb-6 leading-tight">
-                {news.title}
-              </h1>
+            <div className="text-sm text-gray-500 mb-6 flex items-center gap-3">
+              <span>{new Date(news.published_at).toLocaleDateString('vi-VN')}</span>
+              <span>•</span>
+              <span>Tác giả: <strong>{news.user?.name ?? 'Admin'}</strong></span>
+            </div>
 
-              <div className="prose prose-lg max-w-none text-[#4B4B4B]">
-                {news.image && (
-                  <img
-                    src={news.image}
-                    alt={news.title}
-                    className="w-full rounded-xl mb-6 object-cover"
-                  />
-                )}
-                <p className="whitespace-pre-line leading-relaxed">{news.content}</p>
-              </div>
+            {news.image && (
+              <img
+                src={news.image}
+                alt={news.title}
+                className="w-full rounded-xl mb-8 object-cover shadow-md"
+              />
+            )}
 
-              
-            </article>
+            <div className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed">
+              <p className="whitespace-pre-line">{news.content}</p>
+            </div>
 
-            {/* Bên phải: sidebar */}
-            <aside className="space-y-8">
-              {/* Danh mục */}
-              <div className="border border-gray-100 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-[#2C2A24] mb-3">
-                  Danh mục bài viết
-                </h3>
-                <ul className="text-[#6B6659] text-sm space-y-2">
-                  <li><Link href="#">Tin tức</Link></li>
-                  <li><Link href="#">Câu chuyện thủ công</Link></li>
-                  <li><Link href="#">Workshop</Link></li>
-                  <li><Link href="#">Bí quyết bảo quản</Link></li>
-                </ul>
-              </div>
+            {/* --- BÀI VIẾT LIÊN QUAN (HIỂN THỊ NGAY DƯỚI NỘI DUNG) --- */}
+            <div className="mt-12">
+              <h2 className="text-xl md:text-2xl font-serif text-[#2C2A24] mb-6 border-l-4 border-[#A67C52] pl-4">
+                Bài viết liên quan
+              </h2>
 
-              {/* Bài viết nổi bật */}
-              <div className="border border-gray-100 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-[#2C2A24] mb-3">
-                  Bài viết nổi bật
-                </h3>
-                <ul className="space-y-4">
+              {related.length === 0 ? (
+                <div className="text-sm text-gray-500">Không có bài liên quan.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {related.map((r) => (
-                    <li key={r.id} className="flex items-center gap-3">
+                    <Link
+                      key={r.id}
+                      href={`/news/${r.id}`}
+                      className="group block bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden"
+                    >
                       <img
                         src={r.image || '/pott.jpg'}
                         alt={r.title}
-                        className="w-14 h-14 rounded-md object-cover"
+                        className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div>
-                        <Link
-                          href={`/news/${r.id}`}
-                          className="text-sm text-[#2C2A24] hover:text-[#A67C52] font-medium line-clamp-2"
-                        >
+                      <div className="p-4">
+                        <h3 className="text-md md:text-lg font-semibold text-[#2C2A24] mb-2 line-clamp-2 group-hover:text-[#A67C52] transition">
                           {r.title}
-                        </Link>
-                        <p className="text-xs text-gray-500">
+                        </h3>
+                        <div className="text-xs text-gray-400 mb-2">
                           {new Date(r.published_at).toLocaleDateString('vi-VN')}
+                        </div>
+                        <p className="text-sm text-[#65604E] line-clamp-3">
+                          {r.content}
                         </p>
                       </div>
-                    </li>
+                    </Link>
                   ))}
-                </ul>
-              </div>
-
-              {/* Form đăng ký nhận tin */}
-              <div className="border border-gray-100 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-[#2C2A24] mb-3">
-                  Đăng ký nhận tin
-                </h3>
-                <p className="text-sm text-[#6B6659] mb-3">
-                  Nhận thông báo khi có bài viết mới nhất từ Tiệm Gốm.
-                </p>
-                <input
-                  type="email"
-                  placeholder="Nhập email của bạn"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mb-3"
-                />
-                <button className="w-full bg-[#A67C52] text-white py-2 rounded-md text-sm font-medium hover:opacity-90">
-                  Đăng ký
-                </button>
-              </div>
-            </aside>
-          </div>
-
-          {/* Bài viết liên quan */}
-          <div className="mt-14">
-            <h2 className="text-2xl font-serif text-[#2C2A24] mb-6">
-              Bài viết liên quan
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {related.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/news/${r.id}`}
-                  className="block bg-white rounded-xl shadow hover:shadow-md transition overflow-hidden"
-                >
-                  <img
-                    src={r.image || '/pott.jpg'}
-                    alt={r.title}
-                    className="w-full h-44 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-[#2C2A24] mb-2 line-clamp-2">
-                      {r.title}
-                    </h3>
-                    <p className="text-sm text-[#65604E] line-clamp-3">
-                      {r.content}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                </div>
+              )}
             </div>
-          </div>
+            {/* --- end related --- */}
+          </article>
         </div>
       </section>
     </BaseLayout>

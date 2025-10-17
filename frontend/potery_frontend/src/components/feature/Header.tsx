@@ -7,7 +7,7 @@ import { categoryApi } from '../../api/modules/category'; // ✅ thêm import AP
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
-  user: { name?: string; firstName?: string; lastName?: string; email?: string } | null;
+  user: { full_name?: string; name?: string; firstName?: string; lastName?: string; email?: string } | null;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
@@ -25,9 +25,10 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
   }, []);
 
   const displayName =
+    user?.full_name?.trim() ||
     user?.name?.trim() ||
     `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
-    user?.email?.split('@')[0] ||
+    (user?.email ? user.email.split('@')[0] : '') ||
     'Khách Hàng';
 
   const handleLogout = async () => {

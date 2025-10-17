@@ -8,6 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
 import Link from 'next/link';
+import Cookies from 'js-cookie';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'; // Import icons
 
 export default function CartPage() {
@@ -17,7 +18,8 @@ export default function CartPage() {
   const LIGHT_TEXT = 'text-gray-500';
   const BG_COLOR = 'bg-gray-50'; // Nền trang nhẹ
 
-  const { items, updateQuantity, removeItem, subtotal } = useCart();
+  const { items, addItem, updateQuantity, removeItem, subtotal } = useCart();
+  const [cookieItems, setCookieItems] = useState<typeof items>([]);
   const { user, isAuthenticated } = useAuth();
   const [serverItems, setServerItems] = useState<
     Array<{ id: string; product_id: string | number; quantity: number; store_id: number | string }>
@@ -55,6 +57,37 @@ export default function CartPage() {
       mounted = false;
     };
   }, [isAuthenticated, user]);
+
+  // 🔹 Guest: read session cart (fallback cookie) as fallback if context empty
+  useEffect(() => {
+    if (isAuthenticated) return;
+    try {
+      let parsed: any[] | null = null;
+      if (typeof window !== 'undefined') {
+        const ss = sessionStorage.getItem('cart_session');
+        if (ss) parsed = JSON.parse(ss);
+      }
+      if (!parsed) {
+        const saved = Cookies.get('cart_session');
+        if (saved) parsed = JSON.parse(saved || '[]');
+      }
+      if (parsed) {
+        if (Array.isArray(parsed)) setCookieItems(parsed);
+      }
+    } catch {}
+  }, [isAuthenticated]);
+
+  // 🔹 Guest: hydrate context from cookie once for consistent handlers
+  useEffect(() => {
+    if (isAuthenticated) return;
+    if (items.length > 0) return;
+    if (cookieItems.length === 0) return;
+    cookieItems.forEach(ci => {
+      if (ci?.product) addItem(ci.product, ci.quantity ?? 1);
+    });
+    // Do not set cookieItems here to avoid loops; addItem will persist cookie
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, cookieItems.length]);
 
   // 🔹 Fetch related products (Logic giữ nguyên)
   useEffect(() => {
@@ -172,8 +205,8 @@ export default function CartPage() {
             {error && <div className="text-center text-red-600 py-10">{error}</div>}
 
             {!loading && !error && (
-              <>
-                {serverItems.length > 0 ? (
+            <>
+                {isAuthenticated && serverItems.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-10">
                     {/* Bên trái: Danh sách sản phẩm */}
                     <div className="space-y-6">
@@ -270,6 +303,97 @@ export default function CartPage() {
                         <span>{formatPrice(total)}</span>
                       </div>
 
+                      <Link
+                        href="/checkout"
+                        className={`block text-center mt-8 bg-[${ACCENT_COLOR}] text-white py-3 rounded-lg font-semibold text-lg hover:bg-[#8B4513] transition-all duration-300`}
+                      >
+                        Tiến hành thanh toán
+                      </Link>
+                    </div>
+                  </div>
+                ) : !isAuthenticated && (items.length > 0 || cookieItems.length > 0) ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-10">
+                    {/* Left: Guest items from cookie */}
+                    <div className="space-y-6">
+                      {(items.length > 0 ? items : cookieItems).map((ci) => {
+                        const product = ci.product;
+                        const totalPrice = product.price * (ci.quantity ?? 1);
+                        return (
+                          <div
+                            key={product.id}
+                            className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-5 shadow-lg shadow-gray-100/50"
+                          >
+                            <Link href={`/products/${product.id}`} className="flex-shrink-0">
+                              <img
+                                src={product.images?.[0] || '/pott.jpg'}
+                                alt={product.name}
+                                className="w-24 h-24 rounded-lg object-cover transition-transform hover:scale-105"
+                              />
+                            </Link>
+                            <div className="flex-grow flex justify-between items-center w-full md:w-auto">
+                              <div className="flex-grow">
+                                <Link href={`/products/${product.id}`}>
+                                  <h3 className={`font-medium text-lg ${DARK_TEXT} hover:underline transition`}>
+                                    {product.name}
+                                  </h3>
+                                </Link>
+                                <p className={`text-sm ${LIGHT_TEXT}`}>
+                                  Đơn giá: {formatPrice(product.price)}
+                                </p>
+                                <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
+                                  <button
+                                    onClick={() => updateQuantity(product.id, Math.max(1, (ci.quantity ?? 1) - 1))}
+                                    disabled={ci.quantity === 1}
+                                    className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                  <span className={`px-3 font-semibold ${DARK_TEXT}`}>
+                                    {ci.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => updateQuantity(product.id, (ci.quantity ?? 1) + 1)}
+                                    className="p-2 text-gray-700 hover:bg-gray-100 transition"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="text-right flex flex-col items-end gap-2">
+                                <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>
+                                  {formatPrice(totalPrice)}
+                                </p>
+                                <button
+                                  onClick={() => removeItem(product.id)}
+                                  className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
+                                >
+                                  <Trash2 className="w-4 h-4" /> Xóa
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Right: Summary for guest */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl shadow-inner p-6 h-fit">
+                      <h3 className={`text-xl font-serif font-semibold ${DARK_TEXT} mb-5 border-b pb-3`}>
+                        Tóm tắt đơn hàng
+                      </h3>
+                      <div className="space-y-3 mb-6">
+                        <div className={`flex justify-between text-base ${DARK_TEXT}`}>
+                          <span>Tạm tính ({(items.length > 0 ? items : cookieItems).length} sản phẩm):</span>
+                          <span>{formatPrice(items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + ci.product.price * (ci.quantity ?? 1), 0)))}</span>
+                        </div>
+                        <div className={`flex justify-between text-base ${DARK_TEXT}`}>
+                          <span>Phí vận chuyển:</span>
+                          <span>{formatPrice(30000)}</span>
+                        </div>
+                      </div>
+                      <div className={`border-t border-gray-300 pt-4 flex justify-between font-bold text-xl text-[${ACCENT_COLOR}]`}>
+                        <span>Tổng cộng:</span>
+                        <span>{formatPrice((items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + ci.product.price * (ci.quantity ?? 1), 0))) + 30000)}</span>
+                      </div>
                       <Link
                         href="/checkout"
                         className={`block text-center mt-8 bg-[${ACCENT_COLOR}] text-white py-3 rounded-lg font-semibold text-lg hover:bg-[#8B4513] transition-all duration-300`}

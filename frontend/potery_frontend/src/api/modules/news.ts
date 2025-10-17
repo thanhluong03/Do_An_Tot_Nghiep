@@ -16,15 +16,18 @@ export interface NewsItem {
   user?: { id: string; name: string; logo?: string };
 }
 
-const mapNews = (n: any): NewsItem => ({
-  id: String(n.id ?? n._id ?? ''),
-  title: n.title ?? n.name ?? '',
-  content: n.content ?? n.description ?? '',
-  image: n.image ?? '/pott.jpg',
-  published_at: n.published_at ?? n.createdAt ?? new Date(),
-  is_published: n.is_published ?? 1,
-  user: n.user ? { id: String(n.user.id ?? ''), name: n.user.name ?? 'Tác giả' } : undefined,
-});
+const mapNews = (n: any): NewsItem => {
+  const imageFromDb = n?.image_data ? `data:image/jpeg;base64,${n.image_data}` : undefined;
+  return {
+    id: String(n?.id ?? n?._id ?? ''),
+    title: n?.title ?? n?.name ?? '',
+    content: n?.content ?? n?.description ?? '',
+    image: imageFromDb || n?.image || '/pott.jpg',
+    published_at: n?.published_at ?? n?.created_at ?? n?.createdAt ?? new Date(),
+    is_published: typeof n?.is_published === 'boolean' ? n.is_published : Number(n?.is_published ?? 1) === 1,
+    user: n?.user ? { id: String(n.user.id ?? ''), name: n.user.name ?? 'Tác giả' } : undefined,
+  };
+};
 
 export const newsApi = {
   async list(page = 1, limit = 6): Promise<{ items: NewsItem[]; total: number }> {
@@ -35,6 +38,7 @@ export const newsApi = {
   },
   async detail(id: string): Promise<NewsItem> {
     const res = await api.get(`/news/newsdetail/${id}`);
-    return mapNews(res.data);
+    const payload = Array.isArray(res.data) ? res.data[0] : res.data;
+    return mapNews(payload || {});
   },
 };

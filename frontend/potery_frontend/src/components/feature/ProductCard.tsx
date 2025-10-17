@@ -6,6 +6,8 @@ import { Product } from '../../types';
 import { formatPrice } from '../../utils/format';
 import { useAuth } from '../../contexts/AuthContext';
 import { cartApi } from '../../api/modules/cart';
+import { useCart } from '../../contexts/CartContext';
+import { productApi } from '../../api/modules/products';
 
 export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Product) => void }> = ({
   product,
@@ -13,12 +15,34 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
 }) => {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
+  const { addItem } = useCart();
   const [loading, setLoading] = useState(false);
 
   const handleAdd = async () => {
-    if (!isAuthenticated || !user) return alert('Vui lòng đăng nhập');
-    if (!user.id) return alert('Tài khoản không hợp lệ (missing id)');
-    const storeId = product.store?.id;
+    // Guest: save to cookie via context, do NOT require store id
+    if (!isAuthenticated || !user?.id) {
+      setLoading(true);
+      try {
+        addItem(product, 1);
+        alert('Đã thêm vào giỏ hàng!');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Logged-in: need store id for backend cart API
+    // Resolve store id: prefer from list item, fallback to product detail's first store
+    let storeId = product.store?.id as any;
+    if (!storeId) {
+      try {
+        const detail = await productApi.getProductById(String(product.id));
+        const fallback = detail?.stores?.[0]?.store_id;
+        if (fallback) {
+          storeId = fallback;
+        }
+      } catch {}
+    }
     if (!storeId) return alert('Cửa hàng không hợp lệ');
 
     setLoading(true);
@@ -36,6 +60,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
       setLoading(false);
     }
   };
+
 
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-all">
@@ -71,7 +96,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           disabled={loading}
           className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold disabled:opacity-50 transition"
         >
-          {loading ? 'Đang thêm...' : 'Mua ngay'}
+          {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}
         </button>
       </div>
       </div>
