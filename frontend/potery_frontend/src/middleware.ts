@@ -1,36 +1,45 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
+  const { pathname } = url;
 
-  const adminToken = request.cookies.get("adminToken") || null;
-  const { pathname } = request.nextUrl;
+  const adminToken = request.cookies.get('adminToken')?.value || null;
+  const guestId = request.cookies.get('guest_id')?.value || null;
 
-  // Nếu URL có //login-success -> sửa lại đúng path
-  if (url.pathname.startsWith('//login-success')) {
+  const response = NextResponse.next();
+
+  // 🧩 1. Fix lỗi //login-success
+  if (pathname.startsWith('//login-success')) {
     url.pathname = '/login-success';
     return NextResponse.redirect(url);
   }
 
-  if (
-    pathname.startsWith("/admin") &&
-    pathname !== "/admin/login" && // 🔥 Loại trừ trang login
-    !adminToken
-  ) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+  // 🧱 2. Gán guest_id cho khách chưa có session
+  if (!guestId) {
+    response.cookies.set('guest_id', uuidv4(), {
+      maxAge: 60 * 60 * 24 * 30, // 30 ngày
+      path: '/',
+      sameSite: 'lax',
+    });
   }
 
-  // Nếu đã đăng nhập mà vẫn cố vào /admin/login thì chuyển sang /admin
-  if (pathname === "/admin/login" && adminToken) {
-    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  // 🔒 3. Chặn admin chưa đăng nhập
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !adminToken) {
+    return NextResponse.redirect(new URL('/admin/login', request.url));
   }
-  
+
+  // 🚪 4. Chặn admin đã đăng nhập quay lại trang login
+  if (pathname === '/admin/login' && adminToken) {
+    return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+  }
+
+  return response;
 }
 
-// Áp dụng cho tất cả request
+// Áp dụng middleware cho tất cả request
 export const config = {
   matcher: '/:path*',
 };
-
-
