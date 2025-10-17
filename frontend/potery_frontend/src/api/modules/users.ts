@@ -73,30 +73,61 @@ export const userApi = {
         }
     },
   // Lấy thông tin user hiện tại
-  getCurrentUser: async (): Promise<User> => {
+  getCurrentUser: async () => {
   try {
     const token = getToken();
     if (!token) throw new Error('No authentication token found.');
 
-    // ✅ Ưu tiên user cache
+    // ✅ Kiểm tra cache cũ
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem('user');
-      if (cached) return JSON.parse(cached);
+
+      if (cached) {
+        const parsed = JSON.parse(cached);
+
+        // ⚙️ Nếu cache có đủ thông tin thì trả luôn (tối ưu hiệu năng)
+        if (parsed.full_name && parsed.phone_number && parsed.address) {
+          return parsed;
+        }
+
+        // ⚠️ Nếu cache thiếu thông tin, gọi API để cập nhật đầy đủ
+        const customerId = localStorage.getItem('customerId');
+        if (customerId) {
+          const response = await api.get(`/customers/customerdetail/${customerId}`);
+          const userData = response.data;
+
+          // 🔄 Lưu lại cache mới
+          localStorage.setItem('user', JSON.stringify(userData));
+
+          return userData;
+        }
+
+        // Nếu không có customerId thì trả tạm parsed (tránh lỗi)
+        return parsed;
+      }
     }
 
-    // ✅ Nếu có customerId → gọi API
+    // ✅ Nếu không có cache -> lấy từ API
     const customerId = typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
     if (customerId) {
       const response = await api.get(`/customers/customerdetail/${customerId}`);
-      return response.data;
+      const userData = response.data;
+
+      // Lưu cache cho lần sau
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+
+      return userData;
     }
 
-    // 🚨 Fallback: chưa có customerId nhưng vẫn có token
-    return { name: 'Khách', email: null } as unknown as User;
+    throw new Error('User data not found.');
   } catch (error) {
-    throw handleAxiosError(error, 'Failed to fetch current customer/user');
+    console.error('Error fetching user:', error);
+    throw error;
   }
 },
+
 
 
     // Lấy profile user (Dùng chung logic với getCurrentUser)

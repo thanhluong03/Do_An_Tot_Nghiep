@@ -46,33 +46,48 @@ export const useAuthState = () => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const response = await userApi.login(email, password);
-      setUser(response.user);
-      router.push('/');
-    } catch (err) {
-      console.error('Login failed:', err);
-      throw err;
-    }
+  try {
+    const response = await userApi.login(email, password);
+
+    // ✅ Sau khi login thành công → lấy user đầy đủ
+    const fullUser = await userApi.getCurrentUser();
+
+    // ✅ Lưu localStorage để các component khác (như Header) nhận được ngay
+    localStorage.setItem('user', JSON.stringify(fullUser));
+
+    setUser(fullUser);
+    router.push('/');
+  } catch (err) {
+    console.error('Login failed:', err);
+    throw err;
+  }
+};
+
+const register = async (data: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}) => {
+  const payload = {
+    email: data.email,
+    password: data.password,
+    name: `${data.firstName} ${data.lastName}`.trim(),
+    phone: data.phone,
   };
 
-  const register = async (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }) => {
-    const payload = {
-      email: data.email,
-      password: data.password,
-      name: `${data.firstName} ${data.lastName}`.trim(),
-      phone: data.phone,
-    };
-    const response = await userApi.register(payload);
-    setUser(response.user);
-    router.push('/');
-  };
+  const response = await userApi.register(payload);
+
+  // ✅ Sau khi đăng ký → gọi lại API lấy dữ liệu chi tiết
+  const fullUser = await userApi.getCurrentUser();
+
+  localStorage.setItem('user', JSON.stringify(fullUser));
+
+  setUser(fullUser);
+  router.push('/');
+};
+
 
   const logout = async () => {
     await userApi.logout();
