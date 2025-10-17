@@ -299,7 +299,7 @@ export default function PromotionPage() {
                 
                   {/* 4. BẢNG LIỆT KÊ PROMOTION (CRUD VIEW - ĐÃ CẢI TIẾN CSS) */}
                 <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center mt-10">
-                    Danh sách Khuyến mãi (CRUD View)
+                    Danh sách Khuyến mãi
                 </h2>
                 
                 <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-100">
