@@ -1,9 +1,8 @@
-// src/components/VoucherForm.tsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { CreateVoucherDto, UpdateVoucherDto, VoucherResponseDto } from '@/api/services/voucherService';
+import { XCircle } from 'lucide-react'; // Đã import XCircle
 
 interface VoucherFormProps {
     initialData?: VoucherResponseDto; 
@@ -19,7 +18,6 @@ const initialFormState: CreateVoucherDto = {
     is_active: true,
 };
 
-/** Hàm chuyển đổi Date object thành chuỗi định dạng hợp lệ cho input type="datetime-local" */
 const formatForInput = (date?: Date) => 
     date ? new Date(date).toISOString().slice(0, 16) : '';
 
@@ -29,11 +27,9 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
 
     useEffect(() => {
         if (initialData) {
-            // Khi ở chế độ Sửa, load dữ liệu ban đầu
             setFormData({
                 name: initialData.name,
-                // Chuyển chuỗi ISO từ Backend thành Date object (hoặc giữ nguyên nếu đã là Date)
-                start_time: initialData.start_time ? new Date(initialData.start_time) : undefined,
+                start_time: initialData.start_time ? new Date(initialData.start_time) : undefined, 
                 end_time: initialData.end_time ? new Date(initialData.end_time) : undefined,
                 effective_period_begins: initialData.effective_period_begins ? new Date(initialData.effective_period_begins) : undefined,
                 effective_period_ends: initialData.effective_period_ends ? new Date(initialData.effective_period_ends) : undefined,
@@ -43,7 +39,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 is_active: initialData.is_active,
             });
         } else {
-            // Khi ở chế độ Thêm mới, reset form
             setFormData(initialFormState);
         }
     }, [initialData]);
@@ -58,7 +53,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
         } else if (type === 'checkbox') {
             processedValue = (e.target as HTMLInputElement).checked;
         } else if (type === 'datetime-local') {
-            // Convert chuỗi datetime-local sang Date object
             processedValue = value ? new Date(value) : undefined;
         }
 
@@ -74,12 +68,22 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
     };
 
     return (
-        <form onSubmit={handleSubmit} className="p-6 border rounded-xl shadow-2xl max-w-lg mx-auto bg-white transition-all duration-300">
-            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 border-b pb-2">
+        <form onSubmit={handleSubmit} className="relative p-6 border rounded-xl shadow-2xl max-w-lg mx-auto bg-white transition-all duration-300">
+            
+            {/* NÚT ĐÓNG (X) */}
+            <button
+                type="button"
+                onClick={onCancel}
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition duration-150 p-1 rounded-full"
+                title="Đóng form"
+            >
+                <XCircle size={28} />
+            </button>
+            {/* HẾT NÚT ĐÓNG */}
+
+            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 border-b pb-2 pr-10">
                 {isEditMode ? 'Cập Nhật Voucher' : 'Thêm Mới Voucher'}
             </h2>
-            
-            {/* Tên Voucher */}
             <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2 text-gray-700">Tên Voucher</label>
                 <input
@@ -92,8 +96,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                 />
             </div>
-            
-            {/* Phần trăm giảm giá */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="mb-4">
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Phần Trăm Giảm Giá (%)</label>
@@ -108,8 +110,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                         className="w-full p-3 border border-gray-300 rounded-lg"
                     />
                 </div>
-
-                {/* Số lượng */}
                 <div className="mb-4">
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Số Lượng</label>
                     <input
@@ -123,8 +123,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                     />
                 </div>
             </div>
-
-            {/* Điều kiện đơn hàng tối thiểu */}
             <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2 text-gray-700">Đơn hàng tối thiểu (₫)</label>
                 <input
@@ -137,13 +135,37 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                     className="w-full p-3 border border-gray-300 rounded-lg"
                 />
             </div>
-
-            {/* Thời gian hiệu lực */}
+            <h3 className="text-lg font-bold mb-3 mt-4 text-gray-800 pb-1">Thời Gian Phát Hành (Tùy chọn)</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Thời Gian Bắt Đầu PH</label>
+                    <input
+                        title='Chọn thời gian bắt đầu phát hành voucher'
+                        type="datetime-local"
+                        name="start_time"
+                        value={formatForInput(formData.start_time)}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Thời Gian Kết Thúc PH</label>
+                    <input
+                        title='Chọn thời gian kết thúc phát hành voucher'
+                        type="datetime-local"
+                        name="end_time"
+                        value={formatForInput(formData.end_time)}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                    />
+                </div>
+            </div>
+            <h3 className="text-lg font-bold mb-3 mt-4 text-gray-800 pb-1">Thời Gian Hiệu Lực (Tùy chọn)</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700">Hiệu lực Bắt đầu</label>
                     <input
-                    title='Chọn thời gian bắt đầu hiệu lực voucher'
+                        title='Chọn thời gian bắt đầu hiệu lực voucher'
                         type="datetime-local"
                         name="effective_period_begins"
                         value={formatForInput(formData.effective_period_begins)}
@@ -163,8 +185,6 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                     />
                 </div>
             </div>
-
-            {/* Trạng thái Hoạt động */}
             <div className="mb-6 flex items-center">
                 <input
                     type="checkbox"
@@ -187,7 +207,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
                 </button>
                 <button
                     type="submit"
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150"
+                    className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg shadow-md hover:bg-orange-700 transition duration-150"
                 >
                     {isEditMode ? 'Lưu Cập Nhật' : 'Tạo Voucher'}
                 </button>

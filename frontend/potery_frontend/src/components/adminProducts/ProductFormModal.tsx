@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Product } from "@/api/services/productApi";
 import { Supplier } from "@/api/services/supplierService";
 import { Category } from "@/api/services/categoryService";
+import { X, Upload } from "lucide-react";
 
 interface ProductFormModalProps {
   isModalOpen: boolean;
@@ -27,6 +28,11 @@ export default function ProductFormModal({
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
 
+  const handleRemoveImage = (index: number) => {
+    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setPreviewImages((prevImages) => prevImages.filter((_, i) => i !== index));
+  };
+
   React.useEffect(() => {
     if (isModalOpen) {
       setFiles([]);
@@ -50,31 +56,40 @@ export default function ProductFormModal({
     form.append("description", formData.description || "");
     form.append("category_id", (formData.category_id || 0).toString());
     form.append("supplier_id", (formData.supplier_id || 0).toString());
-
     files.forEach((file) => form.append("images", file));
     await handleSave(form);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div
-        className="absolute inset-0 bg-black/30 transition-opacity"
+        className="absolute inset-0"
         onClick={() => setIsModalOpen(false)}
       />
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 animate-[fadeIn_0.2s_ease-in-out]">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center justify-between">
-          {editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}
+
+      {/* --- MAIN MODAL --- */}
+      <div
+        className="relative z-10 w-full max-w-5xl bg-white rounded-3xl shadow-2xl border border-gray-200 
+        p-10 animate-[fadeIn_0.2s_ease-in-out] overflow-y-auto max-h-[92vh]"
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center mb-10 pb-5">
+          <h2 className="text-3xl font-extrabold text-orange-600 tracking-tight">
+            {editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+          </h2>
           <button
             onClick={() => setIsModalOpen(false)}
             className="text-gray-400 hover:text-gray-600 transition"
           >
-            ✕
+            <X size={30} />
           </button>
-        </h2>
+        </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        {/* Form nội dung */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+          {/* Tên sản phẩm */}
+          <div className="col-span-2">
+            <label className="block text-base font-semibold text-gray-800 mb-2">
               Tên sản phẩm
             </label>
             <input
@@ -83,14 +98,14 @@ export default function ProductFormModal({
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
               placeholder="Nhập tên sản phẩm..."
             />
           </div>
 
-
+          {/* Giá */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-base font-semibold text-gray-800 mb-2">
               Giá (VNĐ)
             </label>
             <input
@@ -99,32 +114,17 @@ export default function ProductFormModal({
               onChange={(e) =>
                 setFormData({ ...formData, price: Number(e.target.value) })
               }
-              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
-              placeholder="Nhập giá sản phẩm..."
+              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              placeholder="Nhập giá..."
             />
           </div>
 
+          {/* Danh mục */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mô tả
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
-              placeholder="Nhập mô tả sản phẩm..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-base font-semibold text-gray-800 mb-2">
               Danh mục
             </label>
             <select
-              title="danh mục"
               value={formData.category_id ?? 0}
               onChange={(e) =>
                 setFormData({
@@ -132,7 +132,7 @@ export default function ProductFormModal({
                   category_id: Number(e.target.value),
                 })
               }
-              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
             >
               <option value={0}>-- Chọn danh mục --</option>
               {categories.map((c) => (
@@ -145,11 +145,10 @@ export default function ProductFormModal({
 
           {/* Nhà cung cấp */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-base font-semibold text-gray-800 mb-2">
               Nhà cung cấp
             </label>
             <select
-              title="ncc"
               value={formData.supplier_id ?? 0}
               onChange={(e) =>
                 setFormData({
@@ -157,7 +156,7 @@ export default function ProductFormModal({
                   supplier_id: Number(e.target.value),
                 })
               }
-              className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
             >
               <option value={0}>-- Chọn nhà cung cấp --</option>
               {suppliers.map((s) => (
@@ -168,53 +167,82 @@ export default function ProductFormModal({
             </select>
           </div>
 
-      
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ảnh sản phẩm
+          {/* Mô tả */}
+          <div className="col-span-2">
+            <label className="block text-base font-semibold text-gray-800 mb-2">
+              Mô tả
             </label>
-            <input
-              title="file"
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileChange}
-              className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 
-              file:rounded-lg file:border-0 file:text-sm file:font-medium 
-              file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+            <textarea
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              rows={5}
+              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              placeholder="Nhập mô tả sản phẩm..."
             />
           </div>
 
+          {/* Upload hình ảnh */}
+          <div className="col-span-2">
+            <label className="block text-base font-semibold text-gray-800 mb-3">
+              Ảnh sản phẩm
+            </label>
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-orange-300 rounded-2xl p-8 cursor-pointer hover:bg-orange-50 transition">
+              <Upload className="text-orange-500 mb-3" size={36} />
+              <span className="text-base text-gray-600 font-medium">
+                Chọn hoặc kéo ảnh vào đây
+              </span>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {/* Preview ảnh */}
           {previewImages.length > 0 && (
-            <div className="flex flex-wrap gap-3 mt-2">
+            <div className="col-span-2 flex flex-wrap gap-5 mt-2">
               {previewImages.map((src, i) => (
                 <div
                   key={i}
-                  className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 shadow-sm"
+                  className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition"
                 >
                   <img
                     src={src}
                     alt="preview"
                     className="object-cover w-full h-full"
                   />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(i)}
+                    className="absolute top-1 right-1 bg-white/80 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-500 hover:text-white transition-opacity opacity-80 group-hover:opacity-100"
+                    title="Xóa ảnh"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Nút hành động */}
+        <div className="flex justify-end gap-4 mt-10 border-t pt-6">
           <button
             onClick={() => setIsModalOpen(false)}
-            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition font-medium"
+            className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition shadow-sm"
           >
             Hủy
           </button>
           <button
             onClick={onSave}
-            className="px-5 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm transition"
+            className="px-8 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-lg transition"
           >
-            Lưu
+            {editingProduct ? "Cập nhật sản phẩm" : "Lưu sản phẩm"}
           </button>
         </div>
       </div>

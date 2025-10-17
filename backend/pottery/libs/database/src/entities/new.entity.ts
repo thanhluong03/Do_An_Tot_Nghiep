@@ -18,4 +18,7 @@ export class NewsEntity extends BaseEntity {
 
     @Column({ type: 'boolean', default: true })
     is_published: boolean
+
+    @Column({ type: 'bytea', nullable: true })
+    image_data: Buffer
 }

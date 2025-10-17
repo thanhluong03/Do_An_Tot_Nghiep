@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { BaseLayout } from '../../../layouts';
 import { ProductGrid } from '../../../components/feature/ProductGrid';
 import { useProducts, useCategories } from '../../../hooks/useProducts';
+import { Search, ChevronDown, Filter } from 'lucide-react'; 
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
 });
 
   const [search, setSearch] = useState('');
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false); 
 
   // ✅ Khi load page hoặc query thay đổi → cập nhật category từ URL
   useEffect(() => {
@@ -53,6 +55,15 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
     }
     return result;
   }, [products, filters, search]);
+  
+  const handleCategoryChange = (categoryId: string) => {
+    setFilters((f) => ({ ...f, category: categoryId || undefined }));
+    setPage(1); 
+  };
+
+  const PRIMARY_COLOR = 'text-gray-900'; 
+  const ACCENT_COLOR = '#8B4513'; 
+  const HOVER_BG = 'bg-gray-50'; 
 
   // ✅ Khi người dùng chọn category từ dropdown, cập nhật cả URL
   const handleCategoryChange = (value: string) => {
@@ -65,18 +76,20 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
 
   return (
     <BaseLayout>
-      {/* Banner */}
+      {/* Banner - Tinh tế và Tối giản */}
       <div className="relative w-screen left-1/2 right-1/2 -mx-[50vw]">
         <img
           src="/bg-product.jpg"
-          alt="Bộ sưu tập sản phẩm"
-          className="w-full h-[260px] md:h-[340px] object-cover"
+          alt="Bộ sưu tập sản phẩm gốm sứ thủ công"
+          className="w-full h-[300px] md:h-[400px] object-cover object-center"
         />
-        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 text-white text-center">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-2">
-            Bộ sưu tập sản phẩm
+        <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/50 text-white text-center p-4">
+          <h2 className="text-4xl md:text-6xl font-serif font-light tracking-widest mb-4 uppercase">
+            Artisan Collection
           </h2>
-          <p className="text-base md:text-lg">Tinh tế – Mộc mạc – Đậm hơi thở thủ công Việt</p>
+          <p className="text-lg md:text-2xl font-light italic opacity-90">
+            Nghệ thuật thủ công Việt
+          </p>
         </div>
       </div>
 
@@ -118,36 +131,22 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
             </select>
           </div>
 
-          {/* Sắp xếp */}
-          <div className="flex items-center gap-2">
-            <label className="text-gray-700 text-lg font-bold">Sắp xếp</label>
-            <select
-              value={filters.sortOrder || ''}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  sortOrder: e.target.value
-                    ? (e.target.value as 'asc' | 'desc')
-                    : undefined,
-                }))
-              }
-              className="border rounded px-3 py-2 text-sm bg-white"
-            >
-              <option value="">Giá</option>
-              <option value="asc">Giá tăng dần</option>
-              <option value="desc">Giá giảm dần</option>
-            </select>
+              <h1 className="text-2xl font-serif font-light text-gray-700 mb-6 border-b border-gray-200 pb-2">
+                  Hiển thị {filteredProducts.length} sản phẩm
+              </h1>
+              
+              {/* Lưới sản phẩm */}
+              <ProductGrid
+                products={filteredProducts}
+                loading={loading}
+                error={error}
+                onViewDetails={(p) => router.push(`/products/${p.id}`)}
+                columns={3}
+              />
+            </main>
           </div>
-        </div>
-
-        {/* Lưới sản phẩm */}
-        <ProductGrid
-          products={filteredProducts}
-          loading={loading}
-          error={error}
-          onViewDetails={(p) => router.push(`/products/${p.id}`)}
-          columns={3}
-        />
+        </div> 
+        {/* 💡 KẾT THÚC THẺ KHỐI BỌC */}
       </div>
     </BaseLayout>
   );

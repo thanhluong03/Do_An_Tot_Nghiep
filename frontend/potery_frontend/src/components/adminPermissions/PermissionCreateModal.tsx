@@ -7,7 +7,7 @@ interface Props {
     open: boolean;
     roles: RoleEntity[];
     onClose: () => void;
-    onCreate: (payload: { role_id: number; name: string; description?: string }) => Promise<void>;
+    onCreate: (payload: { role_id: number; name: string; description?: string }) => Promise<any>;
 }
 
 export default function PermissionCreateModal({ open, roles, onClose, onCreate }: Props) {
@@ -82,16 +82,16 @@ export default function PermissionCreateModal({ open, roles, onClose, onCreate }
                     {error && <div className="text-sm text-red-600 p-2 bg-red-50 rounded-lg border border-red-200">{error}</div>} {/* ✅ Thêm style cho error */}
 
                     <div className="flex justify-end gap-3 pt-2">
-                        <button 
-                            type="button" 
-                            onClick={onClose} 
+                        <button
+                            type="button"
+                            onClick={onClose}
                             className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition duration-150 font-medium"
                         > {/* ✅ Nút Cancel style mới */}
                             Hủy
                         </button>
-                        <button 
-                            disabled={loading} 
-                            type="submit" 
+                        <button
+                            disabled={loading}
+                            type="submit"
                             className={`px-5 py-2 text-white rounded-lg font-semibold shadow-md transition duration-150 
                                 ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
                         > {/* ✅ Nút Create màu Indigo */}

@@ -47,8 +47,8 @@ const salesOperationsItems: MenuItem[] = [
         name: "Kho hàng",
         icon: faWarehouse,
         children: [
-            { name: "Nhập kho", icon: faTruckArrowRight, href: "/admin/importproduct" },
-            { name: "Tồn kho", icon: faClipboardList, href: "/admin/inventory" },
+            { name: "Nhập kho sản phẩm", icon: faTruckArrowRight, href: "/admin/importproduct" },
+            { name: "Tồn kho cửa hàng", icon: faClipboardList, href: "/admin/inventory" },
         ],
     },
     { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },

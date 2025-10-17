@@ -184,11 +184,14 @@ export default function ProductsPage() {
   const handleDelete = async (id: number) => {
     toast(
       (t) => (
-        <div className="text-center">
-          <p className="font-semibold mb-2">
-            Bạn có chắc muốn xóa sản phẩm này?
+        <div className="flex flex-col items-center mt-96 p-4 bg-white rounded-xl shadow-2xl max-w-sm mx-auto">
+          <p className="font-semibold mb-3 text-lg text-gray-800">
+            Bạn có chắc chắn muốn xóa sản phẩm này?
           </p>
-          <div className="flex justify-center gap-2">
+          <p className="text-sm text-gray-500 mb-4">
+            Hành động này không thể hoàn tác.
+          </p>
+          <div className="flex justify-center gap-3 w-full">
             <button
               onClick={async () => {
                 toast.dismiss(t.id);
@@ -200,20 +203,32 @@ export default function ProductsPage() {
                   toast.error("Không thể xóa sản phẩm!");
                 }
               }}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg shadow-md"
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl shadow-md font-medium transition"
             >
               Xóa
             </button>
             <button
               onClick={() => toast.dismiss(t.id)}
-              className="bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded-lg"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl text-gray-800 font-medium transition"
             >
               Hủy
             </button>
           </div>
         </div>
       ),
-      { duration: 5000 }
+      { 
+        duration: Infinity, // Giữ toast cho đến khi người dùng tương tác
+        position: 'top-center', // Giữ nguyên position, logic căn giữa sẽ nằm ở `style`
+     
+        style: {
+          width: '100%',
+          maxWidth: '100%', 
+          padding: '0', 
+          background: 'transparent',
+          boxShadow: 'none',
+        
+        },
+      }
     );
   };
 

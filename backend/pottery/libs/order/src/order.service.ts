@@ -5,6 +5,8 @@ import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.inte
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryRepository } from '@app/database';
 import { CategoryRepository } from '@app/database';
+import * as ExcelJS from 'exceljs';
+import { Response } from 'express';
 
 @Injectable()
 export class OrderService {
@@ -204,7 +206,20 @@ export class OrderService {
     }
 
     async getOrders(params: IListOrder): Promise<OrderEntity[]> {
-        return this.orderRepository.findAll(params);
+        const orders = await this.orderRepository.findAll(params);
+        for (const order of orders) {
+            let customerName = '';
+            if (order.customer_id) {
+                const customer = await this.customerRepository.findById(order.customer_id);
+                customerName = customer?.full_name || customer?.username || '';
+            }
+            (order as any).customer_name = customerName;
+            const currentOrder: any = order.current_order || {};
+            const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+            const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+            (order as any).product_count = totalQuantity;
+        }
+        return orders;
     }
 
     async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
@@ -234,5 +249,50 @@ export class OrderService {
 
     async deleteOrder(id: number): Promise<void> {
         await this.orderRepository.softDelete(id);
+    }
+
+    async exportOrdersToExcel(res: Response): Promise<void> {
+    const orders = await this.orderRepository.findAll({ size: 1000, page: 1 });
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Orders');
+        worksheet.columns = [
+            { header: 'STT', key: 'index', width: 8 },
+            { header: 'Tên khách hàng', key: 'customerName', width: 25 },
+            { header: 'Ngày đặt', key: 'orderDate', width: 20 },
+            { header: 'Tổng tiền', key: 'totalAmount', width: 15 },
+            { header: 'Vị trí ship', key: 'shippingAddress', width: 30 },
+            { header: 'Trạng thái thanh toán', key: 'paymentStatus', width: 20 },
+            { header: 'Phương thức thanh toán', key: 'paymentMethod', width: 20 },
+            { header: 'Số lượng sản phẩm', key: 'productCount', width: 15 },
+            { header: 'Tên sản phẩm', key: 'productNames', width: 40 },
+        ];
+        let idx = 1;
+        for (const order of orders) {
+            let customerName = '';
+            if (order.customer_id) {
+                const customer = await this.customerRepository.findById(order.customer_id);
+                customerName = customer?.full_name || customer?.username || '';
+            }
+            const currentOrder: any = order.current_order || {};
+            const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+            const productNames = items.map((item: any) => item.product_name).join(', ');
+            const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+            worksheet.addRow({
+                index: idx,
+                customerName,
+                orderDate: order.order_date ? new Date(order.order_date).toLocaleString('vi-VN') : '',
+                totalAmount: order.total_amount,
+                shippingAddress: order.shipping_address || '',
+                paymentStatus: order.payment_status || '',
+                paymentMethod: order.payment_method || '',
+                productCount: totalQuantity,
+                productNames,
+            });
+            idx++;
+        }
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=orders.xlsx');
+        await workbook.xlsx.write(res);
+        res.end();
     }
 }

@@ -29,8 +29,23 @@ export default function AdminLoginPage() {
       localStorage.setItem("adminRole", data.roleName);
       localStorage.setItem("adminPermissions", JSON.stringify(data.permissions));
 
-      toast.success("Đăng nhập thành công!");
-      router.push("/admin/dashboard");
+      // Kiểm tra nếu không có quyền nào thì báo lỗi và không chuyển trang
+      if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
+        toast.error("Tài khoản không có quyền truy cập quản trị!");
+        return;
+      }
+
+      // Chỉ cho phép vào các trang mà user có permission
+      // Ví dụ: nếu có quyền 'admin/dashboard' thì vào dashboard, nếu không thì vào trang đầu tiên có trong permission
+      const firstPermission = data.permissions[0];
+      let redirectPath = "/admin/dashboard";
+      if (!data.permissions.includes("admin/dashboard")) {
+        redirectPath = `/${firstPermission}`;
+        toast("Bạn chỉ được truy cập: " + redirectPath);
+      } else {
+        toast.success("Đăng nhập thành công!");
+      }
+      router.push(redirectPath);
     } catch (error) {
       toast.error("Lỗi kết nối server");
     }

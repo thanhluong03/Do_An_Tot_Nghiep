@@ -1,3 +1,5 @@
+// src/pages/InventoryPage.tsx
+
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -8,18 +10,21 @@ import {
     deleteInventory,
     listDropdownProducts,
     listDropdownStores,
-    listAllProducts, // Import hàm mới
+    listAllProducts,
     Inventory,
     CreateInventoryDto,
     UpdateInventoryDto,
     SelectOption,
-    Product, // Import type Product
+    Product,
 } from "@/api/services/inventoryService";
 
 import InventoryForm from "@/components/inventory/InventoryForm";
 import InventoryTable from "@/components/inventory/InventoryTable";
+import { getCategories, Category } from "@/api/services/categoryService";
+
 import Pagination from "@/components/inventory/Pagination";
 
+// Interface cho state của form
 export interface InventoryFormState {
     product_id: string | string[] | undefined;
     store_id: string | string[] | undefined;
@@ -29,10 +34,12 @@ export interface InventoryFormState {
 export type FormName = "product_id" | "store_id" | "quantity_stock" | "quantity_sold";
 
 export default function InventoryPage() {
+    const [categories, setCategories] = useState<Category[]>([]);
+
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [stores, setStores] = useState<SelectOption[]>([]);
-    const [allProducts, setAllProducts] = useState<Product[]>([]); // THÊM STATE CHO DANH SÁCH PRODUCT ĐẦY ĐỦ
+    const [allProducts, setAllProducts] = useState<Product[]>([]); // Danh sách Product đầy đủ
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -40,9 +47,9 @@ export default function InventoryPage() {
 
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedStoreId, setSelectedStoreId] = useState<number>(0);
-    
-    // State kiểm soát hiển thị form Thêm mới
-    const [isAdding, setIsAdding] = useState(false); 
+
+    // State kiểm soát hiển thị form Thêm mới (khi editingId === null)
+    const [isAdding, setIsAdding] = useState(false);
 
     // --- Bộ lọc theo thời gian ---
     const [fromDate, setFromDate] = useState<string>("");
@@ -58,10 +65,12 @@ export default function InventoryPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+    // Hàm lấy tên hiển thị
     const getDisplayName = useCallback(
         (list: SelectOption[], id: number | string | undefined): string => {
             if (id === undefined || id === null) return "";
-            if (typeof id === 'string' && id === 'all') return "TẤT CẢ"; // Xử lý trường hợp 'all'
+            // Xử lý giá trị 'all' nếu có
+            if (typeof id === 'string' && id === 'all') return "TẤT CẢ";
             const numericId = Number(id);
             if (isNaN(numericId)) return "";
             const found = list.find((item) => Number(item.id) === numericId);
@@ -70,21 +79,28 @@ export default function InventoryPage() {
         []
     );
 
+    // useEffect 1: Tải dữ liệu dropdown khi component mount
     useEffect(() => {
         fetchDropdownData();
     }, []);
 
+    // useEffect 2: Tải dữ liệu tồn kho khi phân trang thay đổi
     useEffect(() => {
         fetchData();
-    }, [currentPage, pageSize]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPage, pageSize]); // Thêm fetchData vào dependency array
 
+    // Hàm tải dữ liệu dropdown (SP/Cửa hàng) và danh sách Product đầy đủ
     const fetchDropdownData = async () => {
         try {
-            const [productRes, storeRes, allProductRes] = await Promise.all([ // Lấy thêm allProducts
+            // Lấy cả 3 loại dữ liệu song song
+            const [productRes, storeRes, allProductRes] = await Promise.all([
                 listDropdownProducts(),
                 listDropdownStores(),
-                listAllProducts(), // THÊM: Lấy Product đầy đủ
+                listAllProducts(),
+                 getCategories()
             ]);
+
             setProducts(Array.isArray(productRes) ? productRes : []);
             setStores(Array.isArray(storeRes) ? storeRes : []);
             setAllProducts(Array.isArray(allProductRes) ? allProductRes : []); // Lưu Product đầy đủ
@@ -93,16 +109,18 @@ export default function InventoryPage() {
             setProducts([]);
             setStores([]);
             setAllProducts([]);
+            setCategories([]);
         }
     };
 
+    // Hàm tải dữ liệu tồn kho chính
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const res = await listInventories({
                 page: currentPage,
                 size: pageSize,
-                key: searchQuery,
+                key: searchQuery || undefined, // Đảm bảo truyền undefined nếu rỗng
                 store_id: selectedStoreId === 0 ? undefined : selectedStoreId,
                 fromDate: fromDate || undefined,
                 toDate: toDate || undefined,
@@ -122,50 +140,54 @@ export default function InventoryPage() {
         }
     }, [currentPage, pageSize, searchQuery, selectedStoreId, fromDate, toDate]);
 
+    // useEffect 3: Reset trang về 1 khi bộ lọc thay đổi, sau đó gọi fetchData
     useEffect(() => {
         if (currentPage !== 1) {
             setCurrentPage(1);
         } else {
             fetchData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedStoreId, searchQuery, fromDate, toDate]);
 
+    // Xử lý thay đổi input số
     const handleNumberChange = (name: FormName, value: number) => {
         setForm((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: "" }));
     };
 
+    // Xử lý thay đổi CheckboxList/Select
     const handleValueChange = (name: "product_id" | "store_id", value: string | string[] | undefined) => {
         setForm((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: "" }));
     };
 
+    // Reset form và trạng thái
     const handleCancelEdit = () => {
         setEditingId(null);
-        setIsAdding(false); // Reset trạng thái thêm
+        setIsAdding(false);
         setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
         setErrors({});
     };
 
+    // Mở form chỉnh sửa
     const handleEdit = (item: Inventory) => {
         setEditingId(item.id);
-        setIsAdding(false); // Đảm bảo đóng form thêm nếu đang mở
+        setIsAdding(false); // Đảm bảo isAdding = false khi chỉnh sửa
         setForm({
-            product_id: String(item.product_id),
-            store_id: String(item.store_id),
+            product_id: String(item.product_id), // Chắc chắn là string cho select
+            store_id: String(item.store_id), // Chắc chắn là string cho select
             quantity_stock: item.quantity_stock || 0,
             quantity_sold: item.quantity_sold || 0,
         });
-        // Không toast vì InventoryForm tự hiển thị title
+        setErrors({}); // Xóa lỗi cũ
     };
-    
-    // Logic của handleDelete, validate và handleSubmit (giữ nguyên logic)
-    // ...
 
+    // Xử lý xoá
     const handleDelete = async (id: number) => {
         toast(
             (t) => (
-                <div className="text-center">
+                <div className="text-center justify-center">
                     <p className="font-medium mb-2">Bạn có chắc muốn xoá tồn kho ID <b>{id}</b>?</p>
                     <div className="flex justify-center gap-3">
                         <button
@@ -196,55 +218,82 @@ export default function InventoryPage() {
         );
     };
 
+    // Validate form
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
+
+        // Chỉ kiểm tra product_id và store_id khi TẠO MỚI
         if (isCreating) {
-            // Cho phép tạo nếu chọn 'all'
-            if (!form.product_id || (Array.isArray(form.product_id) && form.product_id.length === 0)) newErrors.product_id = "Vui lòng chọn sản phẩm.";
-            if (!form.store_id || (Array.isArray(form.store_id) && form.store_id.length === 0)) newErrors.store_id = "Vui lòng chọn cửa hàng.";
+            if (!form.product_id || (Array.isArray(form.product_id) && form.product_id.length === 0)) {
+                newErrors.product_id = "Vui lòng chọn sản phẩm.";
+            }
+            if (!form.store_id || (Array.isArray(form.store_id) && form.store_id.length === 0)) {
+                newErrors.store_id = "Vui lòng chọn cửa hàng.";
+            }
         }
-        if (form.quantity_stock < 0) newErrors.quantity_stock = "SL Tồn kho phải ≥ 0.";
-        if (editingId !== null && form.quantity_sold < 0)
+
+       if (form.quantity_stock < 0) {
+    newErrors.quantity_stock = "SL Tồn kho phải ≥ 0.";
+} else if (isCreating && form.product_id && !Array.isArray(form.product_id)) {
+    // Kiểm tra nếu chọn 1 sản phẩm cụ thể (tránh lỗi khi chọn nhiều)
+    const product = allProducts.find(p => p.id === Number(form.product_id));
+    if (product && form.quantity_stock > (product.total_quantity_divided || 0)) {
+        newErrors.quantity_stock = `Số lượng nhập (${form.quantity_stock}) vượt quá số lượng còn trong kho (${product.total_quantity_divided || 0}).`;
+    }
+}
+
+        if (!isCreating && form.quantity_sold < 0) {
             newErrors.quantity_sold = "SL Đã bán phải ≥ 0.";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
+    // Submit form
     const handleSubmit = async () => {
-        const isCreating = editingId === null;
+        const isCreating = editingId === null; // Xác định đang là tạo mới hay cập nhật
         if (!validate(isCreating)) return;
 
         try {
             if (isCreating) {
+                // Logic cho TẠO MỚI
+                // Ép kiểu về string hoặc string[] cho API
+                const productId = form.product_id;
+                const storeId = form.store_id;
+
                 const createDto: CreateInventoryDto = {
-                    product_id: form.product_id || "all", // Sử dụng 'all' nếu undefined
-                    store_id: form.store_id || "all", // Sử dụng 'all' nếu undefined
+                    product_id: productId as string | string[], // API call sẽ xử lý string[] nếu người dùng chọn nhiều
+                    store_id: storeId as string | string[], // API call sẽ xử lý string[]
                     quantity_stock: form.quantity_stock,
                 };
                 await createInventory(createDto);
                 toast.success("Tạo tồn kho thành công!");
+                await fetchDropdownData(); 
             } else {
+                // Logic cho CẬP NHẬT
                 const updateDto: UpdateInventoryDto = {
                     quantity_stock: form.quantity_stock,
                     quantity_sold: form.quantity_sold,
                 };
                 await updateInventory(editingId!, updateDto);
                 toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
+                await fetchDropdownData(); // Thêm dòng này
             }
 
             handleCancelEdit();
             fetchData();
         } catch (error) {
-            toast.error("Có lỗi xảy ra khi xử lý yêu cầu!");
+            toast.error("Số lượng trong kho không đủ!");
         }
     };
 
     // Hàm mở form thêm mới
     const handleOpenAddForm = () => {
         setIsAdding(true);
-        setEditingId(null); 
-        // Reset form to empty state (already in handleCancelEdit)
+        setEditingId(null);
+        setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 }); // Reset form
+        setErrors({}); // Xóa lỗi cũ
     }
 
 
@@ -253,9 +302,9 @@ export default function InventoryPage() {
             <Toaster position="top-center" />
             <div className="w-full mx-auto bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-gray-200">
                 <h2 className="text-3xl font-extrabold text-center text-gray-800 mb-8 tracking-wide">
-                    Quản lý Tồn kho
+                    Quản lý Tồn kho trong cửa hàng
                 </h2>
-                
+
                 {/* --- NÚT THÊM MỚI --- */}
                 <div className="flex justify-end mb-6">
                     {editingId === null && !isAdding && (
@@ -263,7 +312,7 @@ export default function InventoryPage() {
                             onClick={handleOpenAddForm}
                             className="px-6 py-2 rounded-lg font-semibold shadow-md transition bg-[#F54900] hover:bg-orange-600 text-white flex items-center gap-2"
                         >
-                            
+
                             + Thêm Tồn Kho Mới
                         </button>
                     )}
@@ -274,7 +323,9 @@ export default function InventoryPage() {
                     <InventoryForm
                         form={form}
                         editingId={editingId}
+                        isAdding={isAdding} // Truyền trạng thái thêm mới
                         errors={errors}
+                         categories={categories}
                         products={products}
                         stores={stores}
                         allProducts={allProducts} // TRUYỀN DANH SÁCH PRODUCT ĐẦY ĐỦ
@@ -298,6 +349,7 @@ export default function InventoryPage() {
                                 Cửa hàng
                             </label>
                             <select
+                                title="store-filter"
                                 value={selectedStoreId}
                                 onChange={(e) => setSelectedStoreId(Number(e.target.value))}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
@@ -329,6 +381,7 @@ export default function InventoryPage() {
                                 Từ ngày
                             </label>
                             <input
+                                title="date-from"
                                 type="date"
                                 value={fromDate}
                                 onChange={(e) => setFromDate(e.target.value)}
@@ -341,6 +394,7 @@ export default function InventoryPage() {
                                 Đến ngày
                             </label>
                             <input
+                                title="date-to"
                                 type="date"
                                 value={toDate}
                                 onChange={(e) => setToDate(e.target.value)}
@@ -348,17 +402,6 @@ export default function InventoryPage() {
                             />
                         </div>
                     </div>
-
-                    {/* <div className="mt-4 text-sm text-gray-600 flex justify-end gap-6">
-                        <p>
-                            Tổng số mục:{" "}
-                            <span className="font-semibold text-gray-800">{totalItems}</span>
-                        </p>
-                        <p>
-                            Đang hiển thị:{" "}
-                            <span className="font-semibold text-gray-800">{inventories.length}</span>
-                        </p>
-                    </div> */}
                 </div>
 
                 {/* --- BẢNG DỮ LIỆU --- */}
@@ -371,7 +414,7 @@ export default function InventoryPage() {
                         inventories={inventories}
                         products={products}
                         stores={stores}
-                        allProducts={allProducts} // TRUYỀN VÀO ĐỂ HIỂN THỊ ẢNH
+                        allProducts={allProducts}
                         getDisplayName={getDisplayName}
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
@@ -379,6 +422,7 @@ export default function InventoryPage() {
                     />
                 )}
 
+                {/* --- PHÂN TRANG --- */}
                 <Pagination
                     totalItems={totalItems}
                     currentPage={currentPage}

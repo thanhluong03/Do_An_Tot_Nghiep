@@ -1,8 +1,8 @@
-// src/components/adminImportProduct/ImportProductForm.tsx
-import React from 'react';
+// src/components/adminImportProduct/ImportProductForm.tsx (PHIÊN BẢN ĐÃ THÊM ẢNH SẢN PHẨM VÀO CHI TIẾT NHẬP LIỆU)
+import React, { useMemo } from 'react';
 import { SelectOption } from "@/api/services/importProductsService"; 
 import { ProductSelectionState } from "@/app/admin/importproduct/page";
-import { Tag, Box, DollarSign, ListChecks } from 'lucide-react';
+import { Tag, Box, DollarSign, Package, ShoppingBag } from 'lucide-react';
 
 interface ImportProductFormProps {
     suppliers: SelectOption[];
@@ -28,175 +28,217 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
     handleSubmit,
 }) => {
     
-    // 💡 Utils: Định dạng số tiền
+    // Utils: Định dạng số tiền, getNumericValue (Giữ nguyên)
     const formatNumber = (num: string | number | undefined): string => {
         if (num === undefined || num === null || num === "") return '';
-        const numberValue = Number(num);
         const cleanValue = String(num).replace(/[^0-9]/g, ''); 
         const parsedValue = Number(cleanValue);
-
         return isNaN(parsedValue) ? '' : parsedValue.toLocaleString('vi-VN');
+    };
+    
+    const getNumericValue = (formattedValue: string | undefined): string => {
+        if (!formattedValue) return "";
+        return String(formattedValue).replace(/\./g, '');
     };
     
     const selectedCount = products.filter((p) => selectedProducts[p.id]?.checked).length;
     
+    const isFormValid = useMemo(() => {
+        if (!selectedSupplier || selectedCount === 0) return false;
+        return !products.filter((p) => selectedProducts[p.id]?.checked)
+            .some((p) => {
+                const quantity = Number(getNumericValue(selectedProducts[p.id]?.quantity));
+                const price = Number(getNumericValue(selectedProducts[p.id]?.price));
+                return quantity <= 0 || price <= 0;
+            });
+    }, [selectedSupplier, selectedProducts, products, selectedCount]);
+
+
+    const MAX_HEIGHT_SCROLL_AREA = 'max-h-[36rem]';
+
     return (
-        <div className="p-6 mb-8 rounded-xl bg-white border border-green-300 shadow-lg transition-all duration-300">
-            <h3 className="text-xl font-bold mb-4 text-green-600 border-b pb-2 flex items-center gap-2">
-                <ListChecks size={20} /> Tạo Phiếu Nhập kho Mới
+        <div className="p-8 mb-8 rounded-2xl bg-white border border-gray-100 shadow-2xl transition-all duration-300">
+            
+            <h3 className="text-2xl font-extrabold mb-6 text-gray-800 border-b-4 border-orange-500/50 pb-3 flex items-center gap-3">
+                <Package size={24} className="text-orange-600"/> TẠO PHIẾU NHẬP KHO
             </h3>
-
-            {/* --- PHẦN CHỌN NHÀ CUNG CẤP (Giữ nguyên) --- */}
-            <div className="mb-6 p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50/50">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <Tag size={16} className="text-green-500"/> Nhà Cung cấp <span className="text-red-500">*</span>
-                </label>
-                <select
-                    value={selectedSupplier}
-                    onChange={(e) => setSelectedSupplier(e.target.value)}
-                    className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 bg-white focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                >
-                    <option value="">-- Chọn Nhà cung cấp --</option>
-                    {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>
-                            {s.name}
-                        </option>
-                    ))}
-                </select>
-                {!selectedSupplier && <p className="mt-1 text-xs text-red-500">Vui lòng chọn Nhà cung cấp.</p>}
-            </div>
-
-            {/* --- PHẦN CHỌN SẢN PHẨM (DANH SÁCH DỌC CÓ ẢNH) --- */}
-            <div className="mb-6">
-                <h4 className="text-md font-semibold text-gray-700 mb-3">
-                    Chọn sản phẩm nhập kho: <span className="text-sm font-normal text-green-600">({products.length} loại từ NCC)</span>
-                </h4>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-6">
                 
-                <div className="max-h-60 overflow-y-auto border border-gray-200 p-2 rounded-lg bg-white shadow-inner custom-scrollbar space-y-1">
+                {/* -------------------- CỘT TRÁI (7/12) -------------------- */}
+                <div className="lg:col-span-7 space-y-4">
                     
-                    {!selectedSupplier ? (
-                        <p className="text-center text-gray-500 py-3">
-                            Vui lòng chọn Nhà cung cấp để xem danh sách sản phẩm.
-                        </p>
-                    ) : (
-                        products.length === 0 ? (
-                            <p className="text-center text-gray-500 py-3">
-                                Nhà cung cấp này hiện không có sản phẩm nào để nhập.
-                            </p>
+                    {/* 1. PHẦN CHỌN NHÀ CUNG CẤP (Giữ nguyên) */}
+                    <div className="p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-inner">
+                        <label className="block text-base font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <Tag size={18} className="text-orange-500"/> NHÀ CUNG CẤP <span className="text-red-500 font-extrabold">*</span>
+                        </label>
+                        <select
+                            title='s'
+                            value={selectedSupplier}
+                            onChange={(e) => setSelectedSupplier(e.target.value)}
+                            className="mt-1 block w-full border border-gray-300 rounded-xl shadow-md py-3 px-4 bg-white text-gray-800 font-medium 
+                                        focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all sm:text-lg appearance-none cursor-pointer"
+                        >
+                            <option value="" disabled={!!selectedSupplier}>-- Chọn Nhà cung cấp --</option>
+                            {suppliers.map((s) => (
+                                <option key={s.id} value={s.id} className='text-gray-900'>
+                                    {s.name}
+                                </option>
+                            ))}
+                        </select>
+                        {!selectedSupplier && <p className="mt-2 text-sm text-red-500 font-medium">Vui lòng chọn Nhà cung cấp.</p>}
+                    </div>
+
+                    {/* 2. CHI TIẾT NHẬP LIỆU (ĐÃ THÊM ẢNH) */}
+                    <div className="p-5 border border-gray-200 rounded-xl bg-white shadow-lg">
+                        <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between border-b border-gray-200 pb-2">
+                            <ShoppingBag size={20} className='text-blue-500'/> CHI TIẾT NHẬP LIỆU
+                            <span className={`text-md font-extrabold ${selectedCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                                ({selectedCount} đã chọn)
+                            </span>
+                        </h4>
+                        
+                        <div className={`space-y-4 p-1 ${MAX_HEIGHT_SCROLL_AREA} overflow-y-auto`}>
+                            {selectedCount === 0 ? (
+                                <p className="text-gray-500 text-center py-10 text-base font-light border border-dashed border-gray-300 rounded-lg">
+                                    Vui lòng chọn sản phẩm ở cột bên phải.
+                                </p>
+                            ) : (
+                                products 
+                                    .filter((p) => selectedProducts[p.id]?.checked)
+                                    .map((p) => (
+                                        <div
+                                            key={p.id}
+                                            className="flex flex-col sm:flex-row items-center gap-4 bg-blue-50/50 p-3 rounded-lg border border-blue-200 shadow-sm"
+                                        >
+                                            {/* KHỐI ẢNH VÀ TÊN SẢN PHẨM (W-2/5) */}
+                                            <div className="w-full sm:w-2/5 flex items-center gap-3">
+                                                {/* Ảnh Sản phẩm */}
+                                                <div className="w-8 h-8 flex-shrink-0 rounded-md overflow-hidden border border-gray-200 bg-white">
+                                                    <img 
+                                                        src={getProductImage(p.id) || "/images/default-product.png"} 
+                                                        alt={p.name} 
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.currentTarget.onerror = null;
+                                                            e.currentTarget.src = "/images/default-product.png";
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className="text-gray-800 font-semibold text-sm truncate">
+                                                    {p.name}
+                                                </span>
+                                            </div>
+                                            
+                                            {/* Số lượng (W-1/4) */}
+                                            <div className="w-full sm:w-1/4">
+                                                <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
+                                                    <Box size={14} className="text-gray-400"/> SL <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    inputMode='numeric'
+                                                    placeholder="0"
+                                                    value={formatNumber(selectedProducts[p.id]?.quantity)}
+                                                    onChange={(e) => handleInputChange(p.id, "quantity", e.target.value)}
+                                                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 text-right font-mono"
+                                                />
+                                                {Number(getNumericValue(selectedProducts[p.id]?.quantity)) <= 0 && <p className="mt-1 text-xs text-red-500">SL {'>'} 0.</p>}
+                                            </div>
+                                            
+                                            {/* Giá nhập (W-1/3) */}
+                                            <div className="w-full sm:w-1/3">
+                                                <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
+                                                    <DollarSign size={14} className="text-gray-400"/> GIÁ (VNĐ) <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    inputMode='numeric'
+                                                    placeholder="0"
+                                                    value={formatNumber(selectedProducts[p.id]?.price)}
+                                                    onChange={(e) => handleInputChange(p.id, "price", e.target.value)}
+                                                    className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 text-right font-mono"
+                                                />
+                                                {Number(getNumericValue(selectedProducts[p.id]?.price)) <= 0 && <p className="mt-1 text-xs text-red-500">Giá {'>'} 0.</p>}
+                                            </div>
+                                        </div>
+                                    ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* -------------------- CỘT PHẢI (5/12) (Giữ nguyên) -------------------- */}
+                <div className="lg:col-span-5">
+                    
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
+                        Chọn Sản phẩm
+                        <span className="text-sm font-semibold text-gray-500">({products.length} loại)</span>
+                    </h4>
+                    
+                    <div className={`${MAX_HEIGHT_SCROLL_AREA} overflow-y-auto border border-gray-300 rounded-xl p-3 bg-white shadow-lg space-y-2`}>
+                        {/* ... (Nội dung chọn sản phẩm giữ nguyên) ... */}
+                        {!selectedSupplier ? (
+                            <p className="text-center text-gray-500 py-10 font-light">Chọn NCC để tải danh sách.</p>
                         ) : (
-                            products.map((p) => (
-                                <div 
-                                    key={p.id}
-                                    onClick={() => handleCheckboxChange(p.id)} 
-                                    className={`
-                                        flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer border-2
-                                        ${selectedProducts[p.id]?.checked 
-                                            ? 'bg-green-100 border-green-500 shadow-sm' 
-                                            : 'border-gray-200 hover:bg-gray-50'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        
-                                        {/* Khối Ảnh */}
-                                        <div className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden border border-gray-300 bg-white">
-                                            <img 
-                                                src={getProductImage(p.id) || "/images/default-product.png"} 
-                                                alt={p.name} 
-                                                className="w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    e.currentTarget.onerror = null;
-                                                    e.currentTarget.src = "/images/default-product.png";
-                                                }}
-                                            />
+                            products.length === 0 ? (
+                                <p className="text-center text-gray-500 py-10 font-light">NCC này không có sản phẩm.</p>
+                            ) : (
+                                products.map((p) => (
+                                    <div 
+                                        key={p.id}
+                                        onClick={() => handleCheckboxChange(p.id)} 
+                                        className={`
+                                            flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer border
+                                            ${selectedProducts[p.id]?.checked 
+                                                ? 'bg-orange-50 border-orange-400 shadow-md transform scale-[1.01]' 
+                                                : 'border-gray-100 hover:bg-gray-50'
+                                            }
+                                        `}
+                                    >
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <div className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden border border-gray-200 bg-white shadow-sm">
+                                                <img 
+                                                    src={getProductImage(p.id) || "/images/default-product.png"} 
+                                                    alt={p.name} 
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.onerror = null;
+                                                        e.currentTarget.src = "/images/default-product.png";
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className={`text-sm font-medium truncate ${selectedProducts[p.id]?.checked ? 'text-orange-800 font-bold' : 'text-gray-700'}`}>
+                                                {p.name}
+                                            </span>
                                         </div>
                                         
-                                        <span className={`text-sm font-medium truncate ${selectedProducts[p.id]?.checked ? 'text-green-800 font-semibold' : 'text-gray-700'}`}>
-                                            {p.name}
-                                        </span>
+                                        <input
+                                            title='check'
+                                            type="checkbox"
+                                            checked={selectedProducts[p.id]?.checked || false}
+                                            onChange={(e) => e.stopPropagation()} 
+                                            className="w-4 h-4 text-orange-600 accent-orange-600 bg-gray-100 border-gray-300 rounded-full focus:ring-orange-500 flex-shrink-0 ml-3 cursor-pointer"
+                                        />
                                     </div>
-                                    
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedProducts[p.id]?.checked || false}
-                                        onChange={(e) => e.stopPropagation()} 
-                                        className="w-4 h-4 text-green-600 accent-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 flex-shrink-0 ml-3"
-                                    />
-                                </div>
-                            ))
-                        )
-                    )}
+                                ))
+                            )
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="mb-6">
-                <h4 className="text-md font-bold text-gray-700 mb-3 flex items-center justify-between border-b border-gray-200 pb-2">
-                    Chi tiết Nhập liệu 
-                    <span className="text-sm font-extrabold text-blue-600">({selectedCount} sản phẩm đã chọn)</span>
-                </h4>
-                
-                <div className="max-h-60 overflow-y-auto space-y-3 p-2 custom-scrollbar">
-                    {selectedCount === 0 ? (
-                        <p className="text-gray-500 text-center py-4 text-sm">Vui lòng chọn sản phẩm ở trên để nhập số lượng và giá.</p>
-                    ) : (
-                        products 
-                            .filter((p) => selectedProducts[p.id]?.checked)
-                            .map((p) => (
-                                <div
-                                    key={p.id}
-                                    className="flex flex-col sm:flex-row items-center gap-3 bg-blue-50/50 p-3 rounded-lg border border-blue-200 shadow-sm"
-                                >
-                                    {/* Tên sản phẩm chiếm 2/5 */}
-                                    <span className="w-full sm:w-2/5 text-gray-800 font-medium truncate">
-                                        {p.name}
-                                    </span>
-                                    
-                                    {/* Số lượng */}
-                                    <div className="w-full sm:w-1/4">
-                                        <label className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                                            <Box size={12}/> SL nhập
-                                        </label>
-                                        <input
-                                            type="text"
-                                            inputMode='numeric'
-                                            placeholder="0"
-                                            value={formatNumber(selectedProducts[p.id]?.quantity)}
-                                            onChange={(e) => handleInputChange(p.id, "quantity", e.target.value)}
-                                            className="w-full border rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-400 text-right"
-                                        />
-                                        {Number(selectedProducts[p.id]?.quantity) <= 0 && selectedProducts[p.id]?.checked && <p className="mt-1 text-xs text-red-500">SL {'>'} 0</p>}
-                                    </div>
-                                    
-                                    {/* Giá nhập */}
-                                    <div className="w-full sm:w-1/3">
-                                        <label className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                                            <DollarSign size={12}/> Giá nhập (VNĐ)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            inputMode='numeric'
-                                            placeholder="0"
-                                            value={formatNumber(selectedProducts[p.id]?.price)}
-                                            onChange={(e) => handleInputChange(p.id, "price", e.target.value)}
-                                            className="w-full border rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-400 text-right"
-                                        />
-                                        {Number(selectedProducts[p.id]?.price) <= 0 && selectedProducts[p.id]?.checked && <p className="mt-1 text-xs text-red-500">Giá {'>'} 0</p>}
-                                    </div>
-                                </div>
-                            ))
-                    )}
-                </div>
-            </div>
 
-            <div className="mt-6 pt-4 border-t flex justify-end">
+            {/* --- FOOTER & BUTTON (Giữ nguyên) --- */}
+            <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
                 <button
                     onClick={handleSubmit}
-                    disabled={!selectedSupplier || selectedCount === 0 || 
-                             products.filter((p) => selectedProducts[p.id]?.checked)
-                                .some((p) => Number(selectedProducts[p.id]?.quantity) <= 0 || !selectedProducts[p.id]?.price || Number(selectedProducts[p.id]?.price) <= 0)} 
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3 rounded-lg shadow-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    disabled={!isFormValid} 
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-extrabold px-10 py-3 rounded-xl shadow-xl transition 
+                                disabled:bg-orange-300 disabled:shadow-none disabled:cursor-not-allowed text-lg tracking-wider transform hover:scale-[1.02]"
                 >
-                    💾 Lưu Phiếu Nhập ({selectedCount})
+                    XÁC NHẬN NHẬP KHO ({selectedCount})
                 </button>
             </div>
         </div>

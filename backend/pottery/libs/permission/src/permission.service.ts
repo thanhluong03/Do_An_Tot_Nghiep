@@ -8,7 +8,7 @@ export class PermissionService {
     constructor(private readonly permissionRepository: PermissionRepository) { }
     getAllAvailablePermissions(): {
         message: string;
-        permissions: string[];
+        permissions: Record<string, { key: string; name: string }[]>;
     } {
         return {
             message: 'Available permissions fetched successfully',
@@ -31,29 +31,27 @@ export class PermissionService {
 
     async updatePermissionsForRole(
         roleId: number,
-        permissionNames: string[]
+        permissionKeys: string[]
     ): Promise<{ message: string }> {
         try {
             const currentPermissions = await this.permissionRepository.findByRoleId(roleId);
-            const currentNames = currentPermissions.map(p => p.name);
-            const toDelete = currentPermissions.filter(p => !permissionNames.includes(p.name));
+            const currentKeys = currentPermissions.map(p => p.name); // name là key
+            // Xóa các quyền không còn
+            const toDelete = currentPermissions.filter(p => !permissionKeys.includes(p.name));
             for (const perm of toDelete) {
                 await this.permissionRepository.softDelete(perm.id);
             }
-            const toAdd = permissionNames.filter(name => !currentNames.includes(name));
-            for (const permissionName of toAdd) {
+            // Thêm mới các quyền
+            const toAdd = permissionKeys.filter(key => !currentKeys.includes(key));
+            for (const key of toAdd) {
                 await this.permissionRepository.create({
                     role_id: roleId,
-                    name: permissionName,
-                    description: `Permission to access ${permissionName}`
+                    name: key // Lưu đúng key vào trường name
                 });
             }
-
-            return {
-                message: 'Permissions updated successfully'
-            };
+            return { message: 'Permissions updated successfully' };
         } catch (error) {
-            throw new Error('Failed to update permissions');
+            return { message: 'Failed to update permissions' };
         }
     }
 

@@ -10,13 +10,14 @@ import {
     getRoles,
 } from "@/api/services/permissionApi";
 import PermissionTable from "@/components/adminPermissions/PermissionTable";
+import { PermissionItem } from "@/api/services/permissionApi";
 import PermissionCreateModal from "@/components/adminPermissions/PermissionCreateModal";
 import { RoleEntity } from "@/api/services/permissionApi";
 
 export default function PermissionsPage() {
     const [roles, setRoles] = useState<RoleEntity[]>([]);
     const [selectedRoleId, setSelectedRoleId] = useState<number | "">("");
-    const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
+    const [availablePermissions, setAvailablePermissions] = useState<Record<string, PermissionItem[]>>({});
     const [rolePermissions, setRolePermissions] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -104,7 +105,7 @@ export default function PermissionsPage() {
             toast.success(`Đã tạo quyền: ${payload.name}`); // ✅ Thêm toast
             return created;
         } catch (err: any) {
-             // throw err to be caught by modal's try/catch
+            // throw err to be caught by modal's try/catch
             throw err;
         }
     }
@@ -112,17 +113,17 @@ export default function PermissionsPage() {
     const selectedRole = useMemo(() => roles.find((r) => r.id === selectedRoleId), [roles, selectedRoleId]);
 
     return (
-        <div className="p-8 bg-white rounded-lg shadow-md mx-auto"> 
+        <div className="p-8 bg-white rounded-lg shadow-md mx-auto">
             <Toaster position="top-right" /> {/* ✅ Thêm Toaster */}
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200"> 
-                <h1 className="text-3xl font-bold text-gray-800">Quản lý Phân quyền</h1> 
+            <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
+                <h1 className="text-3xl font-bold text-gray-800">Quản lý Phân quyền</h1>
                 <div className="flex items-center gap-3">
                     <select
                         title="luachon"
                         value={selectedRoleId}
                         onChange={(e) => setSelectedRoleId(e.target.value ? Number(e.target.value) : "")}
                         className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150 shadow-sm"
-                    > 
+                    >
                         <option value="">-- Chọn Vai trò --</option>
                         {roles.map((r) => (
                             <option key={r.id} value={r.id}>
@@ -131,16 +132,16 @@ export default function PermissionsPage() {
                         ))}
                     </select>
 
-                    <button 
-                        onClick={() => setModalOpen(true)} 
+                    <button
+                        onClick={() => setModalOpen(true)}
                         className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-150 shadow-md font-medium"
-                    > 
+                    >
                         + Tạo Permission
                     </button>
                 </div>
             </div>
 
-            <div className="mb-6 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-lg shadow-sm"> 
+            <div className="mb-6 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-lg shadow-sm">
                 <div className="text-sm text-indigo-800">
                     <span className="font-semibold">Vai trò đang chọn:</span> <span className="font-bold">{selectedRole?.name || "Chưa chọn"}</span>
                 </div>

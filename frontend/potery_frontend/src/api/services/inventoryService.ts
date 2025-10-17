@@ -49,6 +49,7 @@ export interface Product {
     price: number;
     quantity: number;
     category_id?: number;
+     total_quantity_divided: number;
     // Chấp nhận cả url (string) hoặc image_data (Buffer/string Base64)
     images?: { url?: string; image_data?: string | { data: number[] } }[]; 
     main_image?: string | { data: number[] };
