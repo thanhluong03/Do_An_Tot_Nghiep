@@ -40,6 +40,11 @@ export default function LoginSuccessPage() {
         }
       }
 
+      // Ensure context picks up latest token/user and header updates
+      try {
+        await refreshUser();
+      } catch {}
+
       console.log('[LoginSuccess] Login success, redirecting...');
       router.replace('/');
 

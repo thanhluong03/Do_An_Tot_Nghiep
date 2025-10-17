@@ -10,6 +10,7 @@ import { formatPrice } from '../../../utils/format';
 import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
 import { voucherApi, Voucher } from '../../../api/modules/voucher';
+import { customersApi } from '../../../api/modules/customers';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 export default function CheckoutPage() {
@@ -21,6 +22,10 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
+  // Guest info
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
 
   const [serverItems, setServerItems] = useState<Array<{ id: string; product_id: number; quantity: number ;store_id:number}>>([]);
   const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[] }>>({});
@@ -32,6 +37,24 @@ export default function CheckoutPage() {
   
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Build a fallback product map from context items for guest rendering
+  const contextProducts = useMemo(() => {
+    const map: Record<number, { id: number; name: string; price: number; images: string[] }> = {};
+    items.forEach(i => {
+      const pid = Number(i.product?.id ?? 0);
+      if (!pid) return;
+      if (!map[pid]) {
+        map[pid] = {
+          id: pid,
+          name: i.product?.name ?? 'Sản phẩm',
+          price: Number(i.product?.price ?? 0),
+          images: i.product?.images ?? [],
+        };
+      }
+    });
+    return map;
+  }, [items]);
   async function handleGuestCheckout(customerInfo: any) {
   const savedCart = Cookies.get('cart_session');
   if (!savedCart) {
@@ -69,6 +92,8 @@ export default function CheckoutPage() {
   (async () => {
     setLoadingCart(true);
     try {
+      const params = new URLSearchParams(window.location.search);
+      const isBuyNow = params.get('buyNow') === '1';
       if (isAuthenticated && user?.id) {
         // 🧩 Người dùng đã đăng nhập → lấy giỏ hàng từ server
         const data = await cartApi.getByCustomer(user.id as string);
@@ -80,16 +105,62 @@ export default function CheckoutPage() {
         }));
         setServerItems(mapped);
       } else {
-        // 👤 Khách chưa đăng nhập → đọc giỏ hàng từ cookie
-        const saved = Cookies.get('cart_session');
-        if (saved) {
-          const localItems = JSON.parse(saved);
-          const mapped = localItems.map((i: any, idx: number) => ({
-            id: `guest-${idx}`,
-            product_id: Number(i.product?.id ?? i.product_id),
-            quantity: Number(i.quantity ?? 1),
-            store_id: 1, // hoặc lấy store mặc định
-          }));
+        // 👤 Khách chưa đăng nhập
+        if (isBuyNow) {
+          // Prefer Buy-Now session payload
+          let bn: any = null;
+          try { bn = typeof window !== 'undefined' ? sessionStorage.getItem('buy_now') : null; } catch {}
+          if (!bn) {
+            try { bn = Cookies.get('buy_now'); } catch {}
+          }
+          if (bn) {
+            try {
+              const parsed = JSON.parse(bn);
+              const pid = Number(parsed?.product_id ?? parsed?.product?.id);
+              let storeId = Number(parsed?.store_id ?? parsed?.product?.store?.id ?? 0);
+              if (!storeId && pid) {
+                try {
+                  const detail = await productApi.getProductById(String(pid));
+                  storeId = Number(detail?.stores?.[0]?.store_id ?? 0);
+                } catch {}
+              }
+              setServerItems([{ id: 'buy-now', product_id: pid, quantity: Number(parsed?.quantity ?? 1), store_id: storeId || 1 }]);
+              return; // do not merge with cart_session
+            } catch {}
+          }
+        }
+        // 👤 Khách chưa đăng nhập → đọc giỏ hàng từ sessionStorage trước, cookie sau
+        let localItems: any[] | null = null;
+        try {
+          if (typeof window !== 'undefined') {
+            const ss = sessionStorage.getItem('cart_session');
+            if (ss) localItems = JSON.parse(ss);
+          }
+        } catch {}
+        if (!localItems) {
+          const saved = Cookies.get('cart_session');
+          if (saved) localItems = JSON.parse(saved);
+        }
+        if (localItems) {
+          const mapped = await Promise.all(
+            localItems.map(async (i: any, idx: number) => {
+              const pid = Number(i.product?.id ?? i.product_id);
+              let storeId = Number(i.product?.store?.id ?? i.store_id ?? 0);
+              if (!storeId) {
+                try {
+                  const detail = await productApi.getProductById(String(pid));
+                  const fallback = detail?.stores?.[0]?.store_id;
+                  if (fallback) storeId = Number(fallback);
+                } catch {}
+              }
+              return {
+                id: `guest-${idx}`,
+                product_id: pid,
+                quantity: Number(i.quantity ?? 1),
+                store_id: storeId || 1,
+              };
+            })
+          );
           setServerItems(mapped);
         }
       }
@@ -181,7 +252,6 @@ const handlePayment = async (orderId: number, amount: number) => {
 
   /** ===================== TẠO ĐƠN HÀNG ===================== */
 const handleCreate = async () => {
-  if (!isAuthenticated || !user?.id) return setError('❌ Vui lòng đăng nhập để thanh toán');
   if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
   const cartItems = serverItems.length > 0 ? serverItems : items;
   if (!cartItems.length) return setError('❌ Giỏ hàng trống');
@@ -191,6 +261,25 @@ const handleCreate = async () => {
   setError(null);
 
   try {
+    // Determine customer id: logged-in or create guest
+    let customerId: number | null = isAuthenticated && user?.id ? Number(user.id) : null;
+    if (!customerId) {
+      if (!guestName.trim() || !guestPhone.trim()) {
+        throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
+      }
+      const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
+      const created = await customersApi.createCustomer({
+        username: `guest_${Date.now()}`,
+        password: `guest-${Math.random().toString(36).slice(2)}`,
+        full_name: guestName.trim(),
+        email: fallbackEmail,
+        phone_number: guestPhone.trim(),
+        address: address.trim(),
+      });
+      customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
+      if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
+    }
+
     const totalBeforeDiscount = total;
     const totalAfterDiscount = finalTotal;
     const discount = totalBeforeDiscount - totalAfterDiscount;
@@ -215,7 +304,7 @@ const handleCreate = async () => {
     });
 
     const payload = {
-      customer_id: Number(user.id),
+      customer_id: Number(customerId),
       shipping_address: address,
       voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
       payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
@@ -338,12 +427,12 @@ useEffect(() => {
               <h2 className="text-2xl font-semibold mb-4 text-gray-700">Giỏ hàng</h2>
               {loadingCart ? (
                 <div className="text-center text-gray-500 py-8">Đang tải giỏ hàng...</div>
-              ) : serverItems.length === 0 ? (
+              ) : (serverItems.length === 0 && items.length === 0) ? (
                 <div className="text-center text-gray-400 py-8">Giỏ hàng trống</div>
               ) : (
                 <div className="divide-y divide-gray-200">
-                  {serverItems.map(ci => {
-                    const p = serverProducts[ci.product_id];
+                  {(serverItems.length > 0 ? serverItems : items.map((i, idx) => ({ id: `guest-${idx}`, product_id: Number(i.product.id), quantity: i.quantity, store_id: Number(i.product.store?.id || 0) })) ).map(ci => {
+                    const p = serverProducts[ci.product_id] || contextProducts[ci.product_id];
                     if (!p) return null;
                     return (
                       <div key={ci.id} className="flex justify-between py-4 items-center">
@@ -439,6 +528,39 @@ useEffect(() => {
 
             {/* Form */}
             <div className="bg-white shadow-xl rounded-xl p-6 space-y-4">
+              {!isAuthenticated && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">👤 Họ và tên *</label>
+                    <input
+                      className="w-full border-2 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200 transition"
+                      value={guestName}
+                      onChange={e => setGuestName(e.target.value)}
+                      placeholder="Nguyễn Văn A"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">📞 Số điện thoại *</label>
+                      <input
+                        className="w-full border-2 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200 transition"
+                        value={guestPhone}
+                        onChange={e => setGuestPhone(e.target.value)}
+                        placeholder="090xxxxxxx"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">✉️ Email</label>
+                      <input
+                        className="w-full border-2 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200 transition"
+                        value={guestEmail}
+                        onChange={e => setGuestEmail(e.target.value)}
+                        placeholder="example@email.com"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">📍 Địa chỉ giao hàng *</label>
                 <textarea
@@ -462,7 +584,7 @@ useEffect(() => {
               </div>
               {error && <div className="bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded">{error}</div>}
               <button
-                disabled={creating || loadingCart || finalTotal === 0 || !address.trim()}
+                disabled={creating || loadingCart || finalTotal === 0 || !address.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
                 onClick={handleCreate}
                 className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-6 py-4 rounded-lg text-lg font-bold disabled:opacity-50 hover:shadow-lg transition"
               >
