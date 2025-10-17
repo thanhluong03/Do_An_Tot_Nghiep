@@ -78,8 +78,7 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
         </thead>
         <tbody>
           {orders.length > 0 ? (
-            orders.map((order) => (
-              <tr
+            orders.map((order) => (<tr
                 key={order.id}
                 className="border-t border-gray-100 hover:bg-indigo-50 transition-colors duration-100"
               >

@@ -115,96 +115,128 @@ export default function AdminOrderPage() {
   }, [customers, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
 
     // 🟢 Xuất Excel đầy đủ thông tin đơn + item (fetch từ API chi tiết)
-  const handleExportExcel = async () => {
-    if (allOrders.length === 0) {
-      toast.error("Không có dữ liệu để xuất!");
+  // const handleExportExcel = async () => {
+  //   if (allOrders.length === 0) {
+  //     toast.error("Không có dữ liệu để xuất!");
+  //     return;
+  //   }
+
+  //   setLoading(true);
+  //   toast.loading("Đang tải chi tiết các đơn hàng...");
+
+  //   try {
+  //     // Gọi API lấy chi tiết tất cả đơn hàng song song
+  //     const detailedOrders = await Promise.all(
+  //       allOrders.map(async (order) => {
+  //         try {
+  //           const detail = await getOrderDetail(order.id);
+  //           return {
+  //             ...order,
+  //             items: detail.current_order?.items || detail.items || [],
+  //           };
+  //         } catch {
+  //           return { ...order, items: [] };
+  //         }
+  //       })
+  //     );
+
+  //     // Chuẩn bị dữ liệu cho Excel
+  //     const rows: any[] = [];
+
+  //     detailedOrders.forEach((order) => {
+  //       if (order.items && order.items.length > 0) {
+  //         order.items.forEach((item, idx) => {
+  //           rows.push({
+  //             "Mã Đơn hàng": order.id,
+  //             "Khách hàng": order.customer_name,
+  //             "Ngày đặt": order.order_date,
+  //             "Trạng thái đơn": order.status,
+  //             "Trạng thái thanh toán": order.payment_status,
+  //             "Phương thức thanh toán": order.payment_method,
+  //             "Địa chỉ giao hàng": order.shipping_address || "",
+  //             "Tổng tiền": order.total_amount,
+  //             "STT SP": idx + 1,
+  //             "Tên sản phẩm": item.product_name || "",
+  //             "Mã sản phẩm": item.product_id,
+  //             "Số lượng": item.quantity,
+  //             "Giá": item.price_at_order,
+  //             "Cửa hàng": item.store_name || "",
+  //             "Danh mục": item.category_name || "",
+  //             "Mô tả sản phẩm": item.description || "",
+  //           });
+  //         });
+  //       } else {
+  //         rows.push({
+  //           "Mã Đơn hàng": order.id,
+  //           "Khách hàng": order.customer_name,
+  //           "Ngày đặt": order.order_date,
+  //           "Trạng thái đơn": order.status,
+  //           "Trạng thái thanh toán": order.payment_status,
+  //           "Phương thức thanh toán": order.payment_method,
+  //           "Địa chỉ giao hàng": order.shipping_address || "",
+  //           "Tổng tiền": order.total_amount,
+  //           "STT SP": "",
+  //           "Tên sản phẩm": "",
+  //           "Mã sản phẩm": "",
+  //           "Số lượng": "",
+  //           "Giá": "",
+  //           "Cửa hàng": "",
+  //           "Danh mục": "",
+  //           "Mô tả sản phẩm": "",
+  //         });
+  //       }
+  //     });
+
+  //     // Xuất file Excel
+  //     const worksheet = XLSX.utils.json_to_sheet(rows);
+  //     const workbook = XLSX.utils.book_new();
+  //     XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+
+  //     XLSX.writeFile(workbook, "DanhSachDonHang.xlsx");
+  //     toast.dismiss();
+  //     toast.success("Đã xuất file Excel đầy đủ!");
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.dismiss();
+  //     toast.error("Không thể xuất file Excel!");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+const handleExportExcel = async () => {
+  try {
+    const response = await fetch("http://localhost:3000/orders/export-excel", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      toast.error("Không thể xuất file Excel!");
       return;
     }
 
-    setLoading(true);
-    toast.loading("Đang tải chi tiết các đơn hàng...");
+    // Tạo blob từ dữ liệu nhận về
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
 
-    try {
-      // Gọi API lấy chi tiết tất cả đơn hàng song song
-      const detailedOrders = await Promise.all(
-        allOrders.map(async (order) => {
-          try {
-            const detail = await getOrderDetail(order.id);
-            return {
-              ...order,
-              items: detail.current_order?.items || detail.items || [],
-            };
-          } catch {
-            return { ...order, items: [] };
-          }
-        })
-      );
+    // Tạo thẻ <a> ẩn để tải file
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "DanhSachDonHang.xlsx";
+    document.body.appendChild(link);
+    link.click();
 
-      // Chuẩn bị dữ liệu cho Excel
-      const rows: any[] = [];
+    // Dọn dẹp
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 
-      detailedOrders.forEach((order) => {
-        if (order.items && order.items.length > 0) {
-          order.items.forEach((item, idx) => {
-            rows.push({
-              "Mã Đơn hàng": order.id,
-              "Khách hàng": order.customer_name,
-              "Ngày đặt": order.order_date,
-              "Trạng thái đơn": order.status,
-              "Trạng thái thanh toán": order.payment_status,
-              "Phương thức thanh toán": order.payment_method,
-              "Địa chỉ giao hàng": order.shipping_address || "",
-              "Tổng tiền": order.total_amount,
-              "STT SP": idx + 1,
-              "Tên sản phẩm": item.product_name || "",
-              "Mã sản phẩm": item.product_id,
-              "Số lượng": item.quantity,
-              "Giá": item.price_at_order,
-              "Cửa hàng": item.store_name || "",
-              "Danh mục": item.category_name || "",
-              "Mô tả sản phẩm": item.description || "",
-            });
-          });
-        } else {
-          rows.push({
-            "Mã Đơn hàng": order.id,
-            "Khách hàng": order.customer_name,
-            "Ngày đặt": order.order_date,
-            "Trạng thái đơn": order.status,
-            "Trạng thái thanh toán": order.payment_status,
-            "Phương thức thanh toán": order.payment_method,
-            "Địa chỉ giao hàng": order.shipping_address || "",
-            "Tổng tiền": order.total_amount,
-            "STT SP": "",
-            "Tên sản phẩm": "",
-            "Mã sản phẩm": "",
-            "Số lượng": "",
-            "Giá": "",
-            "Cửa hàng": "",
-            "Danh mục": "",
-            "Mô tả sản phẩm": "",
-          });
-        }
-      });
-
-      // Xuất file Excel
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
-
-      XLSX.writeFile(workbook, "DanhSachDonHang.xlsx");
-      toast.dismiss();
-      toast.success("Đã xuất file Excel đầy đủ!");
-    } catch (err) {
-      console.error(err);
-      toast.dismiss();
-      toast.error("Không thể xuất file Excel!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
+    toast.success("Đã tải file Excel thành công!");
+  } catch (err) {
+    console.error(err);
+    toast.error("Lỗi khi tải file Excel!");
+  }
+};
   const handleDeleteOrder = (id: number) => {
     setOrderToDeleteId(id);
     setIsDeleteModalOpen(true);
