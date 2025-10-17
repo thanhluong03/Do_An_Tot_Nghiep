@@ -230,7 +230,7 @@ export default function NewsPage() {
         <div className="min-h-screen bg-gray-50 p-6">
             <Toaster />
             <div className="max-w-8xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center border-b pb-3">
+                <h2 className="text-2xl font-extrabold text-orange-600 mb-8 text-center  pb-3">
                     Quản lý Tin tức
                 </h2>
 
@@ -270,6 +270,7 @@ export default function NewsPage() {
                                     <ImagePlus size={16}/> Ảnh Đại diện
                                 </label>
                                 <input
+                                    title="xap"
                                     type="file"
                                     name="image_data"
                                     accept="image/*"
@@ -292,6 +293,7 @@ export default function NewsPage() {
                             
                             <div className="flex items-center gap-2">
                                 <input
+                                    title="ís"
                                     type="checkbox"
                                     name="is_published"
                                     checked={!!form.is_published} 
@@ -341,6 +343,7 @@ export default function NewsPage() {
                             </div>
                             
                             <select
+                                title="xap"
                                 value={sortOrder}
                                 onChange={(e) => {
                                     setSortOrder(e.target.value as 'newest' | 'oldest');

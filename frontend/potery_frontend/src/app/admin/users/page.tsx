@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import UserTable from "@/components/adminUsers/UserTable";
+import { getRoles, Role } from "@/api/services/roleService";
+
 import {
   listUsers,
   createUser,
@@ -13,6 +15,8 @@ import UserFormModal from "@/components/adminUsers/UserFormModal";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function UserPage() {
+  const [roles, setRoles] = useState<Role[]>([]);
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -30,9 +34,19 @@ export default function UserPage() {
       setLoading(false);
     }
   };
+  const fetchRoles = async () => {
+  try {
+    const data = await getRoles({});
+    setRoles(data);
+  } catch {
+    toast.error("Không thể tải danh sách vai trò!");
+  }
+};
+
 
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
 
   
@@ -78,8 +92,8 @@ export default function UserPage() {
     <div className="p-5 mx-auto bg-white rounded-lg shadow">
       <Toaster position="top-right" />
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Quản lý Người dùng
+        <h1 className="text-2xl font-bold text-orange-600">
+          Quản lý tài khoản admin
         </h1>
         <button
           onClick={() => {
@@ -99,10 +113,12 @@ export default function UserPage() {
       ) : (
         <UserTable
           users={users}
+          roles={roles}
           onEdit={(user) => {
             setEditingUser(user);
             setModalOpen(true);
           }}
+          
           onDelete={handleDelete}
         />
       )}
