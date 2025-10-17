@@ -50,8 +50,8 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
     CONFIRMED: "Đã xác nhận",
     SHIPPING: "Đang giao",
     DELIVERED: "Đã giao",
-    CANCELED: "Đã hủy",
     REJECTED: "Bị từ chối",
+    CANCELED: "Đã hủy",
 
     // Trạng thái thanh toán
     UNPAID: "Chưa thanh toán",
@@ -67,8 +67,7 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
     <div className="overflow-x-auto bg-white border border-gray-200 rounded-2xl shadow-lg">
       <table className="min-w-full text-sm text-left text-gray-700">
         <thead className="bg-indigo-50 text-indigo-800 border-b border-indigo-200">
-          <tr>
-            <th className="px-4 py-3 font-semibold">Mã đơn</th>
+          <tr><th className="px-4 py-3 font-semibold">Mã đơn</th>
             <th className="px-4 py-3 font-semibold">Khách hàng</th>
             <th className="px-4 py-3 font-semibold">Tổng tiền</th>
             <th className="px-4 py-3 text-center font-semibold">Trạng thái đơn hàng</th>
@@ -107,9 +106,15 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
                     {translateStatus(order.payment_status)}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  {new Date(order.order_date).toLocaleDateString("vi-VN")}
-                </td>
+                {new Date(order.order_date).toLocaleString("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+})}
+
                 <td className="px-4 py-3 text-center space-x-2">
                   <button
                     title="Xem chi tiết"

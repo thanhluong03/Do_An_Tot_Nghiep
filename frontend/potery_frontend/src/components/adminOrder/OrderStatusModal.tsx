@@ -64,8 +64,8 @@ export default function OrderStatusModal({
               <option value="CONFIRMED">CONFIRMED - Đã xác nhận</option>
               <option value="SHIPPING">SHIPPING - Đang giao</option>
               <option value="DELIVERED">DELIVERED - Đã giao</option>
-              <option value="CANCELED">CANCELED - Đã hủy</option>
               <option value="REJECTED">REJECTED - Từ chối</option>
+              <option value="CANCELED">CANCELED - Đã hủy</option>
             </select>
           </div>
 

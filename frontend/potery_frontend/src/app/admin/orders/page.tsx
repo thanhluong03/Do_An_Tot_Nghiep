@@ -12,7 +12,7 @@ import {
   OrderStatus,
   PaymentStatus,
 } from "@/api/services/orderService";
-import { listUsers, User } from "@/api/services/userService";
+import { getCustomers, Customer } from "@/api/services/customerService";
 import OrderTable from "@/components/adminOrder/OrderTable";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
@@ -35,7 +35,7 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
 export default function AdminOrderPage() {
   const [orders, setOrders] = useState<FullOrderDetails[]>([]);
   const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [stores, setStores] = useState<SelectOption[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
@@ -49,8 +49,8 @@ export default function AdminOrderPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
-    listUsers()
-      .then(setUsers)
+     getCustomers()
+      .then(setCustomers)
       .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
     listDropdownStores()
       .then(setStores)
@@ -63,7 +63,7 @@ export default function AdminOrderPage() {
       const ordersWithNames = data.map((order) => ({
         ...order,
         customer_name:
-          users.find((u) => u.id === order.customer_id)?.full_name ||
+          customers.find((u) => u.id === order.customer_id)?.full_name ||
           `Khách #${order.customer_id}`,
         total_amount: typeof order.total_amount === "number"
           ? order.total_amount
@@ -92,7 +92,7 @@ export default function AdminOrderPage() {
       const ordersWithNames = data.map((order) => ({
         ...order,
         customer_name:
-          users.find((u) => u.id === order.customer_id)?.full_name ||
+          customers.find((u) => u.id === order.customer_id)?.full_name ||
           `Khách #${order.customer_id}`,
         total_amount: typeof order.total_amount === "number"
           ? order.total_amount
@@ -108,11 +108,11 @@ export default function AdminOrderPage() {
   }
 
   useEffect(() => {
-    if (users.length > 0) {
+    if (customers.length > 0) {
       fetchAllOrders();
       fetchOrders();
     }
-  }, [users, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
+  }, [customers, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
 
     // 🟢 Xuất Excel đầy đủ thông tin đơn + item (fetch từ API chi tiết)
   const handleExportExcel = async () => {
