@@ -19,6 +19,7 @@ export interface Product {
     quantity?: number;
     images?: { url?: string; image_data?: string | { data: number[] } }[]; 
     main_image?: string | { data: number[] };
+    categoryId?: number;
 }
 
 export interface Promotion { 
@@ -43,6 +44,8 @@ export interface SelectOption {
     id: number | string; 
     name: string;
     imageUrl?: string; 
+    categoryId?: number | null; 
+
 }
 
 
@@ -163,7 +166,8 @@ export const listDropdownProducts = async (): Promise<SelectOption[]> => {
         ? products.map(p => ({ 
               id: p.id as number, 
               name: p.name,
-              imageUrl: getProductImageUrl(p) 
+              imageUrl: getProductImageUrl(p) ,
+              categoryId: p.categoryId || null,
           })) 
         : [];
 };
@@ -198,6 +202,7 @@ export const getAllProductsWithPromotions = async (): Promise<ProductPromotionAs
                 id: opt.id as number, 
                 name: opt.name, 
                 imageUrl: opt.imageUrl,
+                categoryId: opt.categoryId || null,
             } as Product, 
         }));
         
