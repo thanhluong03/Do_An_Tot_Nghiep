@@ -84,7 +84,6 @@ export default function PermissionsPage() {
             await updatePermissionsForRole(Number(selectedRoleId), Array.from(rolePermissions));
             // fetch again to refresh state from server
             await fetchRolePermissions(Number(selectedRoleId));
-            localStorage.setItem('adminPermissions', JSON.stringify(Array.from(rolePermissions)));
             toast.success("Phân quyền đã được cập nhật thành công."); // ✅ Thêm toast
         } catch (err) {
             console.error(err);
