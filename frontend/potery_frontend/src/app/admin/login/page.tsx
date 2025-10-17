@@ -25,22 +25,25 @@ export default function AdminLoginPage() {
         return;
       }
 
-      localStorage.setItem("adminName", data.adminName || "Admin");
-      localStorage.setItem("adminRole", data.roleName);
-      localStorage.setItem("adminPermissions", JSON.stringify(data.permissions));
+      localStorage.removeItem("adminPermissions");
+      localStorage.removeItem("adminRoleId");
+      localStorage.removeItem("adminRole");
+      localStorage.removeItem("adminName");
 
-      // Kiểm tra nếu không có quyền nào thì báo lỗi và không chuyển trang
+      if (data.adminName) localStorage.setItem("adminName", data.adminName);
+      if (data.roleName) localStorage.setItem("adminRole", data.roleName);
+      if (data.roleId) {
+        localStorage.setItem("adminRoleId", data.roleId.toString());
+        if (Array.isArray(data.permissions)) {
+          localStorage.setItem(`adminPermissions_${data.roleId}`, JSON.stringify(data.permissions));
+        }
+      }
       if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
         toast.error("Tài khoản không có quyền truy cập quản trị!");
         return;
       }
-      const firstPermission = data.permissions[0];
-      let redirectPath = "/admin/dashboard";
-      if (!data.permissions.includes("admin/dashboard")) {
-        redirectPath = `/${firstPermission}`;
-      }
       toast.success("Đăng nhập thành công!");
-      router.push(redirectPath);
+      window.location.href = "/admin/dashboard";
     } catch (error) {
       toast.error("Lỗi kết nối server");
     }

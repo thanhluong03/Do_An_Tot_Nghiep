@@ -5,7 +5,7 @@ import { LoginService } from '@app/login';
 
 @Controller('admin')
 export class AdminLoginController {
-  constructor(private readonly loginService: LoginService) {}
+  constructor(private readonly loginService: LoginService) { }
 
   @Post('login')
   async login(@Body() adminLoginDto: AdminLoginDto, @Res() res: Response) {
@@ -25,11 +25,12 @@ export class AdminLoginController {
       roleName: result.roleName,
       permissions: result.permissions,
       adminName: result.adminName,
+      roleId: result.roleId,
     });
   }
 
-    @Post('logout')
-    async logout(@Res() res: Response) {
+  @Post('logout')
+  async logout(@Res() res: Response) {
     res.clearCookie('adminToken', { path: '/' });
     return res.json({ message: 'Đã đăng xuất thành công' });
   }

@@ -7,8 +7,10 @@ import AdminSidebar from '@/components/layout/AdminSlidebar';
 import { AdminFooter } from '@/components/layout/AdminFooter';
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAdminPermissionSync } from '@/hooks/useAdminPermissionSync';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  useAdminPermissionSync();
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === '/admin/login';
@@ -22,8 +24,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   React.useEffect(() => {
     if (!isLoginPage) {
-      const permissions = JSON.parse(localStorage.getItem('adminPermissions') || '[]');
+      const roleId = localStorage.getItem('adminRoleId');
+      const permissions = JSON.parse(localStorage.getItem(`adminPermissions_${roleId}`) || '[]');
       const access = permissions.includes(permissionPath);
+      // Log để debug
+      console.log('[AdminLayout] roleId:', roleId);
+      console.log('[AdminLayout] permissions:', permissions);
+      console.log('[AdminLayout] permissionPath:', permissionPath);
+      console.log('[AdminLayout] access:', access);
       if (!access) {
         setHasAccess(false);
         setChecked(true);
