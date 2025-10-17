@@ -1,19 +1,32 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BaseLayout } from '../../../layouts';
 import { ProductGrid } from '../../../components/feature/ProductGrid';
 import { useProducts, useCategories } from '../../../hooks/useProducts';
 
 export default function ProductsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // ✅ lấy query từ URL
   const [page, setPage] = useState(1);
   const limit = 6;
   const { categories } = useCategories();
 
-  const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 'desc' }>({});
+ const categoryFromUrl = searchParams.get('category') || undefined;
+const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 'desc' }>({
+  category: categoryFromUrl,
+});
+
   const [search, setSearch] = useState('');
+
+  // ✅ Khi load page hoặc query thay đổi → cập nhật category từ URL
+  useEffect(() => {
+    const categoryFromQuery = searchParams.get('category');
+    if (categoryFromQuery && categoryFromQuery !== filters.category) {
+      setFilters((f) => ({ ...f, category: categoryFromQuery }));
+    }
+  }, [searchParams, filters.category]);
 
   const { products, loading, error, total } = useProducts({
     page,
@@ -41,6 +54,15 @@ export default function ProductsPage() {
     return result;
   }, [products, filters, search]);
 
+  // ✅ Khi người dùng chọn category từ dropdown, cập nhật cả URL
+  const handleCategoryChange = (value: string) => {
+    setFilters((f) => ({ ...f, category: value || undefined }));
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set('category', value);
+    else params.delete('category');
+    router.push(`/products?${params.toString()}`);
+  };
+
   return (
     <BaseLayout>
       {/* Banner */}
@@ -60,13 +82,11 @@ export default function ProductsPage() {
 
       {/* Nội dung chính */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-
         {/* Thanh tìm kiếm riêng */}
         <div className="flex justify-center mb-6 relative w-full">
           <div className="relative w-full md:w-11/12">
-            {/* Logo hoặc icon tìm kiếm */}
             <img
-              src="/MagnifyingGlass.png" // 👉 thay bằng đường dẫn logo của bạn
+              src="/MagnifyingGlass.png"
               alt="Logo"
               className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 opacity-70"
             />
@@ -86,9 +106,7 @@ export default function ProductsPage() {
             <label className="text-gray-700 text-lg font-bold">Bộ sưu tập</label>
             <select
               value={filters.category || ''}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, category: e.target.value || undefined }))
-              }
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="border rounded px-3 py-2 text-sm bg-white"
             >
               <option value="">Tất cả</option>
