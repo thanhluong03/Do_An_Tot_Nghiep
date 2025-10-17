@@ -38,10 +38,13 @@ export class CreateNewsDto {
     image_data?: Buffer;
 }
 
+// Tệp DTO của bạn
+
 export class UpdateNewsDto {
     @Expose()
+    @IsOptional() // <-- Thêm IsOptional
     @IsString()
-    title: string;
+    title?: string; // <-- THÊM DẤU ? ĐỂ LÀM NÓ TÙY CHỌN
 
     @Expose()
     @IsOptional()
@@ -50,8 +53,8 @@ export class UpdateNewsDto {
 
     @Expose()
     @IsOptional()
-    @IsString()
-    published_at?: Date;
+    @IsDate() // Dữ liệu bạn gửi lên sẽ là string, nhưng NestJS/class-transformer có thể chuyển đổi. Đảm bảo kiểu dữ liệu là Date nếu bạn dùng @IsDate.
+    published_at?: Date; // <-- Sửa lại kiểu dữ liệu thành Date
 
     @Expose()
     @IsOptional()
@@ -67,7 +70,6 @@ export class UpdateNewsDto {
     @IsOptional()
     image_data?: Buffer;
 }
-
 export class NewsResponseDto {
     @Expose()
     id: number;

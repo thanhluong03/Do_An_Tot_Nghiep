@@ -52,15 +52,29 @@ export class NewsService {
         };
     }
 
-    async update(id: number, data: IUpdateNews): Promise<{ message: string, news: NewsEntity }> {
+   async update(id: number, data: IUpdateNews): Promise<{ message: string, news: NewsEntity }> {
+    try { // 👈 Thêm try...catch
+        // Lỗi 500 thường xảy ra ở đây nếu Repository gặp vấn đề DB.
         await this.newsRepository.update(id, data);
+        
         const news = await this.newsRepository.findById(id);
         if (!news) throw new NotFoundException('News not found');
         return {
             message: 'News updated successfully',
             news,
         };
+    } catch (error) {
+        // Ghi log lỗi chi tiết hơn để biết nguyên nhân thực sự
+        console.error("Lỗi cập nhật tin tức (ID: " + id + "):", error);
+        
+        // Nếu không phải là NotFoundException đã xử lý, ném ra lỗi chung
+        if (!(error instanceof NotFoundException)) {
+            // Thay thế bằng InternalServerErrorException nếu bạn muốn một HTTP code rõ ràng hơn
+            throw new Error('Database update failed or an unexpected error occurred.'); 
+        }
+        throw error; // Ném lại NotFoundException
     }
+}
 
     async softDelete(id: number): Promise<{ message: string }> {
         const news = await this.newsRepository.findById(id);
