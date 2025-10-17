@@ -4,6 +4,7 @@ export class ICreateNews {
     published_at?: Date
     is_published?: boolean
     user_id?: number
+    image_data?: Buffer
 
 }
 export interface IUpdateNews {
@@ -12,6 +13,7 @@ export interface IUpdateNews {
     published_at?: Date
     is_published?: boolean
     user_id?: number
+    image_data?: Buffer
 }
 export interface IListNews {
     page?: number
