@@ -11,7 +11,7 @@ import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
 import { voucherApi, Voucher } from '../../../api/modules/voucher';
 import toast from 'react-hot-toast';
-
+import Cookies from 'js-cookie';
 export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
   const { items, clear: clearCart } = useCart();
@@ -32,73 +32,77 @@ export default function CheckoutPage() {
   
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  async function handleGuestCheckout(customerInfo: any) {
+  const savedCart = Cookies.get('cart_session');
+  if (!savedCart) {
+    alert('Giỏ hàng trống!');
+    return;
+  }
+
+  const cartItems = JSON.parse(savedCart);
+
+  const payload = {
+    customer_info: customerInfo,
+    items: cartItems.map((item: any) => ({
+      product_id: item.product.id,
+      quantity: item.quantity,
+      price_at_order: item.product.price,
+    })),
+  };
+
+  const res = await fetch('/api/orders/guest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (res.ok) {
+    Cookies.remove('cart_session'); // clear cart sau khi đặt
+    alert('Đặt hàng thành công!');
+  } else {
+    alert('Đặt hàng thất bại!');
+  }
+}
   /** ===================== LOAD CART & VOUCHERS ===================== */
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (!isAuthenticated || !user?.id) return;
-
-      try {
-        setLoadingCart(true);
+  let mounted = true;
+  (async () => {
+    setLoadingCart(true);
+    try {
+      if (isAuthenticated && user?.id) {
+        // 🧩 Người dùng đã đăng nhập → lấy giỏ hàng từ server
         const data = await cartApi.getByCustomer(user.id as string);
-        console.log("🧾 CART DATA:", data);
-
-        if (!mounted) return;
-
         const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
           id: String(ci.id ?? ci._id ?? ''),
           product_id: Number(ci.product_id),
           quantity: Number(ci.quantity ?? 1),
-           store_id: Number(ci.store?.id ?? ci.store_id ?? 0),
+          store_id: Number(ci.store?.id ?? ci.store_id ?? 0),
         }));
-        console.log("✅ CART MAPPED:", mapped);
-
         setServerItems(mapped);
-        console.log("✅ CART MAPPED:", mapped);
-
-      } catch (e) {
-        console.error('Lỗi tải giỏ hàng:', e);
-      } finally {
-        if (mounted) setLoadingCart(false);
+      } else {
+        // 👤 Khách chưa đăng nhập → đọc giỏ hàng từ cookie
+        const saved = Cookies.get('cart_session');
+        if (saved) {
+          const localItems = JSON.parse(saved);
+          const mapped = localItems.map((i: any, idx: number) => ({
+            id: `guest-${idx}`,
+            product_id: Number(i.product?.id ?? i.product_id),
+            quantity: Number(i.quantity ?? 1),
+            store_id: 1, // hoặc lấy store mặc định
+          }));
+          setServerItems(mapped);
+        }
       }
+    } catch (e) {
+      console.error('Lỗi tải giỏ hàng:', e);
+    } finally {
+      if (mounted) setLoadingCart(false);
+    }
+  })();
 
-      try {
-        setLoadingVouchers(true);
-        const vouchersData = await voucherApi.fetchCustomerVouchers(user.id as string);
-        if (!mounted) return;
+  return () => { mounted = false; };
+}, [isAuthenticated, user?.id]);
 
-        const normalizedVouchers = vouchersData.map((v: any) => {
-          const discountVal = Number(v.discount_value ?? v.voucher_percentage ?? v.discount ?? 0);
-          const minOrder = Number(v.min_order_value ?? v.order_conditions ?? 0);
-          const qty = Number(v.remaining_quantity ?? v.quantity ?? 0);
-
-          return {
-            id: v.id ?? v._id,
-            code: v.code ?? v.voucher_code ?? 'N/A',
-            name: v.name ?? v.title ?? '',
-            description: v.description ?? v.desc ?? '',
-            discount_value: discountVal,
-            voucher_percentage: discountVal,
-            discount_type: (v.discount_type ?? v.type ?? 'PERCENT').toUpperCase(),
-            min_order_value: minOrder,
-            order_conditions: minOrder,
-            quantity: qty,
-            remaining_quantity: qty,
-            is_active: v.is_active !== false,
-            effective_period_begins: v.effective_period_begins ?? v.start_time,
-            effective_period_ends: v.effective_period_ends ?? v.end_time,
-          };
-        });
-        setAvailableVouchers(normalizedVouchers);
-      } catch (e) {
-        console.error('❌ Lỗi khi tải voucher:', e);
-      } finally {
-        if (mounted) setLoadingVouchers(false);
-      }
-    })();
-
-    return () => { mounted = false; };
-  }, [isAuthenticated, user?.id]);
 
   /** ===================== LOAD PRODUCTS ===================== */
   useEffect(() => {

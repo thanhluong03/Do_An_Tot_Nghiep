@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useState, ReactNode, useEffect } from 'react';
 import { Product } from '../types';
-
+import Cookies from 'js-cookie';
 export interface CartItem {
   product: Product;
   quantity: number;
@@ -21,7 +21,22 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+   // ✅ Load cart từ cookie khi reload trang
+  useEffect(() => {
+    const saved = Cookies.get('cart_session');
+    if (saved) {
+      try {
+        setItems(JSON.parse(saved));
+      } catch (err) {
+        console.error('Failed to parse cart cookie:', err);
+      }
+    }
+  }, []);
 
+  // ✅ Mỗi khi items thay đổi, lưu lại vào cookie
+  useEffect(() => {
+    Cookies.set('cart_session', JSON.stringify(items), { expires: 7 }); // lưu 7 ngày
+  }, [items]);
   const addItem = (product: Product, quantity: number = 1) => {
     setItems((prev) => {
       const idx = prev.findIndex((i) => i.product.id === product.id);

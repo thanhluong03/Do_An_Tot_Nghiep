@@ -43,7 +43,7 @@ export function AddToCartClient({
         store_id: Number(storeId),
         quantity, // ✅ truyền đúng số lượng được chọn
       });
-
+       console.log('🟢 Add to cart called with:', product)
       setMessage(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
     } catch (e) {
       console.error(e);
