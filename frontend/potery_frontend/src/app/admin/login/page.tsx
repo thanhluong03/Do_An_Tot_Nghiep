@@ -24,12 +24,13 @@ export default function AdminLoginPage() {
         toast.error(data.message || "Đăng nhập thất bại");
         return;
       }
-
+      localStorage.removeItem("adminID");
       localStorage.removeItem("adminPermissions");
       localStorage.removeItem("adminRoleId");
       localStorage.removeItem("adminRole");
       localStorage.removeItem("adminName");
 
+      if (data.adminID) localStorage.setItem("adminID", data.adminID.toString());
       if (data.adminName) localStorage.setItem("adminName", data.adminName);
       if (data.roleName) localStorage.setItem("adminRole", data.roleName);
       if (data.roleId) {
@@ -38,6 +39,8 @@ export default function AdminLoginPage() {
           localStorage.setItem(`adminPermissions_${data.roleId}`, JSON.stringify(data.permissions));
         }
       }
+
+      
       if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
         toast.error("Tài khoản không có quyền truy cập quản trị!");
         return;

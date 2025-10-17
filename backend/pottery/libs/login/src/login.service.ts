@@ -124,7 +124,9 @@ export class LoginService {
         return {
             message: 'Bạn đã đăng nhập thành công',
             token,
-            adminName:user.full_name,
+            //themadminidvaođay
+            adminID: user.id,
+            adminName: user.full_name,
             roleId: role.id,
             roleName: role.name,
             permissions,

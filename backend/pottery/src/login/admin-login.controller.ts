@@ -22,6 +22,7 @@ export class AdminLoginController {
     // ✅ Trả JSON để frontend lưu thêm role, permissions
     return res.json({
       message: result.message,
+      adminID: result.adminID,
       roleName: result.roleName,
       permissions: result.permissions,
       adminName: result.adminName,

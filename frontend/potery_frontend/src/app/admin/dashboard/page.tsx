@@ -62,8 +62,8 @@ const DashboardPage = () => {
         setProducts(productList);
         setInventories(inventoryList.data || []);
 
-        const allReviews = await (await import("@/api/modules/reviews")).reviewsApi.list("");
-        setReviews(allReviews);
+        // const allReviews = await (await import("@/api/modules/reviews")).reviewsApi.list("");
+        // setReviews(allReviews);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu dashboard:", err);
       } finally {
@@ -135,7 +135,6 @@ const DashboardPage = () => {
     count: ageMap[group] || 0,
   }));
 
-  // ⭐ Feedback khách hàng
   const totalReviews = reviews.length;
   const positiveReviews = reviews.filter(r => (r.rating || 0) >= 4).length;
   const avgRating = totalReviews

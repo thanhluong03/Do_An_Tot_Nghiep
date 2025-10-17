@@ -12,13 +12,15 @@ import {
     ListNewsDto,
 } from "@/api/services/newService"; 
 import { Pencil, Trash2, ImagePlus, Search } from "lucide-react";
-import ConfirmDialog from "@/components/common/ConfirmDialog"; // IMPORT COMPONENT CONFIRM
+import ConfirmDialog from "@/components/common/ConfirmDialog"; 
+import { listUsers, User } from "@/api/services/userService";
+
 
 const initialFormState: CreateNewsDto = {
     title: "",
     content: "",
     is_published: false,
-    user_id: 1, 
+    user_id: 1,
     image_data: null, 
 };
 
@@ -26,6 +28,9 @@ const formatDate = (dateString?: Date | string) =>
     dateString ? new Date(dateString).toISOString().split("T")[0] : "";
 
 export default function NewsPage() {
+
+    
+
     const [newsList, setNewsList] = useState<News[]>([]);
     const [form, setForm] = useState<CreateNewsDto>(initialFormState);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -39,9 +44,23 @@ export default function NewsPage() {
     const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest'); 
     const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null); 
     
+    const [users, setUsers] = useState<User[]>([]);
+
     // STATES MỚI CHO CONFIRM DIALOG
     const [showConfirm, setShowConfirm] = useState(false);
     const [newsToDeleteId, setNewsToDeleteId] = useState<number | null>(null);
+
+    const [adminID, setAdminID] = useState<number>(0);
+    const [adminName, setAdminName] = useState<string>("Admin");
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+        const id = Number(localStorage.getItem("adminID")) || 0;
+        const name = localStorage.getItem("adminName") || "Admin";
+        setAdminID(id);
+        setAdminName(name);
+        }
+    }, []);
 
     const fetchNews = useCallback(async () => {
         setLoading(true);
@@ -60,15 +79,28 @@ export default function NewsPage() {
             setLoading(false);
         }
     }, [searchKey, sortOrder]);
-
+    const fetchUsers = useCallback(async () => {
+    try {
+        const result = await listUsers();
+        setUsers(result);
+    } catch {
+        toast.error("Không thể tải danh sách người dùng!");
+    }
+}, []);
+    
     useEffect(() => {
         fetchNews();
-    }, [fetchNews]);
+        fetchUsers();
+    }, [fetchNews, fetchUsers]);
 
     const handleSearch = () => {
         setSearchKey(liveSearchKey);
     }
-    
+    const getAuthorName = (userId?: number) => {
+    const user = users.find(u => u.id === userId);
+    return user?.full_name || "Không rõ";
+};
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type, checked } = e.target as HTMLInputElement;
         setForm((prev) => ({
@@ -119,7 +151,7 @@ export default function NewsPage() {
                 title: form.title,
                 content: form.content,
                 is_published: form.is_published,
-                user_id: 1, 
+                user_id: adminID,
                 image_data: form.image_data, 
             };
             
@@ -149,7 +181,6 @@ export default function NewsPage() {
             title: news.title,
             content: news.content,
             is_published: news.is_published,
-            user_id: 1, 
             image_data: null, 
         } as CreateNewsDto); 
         setCurrentImageUrl(news.image_data ? `data:image/jpeg;base64,${news.image_data}` : null);
@@ -347,6 +378,7 @@ export default function NewsPage() {
                                         <th className="px-6 py-3 text-left font-semibold rounded-tl-lg w-12">STT</th>
                                         <th className="px-6 py-3 text-left font-semibold w-24">Ảnh</th>
                                         <th className="px-6 py-3 text-left font-semibold">Tiêu đề</th>
+                                        <th className="px-6 py-3 text-left font-semibold">Người đăng</th>
                                         <th className="px-6 py-3 text-center font-semibold">Ngày đăng</th>
                                         <th className="px-6 py-3 text-center font-semibold">Trạng thái</th>
                                         <th className="px-6 py-3 text-center font-semibold rounded-tr-lg w-28">Hành động</th>
@@ -377,7 +409,9 @@ export default function NewsPage() {
                                             <td className="px-6 py-4 font-medium text-gray-800 max-w-xs truncate">
                                                 {n.title}
                                             </td>
-                                            
+                                            <td className="px-6 py-4">{getAuthorName(n.user_id)}</td>
+
+
                                             <td className="px-6 py-4 text-center text-xs">
                                                 {n.published_at ? formatDate(n.published_at) : '---'}
                                             </td>
@@ -404,7 +438,7 @@ export default function NewsPage() {
                                                         <Pencil size={16} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(n.id)} // GỌI HÀM MỚI
+                                                        onClick={() => handleDelete(n.id)} 
                                                         title="Xóa"
                                                         className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full transition duration-150"
                                                     >
