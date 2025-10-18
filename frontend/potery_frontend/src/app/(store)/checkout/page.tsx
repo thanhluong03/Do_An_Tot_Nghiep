@@ -87,13 +87,15 @@ export default function CheckoutPage() {
   }
 }
   /** ===================== LOAD CART & VOUCHERS ===================== */
-  useEffect(() => {
+  /** ===================== LOAD CART & VOUCHERS ===================== */
+useEffect(() => {
   let mounted = true;
   (async () => {
     setLoadingCart(true);
     try {
       const params = new URLSearchParams(window.location.search);
       const isBuyNow = params.get('buyNow') === '1';
+
       if (isAuthenticated && user?.id) {
         // 🧩 Người dùng đã đăng nhập → lấy giỏ hàng từ server
         const data = await cartApi.getByCustomer(user.id as string);
@@ -129,7 +131,8 @@ export default function CheckoutPage() {
             } catch {}
           }
         }
-        // 👤 Khách chưa đăng nhập → đọc giỏ hàng từ sessionStorage trước, cookie sau
+
+        // 👤 Khách chưa đăng nhập → đọc giỏ hàng từ sessionStorage hoặc cookie
         let localItems: any[] | null = null;
         try {
           if (typeof window !== 'undefined') {
@@ -164,15 +167,38 @@ export default function CheckoutPage() {
           setServerItems(mapped);
         }
       }
+
+      /** 🔥 THÊM MỚI — TẢI DANH SÁCH VOUCHER NGƯỜI DÙNG CÓ */
+      setLoadingVouchers(true);
+      let vouchers: Voucher[] = [];
+
+      if (isAuthenticated && user?.id) {
+        try {
+          vouchers = await voucherApi.fetchCustomerVouchers(user.id);
+        } catch (err) {
+          console.error('❌ Lỗi khi tải voucher người dùng:', err);
+        }
+      } else {
+        // Nếu khách, có thể hiển thị danh sách chung (nếu cần)
+        try {
+          vouchers = await voucherApi.fetchAvailableVouchers();
+        } catch {}
+      }
+
+      if (mounted) setAvailableVouchers(vouchers);
     } catch (e) {
       console.error('Lỗi tải giỏ hàng:', e);
     } finally {
-      if (mounted) setLoadingCart(false);
+      if (mounted) {
+        setLoadingCart(false);
+        setLoadingVouchers(false);
+      }
     }
   })();
 
   return () => { mounted = false; };
 }, [isAuthenticated, user?.id]);
+
 
 
   /** ===================== LOAD PRODUCTS ===================== */

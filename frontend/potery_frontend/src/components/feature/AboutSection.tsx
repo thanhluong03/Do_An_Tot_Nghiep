@@ -29,7 +29,7 @@ export const AboutSection: React.FC = () => {
                     {/* CỘT TRÁI: Hình Ảnh Lớn */}
                     <div className="relative">
                         {/* Box chứa hình ảnh lớn và hiệu ứng mờ */}
-                        <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl">
+                        
                             
                             {/* Hình ảnh nền */}
                             <img 
@@ -37,7 +37,7 @@ export const AboutSection: React.FC = () => {
                                 alt="Pottery Workshop" 
                                 className="w-full h-full object-cover"
                             />
-                        </div>
+                        
 
                         {/* Thẻ 3+ NĂM (Absolute) */}
                         <div className="absolute -top-6 -left-6 bg-[#F5F1EB] p-4 rounded-xl shadow-lg text-center">
