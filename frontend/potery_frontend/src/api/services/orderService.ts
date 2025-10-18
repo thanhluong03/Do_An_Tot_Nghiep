@@ -2,6 +2,12 @@
 import axios from 'axios';
 const API_URL_STORES = "http://localhost:3000/stores"; 
 const API_URL = 'http://localhost:3000/orders'; 
+export interface ProductImage {
+    id: number;
+    image_data: string;
+    is_main_image: boolean;
+    priority: number;
+}
 export interface OrderItem {
     product_id: number;
     store_id?: number;
@@ -14,7 +20,7 @@ export interface OrderItem {
     category_name?: string;
     store_name?: string;
     store_address?: string;
-
+    product_images?: ProductImage[];
 }
 
 export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELED' | 'REJECTED';
