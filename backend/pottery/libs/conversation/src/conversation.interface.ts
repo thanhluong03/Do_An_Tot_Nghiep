@@ -7,7 +7,7 @@ export interface Conversation {
 
 export interface Message {
     id?: number;
-    conversation_id: number;
+    conversation_id?: number;
     sender_id: number;
     sender_type?: string;
     content: string;
