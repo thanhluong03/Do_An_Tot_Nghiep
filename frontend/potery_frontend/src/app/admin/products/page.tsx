@@ -257,8 +257,6 @@ export default function ProductsPage() {
           </h1>
         </div>
 
-
-        {/* Nút thêm */}
         <div className="flex justify-end mb-4">
         
           <button
@@ -268,7 +266,6 @@ export default function ProductsPage() {
             + Thêm sản phẩm
           </button>
         </div>
-     {/* Bộ lọc hiện đại */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <input
             type="text"

@@ -18,8 +18,12 @@ const initialFormState: CreateVoucherDto = {
     is_active: true,
 };
 
-const formatForInput = (date?: Date) => 
-    date ? new Date(date).toISOString().slice(0, 16) : '';
+const formatForInput = (date?: Date) => {
+  if (!date) return '';
+  const local = new Date(date);
+  local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
+  return local.toISOString().slice(0, 16);
+};
 
 export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit, onCancel }) => {
     const [formData, setFormData] = useState<CreateVoucherDto | UpdateVoucherDto>(initialFormState);
