@@ -15,26 +15,30 @@ import {
   AboutSection,
   FeaturedCollectionsSection,
   FeaturedProductSection,
-  CategorySection,
-  ProductGrid,
   NewsletterSection,
   ChatModal
 } from '@/components/feature';
-import { ValuePropositionSection, TestimonialsSection, JournalSection } from '@/components/feature/ValueProppositionSection';
+import {
+  ValuePropositionSection,
+  TestimonialsSection,
+  JournalSection,
+} from '@/components/feature/ValueProppositionSection';
 import { ScrollToTopButton } from '@/components/feature/ScrollToTopButton';
+import { conversationApi } from '@/api/modules/conversation';
 
 const VOUCHER_MODAL_SHOWN_KEY = 'voucher_modal_shown';
 
 export default function HomePage() {
   const router = useRouter();
-  const { products: featuredProducts, loading: featuredLoading, error: featuredError } = useFeaturedProducts(8);
-  const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
+  const { products: featuredProducts } = useFeaturedProducts(8);
+  const { categories } = useCategories();
   const { addItem } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   const [addingId, setAddingId] = useState<string | null>(null);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
 
   // Hiển thị voucher modal 1 lần duy nhất cho mỗi user
   useEffect(() => {
@@ -86,9 +90,11 @@ export default function HomePage() {
           {isChatOpen && (
             <ChatModal
               isOpen={isChatOpen}
-              onClose={() => setIsChatOpen(false)} 
+              onClose={() => setIsChatOpen(false)}
               userId={Number(user.id)}
-              storeId={0}            />
+              storeId={0}
+              conversationId={conversationId} // ✅ truyền id xuống
+            />
           )}
 
           {/* Floating Buttons */}
@@ -104,7 +110,26 @@ export default function HomePage() {
 
             {/* Chat Button */}
             <button
-              onClick={() => setIsChatOpen(prev => !prev)}
+              onClick={async () => {
+                if (!isAuthenticated || !user?.id) return;
+                try {
+                  console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
+                  const created = await conversationApi.createConversation({
+                    sender_id: Number(user.id),
+                    sender_type: 'USER',
+                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                    user_id: Number(user.id),
+                    store_id: 1,
+                  });
+
+                  const conv = created?.conversation || created?.data || created;
+                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
+                  setConversationId(conv?.id || null);
+                  setIsChatOpen(true);
+                } catch (err) {
+                  console.error('❌ Lỗi tạo conversation:', err);
+                }
+              }}
               className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
               title="Chat với Admin"
             >
@@ -114,7 +139,6 @@ export default function HomePage() {
         </>
       )}
 
-      {/* Scroll to Top (luôn hiển thị riêng biệt) */}
       <ScrollToTopButton />
 
       {/* === Content === */}
@@ -124,7 +148,6 @@ export default function HomePage() {
       <FeaturedCollectionsSection />
       <FeaturedProductSection />
       <LifestyleSection />
-
       <TestimonialsSection />
       <JournalSection />
       <NewsletterSection />

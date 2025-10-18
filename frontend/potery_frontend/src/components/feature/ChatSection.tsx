@@ -15,93 +15,71 @@ interface ChatModalProps {
   onClose: () => void;
   userId: number;
   storeId: number;
+  conversationId?: number | null;
 }
 
-export function ChatModal({ isOpen, onClose, userId, storeId }: ChatModalProps) {
+export function ChatModal({ isOpen, onClose, userId, storeId, conversationId }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversationId, setConversationId] = useState<number | null>(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Khi mở chat -> load hoặc tạo conversation
+  // ✅ Khi có conversationId → load messages
   useEffect(() => {
-    if (!isOpen || !userId || !storeId) return;
-
-    (async () => {
+    if (!isOpen || !conversationId) return;
+    const fetchMessages = async () => {
       setLoading(true);
       try {
-        // Lấy danh sách conversation của user
-        const allConvs = await conversationApi.getAll(userId, storeId);
-        let conv = allConvs?.find(
-          (c: any) => c.user_id === userId && c.store_id === storeId
-        );
-
-        // Nếu chưa có thì tạo conversation mới
-        if (!conv) {
-          conv = await conversationApi.createConversation({
-            sender_id: userId,
-            sender_type: 'USER',
-            content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-            user_id: userId,
-            store_id: storeId,
-          });
-        }
-
-        // Lưu id & tin nhắn
-        setConversationId(conv.id);
-        setMessages(conv.messages || []);
+        console.log('%c📨 Loading messages for convId:', 'color:cyan', conversationId);
+        const allConvs = await conversationApi.getByUser(userId);
+        const conv = allConvs.find((c: any) => c.id === conversationId);
+        setMessages(conv?.messages || []);
       } catch (err) {
-        console.error('❌ Lỗi khi tải/tạo cuộc trò chuyện:', err);
+        console.error('❌ Lỗi load messages:', err);
       } finally {
         setLoading(false);
       }
-    })();
-  }, [isOpen, userId, storeId]);
+    };
+    fetchMessages();
+  }, [isOpen, userId, conversationId]);
 
-  // Tự động cuộn xuống cuối khi có tin nhắn mới
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Gửi tin nhắn
+  // ✅ Gửi tin nhắn
   const handleSend = async () => {
-    if (!input.trim() || !conversationId || !userId) return;
+    console.log('%c🟡 Click send message', 'color:gold');
+    if (!input.trim()) return;
+    if (!conversationId) {
+      console.warn('⚠️ Không có conversationId, không thể gửi');
+      return;
+    }
+
     const content = input.trim();
     setInput('');
     setSending(true);
 
     try {
-      // Gửi tin nhắn lên server
       await conversationApi.sendMessage({
         sender_id: userId,
         sender_type: 'USER',
         content,
         user_id: userId,
         store_id: storeId,
+        conversation_id: conversationId,
       });
 
-      // Hiển thị tin nhắn mới ngay lập tức
-      const newMessage: Message = {
-        id: Date.now(),
-        sender_type: 'USER',
-        content,
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), sender_type: 'USER', content, created_at: new Date().toISOString() },
+      ]);
 
-      // (Tùy chọn) đồng bộ lại từ DB sau 1s
       setTimeout(async () => {
-        try {
-          const allConvs = await conversationApi.getAll(userId, storeId);
-          const conv = allConvs?.find(
-            (c: any) => c.user_id === userId && c.store_id === storeId
-          );
-          if (conv) setMessages(conv.messages || []);
-        } catch (err) {
-          console.error('Lỗi đồng bộ tin nhắn:', err);
-        }
+        const allConvs = await conversationApi.getByUser(userId);
+        const conv = allConvs?.find((c: any) => c.id === conversationId);
+        if (conv) setMessages(conv.messages || []);
       }, 1000);
     } catch (err) {
       console.error('❌ Lỗi gửi tin nhắn:', err);
@@ -113,36 +91,20 @@ export function ChatModal({ isOpen, onClose, userId, storeId }: ChatModalProps) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[95] w-80 h-[500px] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
-      {/* Header */}
+    <div className="fixed bottom-5 right-5 z-50 w-80 h-[500px] bg-white rounded-xl shadow-lg flex flex-col border border-gray-200">
       <div className="flex justify-between items-center p-3 bg-green-600 text-white font-semibold">
         <span>💬 Chat với Admin</span>
-        <button
-          onClick={onClose}
-          className="text-white text-xl hover:text-gray-200"
-        >
-          ×
-        </button>
+        <button onClick={onClose} className="text-white text-xl hover:text-gray-200">×</button>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 p-3 overflow-y-auto bg-gray-50 space-y-2">
         {loading ? (
-          <div className="text-center text-gray-400 mt-10">
-            ⏳ Đang tải cuộc trò chuyện...
-          </div>
+          <div className="text-center text-gray-400 mt-10">⏳ Đang tải cuộc trò chuyện...</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10">
-            💬 Bắt đầu trò chuyện với admin...
-          </div>
+          <div className="text-center text-gray-400 mt-10">💬 Bắt đầu trò chuyện với admin...</div>
         ) : (
           messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${
-                msg.sender_type === 'USER' ? 'justify-end' : 'justify-start'
-              }`}
-            >
+            <div key={msg.id} className={`flex ${msg.sender_type === 'USER' ? 'justify-end' : 'justify-start'}`}>
               <div
                 className={`px-3 py-2 rounded-lg max-w-[70%] ${
                   msg.sender_type === 'USER'
@@ -150,12 +112,9 @@ export function ChatModal({ isOpen, onClose, userId, storeId }: ChatModalProps) 
                     : 'bg-gray-200 text-gray-800'
                 }`}
               >
-                <p className="text-sm">{msg.content}</p>
+                <p className="text-sm break-words">{msg.content}</p>
                 <p className="text-xs text-gray-500 mt-1 text-right">
-                  {new Date(msg.created_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
@@ -164,7 +123,6 @@ export function ChatModal({ isOpen, onClose, userId, storeId }: ChatModalProps) 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="flex p-3 border-t bg-white">
         <input
           type="text"
