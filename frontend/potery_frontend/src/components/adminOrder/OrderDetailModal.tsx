@@ -60,7 +60,9 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   {order.shipping_address || "Chưa cung cấp"}
                 </p>
               </div>
-              <InfoRow label="Khách hàng ID" value={<span className="font-mono">{order.customer_id}</span>} />
+              {order.customer_name && (
+                <InfoRow label="Tên khách hàng" value={order.customer_name} />
+              )}
               <InfoRow
                 label="Trạng thái đơn"
                 value={
@@ -126,6 +128,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   className="flex justify-between items-center p-3 rounded-lg border bg-white shadow-sm hover:border-indigo-400 transition"
                 >
                   <div className="flex-1">
+                    
                     <p className="font-semibold text-gray-900 text-sm">
                       {item.product_name || `Sản phẩm ID: ${item.product_id}`}
                     </p>

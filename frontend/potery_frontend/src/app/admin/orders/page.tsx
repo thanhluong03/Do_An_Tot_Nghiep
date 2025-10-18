@@ -180,10 +180,12 @@ const handleExportExcel = async () => {
     setLoading(true);
     try {
       const detail = await getOrderDetail(order.id);
+      const customerName = customers.find(u => u.id === order.customer_id)?.full_name || `Khách #${order.customer_id}`
       const fullOrder: FullOrderDetails = {
         ...detail,
         items: detail.current_order?.items || detail.items || [],
         total_amount: parseFloat(detail.total_amount as string),
+        customer_name: customerName,
       };
       setSelectedOrder(fullOrder);
     } catch {
