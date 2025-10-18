@@ -305,7 +305,7 @@ export default function CartPage() {
 
                       <Link
                         href="/checkout"
-                        className={`block text-center mt-8 bg-[${ACCENT_COLOR}] text-white py-3 rounded-lg font-semibold text-lg hover:bg-[#8B4513] transition-all duration-300`}
+                        className="block text-center mt-8 bg-[#A0522D] text-white py-3 rounded-lg font-semibold text-lg transition-all duration-300 hover:bg-[#8B4513] shadow-md hover:shadow-lg"
                       >
                         Tiến hành thanh toán
                       </Link>

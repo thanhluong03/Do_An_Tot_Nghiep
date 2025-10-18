@@ -49,7 +49,7 @@ export const voucherApi = {
    */
   async fetchAvailableVouchers(): Promise<Voucher[]> {
     try {
-      const res = await api.get('/vouchers/listvouchers');
+      const res = await api.get('/vouchers/listvoucherselectofcustomers');
       console.log('✅ Vouchers response:', res.data);
       
       // Xử lý nhiều format response

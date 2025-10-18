@@ -125,7 +125,7 @@ export default function NewsDetailPage() {
               />
             )}
 
-            <div className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed">
+            <div className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed break-words whitespace-normal">
               <p className="whitespace-pre-line">{news.content}</p>
             </div>
 
@@ -157,9 +157,10 @@ export default function NewsDetailPage() {
                         <div className="text-xs text-gray-400 mb-2">
                           {new Date(r.published_at).toLocaleDateString('vi-VN')}
                         </div>
-                        <p className="text-sm text-[#65604E] line-clamp-3">
-                          {r.content}
-                        </p>
+                        <div
+                          className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed break-words whitespace-normal"
+                          dangerouslySetInnerHTML={{ __html: news.content }}
+                        />
                       </div>
                     </Link>
                   ))}

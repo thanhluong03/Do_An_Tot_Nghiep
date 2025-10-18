@@ -8,19 +8,18 @@ import { useProducts, useCategories } from '../../../hooks/useProducts';
 
 export default function ProductsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // ✅ lấy query từ URL
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const limit = 6;
   const { categories } = useCategories();
 
- const categoryFromUrl = searchParams.get('category') || undefined;
-const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 'desc' }>({
-  category: categoryFromUrl,
-});
+  const categoryFromUrl = searchParams.get('category') || undefined;
+  const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 'desc' }>({
+    category: categoryFromUrl,
+  });
 
   const [search, setSearch] = useState('');
 
-  // ✅ Khi load page hoặc query thay đổi → cập nhật category từ URL
   useEffect(() => {
     const categoryFromQuery = searchParams.get('category');
     if (categoryFromQuery && categoryFromQuery !== filters.category) {
@@ -54,7 +53,6 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
     return result;
   }, [products, filters, search]);
 
-  // ✅ Khi người dùng chọn category từ dropdown, cập nhật cả URL
   const handleCategoryChange = (value: string) => {
     setFilters((f) => ({ ...f, category: value || undefined }));
     const params = new URLSearchParams(searchParams.toString());
@@ -80,47 +78,39 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
         </div>
       </div>
 
-      {/* Nội dung chính */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Thanh tìm kiếm riêng */}
-        <div className="flex justify-center mb-6 relative w-full">
-          <div className="relative w-full md:w-11/12">
-            <img
-              src="/MagnifyingGlass.png"
-              alt="Logo"
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 opacity-70"
-            />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm kiếm sản phẩm gốm bạn yêu thích..."
-              className="w-full border rounded-full pl-12 pr-5 py-3 text-base focus:ring-2 focus:ring-[#c4975a] outline-none shadow-sm"
-            />
-          </div>
-        </div>
-
-        {/* Bộ sưu tập và sắp xếp ở dưới */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-          {/* Bộ sưu tập */}
-          <div className="flex items-center gap-2">
-            <label className="text-gray-700 text-lg font-bold">Bộ sưu tập</label>
-            <select
-              value={filters.category || ''}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              className="border rounded px-3 py-2 text-sm bg-white"
+      {/* Layout chính */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col md:flex-row gap-8">
+        {/* Sidebar trái */}
+        <div className="w-full md:w-1/5">
+          <h3 className="text-xl font-bold mb-4">Danh mục</h3>
+          <ul className="space-y-2 mb-6">
+            <li
+              className={`cursor-pointer px-3 py-2 rounded-lg transition ${
+                !filters.category
+                  ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
+                  : 'hover:bg-[#f7f4ef]'
+              }`}
+              onClick={() => handleCategoryChange('')}
             >
-              <option value="">Tất cả</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id.toString()}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              Tất cả sản phẩm
+            </li>
+            {categories.map((c) => (
+              <li
+                key={c.id}
+                onClick={() => handleCategoryChange(c.id.toString())}
+                className={`cursor-pointer px-3 py-2 rounded-lg transition ${
+                  filters.category === c.id.toString()
+                    ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
+                    : 'hover:bg-[#f7f4ef]'
+                }`}
+              >
+                {c.name}
+              </li>
+            ))}
+          </ul>
 
-          {/* Sắp xếp */}
-          <div className="flex items-center gap-2">
-            <label className="text-gray-700 text-lg font-bold">Sắp xếp</label>
+          <div className="mt-6">
+            <h3 className="text-xl font-bold mb-2">Sắp xếp theo</h3>
             <select
               value={filters.sortOrder || ''}
               onChange={(e) =>
@@ -131,23 +121,45 @@ const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 
                     : undefined,
                 }))
               }
-              className="border rounded px-3 py-2 text-sm bg-white"
+              className="border rounded-lg px-3 py-2 w-full text-sm"
             >
-              <option value="">Giá</option>
+              <option value="">Thứ tự mặc định</option>
               <option value="asc">Giá tăng dần</option>
               <option value="desc">Giá giảm dần</option>
             </select>
           </div>
         </div>
 
-        {/* Lưới sản phẩm */}
-        <ProductGrid
-          products={filteredProducts}
-          loading={loading}
-          error={error}
-          onViewDetails={(p) => router.push(`/products/${p.id}`)}
-          columns={3}
-        />
+        {/* Nội dung phải */}
+        <div className="flex-1 md:w-4/5">
+          {/* Thanh tìm kiếm */}
+          <div className="mb-6 relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm kiếm sản phẩm gốm bạn yêu thích..."
+              className="w-full border rounded-full pl-12 pr-5 py-3 text-base focus:ring-2 focus:ring-[#c4975a] outline-none shadow-sm"
+            />
+            <img
+              src="/MagnifyingGlass.png"
+              alt="Tìm kiếm"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-70"
+            />
+          </div>
+
+          {/* Kết quả hiển thị */}
+          <div className="mb-4 text-gray-600">
+            Hiển thị {filteredProducts.length} sản phẩm
+          </div>
+
+          <ProductGrid
+            products={filteredProducts}
+            loading={loading}
+            error={error}
+            onViewDetails={(p) => router.push(`/products/${p.id}`)}
+            columns={3}
+          />
+        </div>
       </div>
     </BaseLayout>
   );
