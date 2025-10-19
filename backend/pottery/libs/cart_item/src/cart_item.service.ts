@@ -52,7 +52,11 @@ export class CartItemService {
                         store = inventory.store;
                     }
                 }
-                return { ...cartItem, product, store };
+                return {
+                    ...cartItem,
+                    ...(product ? { product } : {}),
+                    ...(store ? { store } : {}),
+                };
             })
         );
         return {
@@ -73,7 +77,11 @@ export class CartItemService {
                         store = inventory.store;
                     }
                 }
-                return { ...cartItem, product, store };
+                return {
+                    ...cartItem,
+                    ...(product ? { product } : {}),
+                    ...(store ? { store } : {}),
+                };
             })
         );
         return {
@@ -95,7 +103,11 @@ export class CartItemService {
         }
         return {
             message: 'Cart item fetched successfully',
-            cartItem: { ...cartItem, product, store },
+            cartItem: {
+                ...cartItem,
+                ...(product ? { product } : {}),
+                ...(store ? { store } : {}),
+            },
         };
     }
 

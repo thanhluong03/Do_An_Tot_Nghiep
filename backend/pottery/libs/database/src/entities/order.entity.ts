@@ -1,5 +1,11 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { PaymentTransactionEntity } from './paymenttransaction.entity'
+import { OrderItemEntity } from './order_item.entity'
+import { CustomerEntity } from './customer.entity'
+import { OrderStatusHistoryEntity } from './order_status_history.entity';
+import { DriverLocationEntity } from './driver_location.entity'
+import { DeliveryProofEntity } from './delivery_proof.entity';
 
 export enum OrderStatus {
     CREATED = 'CREATED',
@@ -58,4 +64,23 @@ export class OrderEntity extends BaseEntity {
 
     @Column({ type: 'json', nullable: true })
     current_order: object
+
+    @OneToMany(() => PaymentTransactionEntity, (paymentTransaction) => paymentTransaction.order)
+    paymentTransactions: PaymentTransactionEntity[];
+
+    @OneToMany(() => OrderItemEntity, (orderItem) => orderItem.order)
+    orderItems: OrderItemEntity[];
+
+    @ManyToOne(() => CustomerEntity, (customer) => customer.orders)
+    @JoinColumn({ name: 'customer_id' })
+    customer: CustomerEntity;
+
+    @OneToMany(() => OrderStatusHistoryEntity, (orderStatusHistory) => orderStatusHistory.order)
+    orderStatusHistories: OrderStatusHistoryEntity[];
+
+    @OneToMany(() => DriverLocationEntity, (driverLocation) => driverLocation.order)
+    driverLocations: DriverLocationEntity[];
+
+    @OneToMany(() => DeliveryProofEntity, (deliveryProof) => deliveryProof.order)
+    deliveryProofs: DeliveryProofEntity[];
 }

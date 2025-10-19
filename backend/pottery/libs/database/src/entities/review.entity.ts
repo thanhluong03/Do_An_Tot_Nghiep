@@ -1,6 +1,7 @@
-import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
+import { Entity, Column, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { OrderItemEntity } from './order_item.entity'
+import { CustomerEntity } from './customer.entity'
 
 @Entity('reviews')
 export class ReviewEntity extends BaseEntity {
@@ -17,7 +18,10 @@ export class ReviewEntity extends BaseEntity {
     @Column({ type: 'text', nullable: true })
     comment: string
 
-    @ManyToOne(() => OrderItemEntity, orderItem => orderItem.reviews, { nullable: false })
-    @JoinColumn({ name: 'orderitem_id' })
-    order_item: OrderItemEntity
+    @OneToOne(() => OrderItemEntity, (orderItem) => orderItem.review)
+    order_item: OrderItemEntity;
+
+    @ManyToOne(() => CustomerEntity, (customer) => customer.reviews)
+    @JoinColumn({ name: 'customer_id' })
+    customer: CustomerEntity;
 }

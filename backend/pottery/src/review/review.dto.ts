@@ -15,19 +15,18 @@ export class CreateReviewDto {
     rating: number;
 
     @Expose()
-    @IsOptional()
     @IsString()
     comment?: string;
 
     @Expose()
-    @IsOptional()
+    @IsNumber()
     @IsPositive()
     customer_id?: number;
 
     @Expose()
-    @IsOptional()
+    @IsNumber()
     @IsPositive()
-    orderitem_id?: number;
+    orderitem_id: number;
 }
 
 export class UpdateReviewDto {

@@ -1,6 +1,12 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { RoleEntity } from './role.entity';
+import { NewsEntity } from './new.entity';
+import { ConversationEntity } from './conversation.entity';
+import { StoreEntity } from './store.entity';
+import { DeliveryProofEntity } from './delivery_proof.entity';
+import { DriverLocationEntity } from './driver_location.entity';
+import { OrderStatusHistoryEntity } from './order_status_history.entity';
 @Entity('users')
 export class UserEntity extends BaseEntity {
 
@@ -34,4 +40,23 @@ export class UserEntity extends BaseEntity {
     @ManyToOne(() => RoleEntity, (role) => role.id)
     @JoinColumn({ name: 'role_id' })
     role: RoleEntity;
+
+    @OneToMany(() => NewsEntity, (news) => news.user)
+    news: NewsEntity[];
+
+    @OneToMany(() => ConversationEntity, (conversation) => conversation.user)
+    conversations: ConversationEntity[];
+
+    @ManyToOne(() => StoreEntity, (store) => store.users)
+    @JoinColumn({ name: 'store_id' })
+    store: StoreEntity;
+
+    @OneToMany(() => DeliveryProofEntity, (deliveryProof) => deliveryProof.user)
+    deliveryProofs: DeliveryProofEntity[];
+
+    @OneToMany(() => DriverLocationEntity, (driverLocation) => driverLocation.user)
+    driverLocations: DriverLocationEntity[];
+
+    @OneToMany(() => OrderStatusHistoryEntity, (orderStatusHistory) => orderStatusHistory.user)
+    orderStatusHistories: OrderStatusHistoryEntity[];
 }

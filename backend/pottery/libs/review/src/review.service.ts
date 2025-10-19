@@ -10,6 +10,13 @@ export class ReviewService {
     ) { }
 
     async create(data: ICreateReview): Promise<{ message: string, review: ReviewEntity | null }> {
+        const existing = await this.reviewRepository.findByOrderItemId(data.orderitem_id);
+        if (existing) {
+            return {
+                message: 'Review for this order item already exists',
+                review: null,
+            };
+        }
         try {
             const review = await this.reviewRepository.create({
                 rating: data.rating,

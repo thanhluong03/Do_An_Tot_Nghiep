@@ -6,6 +6,9 @@ import { SupplierEntity } from '../entities'
 
 @Injectable()
 export class ReviewRepository {
+    async findByOrderItemId(orderitem_id: number): Promise<ReviewEntity | null> {
+        return this.repository.findOne({ where: { orderitem_id, deleted_at: IsNull() } });
+    }
     constructor(
         @InjectRepository(ReviewEntity)
         private readonly repository: Repository<ReviewEntity>,

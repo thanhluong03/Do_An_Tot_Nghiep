@@ -1,9 +1,13 @@
-import { Entity, Column, OneToMany } from 'typeorm'
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm'
 import { ProductPromotionEntity } from './product_promotion.entity';
 import { BaseEntity } from './base.entity'
 import { ProductImageEntity } from './product_image.entity';
 import { InventoryEntity } from './inventory.entity';
 import { ImportProductEntity } from './import_product.entity';
+import { CategoryEntity } from './category.entity';
+import { SupplierEntity } from './supplier.entity';
+import { OrderItemEntity } from './order_item.entity';
+import { CartItemEntity } from './cart_item.entity';
 
 // import { RoleEntity } from './role.entity'
 
@@ -43,4 +47,18 @@ export class ProductEntity extends BaseEntity {
 
   @OneToMany(() => ImportProductEntity, (importProduct) => importProduct.product)
   importProducts: ImportProductEntity[];
+
+  @ManyToOne(() => CategoryEntity, (category) => category.products)
+  @JoinColumn({ name: 'category_id' })
+  category: CategoryEntity;
+
+  @ManyToOne(() => SupplierEntity, (supplier) => supplier.products)
+  @JoinColumn({ name: 'supplier_id' })
+  supplier: SupplierEntity;
+
+  @OneToMany(() => OrderItemEntity, (orderItem) => orderItem.product)
+  orderItems: OrderItemEntity[];
+
+  @OneToMany(() => CartItemEntity, (cartItem) => cartItem.product)
+  cartItems: CartItemEntity[];
 }

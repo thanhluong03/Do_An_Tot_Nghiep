@@ -2,7 +2,7 @@ export class ICreateReview {
     rating?: number
     comment?: string
     customer_id?: number
-    orderitem_id?: number
+    orderitem_id: number
 }
 export interface IUpdateReview {
     rating?: number
