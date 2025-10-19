@@ -1,5 +1,11 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { ReviewEntity } from './review.entity'
+import { CartItemEntity } from './cart_item.entity';
+import { OrderEntity } from './order.entity';
+import { VoucherCustomerEntity } from './voucher_customer.entity';
+import { ConversationEntity } from './conversation.entity';
+import { OrderStatusHistoryEntity } from './order_status_history.entity';
 
 @Entity('customers')
 export class CustomerEntity extends BaseEntity {
@@ -28,4 +34,21 @@ export class CustomerEntity extends BaseEntity {
     @Column({ type: 'boolean', nullable: true })
     is_active: boolean
 
+    @OneToMany(() => ReviewEntity, (review) => review.customer)
+    reviews: ReviewEntity[];
+
+    @OneToMany(() => CartItemEntity, (cartItem) => cartItem.customer)
+    cartItems: CartItemEntity[];
+
+    @OneToMany(() => OrderEntity, (order) => order.customer)
+    orders: OrderEntity[];
+
+    @OneToMany(() => VoucherCustomerEntity, (voucherCustomer) => voucherCustomer.customer)
+    voucherCustomers: VoucherCustomerEntity[];
+
+    @OneToMany(() => ConversationEntity, (conversation) => conversation.customer)
+    conversations: ConversationEntity[];
+
+    @OneToMany(() => OrderStatusHistoryEntity, (orderStatusHistory) => orderStatusHistory.customer)
+    orderStatusHistories: OrderStatusHistoryEntity[];
 }

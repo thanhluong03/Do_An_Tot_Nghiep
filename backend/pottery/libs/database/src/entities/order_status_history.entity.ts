@@ -1,5 +1,8 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { OrderEntity } from './order.entity'
+import { UserEntity } from './user.entity';
+import { CustomerEntity } from './customer.entity';
 
 export enum OrderStatusHistory {
     CREATED = 'CREATED',
@@ -27,4 +30,16 @@ export class OrderStatusHistoryEntity extends BaseEntity {
         enum: OrderStatusHistory,
     })
     status: OrderStatusHistory;
+
+    @ManyToOne(() => OrderEntity, (order) => order.orderStatusHistories)
+    @JoinColumn({ name: 'order_id' })
+    order: OrderEntity;
+
+    @ManyToOne(() => UserEntity, (user) => user.orderStatusHistories)
+    @JoinColumn({ name: 'user_id' })
+    user: UserEntity;
+
+    @ManyToOne(() => CustomerEntity, (customer) => customer.orderStatusHistories)
+    @JoinColumn({ name: 'customer_id' })
+    customer: CustomerEntity;
 }

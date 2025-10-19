@@ -1,5 +1,7 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { OrderEntity } from './order.entity'
+import { UserEntity } from './user.entity'
 
 @Entity('driver_locations')
 export class DriverLocationEntity extends BaseEntity {
@@ -18,4 +20,12 @@ export class DriverLocationEntity extends BaseEntity {
 
     @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     timestamp: Date
+
+    @ManyToOne(() => OrderEntity, (order) => order.driverLocations)
+    @JoinColumn({ name: 'order_id' })
+    order: OrderEntity;
+
+    @ManyToOne(() => UserEntity, (user) => user.driverLocations)
+    @JoinColumn({ name: 'driver_id' })
+    user: UserEntity;
 }

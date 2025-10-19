@@ -1,5 +1,6 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { UserEntity } from './user.entity';
 
 @Entity('news')
 export class NewsEntity extends BaseEntity {
@@ -21,4 +22,8 @@ export class NewsEntity extends BaseEntity {
 
     @Column({ type: 'bytea', nullable: true })
     image_data: Buffer
+
+    @ManyToOne(() => UserEntity, (user) => user.news)
+    @JoinColumn({ name: 'user_id' })
+    user: UserEntity;
 }

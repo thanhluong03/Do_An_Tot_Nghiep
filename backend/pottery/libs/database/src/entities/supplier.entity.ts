@@ -1,6 +1,7 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { ImportProductEntity } from './import_product.entity'
+import { ProductEntity } from './product.entity';
 
 @Entity('suppliers')
 export class SupplierEntity extends BaseEntity {
@@ -19,4 +20,7 @@ export class SupplierEntity extends BaseEntity {
 
     @OneToMany(() => ImportProductEntity, (importProduct) => importProduct.supplier)
     importProducts: ImportProductEntity[];
+
+    @OneToMany(() => ProductEntity, (product) => product.supplier)
+    products: ProductEntity[];
 }

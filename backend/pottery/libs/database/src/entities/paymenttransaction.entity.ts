@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm'
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { OrderEntity } from './order.entity'
 
 @Entity('payment_transactions')
 export class PaymentTransactionEntity extends BaseEntity {
@@ -27,4 +28,8 @@ export class PaymentTransactionEntity extends BaseEntity {
 
     @Column({ type: 'json', nullable: true })
     raw_response_data: Record<string, any>;
+
+    @ManyToOne(() => OrderEntity, (order) => order.paymentTransactions)
+    @JoinColumn({ name: 'order_id' })
+    order: OrderEntity;
 }

@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { PermissionEntity } from './permission.entity'
+import { UserEntity } from './user.entity'
 
 @Entity('roles')
 export class RoleEntity extends BaseEntity {
@@ -13,4 +14,7 @@ export class RoleEntity extends BaseEntity {
 
     @OneToMany(() => PermissionEntity, permission => permission.role)
     permissions: PermissionEntity[]
+
+    @OneToMany(() => UserEntity, (user) => user.role)
+    users: UserEntity[];
 }

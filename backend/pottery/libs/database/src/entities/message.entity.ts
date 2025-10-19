@@ -1,5 +1,6 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm'
 import { BaseEntity } from './base.entity'
+import { ConversationEntity } from './conversation.entity';
 
 @Entity('messages')
 export class MessageEntity extends BaseEntity {
@@ -25,4 +26,8 @@ export class MessageEntity extends BaseEntity {
 
     @Column({ type: 'boolean', default: true })
     is_read: boolean
+
+    @ManyToOne(() => ConversationEntity, { eager: true })
+    @JoinColumn({ name: 'conversation_id' })
+    conversation: ConversationEntity;
 }

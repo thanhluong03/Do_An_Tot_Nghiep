@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { VoucherCustomerEntity } from './voucher_customer.entity';
 
 @Entity('vouchers')
 export class VoucherEntity extends BaseEntity {
@@ -29,4 +30,7 @@ export class VoucherEntity extends BaseEntity {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
     order_conditions: number;
+
+    @OneToMany(() => VoucherCustomerEntity, (voucherCustomer) => voucherCustomer.voucher)
+    voucherCustomers: VoucherCustomerEntity[];
 }
