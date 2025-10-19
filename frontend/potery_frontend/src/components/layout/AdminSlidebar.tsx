@@ -53,6 +53,7 @@ const salesOperationsItems: MenuItem[] = [
         ],
     },
     { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },
+     { name: "Test chat", icon: faBox, href: "/admin/conversation", color: "bg-blue-100 text-blue-600" },
     { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
     { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
 ];

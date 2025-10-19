@@ -46,4 +46,7 @@ export const AVAILABLE_PERMISSIONS = {
     'admin/customers': [
         { key: 'admin/customers', name: 'Quản lý khách hàng' },
     ],
+    'admin/conversation': [
+        { key: 'admin/conversation', name: 'Quản lý hội thoại' },
+    ],
 };
