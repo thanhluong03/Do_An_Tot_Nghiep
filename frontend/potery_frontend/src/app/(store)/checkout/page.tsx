@@ -276,21 +276,32 @@ export default function CheckoutPage() {
 
   /** ===================== TẠO ĐƠN HÀNG ===================== */
   const handleCreate = async () => {
-    if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
-    const cartItems = serverItems.length > 0 ? serverItems : items;
-    if (!cartItems.length) return setError('❌ Giỏ hàng trống');
-    if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
+  if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
+  const cartItems = serverItems.length > 0 ? serverItems : items;
+  if (!cartItems.length) return setError('❌ Giỏ hàng trống');
+  if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
 
-    setCreating(true);
-    setError(null);
+  setCreating(true);
+  setError(null);
 
-    try {
-      // Determine customer id: logged-in or create guest
-      let customerId: number | null = isAuthenticated && user?.id ? Number(user.id) : null;
-      if (!customerId) {
+  try {
+    let customerId: number | null = null;
+    const authType = localStorage.getItem('auth_type');
+    const storedGuestId = localStorage.getItem('guest_id');
+
+    // ✅ Nếu user thật (đã đăng nhập)
+    if (isAuthenticated && authType === 'user' && user?.id) {
+      customerId = Number(user.id);
+    } 
+    // ✅ Nếu là guest
+    else {
+      if (storedGuestId) {
+        customerId = Number(storedGuestId);
+      } else {
         if (!guestName.trim() || !guestPhone.trim()) {
           throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
         }
+
         const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
         const created = await customersApi.createCustomer({
           username: `guest_${Date.now()}`,
@@ -300,61 +311,82 @@ export default function CheckoutPage() {
           phone_number: guestPhone.trim(),
           address: address.trim(),
         });
+
         customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
         if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
+
+        // 🧩 Lưu thông tin guest để lần sau dùng lại
+        localStorage.setItem('guest_id', String(customerId));
+        localStorage.setItem('guest_name', guestName.trim());
+        localStorage.setItem('guest_phone', guestPhone.trim());
+        localStorage.setItem('guest_email', fallbackEmail);
+        localStorage.setItem('auth_type', 'guest');
       }
-
-      const totalBeforeDiscount = total;
-      const totalAfterDiscount = finalTotal;
-      const discount = totalBeforeDiscount - totalAfterDiscount;
-
-      // Nếu có giảm giá, chia phần giảm đều theo tỷ lệ
-      const payloadItems = cartItems.map(ci => {
-        const pid = 'product_id' in ci && typeof (ci as any).product_id !== 'undefined'
-          ? Number((ci as any).product_id)
-          : Number((ci as any).product?.id ?? 0);
-
-        const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
-        const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
-        const discountedPrice = basePrice - (share * discount) / ci.quantity;
-        const storeId =
-          'store_id' in ci ? Number((ci as any).store_id) : 1;
-        return {
-          product_id: pid,
-          quantity: ci.quantity,
-          price_at_order: Math.round(discountedPrice), // giá đã giảm cho từng sp
-          store_id: Number(storeId),
-        };
-      });
-
-      const payload = {
-        customer_id: Number(customerId),
-        shipping_address: address,
-        voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
-        payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-        items: payloadItems,
-        total_amount: totalAfterDiscount,  // tổng sau giảm
-        discount_amount: discount,
-        original_amount: totalBeforeDiscount,
-      };
-      const res = await orderApi.createOrder(payload);
-      const createdId = Number(res?.data?.id ?? res?.id);
-      if (!createdId) throw new Error('Không lấy được ID đơn hàng');
-      setOrderId(createdId);
-
-      if (paymentMethod === 'VNPAY') {
-        await handlePayment(createdId, totalAfterDiscount);
-      } else {
-        clearCart();
-        window.location.href = '/orders';
-      }
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng');
-    } finally {
-      setCreating(false);
     }
-  };
-  /** ===================== CHECK PAYMENT RETURN ===================== */
+
+    // ✅ Build payload sau khi có customerId
+    const totalBeforeDiscount = total;
+    const totalAfterDiscount = finalTotal;
+    const discount = totalBeforeDiscount - totalAfterDiscount;
+
+    const payloadItems = cartItems.map(ci => {
+      const pid = 'product_id' in ci ? Number((ci as any).product_id) : Number((ci as any).product?.id ?? 0);
+      const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
+      const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
+      const discountedPrice = basePrice - (share * discount) / ci.quantity;
+      const storeId = 'store_id' in ci ? Number((ci as any).store_id) : 1;
+
+      return {
+        product_id: pid,
+        quantity: ci.quantity,
+        price_at_order: Math.round(discountedPrice),
+        store_id: Number(storeId),
+      };
+    });
+
+    const payload = {
+      customer_id: customerId,
+      shipping_address: address,
+      voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
+      payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
+      items: payloadItems,
+      total_amount: totalAfterDiscount,
+      discount_amount: discount,
+      original_amount: totalBeforeDiscount,
+    };
+
+    console.log('📦 Gửi đơn hàng:', payload);
+
+    const res = await orderApi.createOrder(payload);
+    const createdId = Number(res?.data?.id ?? res?.id);
+
+    if (!createdId) {
+      const backendMsg = res?.data?.error || res?.data?.message || 'Không lấy được ID đơn hàng';
+      throw new Error(backendMsg);
+    }
+
+    setOrderId(createdId);
+
+    if (paymentMethod === 'VNPAY') {
+      await handlePayment(createdId, totalAfterDiscount);
+    } else {
+      clearCart();
+      try {
+        sessionStorage.removeItem('cart_session');
+        Cookies.remove('cart_session');
+      } catch {}
+      window.location.href = '/orders';
+    }
+  } catch (e: any) {
+    const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng';
+    setError(msg);
+    toast.error(msg);
+  } finally {
+    setCreating(false);
+  }
+};
+
+
   /** ===================== CHECK PAYMENT RETURN ===================== */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

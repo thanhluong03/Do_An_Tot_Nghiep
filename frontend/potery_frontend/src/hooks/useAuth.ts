@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { userApi } from '../api/modules/users';
 import { User } from '../types';
+import { toast } from 'react-hot-toast';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -46,22 +47,36 @@ export const useAuthState = () => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const response = await userApi.login(email, password);
+  try {
+    const response = await userApi.login(email, password);
+    const { token } = response;
 
-      // ✅ Sau khi login thành công → lấy user đầy đủ
-      const fullUser = await userApi.getCurrentUser();
+    if (token) localStorage.setItem('token', token);
 
-      // ✅ Lưu localStorage để các component khác (như Header) nhận được ngay
-      localStorage.setItem('user', JSON.stringify(fullUser));
+    // 🧩 Ghi rõ loại đăng nhập
+    localStorage.setItem('auth_type', 'user');
 
-      setUser(fullUser);
-      router.push('/');
-    } catch (err) {
-      console.error('Login failed:', err);
-      throw err;
-    }
-  };
+    // ⚠️ KHÔNG xóa guest_id → để đơn guest cũ vẫn còn dữ liệu riêng
+    // Chỉ xóa thông tin guest trong ngữ cảnh đăng nhập (để UI không hiển thị nhầm)
+    localStorage.removeItem('guest_name');
+    localStorage.removeItem('guest_phone');
+    localStorage.removeItem('guest_email');
+
+    // ✅ Lấy thông tin user thật
+    const fullUser = await userApi.getCurrentUser();
+    localStorage.setItem('user', JSON.stringify(fullUser));
+    setUser(fullUser);
+
+    router.push('/');
+  } catch (err) {
+    console.error('Login failed:', err);
+    toast.error('Đăng nhập thất bại, vui lòng thử lại');
+    throw err;
+  }
+};
+
+
+
 
   const register = async (data: {
     email: string;

@@ -227,6 +227,7 @@ export const userApi = {
     login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
   try {
     const response = await api.post('/login', { email, password });
+    localStorage.removeItem('guest_id');
     const { user, token } = response.data || {};
 
     if (!token) throw new Error('Không nhận được token đăng nhập.');
