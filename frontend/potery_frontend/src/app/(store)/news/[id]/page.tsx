@@ -5,13 +5,19 @@ import { useParams } from 'next/navigation';
 import { BaseLayout } from '../../../../layouts';
 import { newsApi, NewsItem } from '../../../../api/modules/news';
 import Link from 'next/link';
+import { conversationApi } from '@/api/modules/conversation';
+import { VoucherModal, ChatModal, ScrollToTopButton } from '@/components/feature';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NewsDetailPage() {
   const { id } = useParams();
   const [news, setNews] = useState<NewsItem | null>(null);
   const [related, setRelated] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const { user, isAuthenticated } = useAuth();
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -93,6 +99,74 @@ export default function NewsDetailPage() {
 
   return (
     <BaseLayout>
+    {/* === Popup Layer === */}
+                {isAuthenticated && user?.id && (
+                  <>
+                    {/* Voucher Modal */}
+                    {isVoucherModalOpen && (
+                      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+                        <VoucherModal
+                          customerId={user.id}
+                          isOpen={isVoucherModalOpen}
+                          onClose={() => setIsVoucherModalOpen(false)}
+                        />
+                      </div>
+                    )}
+          
+                    {/* Chat Modal */}
+                    {isChatOpen && (
+                      <ChatModal
+                        isOpen={isChatOpen}
+                        onClose={() => setIsChatOpen(false)}
+                        userId={Number(user.id)}
+                        storeId={0}
+                        conversationId={conversationId} // ✅ truyền id xuống
+                      />
+                    )}
+          
+                    {/* Floating Buttons */}
+                    <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+                      {/* Voucher Button */}
+                      <button
+                        onClick={() => setIsVoucherModalOpen(true)}
+                        className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+                        title="Nhận Voucher Giảm Giá!"
+                      >
+                        🎁
+                      </button>
+          
+                      {/* Chat Button */}
+                      <button
+                        onClick={async () => {
+                          if (!isAuthenticated || !user?.id) return;
+                          try {
+                            console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
+                            const created = await conversationApi.createConversation({
+                              sender_id: Number(user.id),
+                              sender_type: 'USER',
+                              content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                              user_id: Number(user.id),
+                              store_id: 1,
+                            });
+          
+                            const conv = created?.conversation || created?.data || created;
+                            console.log('%c✅ Conversation created:', 'color:limegreen', conv);
+                            setConversationId(conv?.id || null);
+                            setIsChatOpen(true);
+                          } catch (err) {
+                            console.error('❌ Lỗi tạo conversation:', err);
+                          }
+                        }}
+                        className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                        title="Chat với Admin"
+                      >
+                        💬
+                      </button>
+                    </div>
+                  </>
+                )}
+          
+                <ScrollToTopButton />
       <section className="bg-[#FAFAF9] py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Nút quay lại */}

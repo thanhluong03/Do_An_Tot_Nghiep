@@ -67,12 +67,14 @@ export function ReviewsClient({
     setSubmitting(true);
 
     try {
-      const payload = {
-        product_id: productId,
-        customer_id: user.id,
-        rating, // ✅ giữ dạng number
+      const payload = [
+      {
+        orderitem_id: Number(productId), // hoặc ID thật từ order item
+        customer_id: Number(user.id),
+        rating,
         comment: comment.trim(),
-      };
+      },
+    ];
 
       console.log('📦 Gửi review:', payload);
       const res = await reviewsApi.create(payload);

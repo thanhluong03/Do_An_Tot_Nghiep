@@ -10,7 +10,6 @@ interface PageProps {
 export default async function ProductDetailPage(props: PageProps) {
   const resolvedParams = 'then' in props.params ? await props.params : props.params;
   const { id } = resolvedParams;
-
   const product = await productApi.getProductById(id).catch(() => null);
 
   if (!product) {
@@ -26,6 +25,7 @@ export default async function ProductDetailPage(props: PageProps) {
 
   return (
     <BaseLayout>
+      
       <ProductDetailClient product={product} />
     </BaseLayout>
   );
