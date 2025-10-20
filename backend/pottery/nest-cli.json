@@ -169,6 +169,15 @@
         "tsConfigPath": "libs/role/tsconfig.lib.json"
       }
     },
+    "send_mail": {
+      "type": "library",
+      "root": "libs/send_mail",
+      "entryFile": "index",
+      "sourceRoot": "libs/send_mail/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/send_mail/tsconfig.lib.json"
+      }
+    },
     "store": {
       "type": "library",
       "root": "libs/store",
@@ -194,15 +203,6 @@
       "sourceRoot": "libs/user/src",
       "compilerOptions": {
         "tsConfigPath": "libs/user/tsconfig.lib.json"
-      }
-    },
-    "voucher": {
-      "type": "library",
-      "root": "libs/voucher",
-      "entryFile": "index",
-      "sourceRoot": "libs/voucher/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/voucher/tsconfig.lib.json"
       }
     },
     "voucher": {
