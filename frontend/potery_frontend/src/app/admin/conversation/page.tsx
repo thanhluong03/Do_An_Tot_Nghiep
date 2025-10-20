@@ -12,7 +12,7 @@ export default function AdminChatPage() {
 
     useEffect(() => {
         const load = async () => {
-            const data = await conversationApi.getConversationsByCustomer(adminId);
+            const data = await conversationApi.getAll();
             // Nếu API có trả last_message_time
             const sorted = [...data].sort((a, b) =>
                 new Date(b.last_message_time || 0).getTime() - new Date(a.last_message_time || 0).getTime()
@@ -28,8 +28,8 @@ export default function AdminChatPage() {
         loadCustomers();
     }, []);
 
-    const getCustomer = (userId: number) =>
-        customers.find((c) => c.id === userId);
+    const getCustomer = (customerId: number) =>
+        customers.find((c) => c.id === customerId);
 
     return (
         <div className="flex h-[calc(100vh-80px)] bg-gray-50 rounded-xl shadow-inner overflow-hidden">
@@ -46,7 +46,7 @@ export default function AdminChatPage() {
                 ) : (
                     <div className="space-y-2">
                         {conversations.map((conv) => {
-                            const customer = getCustomer(conv.user_id);
+                            const customer = getCustomer(conv.customerId);
                             const isActive = conv.id === selectedConv;
 
                             return (
