@@ -25,39 +25,40 @@ export function ChatModal({ isOpen, onClose, userId, storeId, conversationId }: 
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Khi có conversationId → load messages
   useEffect(() => {
   if (!isOpen) return;
 
-  const fetchOrCreateConversation = async () => {
-    setLoading(true);
-    try {
-      let convId = conversationId;
+  const fetchConversation = async () => {
+  setLoading(true);
+  try {
+    let convId: number | null | undefined = conversationId;
 
-      if (!convId) {
-        const newConv = await conversationApi.createConversation({
-          sender_id: userId,
-          sender_type: 'USER',
-          user_id: userId,
-          store_id: storeId,
-          content: 'Bắt đầu trò chuyện',
-        });
-        convId = newConv.id;
-      }
-
-      const allConvs = await conversationApi.getByUser(userId);
-      const conv = allConvs.find((c: any) => c.id === convId);
-      setMessages(conv?.messages || []);
-    } catch (err) {
-      console.error('❌ Lỗi load messages:', err);
-    } finally {
-      setLoading(false);
+    // 🔹 Nếu chưa có conversation → tạo mới
+    if (!convId) {
+      const newConv = await conversationApi.createConversation({
+        sender_id: userId,
+        sender_type: 'USER',
+        user_id: userId,
+        store_id: storeId,
+        content: 'Bắt đầu trò chuyện',
+      });
+      convId = newConv.id;
     }
-  };
 
-  fetchOrCreateConversation();
-}, [isOpen, userId, storeId, conversationId]); // ✅ luôn 4 dependencies, không đổi
+    // 🔹 Đảm bảo có convId mới call API
+    if (!convId) throw new Error("Không tìm thấy conversationId hợp lệ");
 
+    // 🔹 Lấy chi tiết hội thoại
+    const conv = await conversationApi.getConversationDetail(convId);
+    setMessages(conv?.messages || []);
+  } catch (err) {
+    console.error('❌ Lỗi load messages:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+  fetchConversation();
+}, [isOpen, userId, storeId, conversationId]);
 
 
   useEffect(() => {
@@ -66,36 +67,35 @@ export function ChatModal({ isOpen, onClose, userId, storeId, conversationId }: 
 
   // ✅ Gửi tin nhắn
   const handleSend = async () => {
-  if (!input.trim() || !conversationId) return;
+    if (!input.trim() || !conversationId) return;
 
-  const content = input.trim();
-  setInput('');
-  setSending(true);
+    const content = input.trim();
+    setInput('');
+    setSending(true);
 
-  try {
-    await conversationApi.sendMessage({
-      sender_id: userId,
-      sender_type: 'USER',
-      content,
-      user_id: userId,
-      store_id: storeId,
-      conversation_id: conversationId,
-    });
+    try {
+      await conversationApi.sendMessage({
+        sender_id: userId,
+        sender_type: 'USER',
+        content,
+        user_id: userId,
+        store_id: storeId,
+        conversation_id: conversationId,
+      });
 
-    // ✅ Giữ tin nhắn trong state, KHÔNG refetch lại
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now(), sender_type: 'USER', content, created_at: new Date().toISOString() },
-    ]);
-  } catch (err) {
-    console.error('❌ Lỗi gửi tin nhắn:', err);
-  } finally {
-    setSending(false);
-  }
-};
+      // Giữ tin nhắn mới trong state
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), sender_type: 'USER', content, created_at: new Date().toISOString() },
+      ]);
+    } catch (err) {
+      console.error('❌ Lỗi gửi tin nhắn:', err);
+    } finally {
+      setSending(false);
+    }
+  };
 
-
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="fixed bottom-5 right-5 z-50 w-80 h-[500px] bg-white rounded-xl shadow-lg flex flex-col border border-gray-200">

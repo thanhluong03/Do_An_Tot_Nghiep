@@ -41,12 +41,10 @@ export const conversationApi = {
     return res.data;
   },
 
-  getByUser: async (user_id: number) => {
-    console.log('%c📡 API → getByUser', 'color:violet', user_id);
-    const res = await axios.get(`${API_URL}/get-by-user/${user_id}`);
+   getByCustomer: async (customer_id: number) => {
+    const res = await axios.get(`${API_URL}/get-by-customer/${customer_id}`);
     return res.data;
   },
-
   markRead: async (conversationId: number) => {
     const res = await axios.post(`${API_URL}/mark-read`, { conversationId });
     return res.data;
@@ -56,4 +54,10 @@ export const conversationApi = {
     const res = await axios.get(`${API_URL}/${conversationId}`);
     return res.data;
   },
+  getConversationDetail: async (conversationId: number) => {
+  const res = await axios.get(`${API_URL}/get-conversation-detail/${conversationId}`);
+  return res.data;
+},
+
+
 };
