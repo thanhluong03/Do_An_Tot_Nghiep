@@ -8,6 +8,7 @@ import { CategoryEntity } from './category.entity';
 import { SupplierEntity } from './supplier.entity';
 import { OrderItemEntity } from './order_item.entity';
 import { CartItemEntity } from './cart_item.entity';
+import { ProductClassificationEntity } from './product_classification.entity'
 
 // import { RoleEntity } from './role.entity'
 
@@ -61,4 +62,7 @@ export class ProductEntity extends BaseEntity {
 
   @OneToMany(() => CartItemEntity, (cartItem) => cartItem.product)
   cartItems: CartItemEntity[];
+
+  @OneToMany(() => ProductClassificationEntity, (productClassification) => productClassification.product)
+  classifications: ProductClassificationEntity[];
 }

@@ -82,13 +82,15 @@ export function AddToCartClient({
         try {
           sessionStorage.setItem('buy_now', JSON.stringify(payload));
           stored = true;
-        } catch {}
+        } catch { }
       }
       if (!stored) {
-        try { Cookies.set('buy_now', JSON.stringify(payload)); } catch {}
+        try { Cookies.set('buy_now', JSON.stringify(payload)); } catch { }
       }
-      // Navigate with a hint param
-      setTimeout(() => { window.location.href = '/checkout?buyNow=1'; }, 10);
+      // Chuyển hướng với đúng param
+      setTimeout(() => {
+        window.location.href = `/checkout?productId=${payload.product_id}&storeId=${payload.store_id}&quantity=${payload.quantity}`;
+      }, 10);
     } finally {
       setNavigating(false);
     }

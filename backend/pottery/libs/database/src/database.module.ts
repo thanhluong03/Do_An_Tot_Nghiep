@@ -30,7 +30,10 @@ import {
   ConversationEntity,
   OrderStatusHistoryEntity,
   DeliveryProofEntity,
-  DriverLocationEntity
+  DriverLocationEntity,
+  ProductClassificationEntity,
+  ProductAttributeEntity,
+  ClassificationAttributeRelationshipEntity,
 } from './entities';
 import {
   ProductRepository,
@@ -108,6 +111,9 @@ const postgresEntities = [
   OrderStatusHistoryEntity,
   DeliveryProofEntity,
   DriverLocationEntity,
+  ProductClassificationEntity,
+  ProductAttributeEntity,
+  ClassificationAttributeRelationshipEntity,
 ];
 @Module({
   imports: [

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '../../../components/common/Button';
 import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useCart } from '../../../contexts/CartContext';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
+  const { clear } = useCart();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +23,10 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
         await login(formData.email, formData.password);
+        clear(); // Reset cart after login
         // redirect is handled inside useAuth.login
-      } catch (err: any) {
-        setError(err?.message || 'Login failed');
+      } catch (err) {
+        setError((err as Error)?.message || 'Login failed');
       } finally {
         setLoading(false);
       }
@@ -31,16 +34,16 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  let redirectUrl = window.location.origin;
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    let redirectUrl = window.location.origin;
 
-  // Fix tạm thời nếu backend thêm "/" sai
-  if (redirectUrl.endsWith('/')) {
-    redirectUrl = redirectUrl.slice(0, -1);
-  }
+    // Fix tạm thời nếu backend thêm "/" sai
+    if (redirectUrl.endsWith('/')) {
+      redirectUrl = redirectUrl.slice(0, -1);
+    }
 
-  window.location.href = `${API_BASE_URL}/login/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
-};
+    window.location.href = `${API_BASE_URL}/login/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
+  };
 
 
   return (
