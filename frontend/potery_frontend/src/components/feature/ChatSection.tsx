@@ -27,22 +27,38 @@ export function ChatModal({ isOpen, onClose, userId, storeId, conversationId }: 
 
   // ✅ Khi có conversationId → load messages
   useEffect(() => {
-    if (!isOpen || !conversationId) return;
-    const fetchMessages = async () => {
-      setLoading(true);
-      try {
-        console.log('%c📨 Loading messages for convId:', 'color:cyan', conversationId);
-        const allConvs = await conversationApi.getByUser(userId);
-        const conv = allConvs.find((c: any) => c.id === conversationId);
-        setMessages(conv?.messages || []);
-      } catch (err) {
-        console.error('❌ Lỗi load messages:', err);
-      } finally {
-        setLoading(false);
+  if (!isOpen) return;
+
+  const fetchOrCreateConversation = async () => {
+    setLoading(true);
+    try {
+      let convId = conversationId;
+
+      if (!convId) {
+        const newConv = await conversationApi.createConversation({
+          sender_id: userId,
+          sender_type: 'USER',
+          user_id: userId,
+          store_id: storeId,
+          content: 'Bắt đầu trò chuyện',
+        });
+        convId = newConv.id;
       }
-    };
-    fetchMessages();
-  }, [isOpen, userId, conversationId]);
+
+      const allConvs = await conversationApi.getByUser(userId);
+      const conv = allConvs.find((c: any) => c.id === convId);
+      setMessages(conv?.messages || []);
+    } catch (err) {
+      console.error('❌ Lỗi load messages:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchOrCreateConversation();
+}, [isOpen, userId, storeId, conversationId]); // ✅ luôn 4 dependencies, không đổi
+
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,43 +66,34 @@ export function ChatModal({ isOpen, onClose, userId, storeId, conversationId }: 
 
   // ✅ Gửi tin nhắn
   const handleSend = async () => {
-    console.log('%c🟡 Click send message', 'color:gold');
-    if (!input.trim()) return;
-    if (!conversationId) {
-      console.warn('⚠️ Không có conversationId, không thể gửi');
-      return;
-    }
+  if (!input.trim() || !conversationId) return;
 
-    const content = input.trim();
-    setInput('');
-    setSending(true);
+  const content = input.trim();
+  setInput('');
+  setSending(true);
 
-    try {
-      await conversationApi.sendMessage({
-        sender_id: userId,
-        sender_type: 'USER',
-        content,
-        user_id: userId,
-        store_id: storeId,
-        conversation_id: conversationId,
-      });
+  try {
+    await conversationApi.sendMessage({
+      sender_id: userId,
+      sender_type: 'USER',
+      content,
+      user_id: userId,
+      store_id: storeId,
+      conversation_id: conversationId,
+    });
 
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now(), sender_type: 'USER', content, created_at: new Date().toISOString() },
-      ]);
+    // ✅ Giữ tin nhắn trong state, KHÔNG refetch lại
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), sender_type: 'USER', content, created_at: new Date().toISOString() },
+    ]);
+  } catch (err) {
+    console.error('❌ Lỗi gửi tin nhắn:', err);
+  } finally {
+    setSending(false);
+  }
+};
 
-      setTimeout(async () => {
-        const allConvs = await conversationApi.getByUser(userId);
-        const conv = allConvs?.find((c: any) => c.id === conversationId);
-        if (conv) setMessages(conv.messages || []);
-      }, 1000);
-    } catch (err) {
-      console.error('❌ Lỗi gửi tin nhắn:', err);
-    } finally {
-      setSending(false);
-    }
-  };
 
   if (!isOpen) return null;
 
