@@ -35,33 +35,51 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({
   }, [conversationId]);
 
   // 🔹 Lắng nghe tin nhắn realtime
-  useEffect(() => {
-    const handleNewMessage = (msg: Message) => {
-      if (msg.conversation_id === conversationId) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    };
+useEffect(() => {
+  const handleNewMessage = (msg: Message) => {
+    // 🔹 Bỏ qua tin nhắn do chính admin này gửi ra
+    if (
+      msg.sender_id === currentAdminId &&
+      msg.sender_type === "ADMIN"
+    )
+      return;
 
-    socket.on("new_message", handleNewMessage);
-    return () => {
-      socket.off("new_message", handleNewMessage);
-    };
-  }, [conversationId]);
+    if (msg.conversation_id === conversationId) {
+      setMessages((prev) => [...prev, msg]);
+    }
+  };
+
+  socket.on("new_message", handleNewMessage);
+
+  // ✅ cleanup hợp lệ
+  return () => {
+    socket.off("new_message", handleNewMessage);
+  };
+}, [conversationId, currentAdminId]);
+
+
 
   // 🔹 Gửi tin nhắn
   const sendMessage = () => {
-    if (!input.trim()) return;
+  if (!input.trim()) return;
 
-    const newMsg = {
-      conversation_id: conversationId,
-      sender_id: currentAdminId,
-      sender_type: "ADMIN",
-      content: input,
-    };
-
-    socket.emit("send_message", newMsg);
-    setInput("");
+  const newMsg: Message = {
+    conversation_id: conversationId,
+    sender_id: currentAdminId,
+    sender_type: "ADMIN",
+    content: input,
+    sent_at: new Date().toISOString(),
   };
+
+  // 🔹 Hiển thị ngay trên giao diện
+  setMessages((prev) => [...prev, newMsg]);
+
+  // 🔹 Gửi cho server để broadcast
+  socket.emit("send_message", newMsg);
+
+  setInput("");
+};
+
 
   return (
     <div className="flex flex-col h-[80vh] bg-white rounded-xl border shadow-lg overflow-hidden">
