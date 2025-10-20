@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product } from '../../types';
+import type { ProductDetail, StoreInventory } from '../../api/modules/products';
 import { formatPrice } from '../../utils/format';
 import { useAuth } from '../../contexts/AuthContext';
 import { cartApi } from '../../api/modules/cart';
 import { useCart } from '../../contexts/CartContext';
 import { productApi } from '../../api/modules/products';
+import { Modal } from '../common/Modal';
 
 export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Product) => void }> = ({
   product,
@@ -17,6 +20,94 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   const { isAuthenticated, user } = useAuth();
   const { addItem } = useCart();
   const [loading, setLoading] = useState(false);
+  const [showOrderNow, setShowOrderNow] = useState(false);
+  const [showAddCart, setShowAddCart] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  // State for product detail (for popup)
+  const [detail, setDetail] = useState<ProductDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  // Default stores from list, will be replaced by detail if loaded
+  const stores: StoreInventory[] = detail?.stores && detail.stores.length > 0
+    ? detail.stores
+    : [{
+      store_id: product.store?.id || '',
+      store_name: product.store?.name || 'Cửa hàng mặc định',
+      store_address: product.store?.address || '',
+      quantity_stock: product.stock ?? 10
+    }];
+  const [selectedStoreId, setSelectedStoreId] = useState(stores[0]?.store_id || null);
+  // Fetch product detail when opening popup
+  const fetchDetailForPopup = async () => {
+    if (!detail && product.id) {
+      setDetailLoading(true);
+      setDetailError(null);
+      try {
+        const fetched = await productApi.getProductById(String(product.id));
+        setDetail(fetched);
+        // If stores exist, set default selected store
+        if (fetched.stores && fetched.stores.length > 0) {
+          setSelectedStoreId(fetched.stores[0].store_id);
+        }
+      } catch {
+        setDetailError('Không thể tải chi tiết sản phẩm.');
+      } finally {
+        setDetailLoading(false);
+      }
+    }
+  };
+
+  const handleOrderNow = async () => {
+    setShowOrderNow(true);
+    await fetchDetailForPopup();
+  };
+
+  const handleAddCartPopup = async () => {
+    setShowAddCart(true);
+    await fetchDetailForPopup();
+  };
+
+  const handleOrderNowConfirm = () => {
+    // Find selected store's stock
+    const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
+    const stock = selectedStore?.quantity_stock ?? 0;
+    if (quantity > stock) {
+      alert('Số lượng không đủ trong cửa hàng.');
+      return;
+    }
+    // Redirect to checkout with product id, store id, quantity as query param
+    router.push(`/checkout?productId=${product.id}&storeId=${selectedStoreId}&quantity=${quantity}`);
+  };
+
+  const handleAddCartConfirm = async () => {
+    // Find selected store's stock
+    const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
+    const stock = selectedStore?.quantity_stock ?? 0;
+    if (quantity > stock) {
+      alert('Số lượng không đủ trong cửa hàng.');
+      return;
+    }
+    setLoading(true);
+    try {
+      if (!isAuthenticated || !user?.id) {
+        addItem(product, quantity);
+        alert('Đã thêm vào giỏ hàng!');
+      } else {
+        await cartApi.add({
+          customer_id: user.id,
+          product_id: product.id,
+          store_id: selectedStoreId,
+          quantity,
+        });
+        alert('Đã thêm vào giỏ hàng!');
+      }
+      setShowAddCart(false);
+    } catch {
+      alert('Không thể thêm sản phẩm.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAdd = async () => {
     // Guest: save to cookie via context, do NOT require store id
@@ -33,7 +124,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
 
     // Logged-in: need store id for backend cart API
     // Resolve store id: prefer from list item, fallback to product detail's first store
-    let storeId = product.store?.id as any;
+    let storeId = product.store?.id;
     if (!storeId) {
       try {
         const detail = await productApi.getProductById(String(product.id));
@@ -41,7 +132,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         if (fallback) {
           storeId = fallback;
         }
-      } catch {}
+      } catch { }
     }
     if (!storeId) return alert('Cửa hàng không hợp lệ');
 
@@ -62,16 +153,22 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   };
 
 
+  // Use detail if available, else fallback to product
+  const displayProduct = detail || product;
+
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-all">
       <div
         className="relative aspect-[4/3] cursor-pointer"
         onClick={() => onViewDetails?.(product)}
       >
-        <img
+        <Image
           src={product.images[0] || '/placeholder-product.jpg'}
           alt={product.name}
           className="object-cover w-full h-full"
+          width={400}
+          height={300}
+          priority
         />
         <button className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full p-2 shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,15 +187,203 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           </span>
         </div>
 
-       <div className="flex flex-col gap-3">
-        <button
-          onClick={handleAdd}
-          disabled={loading}
-          className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold disabled:opacity-50 transition"
-        >
-          {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}
-        </button>
-      </div>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleAddCartPopup}
+            disabled={loading}
+            className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold disabled:opacity-50 transition"
+          >
+            {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}
+          </button>
+          <button
+            onClick={handleOrderNow}
+            className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-base font-semibold mt-2 transition"
+          >
+            Đặt hàng ngay
+          </button>
+        </div>
+        <Modal isOpen={showOrderNow} onClose={() => setShowOrderNow(false)} title="Đặt hàng nhanh" size="full">
+          <div className="flex flex-col md:flex-row w-full">
+            {/* Ảnh lớn */}
+            <div className="flex-shrink-0 w-full md:w-[340px] flex items-center justify-center bg-[#faf7f2] p-6">
+              <Image
+                src={displayProduct.images?.[0] || '/placeholder-product.jpg'}
+                alt={displayProduct.name}
+                className="aspect-square w-full max-w-[280px] rounded-2xl shadow-lg object-cover border border-[#f3e6d0]"
+                width={320}
+                height={320}
+                priority
+              />
+            </div>
+            {/* Thông tin */}
+            <div className="flex-1 w-full p-6 md:p-8 flex flex-col justify-between min-h-[380px]">
+              {detailLoading ? (
+                <div className="text-center py-12 text-lg text-gray-500">Đang tải chi tiết sản phẩm...</div>
+              ) : detailError ? (
+                <div className="text-center py-12 text-red-500">{detailError}</div>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-3 py-1 text-xs rounded-full bg-[#f3e6d0] text-[#a3764a] font-semibold tracking-wide">{displayProduct.category || 'Gốm sứ'}</span>
+                      <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-semibold">Còn hàng</span>
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-[#2C2A24] mb-2 leading-tight">{displayProduct.name}</h2>
+                    <div className="flex items-center gap-3 mb-4">
+                      {displayProduct.originalPrice && displayProduct.originalPrice > displayProduct.price && (
+                        <span className="text-base md:text-lg text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</span>
+                      )}
+                      <span className={`text-2xl md:text-3xl font-extrabold px-3 py-1 rounded-lg bg-[#fff6e5] text-red-600`}>{formatPrice(displayProduct.price)}</span>
+                      {displayProduct.isFlashSale && (
+                        <span className="text-xs md:text-sm font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full ml-1">🔥 SALE</span>
+                      )}
+                      {displayProduct.discount && (
+                        <span className="text-xs md:text-sm font-bold text-[#c4975a] bg-[#f7e7c2] px-2 py-0.5 rounded-full ml-1">Giảm {Math.round(displayProduct.discount * 100)}%</span>
+                      )}
+                    </div>
+                    {/* Chọn cửa hàng còn hàng */}
+                    <div className="mb-4">
+                      <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng còn hàng</div>
+                      <div className="space-y-2">
+                        {stores.filter(store => store.quantity_stock > 0).map((store) => (
+                          <label key={store.store_id} className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all shadow-sm ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#f5e6d6]' : 'border-gray-200 bg-white'}`}>
+                            <input
+                              type="radio"
+                              name="store"
+                              checked={selectedStoreId === store.store_id}
+                              onChange={() => setSelectedStoreId(store.store_id)}
+                              className="accent-[#c4975a]"
+                            />
+                            <div>
+                              <div className="font-semibold text-base text-[#2C2A24]">{store.store_name || 'Cửa hàng'}</div>
+                              <div className="text-xs text-green-600">Còn: {store.quantity_stock} sản phẩm</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Chọn số lượng */}
+                    <div className="flex items-center gap-4 mb-6">
+                      <span className="font-semibold text-[#2C2A24] text-base">Số lượng:</span>
+                      <div className="flex items-center border-2 border-[#f3e6d0] rounded-xl bg-white shadow">
+                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">−</button>
+                        <input
+                          type="number"
+                          value={quantity}
+                          onChange={e => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-14 text-center border-x outline-none text-base font-semibold"
+                          min={1}
+                        />
+                        <button onClick={() => setQuantity(q => q + 1)} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">+</button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Nút đặt hàng */}
+                  <div className="w-full flex justify-end">
+                    <button
+                      onClick={handleOrderNowConfirm}
+                      className="w-full md:w-auto px-10 py-3 bg-gradient-to-r from-[#ff2d2d] to-[#ff7e5f] hover:from-[#e02424] hover:to-[#ff5e3a] text-white rounded-xl text-lg font-extrabold shadow-lg transition-all tracking-wider uppercase"
+                    >
+                      Đặt hàng ngay
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </Modal>
+        {/* Popup thêm giỏ hàng, giống popup đặt hàng */}
+        <Modal isOpen={showAddCart} onClose={() => setShowAddCart(false)} title="Thêm vào giỏ hàng" size="full">
+          <div className="flex flex-col md:flex-row w-full">
+            {/* Ảnh lớn */}
+            <div className="flex-shrink-0 w-full md:w-[340px] flex items-center justify-center bg-[#faf7f2] p-6">
+              <Image
+                src={displayProduct.images?.[0] || '/placeholder-product.jpg'}
+                alt={displayProduct.name}
+                className="aspect-square w-full max-w-[280px] rounded-2xl shadow-lg object-cover border border-[#f3e6d0]"
+                width={320}
+                height={320}
+                priority
+              />
+            </div>
+            {/* Thông tin */}
+            <div className="flex-1 w-full p-6 md:p-8 flex flex-col justify-between min-h-[380px]">
+              {detailLoading ? (
+                <div className="text-center py-12 text-lg text-gray-500">Đang tải chi tiết sản phẩm...</div>
+              ) : detailError ? (
+                <div className="text-center py-12 text-red-500">{detailError}</div>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-3 py-1 text-xs rounded-full bg-[#f3e6d0] text-[#a3764a] font-semibold tracking-wide">{displayProduct.category || 'Gốm sứ'}</span>
+                      <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-semibold">Còn hàng</span>
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-[#2C2A24] mb-2 leading-tight">{displayProduct.name}</h2>
+                    <div className="flex items-center gap-3 mb-4">
+                      {displayProduct.originalPrice && displayProduct.originalPrice > displayProduct.price && (
+                        <span className="text-base md:text-lg text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</span>
+                      )}
+                      <span className={`text-2xl md:text-3xl font-extrabold px-3 py-1 rounded-lg bg-[#fff6e5] text-red-600`}>{formatPrice(displayProduct.price)}</span>
+                      {displayProduct.isFlashSale && (
+                        <span className="text-xs md:text-sm font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full ml-1">🔥 SALE</span>
+                      )}
+                      {displayProduct.discount && (
+                        <span className="text-xs md:text-sm font-bold text-[#c4975a] bg-[#f7e7c2] px-2 py-0.5 rounded-full ml-1">Giảm {Math.round(displayProduct.discount * 100)}%</span>
+                      )}
+                    </div>
+                    {/* Chọn cửa hàng còn hàng */}
+                    <div className="mb-4">
+                      <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng còn hàng</div>
+                      <div className="space-y-2">
+                        {stores.map((store) => (
+                          <label key={store.store_id} className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all shadow-sm ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#f5e6d6]' : 'border-gray-200 bg-white'}`}>
+                            <input
+                              type="radio"
+                              name="store"
+                              checked={selectedStoreId === store.store_id}
+                              onChange={() => setSelectedStoreId(store.store_id)}
+                              className="accent-[#c4975a]"
+                            />
+                            <div>
+                              <div className="font-semibold text-base text-[#2C2A24]">{store.store_name || 'Cửa hàng'}</div>
+                              <div className="text-xs text-green-600">Còn: {store.quantity_stock} sản phẩm</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Chọn số lượng */}
+                    <div className="flex items-center gap-4 mb-6">
+                      <span className="font-semibold text-[#2C2A24] text-base">Số lượng:</span>
+                      <div className="flex items-center border-2 border-[#f3e6d0] rounded-xl bg-white shadow">
+                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">−</button>
+                        <input
+                          type="number"
+                          value={quantity}
+                          onChange={e => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-14 text-center border-x outline-none text-base font-semibold"
+                          min={1}
+                        />
+                        <button onClick={() => setQuantity(q => q + 1)} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">+</button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Nút thêm giỏ hàng */}
+                  <div className="w-full flex justify-end">
+                    <button
+                      onClick={handleAddCartConfirm}
+                      className="w-full md:w-auto px-10 py-3 bg-gradient-to-r from-[#c4975a] to-[#a3764a] hover:from-[#a3764a] hover:to-[#c4975a] text-white rounded-xl text-lg font-extrabold shadow-lg transition-all tracking-wider uppercase"
+                      disabled={loading}
+                    >
+                      {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );
