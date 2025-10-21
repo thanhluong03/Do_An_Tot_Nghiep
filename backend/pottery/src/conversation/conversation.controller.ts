@@ -1,5 +1,8 @@
+// File: conversation.controller.ts
+
 import { Controller, Get, Param, Post, Body } from '@nestjs/common';
 import { ConversationService } from '../../libs/conversation/src/conversation.service';
+// 🔥 SỬA LẠI: DÙNG DTO ĐỂ VALIDATE VÀ NHẬN ĐÚNG PAYLOAD
 import { CreateConversationDto, MarkReadDto } from './conversation.dto';
 
 @Controller('conversations')
@@ -8,17 +11,14 @@ export class ConversationController {
 
   @Post('create-conversation')
   async createConversation(
-    @Body()
-    body: {
-      user_id: number;
-      customer_id?: number;
-      sender_id: number;
-      sender_type: 'USER' | 'ADMIN' | 'SUPERADMIN';
-      content: string;
-    },
+    // 🔥 SỬA LẠI: Dùng DTO để NestJS biết cần nhận những trường nào, bao gồm cả 'store_id'
+    @Body() createConversationDto: CreateConversationDto,
   ) {
-    return this.conversationService.createConversation(body);
+    // 🔥 SỬA LẠI: Truyền DTO đã được validate vào service
+    return this.conversationService.createConversation(createConversationDto);
   }
+
+  // ... (Các hàm khác giữ nguyên)
 
   @Get('get-all')
   async getAllConversations() {
@@ -40,7 +40,6 @@ export class ConversationController {
     return this.conversationService.getConversationDetail(id);
   }
 
-  // ✅ mark read vẫn giữ REST (hoặc có thể chuyển qua WS)
   @Post('mark-read')
   async markRead(@Body() dto: MarkReadDto) {
     await this.conversationService.markMessagesRead(dto.conversation_id, dto.user_id);
