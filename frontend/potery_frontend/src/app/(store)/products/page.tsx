@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BaseLayout } from '../../../layouts';
 import { ProductGrid } from '../../../components/feature/ProductGrid';
@@ -21,17 +21,20 @@ export default function ProductsPage() {
     category: categoryFromUrl,
   });
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-      const [isChatOpen, setIsChatOpen] = useState(false);
-      const [conversationId, setConversationId] = useState<number | null>(null);
-      const { user, isAuthenticated } = useAuth();
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const { user, isAuthenticated } = useAuth();
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     const categoryFromQuery = searchParams.get('category');
-    if (categoryFromQuery && categoryFromQuery !== filters.category) {
-      setFilters((f) => ({ ...f, category: categoryFromQuery }));
-    }
-  }, [searchParams, filters.category]);
+    setFilters((prevFilters) => {
+      if (categoryFromQuery !== prevFilters.category) {
+        return { ...prevFilters, category: categoryFromQuery || undefined };
+      }
+      return prevFilters;
+    });
+  }, [searchParams]);
 
   const { products, loading, error, total } = useProducts({
     page,
@@ -59,86 +62,97 @@ export default function ProductsPage() {
     return result;
   }, [products, filters, search]);
 
-  const handleCategoryChange = (value: string) => {
+  const handleCategoryChange = useCallback((value: string) => {
+    // Don't reset page when changing category to maintain scroll position
+    // setPage(1); // Remove this line to prevent jumping to top
+
+    // Update filters immediately for smooth UI
     setFilters((f) => ({ ...f, category: value || undefined }));
+
+    // Update URL without causing scroll to top
     const params = new URLSearchParams(searchParams.toString());
-    if (value) params.set('category', value);
-    else params.delete('category');
-    router.push(`/products?${params.toString()}`);
-  };
+    if (value) {
+      params.set('category', value);
+    } else {
+      params.delete('category');
+    }
+
+    // Use replace instead of push to avoid adding to history and preventing scroll
+    window.history.replaceState({}, '', `/products?${params.toString()}`);
+  }, [searchParams]);
 
   return (
     <BaseLayout>
-    {/* === Popup Layer === */}
+      {/* === Popup Layer === */}
       {isAuthenticated && user?.id && (
-          <>
-       {/* Voucher Modal */}
-        {isVoucherModalOpen && (
-                                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
-                                  <VoucherModal
-                                    customerId={user.id}
-                                    isOpen={isVoucherModalOpen}
-                                    onClose={() => setIsVoucherModalOpen(false)}
-                                  />
-                                </div>
-                              )}
-                    
-                              {/* Chat Modal */}
-                              {isChatOpen && (
-                                <ChatModal
-                                  isOpen={isChatOpen}
-                                  onClose={() => setIsChatOpen(false)}
-                                  userId={Number(user.id)}
-                                  storeId={0}
-                                  conversationId={conversationId} // ✅ truyền id xuống
-                                />
-                              )}
-                    
-                              {/* Floating Buttons */}
-                              <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
-                                {/* Voucher Button */}
-                                <button
-                                  onClick={() => setIsVoucherModalOpen(true)}
-                                  className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
-                                  title="Nhận Voucher Giảm Giá!"
-                                >
-                                  🎁
-                                </button>
-                    
-                                {/* Chat Button */}
-                                <button
-                                  onClick={async () => {
-                                    if (!isAuthenticated || !user?.id) return;
-                                    try {
-                                      console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
-                                      const created = await conversationApi.createConversation({
-                                        sender_id: Number(user.id),
-                                        sender_type: 'USER',
-                                        content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                                        user_id: Number(user.id),
-                                        store_id: 1,
-                                      });
-                    
-                                      const conv = created?.conversation || created?.data || created;
-                                      console.log('%c✅ Conversation created:', 'color:limegreen', conv);
-                                      setConversationId(conv?.id || null);
-                                      setIsChatOpen(true);
-                                    } catch (err) {
-                                      console.error('❌ Lỗi tạo conversation:', err);
-                                    }
-                                  }}
-                                  className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                                  title="Chat với Admin"
-                                >
-                                  💬
-                                </button>
-                              </div>
-                            </>
-            )}
-                    
-        <ScrollToTopButton />
-      {/* Banner */}
-      <div className="relative w-screen left-1/2 right-1/2 -mx-[50vw]">
+        <>
+          {/* Voucher Modal */}
+          {isVoucherModalOpen && (
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+              <VoucherModal
+                customerId={user.id}
+                isOpen={isVoucherModalOpen}
+                onClose={() => setIsVoucherModalOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* Chat Modal */}
+          {isChatOpen && (
+            <ChatModal
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              userId={Number(user.id)}
+              storeId={0}
+              conversationId={conversationId} // ✅ truyền id xuống
+            />
+          )}
+
+          {/* Floating Buttons */}
+          <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+            {/* Voucher Button */}
+            <button
+              onClick={() => setIsVoucherModalOpen(true)}
+              className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              title="Nhận Voucher Giảm Giá!"
+            >
+              🎁
+            </button>
+
+            {/* Chat Button */}
+            <button
+              onClick={async () => {
+                if (!isAuthenticated || !user?.id) return;
+                try {
+                  console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
+                  const created = await conversationApi.createConversation({
+                    sender_id: Number(user.id),
+                    sender_type: 'USER',
+                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                    user_id: Number(user.id),
+                    store_id: 1,
+                  });
+
+                  const conv = created?.conversation || created?.data || created;
+                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
+                  setConversationId(conv?.id || null);
+                  setIsChatOpen(true);
+                } catch (err) {
+                  console.error('❌ Lỗi tạo conversation:', err);
+                }
+              }}
+              className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+              title="Chat với Admin"
+            >
+              💬
+            </button>
+          </div>
+        </>
+      )}
+
+      <ScrollToTopButton />
+      {/* Banner - fix overflow */}
+      <div className="relative w-full overflow-x-hidden">
         <img
           src="/bg-product.jpg"
           alt="Bộ sưu tập sản phẩm"
@@ -153,17 +167,16 @@ export default function ProductsPage() {
       </div>
 
       {/* Layout chính */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col md:flex-row gap-8">
-        {/* Sidebar trái */}
-        <div className="w-full md:w-1/5">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-10 flex flex-col lg:flex-row gap-8 overflow-x-hidden">
+        {/* Sidebar trái - Improved responsive design */}
+        <div className="w-full lg:w-1/5 lg:min-w-[240px]">
           <h3 className="text-xl font-bold mb-4">Danh mục</h3>
           <ul className="space-y-2 mb-6">
             <li
-              className={`cursor-pointer px-3 py-2 rounded-lg transition ${
-                !filters.category
-                  ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
-                  : 'hover:bg-[#f7f4ef]'
-              }`}
+              className={`cursor-pointer px-3 py-2 rounded-lg transition ${!filters.category
+                ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
+                : 'hover:bg-[#f7f4ef]'
+                }`}
               onClick={() => handleCategoryChange('')}
             >
               Tất cả sản phẩm
@@ -172,11 +185,10 @@ export default function ProductsPage() {
               <li
                 key={c.id}
                 onClick={() => handleCategoryChange(c.id.toString())}
-                className={`cursor-pointer px-3 py-2 rounded-lg transition ${
-                  filters.category === c.id.toString()
-                    ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
-                    : 'hover:bg-[#f7f4ef]'
-                }`}
+                className={`cursor-pointer px-3 py-2 rounded-lg transition ${filters.category === c.id.toString()
+                  ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
+                  : 'hover:bg-[#f7f4ef]'
+                  }`}
               >
                 {c.name}
               </li>
@@ -205,7 +217,7 @@ export default function ProductsPage() {
         </div>
 
         {/* Nội dung phải */}
-        <div className="flex-1 md:w-4/5">
+        <div className="flex-1 lg:w-4/5 min-w-0">
           {/* Thanh tìm kiếm */}
           <div className="mb-6 relative">
             <input
@@ -226,13 +238,16 @@ export default function ProductsPage() {
             Hiển thị {filteredProducts.length} sản phẩm
           </div>
 
-          <ProductGrid
-            products={filteredProducts}
-            loading={loading}
-            error={error}
-            onViewDetails={(p) => router.push(`/products/${p.id}`)}
-            columns={3}
-          />
+          {/* Grid sản phẩm với smooth transition */}
+          <div className="transition-opacity duration-200 ease-in-out">
+            <ProductGrid
+              products={filteredProducts}
+              loading={loading}
+              error={error}
+              onViewDetails={(p) => router.push(`/products/${p.id}`)}
+              columns={3}
+            />
+          </div>
         </div>
       </div>
     </BaseLayout>

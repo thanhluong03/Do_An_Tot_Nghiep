@@ -21,7 +21,7 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-   // ✅ Load cart từ cookie khi reload trang
+  // ✅ Load cart từ cookie khi reload trang
   useEffect(() => {
     // Prefer sessionStorage for immediate navigation reliability
     try {
@@ -50,14 +50,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('cart_session', JSON.stringify(items));
       }
-    } catch {}
+    } catch { }
     try {
       Cookies.set('cart_session', JSON.stringify(items), { expires: 7 });
-    } catch {}
+    } catch { }
   }, [items]);
   const addItem = (product: Product, quantity: number = 1) => {
     setItems((prev) => {
-      const idx = prev.findIndex((i) => i.product.id === product.id);
+      // Compare ids as strings to avoid duplicates when id types differ (number vs string)
+      const idx = prev.findIndex((i) => String(i.product.id) === String(product.id));
       let next: CartItem[];
       if (idx >= 0) {
         next = [...prev];
@@ -66,33 +67,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
         next = [...prev, { product, quantity }];
       }
       // Persist immediately for guest checkout flows (session first, then cookie)
-      try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch {}
-      try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch {}
+      try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
+      try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
       return next;
     });
   };
 
   const removeItem = (productId: string) => {
     setItems((prev) => {
-      const next = prev.filter((i) => i.product.id !== productId);
-      try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch {}
-      try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch {}
+      const next = prev.filter((i) => String(i.product.id) !== String(productId));
+      try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
+      try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
       return next;
     });
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
     setItems((prev) => {
-      const next = prev.map((i) => i.product.id === productId ? { ...i, quantity } : i);
-      try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch {}
-      try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch {}
+      const next = prev.map((i) => String(i.product.id) === String(productId) ? { ...i, quantity } : i);
+      try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
+      try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
       return next;
     });
   };
 
   const clear = () => {
-    try { if (typeof window !== 'undefined') sessionStorage.removeItem('cart_session'); } catch {}
-    try { Cookies.remove('cart_session'); } catch {}
+    try { if (typeof window !== 'undefined') sessionStorage.removeItem('cart_session'); } catch { }
+    try { Cookies.remove('cart_session'); } catch { }
     setItems([]);
   };
 

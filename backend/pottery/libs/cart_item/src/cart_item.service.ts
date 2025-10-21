@@ -18,17 +18,32 @@ export class CartItemService {
                 return { message: 'Product not found', cartItem: null };
             }
             const quantity = data.quantity ?? 1;
-            const cartItem = await this.cartItemRepository.create({
-                product_id: data.product_id,
-                customer_id: data.customer_id,
-                store_id: data.store_id,
-                quantity,
-            });
-            return {
-                message: 'Cart item created successfully',
-                cartItem,
-            };
-        } catch (error) {
+            const existing = await this.cartItemRepository.findByCustomerProductStore(
+                data.customer_id,
+                data.product_id,
+                data.store_id
+            );
+            if (existing) {
+                const newQuantity = (existing.quantity || 0) + quantity;
+                await this.cartItemRepository.update(existing.id, { quantity: newQuantity });
+                const updated = await this.cartItemRepository.findById(existing.id);
+                return {
+                    message: 'Cart item quantity updated',
+                    cartItem: updated,
+                };
+            } else {
+                const cartItem = await this.cartItemRepository.create({
+                    product_id: data.product_id,
+                    customer_id: data.customer_id,
+                    store_id: data.store_id,
+                    quantity,
+                });
+                return {
+                    message: 'Cart item created successfully',
+                    cartItem,
+                };
+            }
+        } catch {
             return {
                 message: 'Failed to create cart item',
                 cartItem: null,

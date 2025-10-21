@@ -96,7 +96,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         await cartApi.add({
           customer_id: user.id,
           product_id: product.id,
-          store_id: selectedStoreId,
+          store_id: selectedStoreId || '',
           quantity,
         });
         alert('Đã thêm vào giỏ hàng!');
@@ -181,10 +181,46 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         <p className="text-sm text-black-500 mb-1">{product.category}</p>
         <h3 className="font-semibold text-2xl text-gray-900 mb-2">{product.name}</h3>
 
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-[#c4975a] font-semibold text-base">
+        {/* Giá sản phẩm với khuyến mãi */}
+        <div className="flex items-center gap-2 mb-4">
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="text-base text-gray-400 line-through font-semibold">
+              {formatPrice(product.originalPrice)}
+            </span>
+          )}
+          <span className={`text-lg font-bold ${product.originalPrice && product.originalPrice > product.price ? 'text-red-600' : 'text-[#c4975a]'}`}>
             {formatPrice(product.price)}
           </span>
+          {product.originalPrice && product.originalPrice > product.price && product.discount && (
+            <span className="ml-1">
+              <style>{`
+                /* Slightly smaller percent number and tighter arrows */
+                .promo-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,77,79,0.08); color: inherit; padding: 2px 6px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; border: 1px solid rgba(255,77,79,0.14); }
+                .three-arrows { display: inline-flex; flex-direction: column; gap: 0; align-items: center; justify-content: center; margin-left: 0; }
+                .arrow { width: 11px; height: 11px; color: #ff4d4f; display: inline-block; }
+                .arrow svg { width: 100%; height: 100%; display: block; }
+                /* pull arrows even closer: use more negative top margin to overlap slightly */
+                .arrow + .arrow { margin-top: -6px; }
+                @keyframes arrowDrop1 { 0% { transform: translateY(-5px); opacity: 0; } 60% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(1px); opacity: 0.8; } }
+                @keyframes arrowDrop2 { 0% { transform: translateY(-7px); opacity: 0; } 60% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(2px); opacity: 0.6; } }
+                .arrow-1 { animation: arrowDrop1 1.2s ease-in-out infinite; }
+                .arrow-2 { animation: arrowDrop2 1.2s ease-in-out 80ms infinite; }
+                .promo-percent { color: #ff4d4f; position: relative; font-size: 0.86rem; font-weight: 800; padding: 0 2px; line-height: 1; }
+              `}</style>
+
+              <span className="promo-pill" role="status" aria-label={`Giảm ${Math.round(product.discount * 100)} phần trăm`}>
+                <span className="promo-percent">{Math.round(product.discount * 100)}%</span>
+                <span className="three-arrows" aria-hidden>
+                  <span className="arrow arrow-1">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </span>
+                  <span className="arrow arrow-2">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </span>
+                </span>
+              </span>
+            </span>
+          )}
         </div>
 
         <div className="flex gap-3">
@@ -216,20 +252,19 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           </button>
         </div>
         <Modal isOpen={showOrderNow} onClose={() => setShowOrderNow(false)} title="Đặt hàng nhanh" size="full">
-          <div className="flex flex-col md:flex-row w-full">
-            {/* Ảnh lớn */}
-            <div className="flex-shrink-0 w-full md:w-[340px] flex items-center justify-center bg-[#faf7f2] p-6">
+          <div className="flex flex-col md:flex-row w-full gap-6">
+            <div className="flex-shrink-0 w-full md:w-[300px] bg-[#faf7f2] p-6 rounded-2xl flex items-center justify-center">
               <Image
                 src={displayProduct.images?.[0] || '/placeholder-product.jpg'}
                 alt={displayProduct.name}
-                className="aspect-square w-full max-w-[280px] rounded-2xl shadow-lg object-cover border border-[#f3e6d0]"
-                width={320}
-                height={320}
+                className="aspect-square w-full max-w-[240px] rounded-2xl shadow-lg object-cover border border-[#f3e6d0]"
+                width={280}
+                height={280}
                 priority
               />
             </div>
-            {/* Thông tin */}
-            <div className="flex-1 w-full p-6 md:p-8 flex flex-col justify-between min-h-[380px]">
+
+            <div className="flex-1 w-full p-6 md:p-8 flex flex-col justify-between min-h-[300px] bg-white rounded-2xl">
               {detailLoading ? (
                 <div className="text-center py-12 text-lg text-gray-500">Đang tải chi tiết sản phẩm...</div>
               ) : detailError ? (
@@ -241,25 +276,22 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                       <span className="px-3 py-1 text-xs rounded-full bg-[#f3e6d0] text-[#a3764a] font-semibold tracking-wide">{displayProduct.category || 'Gốm sứ'}</span>
                       <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-semibold">Còn hàng</span>
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-[#2C2A24] mb-2 leading-tight">{displayProduct.name}</h2>
+                    <h3 className="text-xl font-bold text-[#2C2A24] mb-2">{displayProduct.name}</h3>
                     <div className="flex items-center gap-3 mb-4">
                       {displayProduct.originalPrice && displayProduct.originalPrice > displayProduct.price && (
-                        <span className="text-base md:text-lg text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</span>
+                        <div className="text-sm text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</div>
                       )}
-                      <span className={`text-2xl md:text-3xl font-extrabold px-3 py-1 rounded-lg bg-[#fff6e5] text-red-600`}>{formatPrice(displayProduct.price)}</span>
-                      {displayProduct.isFlashSale && (
-                        <span className="text-xs md:text-sm font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full ml-1">🔥 SALE</span>
-                      )}
+                      <div className="text-lg font-extrabold text-[#2C2A24]">{formatPrice(displayProduct.price)}</div>
                       {displayProduct.discount && (
-                        <span className="text-xs md:text-sm font-bold text-[#c4975a] bg-[#f7e7c2] px-2 py-0.5 rounded-full ml-1">Giảm {Math.round(displayProduct.discount * 100)}%</span>
+                        <div className="text-sm text-[#a3764a]">Giảm {Math.round(displayProduct.discount * 100)}%</div>
                       )}
                     </div>
-                    {/* Chọn cửa hàng còn hàng */}
+
                     <div className="mb-4">
-                      <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng còn hàng</div>
+                      <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng</div>
                       <div className="space-y-2">
-                        {stores.filter(store => store.quantity_stock > 0).map((store) => (
-                          <label key={store.store_id} className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all shadow-sm ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#f5e6d6]' : 'border-gray-200 bg-white'}`}>
+                        {stores.map((store) => (
+                          <label key={store.store_id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#fdf7ee]' : 'border-gray-100 bg-white'}`}>
                             <input
                               type="radio"
                               name="store"
@@ -267,38 +299,55 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                               onChange={() => setSelectedStoreId(store.store_id)}
                               className="accent-[#c4975a]"
                             />
-                            <div>
+                            <div className="flex-1">
                               <div className="font-semibold text-base text-[#2C2A24]">{store.store_name || 'Cửa hàng'}</div>
-                              <div className="text-xs text-green-600">Còn: {store.quantity_stock} sản phẩm</div>
+                              <div className="text-sm text-gray-500">{store.store_address}</div>
                             </div>
+                            <div className={`text-xs font-semibold ${store.quantity_stock > 0 ? 'text-green-600' : 'text-gray-400'}`}>{store.quantity_stock > 0 ? `Còn ${store.quantity_stock}` : 'Hết hàng'}</div>
                           </label>
                         ))}
                       </div>
                     </div>
-                    {/* Chọn số lượng */}
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="font-semibold text-[#2C2A24] text-base">Số lượng:</span>
-                      <div className="flex items-center border-2 border-[#f3e6d0] rounded-xl bg-white shadow">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">−</button>
+
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className="font-semibold">Số lượng</span>
+                      <div className="flex items-center border rounded-xl bg-white shadow-sm">
+                        <button aria-label="Giảm" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-3 py-2 text-xl font-bold text-[#c4975a]">−</button>
                         <input
                           type="number"
                           value={quantity}
                           onChange={e => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-                          className="w-14 text-center border-x outline-none text-base font-semibold"
+                          className="w-20 text-center border-x outline-none text-base font-semibold"
                           min={1}
                         />
-                        <button onClick={() => setQuantity(q => q + 1)} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">+</button>
+                        <button aria-label="Tăng" onClick={() => setQuantity(q => q + 1)} className="px-3 py-2 text-xl font-bold text-[#c4975a]">+</button>
                       </div>
                     </div>
                   </div>
-                  {/* Nút đặt hàng */}
-                  <div className="w-full flex justify-end">
-                    <button
-                      onClick={handleOrderNowConfirm}
-                      className="w-full md:w-auto px-10 py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-xl text-lg font-extrabold shadow transition-all tracking-wider"
-                    >
-                      Đặt hàng ngay
-                    </button>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div>
+                      <div className="text-sm text-gray-500">Tổng</div>
+                      <div className="text-lg font-extrabold">{formatPrice((displayProduct.price || 0) * quantity)}</div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowOrderNow(false)}
+                        className="px-5 py-2 border rounded-lg text-sm font-semibold bg-white hover:bg-[#fffaf5]"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        onClick={() => {
+                          const sel = stores.find((s) => s.store_id === selectedStoreId);
+                          if (!sel || (sel.quantity_stock ?? 0) < quantity) return alert('Số lượng không đủ trong cửa hàng.');
+                          handleOrderNowConfirm();
+                        }}
+                        className="px-6 py-2 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg font-bold"
+                      >
+                        Đặt hàng ngay
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -307,20 +356,19 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         </Modal>
         {/* Popup thêm giỏ hàng, giống popup đặt hàng */}
         <Modal isOpen={showAddCart} onClose={() => setShowAddCart(false)} title="Thêm vào giỏ hàng" size="full">
-          <div className="flex flex-col md:flex-row w-full">
-            {/* Ảnh lớn */}
-            <div className="flex-shrink-0 w-full md:w-[340px] flex items-center justify-center bg-[#faf7f2] p-6">
+          <div className="flex flex-col md:flex-row w-full gap-6">
+            <div className="flex-shrink-0 w-full md:w-[300px] bg-[#faf7f2] p-6 rounded-2xl flex items-center justify-center">
               <Image
                 src={displayProduct.images?.[0] || '/placeholder-product.jpg'}
                 alt={displayProduct.name}
-                className="aspect-square w-full max-w-[280px] rounded-2xl shadow-lg object-cover border border-[#f3e6d0]"
-                width={320}
-                height={320}
+                className="aspect-square w-full max-w-[240px] rounded-2xl shadow-lg object-cover border border-[#f3e6d0]"
+                width={280}
+                height={280}
                 priority
               />
             </div>
-            {/* Thông tin */}
-            <div className="flex-1 w-full p-6 md:p-8 flex flex-col justify-between min-h-[380px]">
+
+            <div className="flex-1 w-full p-6 md:p-8 flex flex-col justify-between min-h-[300px] bg-white rounded-2xl">
               {detailLoading ? (
                 <div className="text-center py-12 text-lg text-gray-500">Đang tải chi tiết sản phẩm...</div>
               ) : detailError ? (
@@ -332,25 +380,22 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                       <span className="px-3 py-1 text-xs rounded-full bg-[#f3e6d0] text-[#a3764a] font-semibold tracking-wide">{displayProduct.category || 'Gốm sứ'}</span>
                       <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 font-semibold">Còn hàng</span>
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-[#2C2A24] mb-2 leading-tight">{displayProduct.name}</h2>
+                    <h3 className="text-xl font-bold text-[#2C2A24] mb-2">{displayProduct.name}</h3>
                     <div className="flex items-center gap-3 mb-4">
                       {displayProduct.originalPrice && displayProduct.originalPrice > displayProduct.price && (
-                        <span className="text-base md:text-lg text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</span>
+                        <div className="text-sm text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</div>
                       )}
-                      <span className={`text-2xl md:text-3xl font-extrabold px-3 py-1 rounded-lg bg-[#fff6e5] text-red-600`}>{formatPrice(displayProduct.price)}</span>
-                      {displayProduct.isFlashSale && (
-                        <span className="text-xs md:text-sm font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full ml-1">🔥 SALE</span>
-                      )}
+                      <div className="text-lg font-extrabold text-[#2C2A24]">{formatPrice(displayProduct.price)}</div>
                       {displayProduct.discount && (
-                        <span className="text-xs md:text-sm font-bold text-[#c4975a] bg-[#f7e7c2] px-2 py-0.5 rounded-full ml-1">Giảm {Math.round(displayProduct.discount * 100)}%</span>
+                        <div className="text-sm text-[#a3764a]">Giảm {Math.round(displayProduct.discount * 100)}%</div>
                       )}
                     </div>
-                    {/* Chọn cửa hàng còn hàng */}
+
                     <div className="mb-4">
-                      <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng còn hàng</div>
+                      <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng</div>
                       <div className="space-y-2">
-                        {stores.filter(store => store.quantity_stock > 0).map((store) => (
-                          <label key={store.store_id} className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all shadow-sm ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#f5e6d6]' : 'border-gray-200 bg-white'}`}>
+                        {stores.map((store) => (
+                          <label key={store.store_id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#fdf7ee]' : 'border-gray-100 bg-white'}`}>
                             <input
                               type="radio"
                               name="store"
@@ -358,39 +403,52 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                               onChange={() => setSelectedStoreId(store.store_id)}
                               className="accent-[#c4975a]"
                             />
-                            <div>
+                            <div className="flex-1">
                               <div className="font-semibold text-base text-[#2C2A24]">{store.store_name || 'Cửa hàng'}</div>
-                              <div className="text-xs text-green-600">Còn: {store.quantity_stock} sản phẩm</div>
+                              <div className="text-sm text-gray-500">{store.store_address}</div>
                             </div>
+                            <div className={`text-xs font-semibold ${store.quantity_stock > 0 ? 'text-green-600' : 'text-gray-400'}`}>{store.quantity_stock > 0 ? `Còn ${store.quantity_stock}` : 'Hết hàng'}</div>
                           </label>
                         ))}
                       </div>
                     </div>
-                    {/* Chọn số lượng */}
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="font-semibold text-[#2C2A24] text-base">Số lượng:</span>
-                      <div className="flex items-center border-2 border-[#f3e6d0] rounded-xl bg-white shadow">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">−</button>
+
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className="font-semibold">Số lượng</span>
+                      <div className="flex items-center border rounded-xl bg-white shadow-sm">
+                        <button aria-label="Giảm" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-3 py-2 text-xl font-bold text-[#c4975a]">−</button>
                         <input
                           type="number"
                           value={quantity}
                           onChange={e => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-                          className="w-14 text-center border-x outline-none text-base font-semibold"
+                          className="w-20 text-center border-x outline-none text-base font-semibold"
                           min={1}
                         />
-                        <button onClick={() => setQuantity(q => q + 1)} className="px-4 py-1 text-xl font-bold text-[#c4975a] hover:text-[#a3764a]">+</button>
+                        <button aria-label="Tăng" onClick={() => setQuantity(q => q + 1)} className="px-3 py-2 text-xl font-bold text-[#c4975a]">+</button>
                       </div>
                     </div>
                   </div>
-                  {/* Nút thêm giỏ hàng */}
-                  <div className="w-full flex justify-end">
-                    <button
-                      onClick={handleAddCartConfirm}
-                      className="w-full md:w-auto px-10 py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-xl text-lg font-extrabold shadow transition-all tracking-wider"
-                      disabled={loading}
-                    >
-                      {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}
-                    </button>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div>
+                      <div className="text-sm text-gray-500">Tổng</div>
+                      <div className="text-lg font-extrabold">{formatPrice((displayProduct.price || 0) * quantity)}</div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowAddCart(false)}
+                        className="px-5 py-2 border rounded-lg text-sm font-semibold bg-white hover:bg-[#fffaf5]"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        onClick={handleAddCartConfirm}
+                        disabled={loading}
+                        className="px-6 py-2 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg font-bold"
+                      >
+                        {loading ? 'Đang thêm...' : 'Thêm vào giỏ'}
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
