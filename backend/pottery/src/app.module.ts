@@ -43,6 +43,8 @@ import { ImportProductModule } from '@app/import_product';
 import { ConversationModule } from './conversation/conversation.module';
 import { DeliveryProofController } from './delivery_proof/delivery_proof.controller';
 import { DeliveryProofModule } from '@app/delivery_proof';
+import { MailController } from './mail/mail.controller';
+import { SendMailModule } from '@app/send_mail';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -68,13 +70,15 @@ import { DeliveryProofModule } from '@app/delivery_proof';
     PaymenttransactionModule,
     ImportProductModule,
     ConversationModule,
-    DeliveryProofModule
+    DeliveryProofModule,
+    SendMailModule
   ],
   controllers: [
     AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
     UserController, ReviewController, PromotionController, VoucherController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
     PaymentTransactionController, ImportProductController, DeliveryProofController,
-    AdminLoginController
+    AdminLoginController,
+    MailController
   ],
   providers: [AppService],
 })

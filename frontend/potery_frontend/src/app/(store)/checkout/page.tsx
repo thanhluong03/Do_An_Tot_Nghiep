@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { BaseLayout } from '../../../layouts';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useCart } from '../../../contexts/CartContext';
 import { orderApi } from '../../../api/modules/orders';
 import { paymentApi } from '../../../api/modules/payments';
+import { mailApi } from '../../../api/modules/mail';
 import { formatPrice } from '../../../utils/format';
 import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
@@ -20,7 +21,6 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
   // Guest info
   const [guestName, setGuestName] = useState('');
@@ -55,6 +55,39 @@ export default function CheckoutPage() {
     });
     return map;
   }, [items]);
+
+  // Function để gửi email xác nhận đơn hàng
+  const sendOrderConfirmationEmail = useCallback(async (orderId: number) => {
+    try {
+      // Lấy email khách hàng
+      let customerEmail = '';
+
+      if (isAuthenticated && user?.email) {
+        customerEmail = user.email;
+      } else {
+        // Với khách hàng guest, lấy email từ localStorage hoặc state hiện tại
+        const storedEmail = localStorage.getItem('guest_email');
+        customerEmail = storedEmail || guestEmail.trim() || `guest_${Date.now()}@example.com`;
+      }
+
+      console.log('🔄 Đang gửi email xác nhận đơn hàng tới:', customerEmail);
+
+      // Gửi email xác nhận đơn hàng
+      await mailApi.sendOrderMail({
+        to: customerEmail,
+        orderId: orderId,
+      });
+
+      console.log('✅ Email xác nhận đơn hàng đã được gửi thành công tới:', customerEmail);
+      toast.success('📧 Email xác nhận đơn hàng đã được gửi!');
+    } catch (error) {
+      console.error('❌ Lỗi gửi email:', error);
+      console.error('❌ Chi tiết lỗi:', error);
+      // Không throw error để không làm gián đoạn flow đặt hàng
+      toast.error('⚠️ Có lỗi khi gửi email xác nhận');
+    }
+  }, [isAuthenticated, user?.email, guestEmail]);
+
   async function handleGuestCheckout(customerInfo: any) {
     const savedCart = Cookies.get('cart_session');
     if (!savedCart) {
@@ -276,178 +309,126 @@ export default function CheckoutPage() {
 
   /** ===================== TẠO ĐƠN HÀNG ===================== */
   const handleCreate = async () => {
-  if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
-  const cartItems = serverItems.length > 0 ? serverItems : items;
-  if (!cartItems.length) return setError('❌ Giỏ hàng trống');
-  if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
+    if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
+    const cartItems = serverItems.length > 0 ? serverItems : items;
+    if (!cartItems.length) return setError('❌ Giỏ hàng trống');
+    if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
 
-  setCreating(true);
-  setError(null);
+    setCreating(true);
+    setError(null);
 
-  try {
-    let customerId: number | null = null;
-    const authType = localStorage.getItem('auth_type');
-    const storedGuestId = localStorage.getItem('guest_id');
 
-    // ✅ Nếu user thật (đã đăng nhập)
-    if (isAuthenticated && authType === 'user' && user?.id) {
-      customerId = Number(user.id);
-    } 
-    // ✅ Nếu là guest
-    else {
-      if (storedGuestId) {
-        customerId = Number(storedGuestId);
-      } else {
-        if (!guestName.trim() || !guestPhone.trim()) {
-          throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
+    try {
+      let customerId: number | null = null;
+      const authType = localStorage.getItem('auth_type');
+      const storedGuestId = localStorage.getItem('guest_id');
+
+      // ✅ Nếu user thật (đã đăng nhập)
+      if (isAuthenticated && authType === 'user') {
+        // Lấy customerId từ localStorage (được lưu khi đăng nhập)
+        const storedCustomerId = localStorage.getItem('customerId');
+        if (storedCustomerId) {
+          customerId = Number(storedCustomerId);
+        } else {
+          throw new Error('Không tìm thấy customerId. Vui lòng đăng xuất và đăng nhập lại.');
         }
-
-        const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
-        const created = await customersApi.createCustomer({
-          username: `guest_${Date.now()}`,
-          password: `guest-${Math.random().toString(36).slice(2)}`,
-          full_name: guestName.trim(),
-          email: fallbackEmail,
-          phone_number: guestPhone.trim(),
-          address: address.trim(),
-        });
-
-        customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
-        if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
-
-        // 🧩 Lưu thông tin guest để lần sau dùng lại
-        localStorage.setItem('guest_id', String(customerId));
-        localStorage.setItem('guest_name', guestName.trim());
-        localStorage.setItem('guest_phone', guestPhone.trim());
-        localStorage.setItem('guest_email', fallbackEmail);
-        localStorage.setItem('auth_type', 'guest');
       }
-    }
+      // ✅ Nếu là guest
+      else {
+        if (storedGuestId) {
+          customerId = Number(storedGuestId);
+        } else {
+          if (!guestName.trim() || !guestPhone.trim()) {
+            throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
+          }
 
-    // ✅ Build payload sau khi có customerId
-    const totalBeforeDiscount = total;
-    const totalAfterDiscount = finalTotal;
-    const discount = totalBeforeDiscount - totalAfterDiscount;
-
-    const payloadItems = cartItems.map(ci => {
-      const pid = 'product_id' in ci ? Number((ci as any).product_id) : Number((ci as any).product?.id ?? 0);
-      const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
-      const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
-      const discountedPrice = basePrice - (share * discount) / ci.quantity;
-      const storeId = 'store_id' in ci ? Number((ci as any).store_id) : 1;
-
-      return {
-        product_id: pid,
-        quantity: ci.quantity,
-        price_at_order: Math.round(discountedPrice),
-        store_id: Number(storeId),
-      };
-    });
-
-    const payload = {
-      customer_id: customerId,
-      shipping_address: address,
-      voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
-      payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-      items: payloadItems,
-      total_amount: totalAfterDiscount,
-      discount_amount: discount,
-      original_amount: totalBeforeDiscount,
-    };
-
-    console.log('📦 Gửi đơn hàng:', payload);
-
-    const res = await orderApi.createOrder(payload);
-    const createdId = Number(res?.data?.id ?? res?.id);
-
-    if (!createdId) {
-      const backendMsg = res?.data?.error || res?.data?.message || 'Không lấy được ID đơn hàng';
-      throw new Error(backendMsg);
-    }
-
-    setOrderId(createdId);
-
-    if (paymentMethod === 'VNPAY') {
-      await handlePayment(createdId, totalAfterDiscount);
-    } else {
-      clearCart();
-      try {
-        sessionStorage.removeItem('cart_session');
-        Cookies.remove('cart_session');
-      } catch {}
-      window.location.href = '/orders';
-    }
-  } catch (e: any) {
-    const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng';
-    setError(msg);
-    toast.error(msg);
-  } finally {
-    setCreating(false);
-  }
-};
-
-
-  /** ===================== CHECK PAYMENT RETURN ===================== */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment');
-    const orderId = params.get('order_id');
-
-    if (paymentStatus === 'success' && orderId) {
-      (async () => {
-        try {
-          // ... (Giữ nguyên logic cập nhật API và clearCart) ...
-          await orderApi.updateOrder(Number(orderId), {
-            status: 'CONFIRMED',
-            payment_status: 'PAID',
-          });
-          clearCart();
-
-          // 1. GỌI TOAST TRƯỚC HẾT
-          toast.success('🎉 Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.', {
-            duration: 4000,
-            position: 'top-right',
-            style: {
-              border: '2px solid #22c55e',
-              padding: '16px',
-              color: '#166534',
-              fontWeight: '600',
-              borderRadius: '10px',
-              background: '#dcfce7',
-            },
+          const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
+          const created = await customersApi.createCustomer({
+            username: `guest_${Date.now()}`,
+            password: `guest-${Math.random().toString(36).slice(2)}`,
+            full_name: guestName.trim(),
+            email: fallbackEmail,
+            phone_number: guestPhone.trim(),
+            address: address.trim(),
           });
 
-          // 2. XÓA QUERY NGAY LẬP TỨC ĐỂ NGĂN useEffect LẶP LẠI
-          window.history.replaceState({}, '', '/orders');
+          customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
+          if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
 
-          // 3. THIẾT LẬP TIMEOUT CHO VIỆC CHUYỂN HƯỚNG CỨNG (NẾU CẦN)
-          // Nếu bạn muốn người dùng thấy thông báo trên trang Orders sau khi chuyển
-          // thì không cần chuyển hướng cứng nữa vì đã replaceState ở bước 2.
-          // NHƯNG nếu bạn muốn chuyển đến trang /orders SAU KHI thấy toast, hãy dùng setTimeout.
-          // Giữ nguyên setTimeout để cho phép người dùng thấy toast
-          setTimeout(() => {
-            window.location.href = '/orders'; // Chuyển hướng cứng để tải lại trang Orders
-          }, 2000);
-
-        } catch (err) {
-          console.error('❌ Lỗi cập nhật trạng thái đơn hàng sau thanh toán:', err);
-          toast.error('Không thể cập nhật trạng thái đơn hàng.', {
-            position: 'top-right',
-          });
-          // Quan trọng: Nếu lỗi, xóa query và quay lại /checkout để người dùng thử lại
-          window.history.replaceState({}, '', '/checkout');
+          // 🧩 Lưu thông tin guest để lần sau dùng lại
+          localStorage.setItem('guest_id', String(customerId));
+          localStorage.setItem('guest_name', guestName.trim());
+          localStorage.setItem('guest_phone', guestPhone.trim());
+          localStorage.setItem('guest_email', fallbackEmail);
+          localStorage.setItem('auth_type', 'guest');
         }
-      })();
-      // THÊM DÒNG NÀY: Dọn dẹp query param ngay lập tức (trước khi async/await kết thúc)
-      // Tùy chọn, vì nó đã có trong logic async ở trên, nhưng có thể giúp ngăn race condition
-      window.history.replaceState({}, '', '/orders');
-    } else if (paymentStatus === 'failed') {
-      toast.error('❌ Thanh toán thất bại, vui lòng thử lại!', {
-        position: 'top-right',
+      }
+
+      // ✅ Build payload sau khi có customerId
+      const totalBeforeDiscount = total;
+      const totalAfterDiscount = finalTotal;
+      const discount = totalBeforeDiscount - totalAfterDiscount;
+
+      const payloadItems = cartItems.map(ci => {
+        const pid = 'product_id' in ci ? Number((ci as any).product_id) : Number((ci as any).product?.id ?? 0);
+        const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
+        const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
+        const discountedPrice = basePrice - (share * discount) / ci.quantity;
+        const storeId = 'store_id' in ci ? Number((ci as any).store_id) : 1;
+
+        return {
+          product_id: pid,
+          quantity: ci.quantity,
+          price_at_order: Math.round(discountedPrice),
+          store_id: Number(storeId),
+        };
       });
-      window.history.replaceState({}, '', '/checkout');
+
+      const payload = {
+        customer_id: customerId,
+        shipping_address: address,
+        voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
+        payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
+        items: payloadItems,
+        total_amount: totalAfterDiscount,
+        discount_amount: discount,
+        original_amount: totalBeforeDiscount,
+      };
+
+      console.log('📦 Gửi đơn hàng:', payload);
+
+      const res = await orderApi.createOrder(payload);
+      const createdId = Number(res?.data?.id ?? res?.id);
+
+      if (!createdId) {
+        const backendMsg = res?.data?.error || res?.data?.message || 'Không lấy được ID đơn hàng';
+        throw new Error(backendMsg);
+      }
+
+      if (paymentMethod === 'VNPAY') {
+        // Với VNPay, chỉ chuyển hướng thanh toán, email sẽ được gửi từ backend nếu là guest
+        await handlePayment(createdId, totalAfterDiscount);
+      } else {
+        // Với COD, chỉ gửi email cho guest, user đăng nhập không cần email
+        if (!isAuthenticated) {
+          await sendOrderConfirmationEmail(createdId);
+        }
+        clearCart();
+        try {
+          sessionStorage.removeItem('cart_session');
+          Cookies.remove('cart_session');
+        } catch { }
+        window.location.href = '/orders';
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setCreating(false);
     }
-  }, []);
+  };
+
 
   /** ===================== LOAD ORDERS ===================== */
   useEffect(() => {

@@ -19,6 +19,8 @@ import {
 } from './paymenttransaction.dto';
 import { PaymentTransactionRepository } from '../../libs/database/src/repositories/paymenttransaction.repository';
 import { OrderRepository } from '../../libs/database/src/repositories/order.repository';
+import { CustomerRepository } from '@app/database';
+import { SendMailService } from '@app/send_mail';
 import * as crypto from 'crypto';
 
 @Controller('paymenttransaction')
@@ -29,6 +31,9 @@ export class PaymentTransactionController {
         private readonly paymentTransactionRepo: PaymentTransactionRepository,
         @Inject(OrderRepository)
         private readonly orderRepository: OrderRepository,
+        @Inject(CustomerRepository)
+        private readonly customerRepository: CustomerRepository,
+        private readonly sendMailService: SendMailService,
     ) { }
 
     @Post('vnpay')
@@ -54,7 +59,7 @@ export class PaymentTransactionController {
     async vnpayCallback(
         @Query() query: Record<string, string>,
         @Res() res: Response,
-        
+
 
     ) {
         try {
@@ -130,25 +135,47 @@ export class PaymentTransactionController {
             });
 
             if (status === 'SUCCESS' && order_id) {
-            const order = await this.orderRepository.findById(order_id);
+                const order = await this.orderRepository.findById(order_id);
                 if (order) {
-                order.payment_status = PaymentStatus.PAID;
-                order.status = OrderStatus.CONFIRMED; // use OrderStatus enum instead of string literal
-                order.current_order = order.current_order
-                ? { ...order.current_order, payment_status: PaymentStatus.PAID }
-                : { payment_status: PaymentStatus.PAID };
+                    order.payment_status = PaymentStatus.PAID;
+                    order.status = OrderStatus.CONFIRMED; // use OrderStatus enum instead of string literal
+                    order.current_order = order.current_order
+                        ? { ...order.current_order, payment_status: PaymentStatus.PAID }
+                        : { payment_status: PaymentStatus.PAID };
 
-                await this.orderRepository.save(order);
+                    await this.orderRepository.save(order);
 
-                console.log(`[VNPAY] ✅ Order #${order_id} marked as PAID`);
-                return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=success&order_id=${order_id}`);
+                    console.log(`[VNPAY] ✅ Order #${order_id} marked as PAID`);
+
+                    // 🔥 CHỈ GỬI EMAIL CHO KHÁCH GUEST (CHƯA ĐĂNG NHẬP)
+                    try {
+                        const customer = await this.customerRepository.findById(order.customer_id);
+
+                        // Kiểm tra nếu là guest customer (username bắt đầu với "guest_")
+                        if (customer && customer.username && customer.username.startsWith('guest_')) {
+                            const customerEmail = customer.email || `order_${order_id}@pottery.com`;
+
+                            await this.sendMailService.sendOrderConfirmationMail({
+                                to: customerEmail,
+                                orderId: order_id,
+                            });
+
+                            console.log(`[VNPAY] 📧 Email sent to guest: ${customerEmail} for order #${order_id}`);
+                        } else {
+                            console.log(`[VNPAY] 👤 Registered customer - no email sent for order #${order_id}`);
+                        }
+                    } catch (emailError) {
+                        console.error(`[VNPAY] ❌ Email failed for order #${order_id}:`, emailError);
+                    }
+
+                    return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=success&order_id=${order_id}`);
+                } else {
+                    console.warn(`[VNPAY] ⚠️ Order #${order_id} not found`);
+                    return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
+                }
             } else {
-                console.warn(`[VNPAY] ⚠️ Order #${order_id} not found`);
+                console.log(`[VNPAY] ❌ Payment failed for order #${order_id}`);
                 return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
-            }
-            } else {
-            console.log(`[VNPAY] ❌ Payment failed for order #${order_id}`);
-            return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
             }
 
 

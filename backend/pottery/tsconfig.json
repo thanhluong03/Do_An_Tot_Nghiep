@@ -37,6 +37,12 @@
       "@app/common/*": [
         "libs/common/src/*"
       ],
+      "@app/conversation": [
+        "libs/conversation/src"
+      ],
+      "@app/conversation/*": [
+        "libs/conversation/src/*"
+      ],
       "@app/customer": [
         "libs/customer/src"
       ],
@@ -48,6 +54,12 @@
       ],
       "@app/database/*": [
         "libs/database/src/*"
+      ],
+      "@app/delivery_proof": [
+        "libs/delivery_proof/src"
+      ],
+      "@app/delivery_proof/*": [
+        "libs/delivery_proof/src/*"
       ],
       "@app/import_product": [
         "libs/import_product/src"
@@ -139,17 +151,11 @@
       "@app/voucher/*": [
         "libs/voucher/src/*"
       ],
-      "@app/delivery_proof": [
-        "libs/delivery_proof/src"
+      "@app/send_mail": [
+        "libs/send_mail/src"
       ],
-      "@app/delivery_proof/*": [
-        "libs/delivery_proof/src/*"
-      ],
-      "@app/conversation": [
-        "libs/conversation/src"
-      ],
-      "@app/conversation/*": [
-        "libs/conversation/src/*"
+      "@app/send_mail/*": [
+        "libs/send_mail/src/*"
       ]
     }
   }
