@@ -1,102 +1,110 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { userApi } from '../../../api/modules/users';
+// import { userApi } from '../../../api/modules/users'; // 🔥 KHÔNG CẦN NỮA
 import { useRouter } from 'next/navigation';
 import { BaseLayout } from '@/layouts';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, ScrollToTopButton } from '@/components/feature';
 import { useAuth } from '@/contexts/AuthContext';
+import { userApi } from '@/api/modules/users'; // 🔥 VẪN CẦN CHO LOGOUT VÀ UPDATE
 
 interface Customer {
-  id?: number | string;
-  full_name?: string;
-  email: string;
-  phone_number?: string;
-  address?: string;
-  avatar_image?: string | null;
-  created_at?: string;
+  id?: number | string;
+  full_name?: string;
+  email: string;
+  phone_number?: string;
+  address?: string;
+  avatar_image?: string | null;
+  created_at?: string;
 }
 
 export default function ProfilePage() {
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<Customer>>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const router = useRouter();
-  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-        const [isChatOpen, setIsChatOpen] = useState(false);
-        const [conversationId, setConversationId] = useState<number | null>(null);
-        const { user, isAuthenticated } = useAuth();
-  useEffect(() => {
-    const fetchCustomer = async () => {
-      try {
-        const user = await userApi.getCurrentUser();
-        setCustomer(user);
-        setFormData(user);
-      } catch (err) {
-        console.error('Failed to fetch user:', err);
-        setCustomer(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCustomer();
-  }, []);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState<Partial<Customer>>({});
+  // const [loading, setLoading] = useState(true); // 🔥 KHÔNG DÙNG STATE LOADING RIÊNG
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  
+  // 🔥 LẤY STATE TỪ CONTEXT (Đổi tên 'loading' thành 'authLoading' để tránh trùng lặp)
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      await userApi.logout();
-    } catch (e) {
-      console.warn('Logout failed:', e);
-    }
-    router.push('/login');
-  };
+  // 🔥 THAY THẾ HOÀN TOÀN useEffect CŨ BẰNG ĐOẠN NÀY
+  useEffect(() => {
+    // Nếu context còn đang tải, chúng ta không làm gì cả
+    if (authLoading) {
+      return;
+    }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    // Nếu context đã tải xong VÀ user đã đăng nhập
+    if (isAuthenticated && user) {
+      // ✅ Đồng bộ 'user' từ context vào state của trang
+      setCustomer(user as Customer);
+      setFormData(user as Customer);
+    } else {
+      // Nếu context đã tải xong VÀ không có user (hoặc đã logout)
+      setCustomer(null);
+    }
+  }, [user, isAuthenticated, authLoading]); // Phụ thuộc vào state từ context
 
-  const handleSave = async () => {
-    if (!customer) return;
-    setSaving(true);
-    try {
-      const res = await userApi.updateProfile(formData as any);
-      setCustomer(res);
-      setFormData(res);
-      setEditing(false);
-      alert('✅ Cập nhật thông tin thành công!');
-    } catch (err) {
-      console.error('Update failed:', err);
-      alert('❌ Cập nhật thất bại. Vui lòng thử lại.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleLogout = async () => {
+    await logout(); // 🔥 Dùng hàm logout từ context
+    // router.push('/login'); // Hàm logout trong context đã xử lý việc chuyển trang
+  };
 
-  if (loading)
-    return (
-      <BaseLayout>
-        <div className="text-center text-gray-600 py-20 animate-pulse">Đang tải...</div>
-      </BaseLayout>
-    );
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  if (!customer)
-    return (
-      <BaseLayout>
-        <div className="text-center py-20">
-          <p className="text-gray-600">Không tìm thấy thông tin người dùng.</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="mt-4 px-6 py-2 bg-[#65604E] text-white rounded-lg"
-          >
-            Đăng nhập lại
-          </button>
-        </div>
-      </BaseLayout>
-    );
+  const handleSave = async () => {
+    if (!customer) return;
+    setSaving(true);
+    try {
+      // API update vẫn giữ nguyên
+      const res = await userApi.updateProfile(formData as any); 
+      setCustomer(res);
+      setFormData(res);
+      setEditing(false);
+      alert('✅ Cập nhật thông tin thành công!');
+      // Có thể bạn muốn gọi refreshUser() từ context ở đây
+    } catch (err) {
+      console.error('Update failed:', err);
+      alert('❌ Cập nhật thất bại. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 🔥 DÙNG 'authLoading' ĐỂ KIỂM TRA
+  if (authLoading)
+    return (
+      <BaseLayout>
+        <div className="text-center text-gray-600 py-20 animate-pulse">Đang tải...</div>
+      </BaseLayout>
+    );
+
+  // Sau khi hết loading, nếu không có customer (do !isAuthenticated)
+  if (!customer)
+    return (
+      <BaseLayout>
+        <div className="text-center py-20">
+          <p className="text-gray-600">Không tìm thấy thông tin người dùng.</p>
+          <button
+            onClick={() => router.push('/login')}
+            className="mt-4 px-6 py-2 bg-[#65604E] text-white rounded-lg"
+          >
+            Đăng nhập
+          </button>
+        </div>
+      </BaseLayout>
+    );
+
+  // Nếu vượt qua 2 kiểm tra trên, 'customer' chắc chắn có dữ liệu
 
   return (
     <BaseLayout>

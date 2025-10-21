@@ -14,6 +14,7 @@ import { voucherApi, Voucher } from '../../../api/modules/voucher';
 import { customersApi } from '../../../api/modules/customers';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
+
 export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
   const { items, clear: clearCart } = useCart();
@@ -22,6 +23,7 @@ export default function CheckoutPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
+  
   // Guest info
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -55,6 +57,23 @@ export default function CheckoutPage() {
     });
     return map;
   }, [items]);
+
+  // 🧹 Function để xóa sạch thông tin guest
+  const clearGuestData = useCallback(() => {
+    console.log('🧹 Xóa sạch thông tin guest...');
+    localStorage.removeItem('guest_id');
+    localStorage.removeItem('guest_name');
+    localStorage.removeItem('guest_phone');
+    localStorage.removeItem('guest_email');
+    localStorage.removeItem('auth_type');
+    
+    // Reset state về rỗng
+    setGuestName('');
+    setGuestEmail('');
+    setGuestPhone('');
+    
+    console.log('✅ Đã xóa sạch thông tin guest');
+  }, []);
 
   // Function để gửi email xác nhận đơn hàng
   const sendOrderConfirmationEmail = useCallback(async (orderId: number) => {
@@ -119,17 +138,28 @@ export default function CheckoutPage() {
       alert('Đặt hàng thất bại!');
     }
   }
-  /** ===================== LOAD CART & VOUCHERS ===================== */
+
   /** ===================== LOAD CART & VOUCHERS ===================== */
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoadingCart(true);
       try {
+        // 🔥 NẾU NGƯỜI DÙNG THẬT ĐĂNG NHẬP → XÓA THÔNG TIN GUEST CŨ
+        if (isAuthenticated && user?.id) {
+          const authType = localStorage.getItem('auth_type');
+          if (authType !== 'user') {
+            console.log('🧹 Phát hiện user thật đăng nhập → Xóa thông tin guest cũ');
+            clearGuestData();
+            localStorage.setItem('auth_type', 'user');
+          }
+        }
+        
         const params = new URLSearchParams(window.location.search);
         const productId = params.get('productId');
         const storeId = params.get('storeId');
         const quantity = params.get('quantity');
+        
         // Nếu có đủ 3 param → ưu tiên hiển thị đơn hàng mua ngay
         if (productId && storeId && quantity) {
           const detail = await productApi.getProductById(productId);
@@ -152,7 +182,8 @@ export default function CheckoutPage() {
           setLoadingCart(false);
           return;
         }
-        // ...existing code for cart/session/cookie...
+        
+        // Load cart cho user đã đăng nhập
         if (isAuthenticated && user?.id) {
           const data = await cartApi.getByCustomer(user.id as string);
           const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
@@ -163,7 +194,7 @@ export default function CheckoutPage() {
           }));
           setServerItems(mapped);
         } else {
-          // ...existing code for guest cart...
+          // Load cart cho guest
           let localItems: any[] | null = null;
           try {
             if (typeof window !== 'undefined') {
@@ -171,10 +202,12 @@ export default function CheckoutPage() {
               if (ss) localItems = JSON.parse(ss);
             }
           } catch { }
+          
           if (!localItems) {
             const saved = Cookies.get('cart_session');
             if (saved) localItems = JSON.parse(saved);
           }
+          
           if (localItems) {
             const mapped = await Promise.all(
               localItems.map(async (i: any, idx: number) => {
@@ -199,7 +232,7 @@ export default function CheckoutPage() {
           }
         }
 
-        /** 🔥 THÊM MỚI — TẢI DANH SÁCH VOUCHER NGƯỜI DÙNG CÓ */
+        /** 🔥 TẢI DANH SÁCH VOUCHER */
         setLoadingVouchers(true);
         let vouchers: Voucher[] = [];
 
@@ -228,9 +261,7 @@ export default function CheckoutPage() {
     })();
 
     return () => { mounted = false; };
-  }, [isAuthenticated, user?.id]);
-
-
+  }, [isAuthenticated, user?.id, clearGuestData]);
 
   /** ===================== LOAD PRODUCTS ===================== */
   useEffect(() => {
@@ -292,6 +323,7 @@ export default function CheckoutPage() {
     setError(null);
     setSelectedVoucher(selectedVoucher?.id === voucher.id ? null : voucher);
   };
+
   const handlePayment = async (orderId: number, amount: number) => {
     const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${orderId}`;
 
@@ -316,7 +348,6 @@ export default function CheckoutPage() {
 
     setCreating(true);
     setError(null);
-
 
     try {
       let customerId: number | null = null;
@@ -407,12 +438,20 @@ export default function CheckoutPage() {
 
       if (paymentMethod === 'VNPAY') {
         // Với VNPay, chỉ chuyển hướng thanh toán, email sẽ được gửi từ backend nếu là guest
+        // 🧹 XÓA THÔNG TIN GUEST NGAY TRƯỚC KHI CHUYỂN SANG VNPAY
+        if (!isAuthenticated) {
+          clearGuestData();
+        }
         await handlePayment(createdId, totalAfterDiscount);
       } else {
         // Với COD, chỉ gửi email cho guest, user đăng nhập không cần email
         if (!isAuthenticated) {
           await sendOrderConfirmationEmail(createdId);
+          
+          // 🧹 XÓA SẠCH THÔNG TIN GUEST SAU KHI ĐẶT HÀNG THÀNH CÔNG
+          clearGuestData();
         }
+        
         clearCart();
         try {
           sessionStorage.removeItem('cart_session');
@@ -428,7 +467,6 @@ export default function CheckoutPage() {
       setCreating(false);
     }
   };
-
 
   /** ===================== LOAD ORDERS ===================== */
   useEffect(() => {
