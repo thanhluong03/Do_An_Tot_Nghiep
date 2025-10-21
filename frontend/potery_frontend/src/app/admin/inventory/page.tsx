@@ -298,10 +298,10 @@ export default function InventoryPage() {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-2">
             <Toaster position="top-center" />
             <div className="w-full mx-auto bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-gray-200">
-                <h2 className="text-3xl font-extrabold text-center text-gray-800 mb-8 tracking-wide">
+                <h2 className="text-3xl font-extrabold text-center text-[#B95D26] mb-8 tracking-wide">
                     Quản lý Tồn kho trong cửa hàng
                 </h2>
 

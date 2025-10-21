@@ -39,12 +39,12 @@ export default function CategoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 relative">
+    <div className="min-h-screen bg-gray-100 p-2 relative">
       <Toaster position="top-right" />
 
-      <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
+      <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-700">
+          <h2 className="text-2xl font-bold text-[#B95D26]">
             Quản lý Danh mục Sản phẩm
           </h2>
           <button

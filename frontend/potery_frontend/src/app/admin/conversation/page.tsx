@@ -74,7 +74,7 @@ export default function AdminChatPage() {
     <div className="flex h-[calc(100vh-80px)] bg-orange-50 rounded-xl shadow-inner overflow-hidden border border-orange-100">
       {/* Sidebar danh sách hội thoại */}
       <div className="w-1/4 border-r border-orange-200 bg-white p-4 overflow-y-auto">
-        <h2 className="text-lg font-semibold mb-4 text-orange-700 flex items-center gap-2">
+        <h2 className="text-lg font-semibold mb-4 text-[#B95D26] flex items-center gap-2">
           Danh sách hội thoại khách hàng
         </h2>
 

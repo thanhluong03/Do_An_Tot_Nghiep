@@ -89,10 +89,10 @@ export default function UserPage() {
   };
 
   return (
-    <div className="p-5 mx-auto bg-white rounded-lg shadow">
+    <div className="p-2 mx-auto bg-white rounded-lg shadow">
       <Toaster position="top-right" />
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-orange-600">
+      <div className="flex justify-between items-center mb-6 p-8 border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-[#B95D26]">
           Quản lý tài khoản admin
         </h1>
         <button

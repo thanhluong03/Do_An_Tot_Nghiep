@@ -349,13 +349,13 @@ export default function ImportProductPage() {
     }, [allProductsForForm]);
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+        <div className="min-h-screen bg-gray-100 sm:p-2">
             <Toaster position="top-center" />
             
-            <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-8">
                 
                 <div className="flex justify-between items-center mb-6  border-gray-200 pb-3">
-                    <h1 className="text-2xl font-bold text-gray-800">
+                    <h1 className="text-2xl font-bold text-[#B95D26]">
                         Quản lý nhập kho sản phẩm
                     </h1>
                     <button
@@ -424,7 +424,7 @@ export default function ImportProductPage() {
                     
                 </div>
                     <div className="mt-10">
-                        <h1 className="text-2xl text-center mb-4 font-bold text-orange-700">
+                        <h1 className="text-2xl text-center mb-4 font-bold text-[#B95D26]">
                             Danh sách sản phẩm tồn trong kho nhập
                         </h1>
                     <ProductListTable

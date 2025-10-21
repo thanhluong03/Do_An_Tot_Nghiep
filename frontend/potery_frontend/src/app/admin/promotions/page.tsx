@@ -266,9 +266,9 @@ export default function PromotionPage() {
             
             <div className="w-full mx-auto bg-white rounded-xl shadow-2xl p-8">
 
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-extrabold text-gray-800 flex-1 text-center pr-12">
-                        Quản lý Chương trình Khuyến mãi
+                <div className="flex justify-around items-center mb-8">
+                    <h2 className="text-3xl font-extrabold text-[#B95D26] flex-1 pr-12">
+                        Quản lý chương trình Khuyến mãi
                     </h2>
                     <button
                         onClick={() => {
@@ -279,7 +279,7 @@ export default function PromotionPage() {
                         }}
                         className="px-6 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-lg transition transform hover:scale-105"
                     >
-                        + Thêm Promotion mới
+                        + Thêm khuyến mãi mới
                     </button>
                 </div>
 

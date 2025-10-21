@@ -62,11 +62,11 @@ export default function CustomerPage() {
   const currentCustomers = customers.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 relative">
+    <div className="min-h-screen bg-gray-100 p-2 relative">
       <Toaster position="top-center" />
       <div className="bg-white p-6 rounded-2xl shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-700">Quản lý Khách hàng</h2>
+        <div className="flex justify-between text-center items-center mb-6">
+          <h2 className="text-2xl text-center font-bold text-[#B95D26]">Quản lý Khách hàng</h2>
         </div>
 
         {/* Table */}

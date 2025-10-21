@@ -61,7 +61,7 @@ export default function RolePage() {
   return (
         <div className="p-8 mx-auto bg-white rounded-lg shadow">
             <div className="flex justify-between items-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-800 text-center">Quản lý Phân quyền (Role Management)</h1>
+                <h1 className="text-2xl font-bold text-[#B95D26] text-center">Quản lý Phân quyền (Role Management)</h1>
                 <div className="flex gap-2">
                     
                     <button

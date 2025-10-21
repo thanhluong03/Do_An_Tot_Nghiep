@@ -126,7 +126,7 @@ export default function SupplierPage() {
   const currentSuppliers = suppliers.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 relative">
+    <div className="min-h-screen bg-gray-100 p-1 relative">
       <Toaster position="top-center" />
       <div className="bg-white p-6 rounded-2xl shadow-lg">
         <div className="flex justify-between items-center mb-6">

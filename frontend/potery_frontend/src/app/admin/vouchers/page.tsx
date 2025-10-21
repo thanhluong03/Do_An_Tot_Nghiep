@@ -125,10 +125,10 @@ const AdminVoucherPage: React.FC = () => {
     };
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen">
+        <div className="p-8 bg-white min-h-screen shadow-smd border border-gray-200">
             <Toaster position="top-right" reverseOrder={false} />
 
-            <h1 className="text-3xl font-extrabold mb-8 text-gray-800 border-b pb-3">Quản Lý Voucher</h1>
+            <h1 className="text-3xl font-extrabold mb-8 text-[#B95D26] border-b pb-3">Quản lý Voucher</h1>
 
             {error && (
                 <div className="p-4 mb-6 bg-red-100 text-red-700 rounded-lg border border-red-300 font-medium">

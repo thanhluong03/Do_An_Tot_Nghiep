@@ -80,7 +80,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
     return (
          <div className="flex flex-col">
             <div className="mb-4 flex items-center justify-center">
-                <h2 className="text-2xl font-extrabold text-orange-800 tracking-wide">
+                <h2 className="text-2xl font-extrabold text-[#B95D26] tracking-wide">
                     Lịch sử nhập kho sản phẩm({totalItems}) 
                 </h2>
               

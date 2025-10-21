@@ -116,7 +116,7 @@ export default function PermissionsPage() {
         <div className="p-8 bg-white rounded-lg shadow-md mx-auto">
             <Toaster position="top-right" /> {/* ✅ Thêm Toaster */}
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
-                <h1 className="text-3xl font-bold text-gray-800">Quản lý Phân quyền</h1>
+                <h1 className="text-3xl font-bold text-[#B95D26]">Quản lý Phân quyền</h1>
                 <div className="flex items-center gap-3">
                     <select
                         title="luachon"
