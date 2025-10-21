@@ -11,7 +11,7 @@ export interface Message {
     sender_id: number;
     sender_type?: string;
     content: string;
-    sent_at?: Date;
+    sent_at?: string;
     is_read?: boolean;
 }
 

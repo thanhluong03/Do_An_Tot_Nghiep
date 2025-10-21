@@ -22,11 +22,17 @@ export interface SendMessagePayload {
 
 export const conversationApi = {
   createConversation: async (payload: CreateConversationPayload) => {
-    console.log('%c📡 API → createConversation', 'color:violet', payload);
+  console.log('%c📡 API → createConversation', 'color:violet', payload);
+  try {
     const res = await axios.post(`${API_URL}/create-conversation`, payload);
     console.log('%c✅ API response (create):', 'color:lime', res.data);
     return res.data;
-  },
+  } catch (err: any) {
+    console.error('❌ API lỗi createConversation:', err.response?.data || err.message);
+    throw err;
+  }
+},
+
 
   sendMessage: async (payload: SendMessagePayload) => {
     console.log('%c📡 API → sendMessage', 'color:violet', payload);
