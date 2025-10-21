@@ -16,11 +16,60 @@ interface Customer {
   phone_number?: string;
   address?: string;
   avatar_image?: string | null;
+  avatar?: string | null;
   created_at?: string;
 }
 
 export default function ProfilePage() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Lấy thông tin khách hàng trực tiếp từ API khi vào trang
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      try {
+        let customerId = null;
+        if (typeof window !== 'undefined') {
+          customerId = localStorage.getItem('customerId');
+        }
+        if (customerId) {
+          const data = await userApi.getCustomerDetailById(customerId);
+          setCustomer({
+            id: data.id,
+            full_name: data.full_name || data.name || '',
+            email: data.email || '',
+            phone_number: data.phone_number || data.phone || '',
+            address: data.address || '',
+            avatar_image: data.avatar_image || data.avatar || null,
+            avatar: data.avatar || null,
+            created_at: data.created_at || data.createdAt || '',
+          });
+          setFormData({
+            id: data.id,
+            full_name: data.full_name || data.name || '',
+            email: data.email || '',
+            phone_number: data.phone_number || data.phone || '',
+            address: data.address || '',
+            avatar_image: data.avatar_image || data.avatar || null,
+            avatar: data.avatar || null,
+            created_at: data.created_at || data.createdAt || '',
+          });
+        }
+      } catch (err) {
+        console.error('Lỗi lấy thông tin khách hàng:', err);
+      }
+    };
+    fetchCustomer();
+  }, []);
+  // ...existing code...
+
   const [customer, setCustomer] = useState<Customer | null>(null);
+  // Debug: log giá trị avatar để kiểm tra backend trả về gì
+  useEffect(() => {
+    if (customer) {
+      console.log('[PROFILE PAGE] customer.avatar_image:', customer.avatar_image, typeof customer.avatar_image);
+      console.log('[PROFILE PAGE] customer.avatar:', customer.avatar, typeof customer.avatar);
+    }
+  }, [customer]);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Customer>>({});
   // const [loading, setLoading] = useState(true); // 🔥 KHÔNG DÙNG STATE LOADING RIÊNG
@@ -42,14 +91,8 @@ export default function ProfilePage() {
   // 🔥 THAY THẾ HOÀN TOÀN useEffect CŨ BẰNG ĐOẠN NÀY
   // Luôn lấy thông tin mới nhất của user khi vào trang
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      // Gọi refreshUser để luôn lấy thông tin mới nhất từ backend
-      refreshUser().then(() => {
-        // Sau khi refresh, context sẽ cập nhật user mới nhất
-        setCustomer(user as Customer);
-        setFormData(user as Customer);
-      });
-    } else if (!authLoading && !isAuthenticated) {
+    // Không cần đồng bộ context user nữa, chỉ cần clear khi không đăng nhập
+    if (!authLoading && !isAuthenticated) {
       setCustomer(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,17 +108,63 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Xử lý chọn file ảnh
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleSave = async () => {
     if (!customer) return;
     setSaving(true);
     try {
-      // API update vẫn giữ nguyên
-      const res = await userApi.updateProfile(formData as any);
-      // Sau khi update, luôn gọi refreshUser để context và localStorage đồng bộ
+      let dataToSend: any = formData;
+      if (selectedFile) {
+        const formDataToSend = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formDataToSend.append(key, value as any);
+          }
+        });
+        formDataToSend.append('avatar_image', selectedFile);
+        dataToSend = formDataToSend;
+      }
+      await userApi.updateProfile(dataToSend);
       await refreshUser();
-      setCustomer(res);
-      setFormData(res);
+      // Fetch lại thông tin khách hàng mới nhất từ backend
+      let customerId = null;
+      if (typeof window !== 'undefined') {
+        customerId = localStorage.getItem('customerId');
+      }
+      if (customerId) {
+        const data = await userApi.getCustomerDetailById(customerId);
+        setCustomer({
+          id: data.id,
+          full_name: data.full_name || data.name || '',
+          email: data.email || '',
+          phone_number: data.phone_number || data.phone || '',
+          address: data.address || '',
+          avatar_image: data.avatar_image || data.avatar || null,
+          avatar: data.avatar || null,
+          created_at: data.created_at || data.createdAt || '',
+        });
+        setFormData({
+          id: data.id,
+          full_name: data.full_name || data.name || '',
+          email: data.email || '',
+          phone_number: data.phone_number || data.phone || '',
+          address: data.address || '',
+          avatar_image: data.avatar_image || data.avatar || null,
+          avatar: data.avatar || null,
+          created_at: data.created_at || data.createdAt || '',
+        });
+      }
       setEditing(false);
+      setSelectedFile(null);
+      setPreviewUrl(null);
       alert('✅ Cập nhật thông tin thành công!');
     } catch (err) {
       console.error('Update failed:', err);
@@ -187,11 +276,49 @@ export default function ProfilePage() {
             {/* Cột trái: Avatar + thông tin ngắn */}
             <div className="flex flex-col items-center text-center border-r border-gray-100 pr-0 lg:pr-8">
               <div className="relative">
-                <img
-                  src={customer.avatar_image || '/default-avatar.png'}
-                  alt="Avatar"
-                  className="w-40 h-40 rounded-full object-cover border-4 border-[#E8E5DA] shadow-lg"
-                />
+                <label
+                  htmlFor="avatar-upload"
+                  className="cursor-pointer block relative"
+                  onClick={editing ? (e) => {
+                    const input = document.getElementById('avatar-upload') as HTMLInputElement | null;
+                    if (input) input.value = '';
+                  } : undefined}
+                >
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleAvatarChange}
+                    disabled={!editing}
+                  />
+                  <img
+                    src={
+                      previewUrl
+                        ? previewUrl
+                        : (typeof customer.avatar_image === 'string' && customer.avatar_image
+                          ? (customer.avatar_image.startsWith('http')
+                            ? customer.avatar_image
+                            : `data:image/jpeg;base64,${customer.avatar_image}`)
+                          : (typeof customer.avatar === 'string' && customer.avatar
+                            ? (customer.avatar.startsWith('http')
+                              ? customer.avatar
+                              : `data:image/jpeg;base64,${customer.avatar}`)
+                            : '/default-avatar.png'))
+                    }
+                    alt="Avatar"
+                    className={`w-40 h-40 rounded-full object-cover border-4 border-[#E8E5DA] shadow-lg ${editing ? 'hover:opacity-80' : ''}`}
+                  />
+                  {editing && (
+                    <span className="absolute bottom-2 right-3 bg-[#C4975A] text-white text-xs px-2 py-1 rounded-full shadow">
+                      ✎
+                    </span>
+                  )}
+                </label>
+                {!(typeof customer.avatar_image === 'string' && customer.avatar_image) &&
+                  !(typeof customer.avatar === 'string' && customer.avatar) && (
+                    <div className="text-xs text-red-500 mt-2">Không có dữ liệu ảnh hoặc dữ liệu ảnh không hợp lệ</div>
+                  )}
                 {editing && (
                   <span className="absolute bottom-2 right-3 bg-[#C4975A] text-white text-xs px-2 py-1 rounded-full shadow">
                     ✎

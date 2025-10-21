@@ -14,9 +14,21 @@ export class CustomerService {
             size: params.size || 10,
             key: params.key,
         });
+        const customersWithAvatar = customers.map((customer) => {
+            let avatarBase64: string | null = null;
+            if (customer.avatar_image) {
+                avatarBase64 = Buffer.isBuffer(customer.avatar_image)
+                    ? customer.avatar_image.toString('base64')
+                    : String(customer.avatar_image);
+            }
+            return {
+                ...customer,
+                avatar_image: avatarBase64,
+            };
+        });
         return {
             message: customers.length > 0 ? 'Customers fetched successfully' : 'No customers found',
-            customers,
+            customers: customersWithAvatar,
         };
     }
 
@@ -69,6 +81,15 @@ export class CustomerService {
         if (!customer) {
             throw new NotFoundException(`Customer with id ${id} not found`);
         }
-        return customer;
+        let avatarBase64: string | null = null;
+        if (customer.avatar_image) {
+            avatarBase64 = Buffer.isBuffer(customer.avatar_image)
+                ? customer.avatar_image.toString('base64')
+                : String(customer.avatar_image);
+        }
+        return {
+            ...customer,
+            avatar_image: avatarBase64,
+        };
     }
 }

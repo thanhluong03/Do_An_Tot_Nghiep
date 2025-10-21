@@ -58,6 +58,14 @@ const handleAxiosError = (error: unknown, defaultMessage: string): Error => {
 };
 
 export const userApi = {
+  getCustomerDetailById: async (customerId: string | number) => {
+    try {
+      const res = await api.get(`/customers/customerdetail/${customerId}`);
+      return res.data;
+    } catch (error) {
+      throw handleAxiosError(error, 'Không thể lấy thông tin khách hàng.');
+    }
+  },
   // Tìm customer theo email để lấy id từ bảng customers
   getCustomerByEmail: async (email: string): Promise<{ id: string | number; email: string; name?: string } | null> => {
     try {
@@ -130,27 +138,36 @@ export const userApi = {
         typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
       if (!customerId) throw new Error('Không tìm thấy ID người dùng.');
 
-      // 🧹 Làm sạch dữ liệu trước khi gửi
-      const d = data as any;
-      const payload: Record<string, any> = {
-        full_name: d.full_name || d.name || '',
-        email: d.email || '',
-        phone_number: d.phone || d.phone_number || '',
-        address: d.address || '',
-        avatar_image: d.avatar_image || null,
-      };
-
-      // Gọi API PUT
-      const response = await axios.put(
-        `http://localhost:3000/customers/updatecustomer/${customerId}`,
-        payload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let response;
+      if (typeof FormData !== 'undefined' && data instanceof FormData) {
+        response = await axios.put(
+          `http://localhost:3000/customers/updatecustomer/${customerId}`,
+          data,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        const d = data as any;
+        const payload: Record<string, any> = {
+          full_name: d.full_name || d.name || '',
+          email: d.email || '',
+          phone_number: d.phone || d.phone_number || '',
+          address: d.address || '',
+        };
+        response = await axios.put(
+          `http://localhost:3000/customers/updatecustomer/${customerId}`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      }
 
       const updatedUser = response.data;
 
