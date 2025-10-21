@@ -16,7 +16,7 @@ export const FeaturedProductSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const cart = useCart();
-  const addToCart = (cart as any).addToCart ?? (() => {});
+  const addToCart = (cart as any).addToCart ?? (() => { });
 
   // Fetch danh sách sản phẩm nổi bật
   useEffect(() => {
@@ -59,23 +59,23 @@ export const FeaturedProductSection: React.FC = () => {
     <section className="bg-[#FBFBFB] pt-6 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
         {/* Nút chuyển sản phẩm ở ngoài khung */}
-    <div className="absolute inset-y-0 -left-8 flex items-center z-20">
-      <button
-        onClick={prevProduct}
-        className="w-10 h-10 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-[#F5F1EB] transition"
-      >
-        <span className="text-xl text-gray-700">←</span>
-      </button>
-    </div>
+        <div className="absolute inset-y-0 -left-8 flex items-center z-20">
+          <button
+            onClick={prevProduct}
+            className="w-10 h-10 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-[#F5F1EB] transition"
+          >
+            <span className="text-xl text-gray-700">←</span>
+          </button>
+        </div>
 
-    <div className="absolute inset-y-0 -right-8 flex items-center">
-      <button
-        onClick={nextProduct}
-        className="w-10 h-10 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-[#F5F1EB] transition"
-      >
-        <span className="text-xl text-gray-700">→</span>
-      </button>
-    </div>
+        <div className="absolute inset-y-0 -right-8 flex items-center">
+          <button
+            onClick={nextProduct}
+            className="w-10 h-10 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-[#F5F1EB] transition"
+          >
+            <span className="text-xl text-gray-700">→</span>
+          </button>
+        </div>
         <div className="bg-white rounded-lg shadow-md border border-gray-100 p-5 relative">
           <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 items-stretch">
 

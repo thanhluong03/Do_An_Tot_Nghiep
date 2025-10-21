@@ -187,17 +187,30 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           </span>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex gap-3">
           <button
             onClick={handleAddCartPopup}
             disabled={loading}
-            className="w-full py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-semibold disabled:opacity-50 transition"
+            className="flex items-center justify-center px-4 py-3 bg-[#e9d3b3] hover:bg-[#c4975a] rounded-lg disabled:opacity-50 transition"
+            title="Thêm vào giỏ hàng"
+            style={{ minWidth: '48px' }}
           >
-            {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}
+            {loading ? (
+              <span className="text-white text-base font-semibold">Đang thêm...</span>
+            ) : (
+              <span className="inline-block">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="6" width="20" height="14" rx="4" fill="#fff" stroke="#c4975a" strokeWidth="1.5" />
+                  <path d="M7 10V8C7 5.79086 8.79086 4 11 4H13C15.2091 4 17 5.79086 17 8V10" stroke="#c4975a" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="9" cy="17" r="1.5" fill="#c4975a" />
+                  <circle cx="15" cy="17" r="1.5" fill="#c4975a" />
+                </svg>
+              </span>
+            )}
           </button>
           <button
             onClick={handleOrderNow}
-            className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-base font-semibold mt-2 transition"
+            className="flex-1 py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-extrabold shadow transition-all tracking-wider"
           >
             Đặt hàng ngay
           </button>
@@ -282,7 +295,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                   <div className="w-full flex justify-end">
                     <button
                       onClick={handleOrderNowConfirm}
-                      className="w-full md:w-auto px-10 py-3 bg-gradient-to-r from-[#ff2d2d] to-[#ff7e5f] hover:from-[#e02424] hover:to-[#ff5e3a] text-white rounded-xl text-lg font-extrabold shadow-lg transition-all tracking-wider uppercase"
+                      className="w-full md:w-auto px-10 py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-xl text-lg font-extrabold shadow transition-all tracking-wider"
                     >
                       Đặt hàng ngay
                     </button>
@@ -336,7 +349,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                     <div className="mb-4">
                       <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng còn hàng</div>
                       <div className="space-y-2">
-                        {stores.map((store) => (
+                        {stores.filter(store => store.quantity_stock > 0).map((store) => (
                           <label key={store.store_id} className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all shadow-sm ${selectedStoreId === store.store_id ? 'border-[#c4975a] bg-[#f5e6d6]' : 'border-gray-200 bg-white'}`}>
                             <input
                               type="radio"
@@ -373,7 +386,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                   <div className="w-full flex justify-end">
                     <button
                       onClick={handleAddCartConfirm}
-                      className="w-full md:w-auto px-10 py-3 bg-gradient-to-r from-[#c4975a] to-[#a3764a] hover:from-[#a3764a] hover:to-[#c4975a] text-white rounded-xl text-lg font-extrabold shadow-lg transition-all tracking-wider uppercase"
+                      className="w-full md:w-auto px-10 py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-xl text-lg font-extrabold shadow transition-all tracking-wider"
                       disabled={loading}
                     >
                       {loading ? 'Đang thêm...' : 'Thêm giỏ hàng'}

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts';
 import { cn } from '../../utils/cn';
 import { categoryApi } from '../../api/modules/category'; // ✅ thêm import API
+import { useCart } from '../../contexts/CartContext';
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
@@ -95,7 +96,8 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
 // --- COMPONENT CHÍNH: HEADER ---
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount] = useState(0);
+  const { items } = useCart();
+  const cartCount = items.length;
   const { user, isAuthenticated, logout } = useAuth();
 
   // ✅ Lấy danh mục từ API thật
@@ -185,7 +187,7 @@ export const Header: React.FC = () => {
             <a href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
               <img src="/Bag.png" alt="Giỏ hàng" className="w-5 h-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#65604E] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-[#c4975a] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border-2 border-white shadow">
                   {cartCount}
                 </span>
               )}
