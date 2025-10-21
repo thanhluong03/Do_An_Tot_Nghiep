@@ -1,40 +1,73 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { conversationApi } from "@/api/services/conversationApi";
+// ✅ Import đúng hàm API
+import { conversationApi } from "@/api/services/conversationApi"; 
 import { getCustomers, Customer } from "@/api/services/customerService";
 import { AdminChatBox } from "@/components/adminChat/AdminChatBox";
 
+// Giả định entity Conversation trả về từ API 'getAll'
+interface Conversation {
+  id: number;
+  user_id: number; // ID của Admin
+  customer_id: number; // ID của Customer
+  last_message_time?: string; // (Giữ lại logic sort của bạn)
+  // Thêm các thuộc tính khác nếu có
+}
+
 export default function AdminChatPage() {
   const [selectedConv, setSelectedConv] = useState<number | null>(null);
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]); // Gõ kiểu Conversation
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const adminId = 1;
+  
+  // Lấy ID admin đang đăng nhập (ví dụ)
+  const adminId = 1; // (Bạn có thể lấy từ context/session)
 
   useEffect(() => {
     const load = async () => {
-      const data = await conversationApi.getConversationsByCustomer(adminId);
-      const sorted = [...data].sort(
-        (a, b) =>
-          new Date(b.last_message_time || 0).getTime() -
-          new Date(a.last_message_time || 0).getTime()
-      );
-      setConversations(sorted);
-      if (sorted.length > 0) setSelectedConv(sorted[0].id);
+      try {
+        // ✅ LỖI 1: SỬA LẠI HÀM API
+        // Gọi 'getAll' để lấy logic "Hộp thư chung"
+        const data: Conversation[] = await conversationApi.getAll();
+        
+        const sorted = [...data].sort(
+          (a, b) =>
+            new Date(b.last_message_time || 0).getTime() -
+            new Date(a.last_message_time || 0).getTime()
+        );
+        
+        setConversations(sorted);
+        // Tự động chọn hội thoại đầu tiên
+        if (sorted.length > 0) {
+          setSelectedConv(sorted[0].id);
+        }
+      } catch (error) {
+        console.error("Lỗi tải danh sách hội thoại:", error);
+      }
     };
+    
     const loadCustomers = async () => {
-      const list = await getCustomers();
-      setCustomers(list);
+      try {
+        const list = await getCustomers();
+        setCustomers(list);
+      } catch (error) {
+        console.error("Lỗi tải danh sách khách hàng:", error);
+      }
     };
+
     load();
     loadCustomers();
-  }, []);
+  }, []); // Chỉ cần chạy 1 lần
 
+  // Hàm helper tìm khách hàng
   const getCustomer = (customerID: number) =>
     customers.find((c) => c.id === customerID);
 
-  const currentCustomer = conversations.find((c) => c.id === selectedConv);
-  const selectedCustomer = currentCustomer
-    ? getCustomer(currentCustomer.user_id)
+  // Lấy thông tin customer cho hội thoại đang chọn
+  const currentConv = conversations.find((c) => c.id === selectedConv);
+  
+  // ✅ LỖI 2: SỬA LẠI user_id -> customer_id
+  const selectedCustomer = currentConv
+    ? getCustomer(currentConv.customer_id) // Dùng customer_id
     : null;
 
   return (
@@ -52,7 +85,8 @@ export default function AdminChatPage() {
         ) : (
           <div className="space-y-2">
             {conversations.map((conv) => {
-              const customer = getCustomer(conv.user_id);
+              // ✅ LỖI 2: SỬA LẠI user_id -> customer_id
+              const customer = getCustomer(conv.customer_id); // Dùng customer_id
               const isActive = conv.id === selectedConv;
 
               return (
