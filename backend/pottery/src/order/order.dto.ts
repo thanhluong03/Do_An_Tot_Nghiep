@@ -73,10 +73,16 @@ export class CreateOrderDto {
     @IsPositive()
     customer_id: number;
 
+     @Expose()
+    @IsOptional()
+    @IsString()
+    guest_id?: string;
+
     @Expose()
     @IsOptional()
     @IsString()
     shipping_address?: string;
+    
 
     @Expose()
     @IsOptional()

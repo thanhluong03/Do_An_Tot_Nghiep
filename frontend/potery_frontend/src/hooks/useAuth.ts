@@ -5,6 +5,24 @@ import { useRouter } from 'next/navigation';
 import { userApi } from '../api/modules/users';
 import { User } from '../types';
 import { toast } from 'react-hot-toast';
+import Cookies from 'js-cookie'; // ✅ Đảm bảo bạn đã import thư viện cookie
+
+// 🔥 TẠO MỘT HÀM DỌN DẸP DÙNG CHUNG
+const clearGuestData = () => {
+  console.log('🧹 Dọn dẹp dữ liệu guest TRƯỚC KHI login/register...');
+  
+  // Dọn dẹp Local Storage
+  localStorage.removeItem('guest_id');
+  localStorage.removeItem('guest_name');
+  localStorage.removeItem('guest_phone');
+  localStorage.removeItem('guest_email');
+  localStorage.removeItem('auth_type');
+  
+  // ✅ Dọn dẹp CẢ COOKIE (Rất quan trọng)
+  // (Nếu backend đọc cookie, đây là bước bắt buộc)
+  Cookies.remove('guest_id'); 
+  Cookies.remove('cart_session'); 
+};
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -47,36 +65,35 @@ export const useAuthState = () => {
   }, []);
 
   const login = async (email: string, password: string) => {
-  try {
-    const response = await userApi.login(email, password);
-    const { token } = response;
+    try {
+      // 🔥 BƯỚC 1: DỌN DẸP SẠCH SẼ TRƯỚC KHI GỌI API
+      clearGuestData();
 
-    if (token) localStorage.setItem('token', token);
+      // 🔥 BƯỚC 2: GỌI API LOGIN SAU KHI ĐÃ SẠCH
+      const response = await userApi.login(email, password);
+      const { token } = response;
 
-    // 🧩 Ghi rõ loại đăng nhập
-    localStorage.setItem('auth_type', 'user');
+      if (token) localStorage.setItem('token', token);
 
-    // ⚠️ KHÔNG xóa guest_id → để đơn guest cũ vẫn còn dữ liệu riêng
-    // Chỉ xóa thông tin guest trong ngữ cảnh đăng nhập (để UI không hiển thị nhầm)
-    localStorage.removeItem('guest_name');
-    localStorage.removeItem('guest_phone');
-    localStorage.removeItem('guest_email');
+      // 🧩 Ghi rõ loại đăng nhập là user thật
+      localStorage.setItem('auth_type', 'user');
 
-    // ✅ Lấy thông tin user thật
-    const fullUser = await userApi.getCurrentUser();
-    localStorage.setItem('user', JSON.stringify(fullUser));
-    setUser(fullUser);
+      // ✅ Lấy thông tin user thật (lúc này đã an toàn)
+      const fullUser = await userApi.getCurrentUser();
+      
+      // Bạn nên lưu cả customerId thật ở đây nếu có
+      // Ví dụ: localStorage.setItem('customerId', fullUser.customerId);
+      
+      localStorage.setItem('user', JSON.stringify(fullUser));
+      setUser(fullUser);
 
-    router.push('/');
-  } catch (err) {
-    console.error('Login failed:', err);
-    toast.error('Đăng nhập thất bại, vui lòng thử lại');
-    throw err;
-  }
-};
-
-
-
+      router.push('/');
+    } catch (err) {
+      console.error('Login failed:', err);
+      toast.error('Đăng nhập thất bại, vui lòng thử lại');
+      throw err;
+    }
+  };
 
   const register = async (data: {
     email: string;
@@ -85,28 +102,58 @@ export const useAuthState = () => {
     lastName: string;
     phone?: string;
   }) => {
-    const payload = {
-      email: data.email,
-      password: data.password,
-      name: `${data.firstName} ${data.lastName}`.trim(),
-      phone: data.phone,
-    };
+    
+    try {
+      // 🔥 BƯỚC 1: DỌN DẸP SẠCH SẼ TRƯỚC KHI GỌI API
+      clearGuestData();
+      
+      const payload = {
+        email: data.email,
+        password: data.password,
+        name: `${data.firstName} ${data.lastName}`.trim(),
+        phone: data.phone,
+      };
 
-    const response = await userApi.register(payload);
+      // 🔥 BƯỚC 2: GỌI API REGISTER SAU KHI ĐÃ SẠCH
+      const response = await userApi.register(payload);
 
-    // ✅ Sau khi đăng ký → gọi lại API lấy dữ liệu chi tiết
-    const fullUser = await userApi.getCurrentUser();
+      // 🧩 Ghi rõ loại đăng nhập là user thật
+      localStorage.setItem('auth_type', 'user');
+      
+      // Giả sử API register tự động login hoặc trả về token
+      // Nếu không, bạn cần gọi login ở đây
+      // const loginResponse = await userApi.login(data.email, data.password);
+      // if (loginResponse.token) localStorage.setItem('token', loginResponse.token);
 
-    localStorage.setItem('user', JSON.stringify(fullUser));
+      // ✅ Sau khi đăng ký → gọi lại API lấy dữ liệu chi tiết
+      const fullUser = await userApi.getCurrentUser();
 
-    setUser(fullUser);
-    router.push('/');
+      localStorage.setItem('user', JSON.stringify(fullUser));
+
+      setUser(fullUser);
+      router.push('/');
+      
+    } catch (err: any) {
+        console.error('Register failed:', err);
+        toast.error(err?.message || 'Đăng ký thất bại');
+        throw err;
+    }
   };
 
-
   const logout = async () => {
-    await userApi.logout();
+    try {
+      await userApi.logout();
+    } catch (e) {
+      console.warn('Logout API failed, logging out locally:', e);
+    }
+    
+    // 🔥 DỌN DẸP TOÀN BỘ KHI LOGOUT
     setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('customerId'); // Xóa cả customerId của user thật
+    clearGuestData(); // Xóa luôn data guest để đảm bảo sạch sẽ
+    
     router.push('/');
   };
 

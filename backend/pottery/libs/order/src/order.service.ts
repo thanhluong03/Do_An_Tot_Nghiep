@@ -30,99 +30,124 @@ export class OrderService {
     ) { }
 
     async createOrder(data: ICreateOrder): Promise<OrderEntity> {
-        const { items, status, payment_status, payment_method, ...orderData } = data;
-        const enrichedItems: IOrderItem[] = [];
-        let total_amount = 0;
-        for (const item of items) {
-            const inventory = await this.inventoryRepository.findByProductAndStore(
-                item.product_id,
-                item.store_id,
-            );
-            if (!inventory) {
-                throw new NotFoundException(
-                    `Không tìm thấy tồn kho cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
-                );
-            }
-            if (inventory.quantity_stock < item.quantity) {
-                throw new NotFoundException(
-                    `Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
-                );
-            }
-            const product = inventory.product;
-            const store = inventory.store;
-            if (product && typeof product.quantity === 'number') {
-                if (product.quantity < item.quantity) {
-                    throw new NotFoundException(
-                        `Số lượng sản phẩm tổng không đủ cho sản phẩm ${item.product_id}`,
-                    );
-                }
-                product.quantity -= item.quantity;
-                await this.productRepository.update(product.id, { quantity: product.quantity });
-            }
-            let categoryName: string | undefined = undefined;
-            if (product && product.category_id) {
-                const category = await this.categoryRepository.findById(
-                    product.category_id,
-                );
-                categoryName = category?.name;
-            }
-            let product_images: any[] = [];
-            if (product?.id) {
-                const images = await this.productImageRepository.findByProductId(product.id);
-                product_images = images.map((img: any) => ({
-                    id: img.id,
-                    image_data: img.image_data ? img.image_data.toString('base64') : null,
-                    is_main_image: img.is_main_image ?? false,
-                    priority: img.priority ?? 0,
-                }));
-            }
-            enrichedItems.push({
-                ...item,
-                product_name: product?.name,
-                description: product?.description,
-                price: product?.price,
-                category_id: product?.category_id,
-                category_name: categoryName,
-                store_name: store?.store_name,
-                store_address: store?.address,
-                product_images,
-            });
-            total_amount += item.price_at_order * item.quantity;
-            inventory.quantity_stock -= item.quantity;
-            inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
-            await this.inventoryRepository.create(inventory);
-        }
-        const current_order = {
-            ...orderData,
-            items: enrichedItems,
-            total_amount,
-            status: status ?? OrderStatus.CREATED,
-            payment_status: payment_status ?? PaymentStatus.UNPAID,
-            payment_method: payment_method ?? PaymentMethod.ONSITE,
-            order_date: new Date()
-        };
-        const order = await this.orderRepository.createOrder(
-            {
-                ...orderData,
-                total_amount,
-                status: status ?? OrderStatus.CREATED,
-                payment_status: payment_status ?? PaymentStatus.UNPAID,
-                payment_method: payment_method ?? PaymentMethod.ONSITE,
-                current_order
-            },
-            items
-        );
-        if (order && order.id) {
-            const orderItems = await this.orderRepository.getOrderItemsByOrderId(order.id);
-            for (let i = 0; i < current_order.items.length; i++) {
-                if (orderItems[i] && orderItems[i].id) {
-                    (current_order.items[i] as any).orderitem_id = orderItems[i].id;
-                }
-            }
-            await this.orderRepository.update(order.id, { current_order });
-        }
-        return order;
+    // ✅ Thêm xử lý phân biệt guest / user
+    const { items, status, payment_status, payment_method, guest_id, customer_id, ...orderData } = data;
+
+    // Nếu là khách vãng lai (guest)
+    if (guest_id) {
+      orderData['guest_id'] = guest_id;
+      orderData['customer_id'] = null;
     }
+    // Nếu là người dùng đã đăng nhập
+    else if (customer_id) {
+      orderData['customer_id'] = customer_id;
+      orderData['guest_id'] = null;
+    }
+    // Nếu là admin tạo đơn
+    else {
+      orderData['customer_id'] = null;
+      orderData['guest_id'] = null;
+    }
+
+    // Tiếp tục logic cũ
+    const enrichedItems: IOrderItem[] = [];
+    let total_amount = 0;
+
+    for (const item of items) {
+      const inventory = await this.inventoryRepository.findByProductAndStore(item.product_id, item.store_id);
+      if (!inventory) {
+        throw new NotFoundException(
+          `Không tìm thấy tồn kho cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
+        );
+      }
+
+      if (inventory.quantity_stock < item.quantity) {
+        throw new NotFoundException(
+          `Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
+        );
+      }
+
+      const product = inventory.product;
+      const store = inventory.store;
+
+      if (product && typeof product.quantity === 'number') {
+        if (product.quantity < item.quantity) {
+          throw new NotFoundException(`Số lượng sản phẩm tổng không đủ cho sản phẩm ${item.product_id}`);
+        }
+        product.quantity -= item.quantity;
+        await this.productRepository.update(product.id, { quantity: product.quantity });
+      }
+
+      let categoryName: string | undefined = undefined;
+      if (product && product.category_id) {
+        const category = await this.categoryRepository.findById(product.category_id);
+        categoryName = category?.name;
+      }
+
+      let product_images: any[] = [];
+      if (product?.id) {
+        const images = await this.productImageRepository.findByProductId(product.id);
+        product_images = images.map((img: any) => ({
+          id: img.id,
+          image_data: img.image_data ? img.image_data.toString('base64') : null,
+          is_main_image: img.is_main_image ?? false,
+          priority: img.priority ?? 0,
+        }));
+      }
+
+      enrichedItems.push({
+        ...item,
+        product_name: product?.name,
+        description: product?.description,
+        price: product?.price,
+        category_id: product?.category_id,
+        category_name: categoryName,
+        store_name: store?.store_name,
+        store_address: store?.address,
+        product_images,
+      });
+
+      total_amount += item.price_at_order * item.quantity;
+
+      inventory.quantity_stock -= item.quantity;
+      inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
+      await this.inventoryRepository.create(inventory);
+    }
+
+    const current_order = {
+      ...orderData,
+      items: enrichedItems,
+      total_amount,
+      status: status ?? OrderStatus.CREATED,
+      payment_status: payment_status ?? PaymentStatus.UNPAID,
+      payment_method: payment_method ?? PaymentMethod.ONSITE,
+      order_date: new Date(),
+    };
+
+    const order = await this.orderRepository.createOrder(
+      {
+        ...orderData,
+        total_amount,
+        status: status ?? OrderStatus.CREATED,
+        payment_status: payment_status ?? PaymentStatus.UNPAID,
+        payment_method: payment_method ?? PaymentMethod.ONSITE,
+        current_order,
+      },
+      items,
+    );
+
+    if (order && order.id) {
+      const orderItems = await this.orderRepository.getOrderItemsByOrderId(order.id);
+      for (let i = 0; i < current_order.items.length; i++) {
+        if (orderItems[i] && orderItems[i].id) {
+          (current_order.items[i] as any).orderitem_id = orderItems[i].id;
+        }
+      }
+      await this.orderRepository.update(order.id, { current_order });
+    }
+
+    return order;
+  }
 
     async getOrderById(id: number): Promise<any> {
         const order = await this.orderRepository.findById(id);

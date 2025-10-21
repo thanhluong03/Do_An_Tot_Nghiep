@@ -3,8 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../../components/common/Button';
 import Link from 'next/link';
-import { userApi } from '../../../api/modules/users';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../contexts/AuthContext'; // 🔥 BẮT BUỘC IMPORT
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -17,7 +16,7 @@ export default function RegisterPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const { register } = useAuth(); // 🔥 LẤY HÀM REGISTER TỪ CONTEXT
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,12 +28,22 @@ export default function RegisterPage() {
       try {
         setLoading(true);
         setError(null);
-        const name = `${formData.firstName} ${formData.lastName}`.trim();
-        const result = await userApi.register({ email: formData.email, password: formData.password, name, phone: formData.phone || undefined });
-        localStorage.setItem('token', result.token);
-        router.push('/');
+        
+        // 🔥 SỬ DỤNG HÀM REGISTER TỪ CONTEXT
+        // Hàm này sẽ tự động gọi API, clearGuestData, và chuyển trang
+        await register({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone || undefined,
+        });
+
+        // Context (useAuthState) đã tự động xử lý việc chuyển trang
+
       } catch (err: any) {
-        setError(err?.message || 'Register failed');
+        // Lỗi đã được ném từ useAuthState
+        setError(err?.message || 'Đăng ký thất bại');
       } finally {
         setLoading(false);
       }

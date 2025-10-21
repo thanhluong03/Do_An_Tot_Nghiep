@@ -20,7 +20,8 @@ export interface IOrderItem {
 
 import type { OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 export interface ICreateOrder {
-    customer_id: number;
+    customer_id?: number; // ✅ Cho phép undefined nếu là khách
+    guest_id?: string; // ✅ Thêm dòng này
     shipping_address?: string;
     payment_method?: PaymentMethod;
     status?: OrderStatus;
