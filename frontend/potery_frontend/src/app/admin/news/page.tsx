@@ -227,10 +227,10 @@ export default function NewsPage() {
 
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-white shadow-xl  p-2">
             <Toaster />
-            <div className="max-w-8xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-extrabold text-orange-600 mb-8 text-center  pb-3">
+            <div className="max-w-8xl mx-auto bg-white rounded-2xl p-8">
+                <h2 className="text-2xl font-extrabold text-[#B95D26] mb-8 text-center  pb-3">
                     Quản lý Tin tức
                 </h2>
 

@@ -225,12 +225,12 @@ const handleExportExcel = async () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-white min-h-screen shadow-md border border-gray-200">
       <Toaster position="top-right" />
-      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
-        <div className="py-6 border-b border-gray-200 text-center bg-gray-50">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Quản lý Đơn hàng
+      <div className=" mx-auto bg-white rounded-2x overflow-hidden">
+        <div className="py-6 border-b border-gray-200 text-center bg-white">
+          <h1 className="text-3xl font-bold text-[#B95D26] tracking-tight">
+            Quản lý đơn hàng
           </h1>
         </div>
 

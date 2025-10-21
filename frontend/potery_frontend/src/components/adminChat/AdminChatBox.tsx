@@ -75,7 +75,7 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
   return (
     <div className="flex flex-col h-[80vh] bg-white rounded-xl border border-white shadow-lg overflow-hidden">
       {/* 🔹 Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-orange-500 text-white font-semibold shadow-md">
+      <div className="flex items-center gap-3 px-4 py-3 bg-[#B95D26] text-white font-semibold shadow-md">
         <img
           src={
             customer?.avatar_image
@@ -102,7 +102,7 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
           >
             <div
               className={`px-4 py-2 rounded-2xl max-w-[70%] break-words shadow-sm ${
-                m.sender_type === "ADMIN" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"
+                m.sender_type === "ADMIN" ? "bg-[#B95D26] text-white" : "bg-gray-200 text-gray-800"
               }`}
             >
               {m.content}
@@ -130,7 +130,7 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
         />
         <button
           onClick={sendMessage}
-          className="bg-orange-500 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-md transition"
+          className="bg-[#B95D26] hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow-md transition"
         >
           Gửi
         </button>

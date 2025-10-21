@@ -133,10 +133,10 @@ export default function StorePage() {
     const currentStores = stores.slice(startIndex, startIndex + pageSize);
 
     return (
-        <div className="min-h-screen bg-gray-100 p-8">
+        <div className="min-h-screen bg-gray-100 p-2">
             <Toaster position="top-right" />
             <div className="w-full mx-auto bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
+                <h2 className="text-3xl font-extrabold text-[#B95D26] mb-10 text-center">
                     Quản lý Cửa hàng
                 </h2>
 

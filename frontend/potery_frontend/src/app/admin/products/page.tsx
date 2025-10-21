@@ -248,11 +248,11 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="p-8 flex justify-center">
+    <div className=" flex justify-center">
       <Toaster position="top-center" />
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-8xl">
+      <div className="bg-white rounded-2xl shadow-xl p-4 pt-6 w-full max-w-8xl">
         <div className="flex justify-center mb-6">
-          <h1 className="text-3xl font-extrabold text-black">
+          <h1 className="text-3xl font-extrabold text-[#B95D26]">
             Quản lý sản phẩm
           </h1>
         </div>
