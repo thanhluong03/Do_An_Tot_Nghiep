@@ -1,5 +1,6 @@
 "use client";
 
+import { Customer } from "@/api/services/customerService";
 import React, { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -23,7 +24,7 @@ interface ChatBoxProps {
   customer?: Customer | null;
 }
 
-export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAdminId }) => {
+export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAdminId,customer }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
