@@ -75,13 +75,27 @@ const mapProduct = (p: any): Product => {
         .filter(Boolean)
     : [];
 
+  const originalPrice = Number(p.price ?? 0);
+  let currentPrice = originalPrice;
+  let discount: number | undefined = undefined;
+  if (p.promotion && p.promotion.discount_type && p.promotion.discount_value) {
+    const discountValue = Number(p.promotion.discount_value);
+    if (p.promotion.discount_type === 'PERCENTAGE') {
+      currentPrice = originalPrice * (1 - discountValue / 100);
+    } else if (p.promotion.discount_type === 'FIXED') {
+      currentPrice = Math.max(0, originalPrice - discountValue);
+    }
+    if (currentPrice < originalPrice) {
+      discount = (originalPrice - currentPrice) / originalPrice;
+    }
+  }
   return {
     id: String(p.id ?? p._id ?? ''),
     name: p.name ?? 'Sản phẩm',
     description: p.description ?? '',
-    price: Number(p.price ?? 0),
-    originalPrice: undefined,
-    discount: undefined,
+    price: currentPrice,
+    originalPrice: currentPrice < originalPrice ? originalPrice : undefined,
+    discount,
     images,
     category: p.category ?? '',
     rating: Number(p.rating ?? 5),

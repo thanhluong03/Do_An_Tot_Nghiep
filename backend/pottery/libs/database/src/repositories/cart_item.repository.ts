@@ -47,4 +47,14 @@ export class CartItemRepository {
     async softDelete(id: number): Promise<void> {
         await this.repository.softDelete(id)
     }
+    async findByCustomerProductStore(customer_id: number, product_id: number, store_id: number): Promise<CartItemEntity | null> {
+        return this.repository.findOne({
+            where: {
+                customer_id,
+                product_id,
+                store_id,
+                deleted_at: IsNull(),
+            },
+        });
+    }
 }
