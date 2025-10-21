@@ -1,8 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConversationEntity, MessageEntity } from '@app/database';
+// 🔥 Thêm CustomerEntity và UserEntity vào import
+import {
+  ConversationEntity,
+  MessageEntity,
+  CustomerEntity,
+  UserEntity,
+} from '@app/database';
 import { Conversation, Message, ConversationQuery } from './conversation.interface';
+import { CreateConversationDto } from 'src/conversation/conversation.dto';
 
 @Injectable()
 export class ConversationService {
@@ -11,126 +18,145 @@ export class ConversationService {
     private readonly conversationRepo: Repository<ConversationEntity>,
     @InjectRepository(MessageEntity)
     private readonly messageRepo: Repository<MessageEntity>,
+    // 🔥 Import repo của Customer và User để kiểm tra
+    @InjectRepository(CustomerEntity)
+    private readonly customerRepo: Repository<CustomerEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepo: Repository<UserEntity>,
   ) {}
 
-  /** 📋 Lấy danh sách conversation theo user_id / customer_id */
+  /** 📋 Lấy danh sách conversation (Giữ nguyên) */
   async getConversations(query: ConversationQuery): Promise<Conversation[]> {
     const qb = this.conversationRepo.createQueryBuilder('c');
-    if (query.user_id) qb.andWhere('c.user_id = :user_id', { user_id: query.user_id });
-    if (query.customer_id) qb.andWhere('c.customer_id = :customer_id', { customer_id: query.customer_id });
-    if (query.search) qb.andWhere('CAST(c.id AS TEXT) LIKE :search', { search: `%${query.search}%` });
+    if (query.user_id)
+      qb.andWhere('c.user_id = :user_id', { user_id: query.user_id });
+    if (query.customer_id)
+      qb.andWhere('c.customer_id = :customer_id', {
+        customer_id: query.customer_id,
+      });
+    if (query.search)
+      qb.andWhere('CAST(c.id AS TEXT) LIKE :search', {
+        search: `%${query.search}%`,
+      });
     return qb.orderBy('c.started_at', 'DESC').getMany();
   }
 
-  /** 🔍 Lấy chi tiết conversation + messages */
-  async getConversationDetail(id: number): Promise<{ conversation: Conversation | null; messages: Message[] }> {
-  const conversation = await this.conversationRepo.findOne({ where: { id } });
-  if (!conversation) return { conversation: null, messages: [] };
+  /** 🔍 Lấy chi tiết conversation + messages (Giữ nguyên) */
+  async getConversationDetail(
+    id: number,
+  ): Promise<{ conversation: Conversation | null; messages: Message[] }> {
+    const conversation = await this.conversationRepo.findOne({ where: { id } });
+    if (!conversation) return { conversation: null, messages: [] };
 
-  const messages = await this.messageRepo.find({
-    where: { conversation_id: id },
-    order: { sent_at: 'ASC' },
-  });
+    const messages = await this.messageRepo.find({
+      where: { conversation_id: id },
+      order: { sent_at: 'ASC' },
+    });
 
-  // 🔹 convert sent_at Date -> string
-  const messagesStr = messages.map(msg => ({
-    ...msg,
-    sent_at: msg.sent_at?.toISOString(),
-  }));
+    const messagesStr = messages.map((msg) => ({
+      ...msg,
+      sent_at: msg.sent_at?.toISOString(),
+    }));
 
-  return { conversation, messages: messagesStr };
-}
-
+    return { conversation, messages: messagesStr };
+  }
 
   /** 🟢 Tạo conversation (và message đầu tiên nếu có content) */
-   async createConversation(data: any) {
-  const user_id = Number(data.user_id);
-  const store_id = Number(data.store_id) || Number(data.customer_id);
-  const sender_id = Number(data.sender_id);
-  const sender_type = data.sender_type || 'USER';
-  const content = data.content?.trim();
-
-  if (!user_id || !store_id) {
-    throw new Error('Thiếu user_id hoặc store_id khi tạo conversation');
-  }
-
-  // ✅ Kiểm tra user tồn tại
-  const userExists = await this.conversationRepo.query(
-    `SELECT id FROM users WHERE id = $1 LIMIT 1`, [user_id]
-  );
-  if (!userExists.length) {
-    throw new Error(`User với id=${user_id} không tồn tại`);
-  }
-
-  // ✅ Kiểm tra customer tồn tại, nếu không thì tạo guest tạm
-  let customerId = store_id;
-  const customerExists = await this.conversationRepo.query(
-    `SELECT id FROM customers WHERE id = $1 LIMIT 1`, [store_id]
-  );
-  if (!customerExists.length) {
-    const inserted = await this.conversationRepo.query(
-      `INSERT INTO customers (name, email) VALUES ($1, $2) RETURNING id`,
-      [`Guest_${Date.now()}`, `guest_${Date.now()}@temp.local`],
-    );
-    customerId = inserted[0].id;
-  }
-
-  // 🔍 Tìm xem đã có conversation giữa user và customer chưa
-  let conversation = await this.conversationRepo.findOne({
-    where: { user_id, customer_id: customerId },
-  });
-
-  // 🔹 Nếu chưa có thì tạo mới
-  if (!conversation) {
-    const newConv = this.conversationRepo.create({
-      user_id,
-      customer_id: customerId,
-      started_at: new Date(),
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-    conversation = await this.conversationRepo.save(newConv);
-  }
-
-  // 🔹 Nếu có nội dung khởi tạo thì thêm tin nhắn đầu tiên
-  if (content) {
-    const msg = this.messageRepo.create({
-      conversation_id: conversation.id,
+  async createConversation(
+    data: CreateConversationDto,
+  ): Promise<ConversationEntity> {
+    // 1. Lấy customer_id (là user_id từ client) và content
+    // store_id bị bỏ qua vì entity không có
+    const {
+      user_id: customerId,
       sender_id,
-      sender_type,
+      sender_type = 'USER',
       content,
-      sent_at: new Date(),
-      is_read: false,
-    });
-    await this.messageRepo.save(msg);
-  }
+    } = data;
 
-  return conversation;
-}
+    // 2. 🔥 GÁN ADMIN MẶC ĐỊNH
+    // Entity của bạn yêu cầu 1 admin user_id.
+    // Bạn phải thay SỐ 1 này bằng logic nghiệp vụ của bạn (ví dụ: admin đầu tiên)
+    const adminUserId = 1;
+
+    if (!customerId) {
+      throw new Error('Thiếu customer_id (từ user_id) khi tạo conversation');
+    }
+
+    // 3. ✅ Kiểm tra customer (user) tồn tại
+    const customerExists = await this.customerRepo.findOne({
+      where: { id: customerId },
+    });
+    if (!customerExists) {
+      throw new NotFoundException(`Customer với id=${customerId} không tồn tại`);
+    }
+
+    // (Tùy chọn) Kiểm tra admin tồn tại
+    const adminExists = await this.userRepo.findOne({
+      where: { id: adminUserId },
+    });
+    if (!adminExists) {
+      throw new NotFoundException(`Admin mặc định với id=${adminUserId} không tồn tại`);
+    }
+
+    // 4. 🔍 Tìm xem đã có conversation giữa customer và admin NÀY chưa
+    let conversation = await this.conversationRepo.findOne({
+      where: {
+        customer_id: customerId,
+        user_id: adminUserId, // Tìm theo admin_id mặc định
+      },
+    });
+
+    // 5. 🔹 Nếu chưa có thì tạo mới (KHÔNG DÙNG store_id)
+    if (!conversation) {
+      const newConv = this.conversationRepo.create({
+        customer_id: customerId,
+        user_id: adminUserId, // Gán admin_id mặc định
+        started_at: new Date(),
+      });
+      conversation = await this.conversationRepo.save(newConv);
+    }
+
+    // 6. 🔹 Nếu có nội dung khởi tạo thì thêm tin nhắn đầu tiên
+    if (content?.trim()) {
+      const msg = this.messageRepo.create({
+        conversation_id: conversation.id,
+        sender_id: sender_id || customerId, // Mặc định là customer
+        sender_type,
+        content: content.trim(),
+        sent_at: new Date(),
+        is_read: false,
+      });
+      await this.messageRepo.save(msg);
+    }
+
+    return conversation;
+  }
 
   /** 💬 Lưu message mới, tự tạo conversation nếu chưa có */
   async saveMessage(data: Message): Promise<Message> {
     let conversationId = data.conversation_id;
     let sender_type: 'USER' | 'ADMIN' | 'SUPERADMIN' =
-      data.sender_type === 'ADMIN' || data.sender_type === 'SUPERADMIN' ? data.sender_type : 'USER';
+      data.sender_type === 'ADMIN' || data.sender_type === 'SUPERADMIN'
+        ? data.sender_type
+        : 'USER';
 
-    // Nếu chưa có conversation_id thì tạo mới
+    // Nếu chưa có conversation_id (frontend gửi tin nhắn mà ko có ID)
     if (!conversationId) {
-      let user_id: number | undefined = (data as any).user_id;
-      let customer_id: number | undefined = (data as any).customer_id || (data as any).store_id;
+      // (data as any).user_id là CUSTOMER ID (từ client gửi lên)
+      const customer_id: number | undefined =
+        (data as any).user_id || (data as any).customer_id;
+      
+      // Lấy admin_id mặc định (giống hệt createConversation)
+      const admin_user_id = 1;
 
-      if (data.sender_type === 'CUSTOMER') {
-        customer_id = data.sender_id;
-        sender_type = 'USER';
-      } else if (data.sender_type === 'USER') {
-        user_id = data.sender_id;
-      }
-
-      if (user_id && customer_id) {
-        let conv = await this.conversationRepo.findOne({ where: { user_id, customer_id } });
+      if (customer_id) {
+        let conv = await this.conversationRepo.findOne({
+          where: { user_id: admin_user_id, customer_id },
+        });
         if (!conv) {
           conv = await this.conversationRepo.save({
-            user_id,
+            user_id: admin_user_id,
             customer_id,
             started_at: new Date(),
             created_at: new Date(),
@@ -140,7 +166,9 @@ export class ConversationService {
         }
         conversationId = conv.id;
       } else {
-        throw new Error('Thiếu thông tin user_id hoặc customer_id để tạo cuộc trò chuyện!');
+        throw new Error(
+          'Thiếu thông tin customer_id để tạo cuộc trò chuyện!',
+        );
       }
     }
 
@@ -155,14 +183,17 @@ export class ConversationService {
 
     const saved = await this.messageRepo.save(msg);
 
-// 🔹 convert để gửi WebSocket
-return { ...saved, sent_at: saved.sent_at.toISOString() };
+    // 🔹 convert để gửi WebSocket
+    return { ...saved, sent_at: saved.sent_at.toISOString() };
   }
 
   /** ✅ Đánh dấu tin nhắn đã đọc */
-  async markMessagesRead(conversation_id: number, user_id: number): Promise<void> {
+  async markMessagesRead(
+    conversation_id: number,
+    user_id: number,
+  ): Promise<void> {
     await this.messageRepo.update(
-      { conversation_id, sender_id: user_id },
+      { conversation_id, sender_id: user_id }, // Chỉ đánh dấu tin nhắn của user đó
       { is_read: true },
     );
   }
