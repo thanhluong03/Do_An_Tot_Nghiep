@@ -10,172 +10,177 @@ import { useAuth } from '@/contexts/AuthContext';
 import { userApi } from '@/api/modules/users'; // 🔥 VẪN CẦN CHO LOGOUT VÀ UPDATE
 
 interface Customer {
-  id?: number | string;
-  full_name?: string;
-  email: string;
-  phone_number?: string;
-  address?: string;
-  avatar_image?: string | null;
-  created_at?: string;
+  id?: number | string;
+  full_name?: string;
+  email: string;
+  phone_number?: string;
+  address?: string;
+  avatar_image?: string | null;
+  created_at?: string;
 }
 
 export default function ProfilePage() {
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<Customer>>({});
-  // const [loading, setLoading] = useState(true); // 🔥 KHÔNG DÙNG STATE LOADING RIÊNG
-  const [saving, setSaving] = useState(false);
-  const router = useRouter();
-  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [conversationId, setConversationId] = useState<number | null>(null);
-  
-  // 🔥 LẤY STATE TỪ CONTEXT (Đổi tên 'loading' thành 'authLoading' để tránh trùng lặp)
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState<Partial<Customer>>({});
+  // const [loading, setLoading] = useState(true); // 🔥 KHÔNG DÙNG STATE LOADING RIÊNG
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
 
-  // 🔥 THAY THẾ HOÀN TOÀN useEffect CŨ BẰNG ĐOẠN NÀY
-  useEffect(() => {
-    // Nếu context còn đang tải, chúng ta không làm gì cả
-    if (authLoading) {
-      return;
-    }
+  // 🔥 LẤY STATE TỪ CONTEXT (Đổi tên 'loading' thành 'authLoading' để tránh trùng lặp)
+  const { user, isAuthenticated, loading: authLoading, logout, refreshUser } = useAuth();
 
-    // Nếu context đã tải xong VÀ user đã đăng nhập
-    if (isAuthenticated && user) {
-      // ✅ Đồng bộ 'user' từ context vào state của trang
-      setCustomer(user as Customer);
-      setFormData(user as Customer);
-    } else {
-      // Nếu context đã tải xong VÀ không có user (hoặc đã logout)
-      setCustomer(null);
-    }
-  }, [user, isAuthenticated, authLoading]); // Phụ thuộc vào state từ context
+  // Log thông tin user từ context và customer state để debug
+  useEffect(() => {
+    console.log('[PROFILE PAGE] user from context:', user);
+    console.log('[PROFILE PAGE] customer state:', customer);
+  }, [user, customer]);
 
-  const handleLogout = async () => {
-    await logout(); // 🔥 Dùng hàm logout từ context
-    // router.push('/login'); // Hàm logout trong context đã xử lý việc chuyển trang
-  };
+  // 🔥 THAY THẾ HOÀN TOÀN useEffect CŨ BẰNG ĐOẠN NÀY
+  // Luôn lấy thông tin mới nhất của user khi vào trang
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      // Gọi refreshUser để luôn lấy thông tin mới nhất từ backend
+      refreshUser().then(() => {
+        // Sau khi refresh, context sẽ cập nhật user mới nhất
+        setCustomer(user as Customer);
+        setFormData(user as Customer);
+      });
+    } else if (!authLoading && !isAuthenticated) {
+      setCustomer(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isAuthenticated]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleLogout = async () => {
+    await logout(); // 🔥 Dùng hàm logout từ context
+    // router.push('/login'); // Hàm logout trong context đã xử lý việc chuyển trang
+  };
 
-  const handleSave = async () => {
-    if (!customer) return;
-    setSaving(true);
-    try {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!customer) return;
+    setSaving(true);
+    try {
       // API update vẫn giữ nguyên
-      const res = await userApi.updateProfile(formData as any); 
-      setCustomer(res);
-      setFormData(res);
-      setEditing(false);
-      alert('✅ Cập nhật thông tin thành công!');
-      // Có thể bạn muốn gọi refreshUser() từ context ở đây
-    } catch (err) {
-      console.error('Update failed:', err);
-      alert('❌ Cập nhật thất bại. Vui lòng thử lại.');
-    } finally {
-      setSaving(false);
-    }
-  };
+      const res = await userApi.updateProfile(formData as any);
+      // Sau khi update, luôn gọi refreshUser để context và localStorage đồng bộ
+      await refreshUser();
+      setCustomer(res);
+      setFormData(res);
+      setEditing(false);
+      alert('✅ Cập nhật thông tin thành công!');
+    } catch (err) {
+      console.error('Update failed:', err);
+      alert('❌ Cập nhật thất bại. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  // 🔥 DÙNG 'authLoading' ĐỂ KIỂM TRA
-  if (authLoading)
-    return (
-      <BaseLayout>
-        <div className="text-center text-gray-600 py-20 animate-pulse">Đang tải...</div>
-      </BaseLayout>
-    );
+  // 🔥 DÙNG 'authLoading' ĐỂ KIỂM TRA
+  if (authLoading)
+    return (
+      <BaseLayout>
+        <div className="text-center text-gray-600 py-20 animate-pulse">Đang tải...</div>
+      </BaseLayout>
+    );
 
-  // Sau khi hết loading, nếu không có customer (do !isAuthenticated)
-  if (!customer)
-    return (
-      <BaseLayout>
-        <div className="text-center py-20">
-          <p className="text-gray-600">Không tìm thấy thông tin người dùng.</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="mt-4 px-6 py-2 bg-[#65604E] text-white rounded-lg"
-          >
-            Đăng nhập
-          </button>
-        </div>
-      </BaseLayout>
-    );
+  // Sau khi hết loading, nếu không có customer (do !isAuthenticated)
+  if (!customer)
+    return (
+      <BaseLayout>
+        <div className="text-center py-20">
+          <p className="text-gray-600">Không tìm thấy thông tin người dùng.</p>
+          <button
+            onClick={() => router.push('/login')}
+            className="mt-4 px-6 py-2 bg-[#65604E] text-white rounded-lg"
+          >
+            Đăng nhập
+          </button>
+        </div>
+      </BaseLayout>
+    );
 
-  // Nếu vượt qua 2 kiểm tra trên, 'customer' chắc chắn có dữ liệu
+  // Nếu vượt qua 2 kiểm tra trên, 'customer' chắc chắn có dữ liệu
 
   return (
     <BaseLayout>
-    {/* === Popup Layer === */}
-                {isAuthenticated && user?.id && (
-                  <>
-                    {/* Voucher Modal */}
-                    {isVoucherModalOpen && (
-                      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
-                        <VoucherModal
-                          customerId={user.id}
-                          isOpen={isVoucherModalOpen}
-                          onClose={() => setIsVoucherModalOpen(false)}
-                        />
-                      </div>
-                    )}
-          
-                    {/* Chat Modal */}
-                    {isChatOpen && (
-                      <ChatModal
-                        isOpen={isChatOpen}
-                        onClose={() => setIsChatOpen(false)}
-                        userId={Number(user.id)}
-                        storeId={0}
-                        conversationId={conversationId} // ✅ truyền id xuống
-                      />
-                    )}
-          
-                    {/* Floating Buttons */}
-                    <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
-                      {/* Voucher Button */}
-                      <button
-                        onClick={() => setIsVoucherModalOpen(true)}
-                        className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
-                        title="Nhận Voucher Giảm Giá!"
-                      >
-                        🎁
-                      </button>
-          
-                      {/* Chat Button */}
-                      <button
-                        onClick={async () => {
-                          if (!isAuthenticated || !user?.id) return;
-                          try {
-                            console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
-                            const created = await conversationApi.createConversation({
-                              sender_id: Number(user.id),
-                              sender_type: 'USER',
-                              content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                              user_id: Number(user.id),
-                              store_id: 1,
-                            });
-          
-                            const conv = created?.conversation || created?.data || created;
-                            console.log('%c✅ Conversation created:', 'color:limegreen', conv);
-                            setConversationId(conv?.id || null);
-                            setIsChatOpen(true);
-                          } catch (err) {
-                            console.error('❌ Lỗi tạo conversation:', err);
-                          }
-                        }}
-                        className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                        title="Chat với Admin"
-                      >
-                        💬
-                      </button>
-                    </div>
-                  </>
-                )}
-          
-                <ScrollToTopButton />
+      {/* === Popup Layer === */}
+      {isAuthenticated && user?.id && (
+        <>
+          {/* Voucher Modal */}
+          {isVoucherModalOpen && (
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+              <VoucherModal
+                customerId={user.id}
+                isOpen={isVoucherModalOpen}
+                onClose={() => setIsVoucherModalOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* Chat Modal */}
+          {isChatOpen && (
+            <ChatModal
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              userId={Number(user.id)}
+              storeId={0}
+              conversationId={conversationId} // ✅ truyền id xuống
+            />
+          )}
+
+          {/* Floating Buttons */}
+          <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+            {/* Voucher Button */}
+            <button
+              onClick={() => setIsVoucherModalOpen(true)}
+              className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              title="Nhận Voucher Giảm Giá!"
+            >
+              🎁
+            </button>
+
+            {/* Chat Button */}
+            <button
+              onClick={async () => {
+                if (!isAuthenticated || !user?.id) return;
+                try {
+                  console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
+                  const created = await conversationApi.createConversation({
+                    sender_id: Number(user.id),
+                    sender_type: 'USER',
+                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                    user_id: Number(user.id),
+                    store_id: 1,
+                  });
+
+                  const conv = created?.conversation || created?.data || created;
+                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
+                  setConversationId(conv?.id || null);
+                  setIsChatOpen(true);
+                } catch (err) {
+                  console.error('❌ Lỗi tạo conversation:', err);
+                }
+              }}
+              className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+              title="Chat với Admin"
+            >
+              💬
+            </button>
+          </div>
+        </>
+      )}
+
+      <ScrollToTopButton />
       <section className="bg-[#F5F1EB] py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="bg-white rounded-3xl shadow-xl p-10 grid grid-cols-1 lg:grid-cols-3 gap-10 border border-[#E8E5DA]">

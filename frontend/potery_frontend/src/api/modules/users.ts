@@ -60,206 +60,192 @@ const handleAxiosError = (error: unknown, defaultMessage: string): Error => {
 export const userApi = {
   // Tìm customer theo email để lấy id từ bảng customers
   getCustomerByEmail: async (email: string): Promise<{ id: string | number; email: string; name?: string } | null> => {
-        try {
-            const res = await api.get('/customers/listcustomers', { params: { key: email, size: 1, page: 1 } });
-            const list = res.data?.customers || [];
-            if (Array.isArray(list) && list.length > 0) {
-                const c = list[0];
-                return { id: c.id, email: c.email, name: c.full_name };
-            }
-            return null;
-        } catch (error) {
-            throw handleAxiosError(error, 'Failed to find customer by email');
-        }
-    },
+    try {
+      const res = await api.get('/customers/listcustomers', { params: { key: email, size: 1, page: 1 } });
+      const list = res.data?.customers || [];
+      if (Array.isArray(list) && list.length > 0) {
+        const c = list[0];
+        return { id: c.id, email: c.email, name: c.full_name };
+      }
+      return null;
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to find customer by email');
+    }
+  },
   // Lấy thông tin user hiện tại
   getCurrentUser: async () => {
-  try {
-    const token = getToken();
-    if (!token) throw new Error('No authentication token found.');
+    try {
+      const token = getToken();
+      if (!token) throw new Error('No authentication token found.');
 
-    // ✅ Kiểm tra cache cũ
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('user');
-
-      if (cached) {
-        const parsed = JSON.parse(cached);
-
-        // ⚙️ Nếu cache có đủ thông tin thì trả luôn (tối ưu hiệu năng)
-        if (parsed.full_name && parsed.phone_number && parsed.address) {
-          return parsed;
-        }
-
-        // ⚠️ Nếu cache thiếu thông tin, gọi API để cập nhật đầy đủ
-        const customerId = localStorage.getItem('customerId');
-        if (customerId) {
-          const response = await api.get(`/customers/customerdetail/${customerId}`);
-          const userData = response.data;
-
-          // 🔄 Lưu lại cache mới
-          localStorage.setItem('user', JSON.stringify(userData));
-
-          return userData;
-        }
-
-        // Nếu không có customerId thì trả tạm parsed (tránh lỗi)
-        return parsed;
-      }
-    }
-
-    // ✅ Nếu không có cache -> lấy từ API
-    const customerId = typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
-    if (customerId) {
-      const response = await api.get(`/customers/customerdetail/${customerId}`);
-      const userData = response.data;
-
-      // Lưu cache cho lần sau
+      // ✅ Kiểm tra cache trước
       if (typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(userData));
+        const cached = localStorage.getItem('customer');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.full_name && parsed.phone_number && parsed.address) {
+            return parsed;
+          }
+        }
       }
 
-      return userData;
+      // ✅ Nếu không có cache đầy đủ -> lấy từ API
+      const customerId = typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
+      if (customerId) {
+        const response = await api.get(`/customers/customerdetail/${customerId}`);
+        const userData = response.data;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('customer', JSON.stringify(userData));
+        }
+        return userData;
+      }
+
+      throw new Error('User data not found.');
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      throw error;
     }
-
-    throw new Error('User data not found.');
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    throw error;
-  }
-},
+  },
 
 
 
-    // Lấy profile user (Dùng chung logic với getCurrentUser)
-    getUserProfile: async (): Promise<UserProfile> => {
-        // Tùy thuộc vào cấu trúc dữ liệu, có thể gọi lại getCurrentUser hoặc dùng endpoint khác
-        // Giả sử: dùng /customers/customerdetail/:id
-        const user = await userApi.getCurrentUser();
-        // Cần ánh xạ User/Customer sang UserProfile nếu cần
-        return user as unknown as UserProfile; // Cần chắc chắn Customer type khớp UserProfile
-    },
+  // Lấy profile user (Dùng chung logic với getCurrentUser)
+  getUserProfile: async (): Promise<UserProfile> => {
+    // Tùy thuộc vào cấu trúc dữ liệu, có thể gọi lại getCurrentUser hoặc dùng endpoint khác
+    // Giả sử: dùng /customers/customerdetail/:id
+    const user = await userApi.getCurrentUser();
+    // Cần ánh xạ User/Customer sang UserProfile nếu cần
+    return user as unknown as UserProfile; // Cần chắc chắn Customer type khớp UserProfile
+  },
 
   // Cập nhật profile
   // Cập nhật profile
-   // Cập nhật profile
-   updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
-  try {
-    const token = getToken();
-    if (!token) throw new Error('Không tìm thấy token đăng nhập.');
+  // Cập nhật profile
+  updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
+    try {
+      const token = getToken();
+      if (!token) throw new Error('Không tìm thấy token đăng nhập.');
 
-    const customerId =
-      typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
-    if (!customerId) throw new Error('Không tìm thấy ID người dùng.');
+      const customerId =
+        typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
+      if (!customerId) throw new Error('Không tìm thấy ID người dùng.');
 
-    // 🧹 Làm sạch dữ liệu trước khi gửi
-    const d = data as any;
-    const payload: Record<string, any> = {
-      full_name: d.full_name || d.name || '',
-      email: d.email || '',
-      phone_number: d.phone || d.phone_number || '',
-      address: d.address || '',
-      avatar_image: d.avatar_image || null,
-    };
+      // 🧹 Làm sạch dữ liệu trước khi gửi
+      const d = data as any;
+      const payload: Record<string, any> = {
+        full_name: d.full_name || d.name || '',
+        email: d.email || '',
+        phone_number: d.phone || d.phone_number || '',
+        address: d.address || '',
+        avatar_image: d.avatar_image || null,
+      };
 
-    // Gọi API PUT
-    const response = await axios.put(
-      `http://localhost:3000/customers/updatecustomer/${customerId}`,
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+      // Gọi API PUT
+      const response = await axios.put(
+        `http://localhost:3000/customers/updatecustomer/${customerId}`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    const updatedUser = response.data;
+      const updatedUser = response.data;
 
-    // 🔄 Chuẩn hóa về UserProfile cho frontend
-    const normalizedUser = {
-      id: updatedUser.id || customerId,
-      name: updatedUser.full_name || updatedUser.name || '',
-      email: updatedUser.email || '',
-      phone: updatedUser.phone_number || '',
-      address: updatedUser.address || '',
-      avatar_image: updatedUser.avatar_image || null,
-    } as unknown as UserProfile;
+      // 🔄 Chuẩn hóa về UserProfile cho frontend
+      const normalizedUser = {
+        id: updatedUser.id || customerId,
+        name: updatedUser.full_name || updatedUser.name || '',
+        email: updatedUser.email || '',
+        phone: updatedUser.phone_number || '',
+        address: updatedUser.address || '',
+        avatar_image: updatedUser.avatar_image || null,
+      } as unknown as UserProfile;
 
-    // Cập nhật localStorage
-    localStorage.setItem('user', JSON.stringify(normalizedUser));
+      // Cập nhật localStorage
+      localStorage.setItem('customer', JSON.stringify(normalizedUser));
 
-    return normalizedUser;
-  } catch (error) {
-    console.error('❌ Lỗi update profile:', error);
-    throw handleAxiosError(error, 'Không thể cập nhật thông tin người dùng.');
-  }
-},
+      return normalizedUser;
+    } catch (error) {
+      console.error('❌ Lỗi update profile:', error);
+      throw handleAxiosError(error, 'Không thể cập nhật thông tin người dùng.');
+    }
+  },
 
 
   // Đăng ký (backend: POST /login/register)
-    register: async (data: {
-        email: string;
-        password: string;
-        name: string;
-        phone?: string;
-    }): Promise<{ user: User; token: string }> => {
-        try {
-            const response = await api.post('/login/register', data);
-            const { user, token } = response.data || {};
-            // Lưu token
-            localStorage.setItem('token', token);
-            // Lấy customerId từ email
-            if (user?.email) {
-                const customer = await userApi.getCustomerByEmail(user.email);
-                if (customer?.id) localStorage.setItem('customerId', String(customer.id));
-                // Lưu user với id nếu có
-                const persisted = { id: customer?.id, email: user.email, name: user.name } as User;
-                localStorage.setItem('user', JSON.stringify(persisted));
-                return { user: persisted, token };
-            }
-            return response.data;
-        } catch (error) {
-            throw handleAxiosError(error, 'Failed to register');
-        }
-    },
-
-    // Đăng nhập (backend: POST /login)
-    login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-  try {
-    const response = await api.post('/login', { email, password });
-    localStorage.removeItem('guest_id');
-    const { user, token } = response.data || {};
-
-    if (!token) throw new Error('Không nhận được token đăng nhập.');
-
-    localStorage.setItem('token', token);
-
-    // ✅ Lấy customerId từ email
-    if (user?.email) {
-      const customer = await userApi.getCustomerByEmail(user.email);
-      if (customer?.id) localStorage.setItem('customerId', String(customer.id));
-
-      const persisted = { id: customer?.id, email: user.email, name: user.name } as User;
-      localStorage.setItem('user', JSON.stringify(persisted));
-
-      return { user: persisted, token };
+  register: async (data: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+  }): Promise<{ user: User; token: string }> => {
+    try {
+      const response = await api.post('/login/register', data);
+      const { user, token } = response.data || {};
+      // Lưu token
+      localStorage.setItem('token', token);
+      // Lấy customerId từ email
+      if (user?.email) {
+        const customer = await userApi.getCustomerByEmail(user.email);
+        if (customer?.id) localStorage.setItem('customerId', String(customer.id));
+        // Lưu customer với id nếu có
+        const persisted = { id: customer?.id, email: user.email, name: user.name } as User;
+        localStorage.setItem('customer', JSON.stringify(persisted));
+        return { user: persisted, token };
+      }
+      return response.data;
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to register');
     }
+  },
 
-    return { user, token };
-  } catch (error) {
-    throw handleAxiosError(error, 'Đăng nhập thất bại.');
-  }
-},
+  // Đăng nhập (backend: POST /login)
+  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
+    try {
+      const response = await api.post('/login', { email, password });
+      localStorage.removeItem('guest_id');
+      const { user, token } = response.data || {};
 
+      if (!token) throw new Error('Không nhận được token đăng nhập.');
 
-    // Đăng xuất (Bổ sung xóa customerId)
-    logout: async (): Promise<void> => {
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('customerId'); // Xóa ID khi logout
-            localStorage.removeItem('user');
+      localStorage.setItem('token', token);
+
+      // ✅ SỬ DỤNG TRỰC TIẾP ID TỪ BACKEND thay vì tìm kiếm lại
+      if (user?.id) {
+        localStorage.setItem('customerId', String(user.id));
+
+        // Luôn fetch chi tiết customer từ API sử dụng ID từ backend
+        try {
+          const detailRes = await api.get(`/customers/customerdetail/${user.id}`);
+          const fullCustomer = detailRes.data;
+          localStorage.setItem('customer', JSON.stringify(fullCustomer));
+          return { user: fullCustomer, token };
+        } catch (detailError) {
+          // Nếu không lấy được chi tiết, vẫn lưu thông tin từ backend
+          const persisted = { id: user.id, email: user.email, name: user.name } as User;
+          localStorage.setItem('customer', JSON.stringify(persisted));
+          return { user: persisted, token };
         }
-    },
+      }
+
+      return { user, token };
+    } catch (error) {
+      throw handleAxiosError(error, 'Đăng nhập thất bại.');
+    }
+  },
+
+
+  // Đăng xuất (Bổ sung xóa customerId)
+  logout: async (): Promise<void> => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('customerId'); // Xóa ID khi logout
+      localStorage.removeItem('customer');
+    }
+  },
 
   // URL đăng nhập Google
   getGoogleLoginUrl: () => `${API_BASE_URL}/login/google`,

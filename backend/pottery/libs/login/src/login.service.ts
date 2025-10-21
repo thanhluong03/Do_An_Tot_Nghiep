@@ -34,7 +34,7 @@ export class LoginService {
             return { success: false, message: 'Incorrect password', status: HttpStatus.UNAUTHORIZED };
         }
         const token = this.jwtService.sign({ email: user.email, name: user.full_name });
-        return { success: true, token, user: { email: user.email, name: user.full_name } };
+        return { success: true, token, user: { id: user.id, email: user.email, name: user.full_name } };
     }
 
     async register(body: any) {
@@ -55,7 +55,7 @@ export class LoginService {
             return { success: false, message: 'Registration failed', status: HttpStatus.INTERNAL_SERVER_ERROR };
         }
         const token = this.jwtService.sign({ email, name });
-        return { success: true, token, user: { email, name } };
+        return { success: true, token, user: { id: result.customer.id, email, name } };
     }
 
     async googleAuthRedirect(user: any) {
@@ -130,8 +130,8 @@ export class LoginService {
             roleId: role.id,
             roleName: role.name,
             permissions,
-            
+
         };
-        }
+    }
 
 }
