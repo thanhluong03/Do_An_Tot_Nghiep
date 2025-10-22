@@ -2,6 +2,7 @@
 
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import toast, { Toaster } from "react-hot-toast";
 import {
     listInventories,
@@ -36,10 +37,13 @@ export type FormName = "product_id" | "store_id" | "quantity_stock" | "quantity_
 export default function InventoryPage() {
     const [categories, setCategories] = useState<Category[]>([]);
 
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
+    
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [stores, setStores] = useState<SelectOption[]>([]);
-    const [allProducts, setAllProducts] = useState<Product[]>([]); // Danh sách Product đầy đủ
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -48,10 +52,8 @@ export default function InventoryPage() {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedStoreId, setSelectedStoreId] = useState<number>(0);
 
-    // State kiểm soát hiển thị form Thêm mới (khi editingId === null)
     const [isAdding, setIsAdding] = useState(false);
 
-    // --- Bộ lọc theo thời gian ---
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
 
@@ -65,11 +67,9 @@ export default function InventoryPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    // Hàm lấy tên hiển thị
     const getDisplayName = useCallback(
         (list: SelectOption[], id: number | string | undefined): string => {
             if (id === undefined || id === null) return "";
-            // Xử lý giá trị 'all' nếu có
             if (typeof id === 'string' && id === 'all') return "TẤT CẢ";
             const numericId = Number(id);
             if (isNaN(numericId)) return "";
@@ -78,22 +78,15 @@ export default function InventoryPage() {
         },
         []
     );
-
-    // useEffect 1: Tải dữ liệu dropdown khi component mount
     useEffect(() => {
         fetchDropdownData();
     }, []);
 
-    // useEffect 2: Tải dữ liệu tồn kho khi phân trang thay đổi
     useEffect(() => {
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentPage, pageSize]); // Thêm fetchData vào dependency array
-
-    // Hàm tải dữ liệu dropdown (SP/Cửa hàng) và danh sách Product đầy đủ
+    }, [currentPage, pageSize]);
     const fetchDropdownData = async () => {
         try {
-            // Lấy cả 3 loại dữ liệu song song
             const [productRes, storeRes, allProductRes] = await Promise.all([
                 listDropdownProducts(),
                 listDropdownStores(),
@@ -103,7 +96,8 @@ export default function InventoryPage() {
 
             setProducts(Array.isArray(productRes) ? productRes : []);
             setStores(Array.isArray(storeRes) ? storeRes : []);
-            setAllProducts(Array.isArray(allProductRes) ? allProductRes : []); // Lưu Product đầy đủ
+            setAllProducts(Array.isArray(allProductRes) ? allProductRes : []);
+            
         } catch (error) {
             toast.error("Lỗi khi tải danh sách sản phẩm/cửa hàng.");
             setProducts([]);
@@ -120,7 +114,7 @@ export default function InventoryPage() {
             const res = await listInventories({
                 page: currentPage,
                 size: pageSize,
-                key: searchQuery || undefined, // Đảm bảo truyền undefined nếu rỗng
+                key: searchQuery || undefined,
                 store_id: selectedStoreId === 0 ? undefined : selectedStoreId,
                 fromDate: fromDate || undefined,
                 toDate: toDate || undefined,
@@ -173,56 +167,49 @@ export default function InventoryPage() {
     // Mở form chỉnh sửa
     const handleEdit = (item: Inventory) => {
         setEditingId(item.id);
-        setIsAdding(false); // Đảm bảo isAdding = false khi chỉnh sửa
+        setIsAdding(false);
         setForm({
-            product_id: String(item.product_id), // Chắc chắn là string cho select
-            store_id: String(item.store_id), // Chắc chắn là string cho select
+            product_id: String(item.product_id), 
+            store_id: String(item.store_id),
             quantity_stock: item.quantity_stock || 0,
             quantity_sold: item.quantity_sold || 0,
         });
         setErrors({}); // Xóa lỗi cũ
     };
 
-    // Xử lý xoá
-    const handleDelete = async (id: number) => {
-        toast(
-            (t) => (
-                <div className="text-center justify-center">
-                    <p className="font-medium mb-2">Bạn có chắc muốn xoá tồn kho ID <b>{id}</b>?</p>
-                    <div className="flex justify-center gap-3">
-                        <button
-                            onClick={async () => {
-                                toast.dismiss(t.id);
-                                try {
-                                    await deleteInventory(id);
-                                    toast.success(`Đã xoá tồn kho ID ${id}!`);
-                                    fetchData();
-                                } catch {
-                                    toast.error("Không thể xoá tồn kho!");
-                                }
-                            }}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded-md"
-                        >
-                            Xoá
-                        </button>
-                        <button
-                            onClick={() => toast.dismiss(t.id)}
-                            className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-1 rounded-md"
-                        >
-                            Huỷ
-                        </button>
-                    </div>
-                </div>
-            ),
-            { duration: 5000, position: "top-center" }
-        );
+   const handleDelete = (id: number) => { 
+        setItemToDeleteId(id);
+        setIsDeleteDialogOpen(true);
+    };
+
+    // Thực hiện xoá (chỉ gọi khi xác nhận) <--- THÊM HÀM NÀY
+    const performDelete = async () => {
+        if (itemToDeleteId === null) return;
+
+        const id = itemToDeleteId;
+        setIsDeleteDialogOpen(false);
+        setItemToDeleteId(null);
+
+        try {
+            await deleteInventory(id);
+            toast.success(`Đã xoá tồn kho ID ${id}!`);
+            fetchData();
+        } catch (error: any) {
+            const msg = error.response?.data?.message || "Không thể xoá tồn kho!";
+            toast.error(msg);
+        }
+    };
+    
+    // Huỷ xoá <--- THÊM HÀM NÀY
+    const handleCancelDelete = () => {
+        setIsDeleteDialogOpen(false);
+        setItemToDeleteId(null);
     };
 
     // Validate form
     const validate = (isCreating: boolean) => {
         const newErrors: { [key: string]: string } = {};
 
-        // Chỉ kiểm tra product_id và store_id khi TẠO MỚI
         if (isCreating) {
             if (!form.product_id || (Array.isArray(form.product_id) && form.product_id.length === 0)) {
                 newErrors.product_id = "Vui lòng chọn sản phẩm.";
@@ -235,7 +222,6 @@ export default function InventoryPage() {
        if (form.quantity_stock < 0) {
     newErrors.quantity_stock = "SL Tồn kho phải ≥ 0.";
 } else if (isCreating && form.product_id && !Array.isArray(form.product_id)) {
-    // Kiểm tra nếu chọn 1 sản phẩm cụ thể (tránh lỗi khi chọn nhiều)
     const product = allProducts.find(p => p.id === Number(form.product_id));
     if (product && form.quantity_stock > (product.total_quantity_divided || 0)) {
         newErrors.quantity_stock = `Số lượng nhập (${form.quantity_stock}) vượt quá số lượng còn trong kho (${product.total_quantity_divided || 0}).`;
@@ -252,19 +238,17 @@ export default function InventoryPage() {
 
     // Submit form
     const handleSubmit = async () => {
-        const isCreating = editingId === null; // Xác định đang là tạo mới hay cập nhật
+        const isCreating = editingId === null;
         if (!validate(isCreating)) return;
 
         try {
             if (isCreating) {
-                // Logic cho TẠO MỚI
-                // Ép kiểu về string hoặc string[] cho API
                 const productId = form.product_id;
                 const storeId = form.store_id;
 
                 const createDto: CreateInventoryDto = {
-                    product_id: productId as string | string[], // API call sẽ xử lý string[] nếu người dùng chọn nhiều
-                    store_id: storeId as string | string[], // API call sẽ xử lý string[]
+                    product_id: productId as string | string[], 
+                    store_id: storeId as string | string[],
                     quantity_stock: form.quantity_stock,
                 };
                 await createInventory(createDto);
@@ -318,17 +302,16 @@ export default function InventoryPage() {
                     )}
                 </div>
 
-                {/* --- FORM THÊM/SỬA (CHỈ HIỂN THỊ KHI editingId HOẶC isAdding TRUE) --- */}
                 {(editingId !== null || isAdding) && (
                     <InventoryForm
                         form={form}
                         editingId={editingId}
-                        isAdding={isAdding} // Truyền trạng thái thêm mới
+                        isAdding={isAdding}
                         errors={errors}
                          categories={categories}
                         products={products}
                         stores={stores}
-                        allProducts={allProducts} // TRUYỀN DANH SÁCH PRODUCT ĐẦY ĐỦ
+                        allProducts={allProducts}
                         getDisplayName={getDisplayName}
                         handleValueChange={handleValueChange}
                         handleNumberChange={handleNumberChange}
@@ -434,6 +417,16 @@ export default function InventoryPage() {
                     }}
                 />
             </div>
+           {isDeleteDialogOpen && (
+                <ConfirmDialog
+                    message={`Bạn có chắc chắn muốn xóa Tồn kho ID: ${itemToDeleteId} này không? Hành động này không thể hoàn tác.`} 
+                    onConfirm={performDelete}
+                    onCancel={handleCancelDelete} 
+                    title="Xác nhận Xóa Tồn kho"
+                    confirmText="Xóa"
+                    cancelText="Hủy"
+                />
+            )}
         </div>
     );
 }

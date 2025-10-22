@@ -9,6 +9,7 @@ import {
   Supplier,
 } from "@/api/services/supplierService";
 import { Pencil, Trash2 } from "lucide-react";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const initialFormState: Supplier = {
   name: "",
@@ -25,6 +26,8 @@ export default function SupplierPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(5);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSuppliers();
@@ -86,40 +89,33 @@ export default function SupplierPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    toast(
-      (t) => (
-        <div>
-          <p>Bạn có chắc muốn xoá nhà cung cấp này?</p>
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={async () => {
-                toast.dismiss(t.id);
-                try {
-                  await deleteSupplier(id);
-                  toast.success("Đã xoá nhà cung cấp!");
-                  fetchSuppliers();
-                } catch {
-                  toast.error("Không thể xoá nhà cung cấp!");
-                }
-              }}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-            >
-              Xoá
-            </button>
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded"
-            >
-              Huỷ
-            </button>
-          </div>
-        </div>
-      ),
-      { duration: 2000 }
-    );
-  };
+ const handleDelete = (id: number) => {
+    setItemToDeleteId(id);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  // [THÊM MỚI] Hàm thực hiện API xóa
+  const performDelete = async () => {
+    if (!itemToDeleteId) return;
 
+    try {
+      await deleteSupplier(itemToDeleteId);
+      toast.success("Đã xoá nhà cung cấp!");
+      fetchSuppliers();
+    } catch {
+      toast.error("Không thể xoá nhà cung cấp!");
+    } finally {
+      // Đóng dialog và reset state
+      setIsDeleteDialogOpen(false);
+      setItemToDeleteId(null);
+    }
+  };
+  
+  // [THÊM MỚI] Hàm hủy xóa
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setItemToDeleteId(null);
+  };
   // Pagination
   const totalPages = Math.ceil(suppliers.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -283,6 +279,17 @@ export default function SupplierPage() {
             </div>
           </div>
         </div>
+        
+      )}
+      {isDeleteDialogOpen && (
+        <ConfirmDialog
+          title="Xác nhận Xoá Nhà cung cấp"
+          message={`Bạn có chắc muốn xoá nhà cung cấp ID: ${itemToDeleteId}? Hành động này không thể hoàn tác.`}
+          confirmText="Xác nhận Xoá"
+          cancelText="Hủy bỏ"
+          onConfirm={performDelete}
+          onCancel={handleCancelDelete}
+        />
       )}
     </div>
   );

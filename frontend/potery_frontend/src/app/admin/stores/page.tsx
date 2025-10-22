@@ -8,8 +8,9 @@ import {
     Store,
 } from "@/api/services/storeService";
 import toast, { Toaster } from "react-hot-toast";
-import { Pencil, Trash2 } from 'lucide-react'; // Import icons
-import StoreForm from "@/components/adminStore/StoreForm"; // IMPORT COMPONENT MỚI (Giả định path này)
+import { Pencil, Trash2 } from 'lucide-react';
+import StoreForm from "@/components/adminStore/StoreForm";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function StorePage() {
     const defaultForm: Store = {
@@ -17,16 +18,17 @@ export default function StorePage() {
         address: "",
         phone: "",
     };
-
+const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
     const [stores, setStores] = useState<Store[]>([]);
     const [form, setForm] = useState<Store>(defaultForm);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(5);
-    const [showForm, setShowForm] = useState(false); // STATE MỚI: Quản lý hiển thị form
+    const [showForm, setShowForm] = useState(false);
 
-    // Hàm format ngày kiểu Việt Nam (Tái sử dụng từ component trên)
+
     const formatDateTime = (isoString?: string) => {
         if (!isoString) return "N/A";
         const date = new Date(isoString);
@@ -40,7 +42,6 @@ export default function StorePage() {
         });
     };
 
-    // Hồi lại giá trị mặc định và ẩn form/tắt chế độ sửa
     const resetFormState = useCallback(() => {
         setForm(defaultForm);
         setEditingId(null);
@@ -56,7 +57,7 @@ export default function StorePage() {
         try {
             const data = await getStores();
             setStores(data);
-            setCurrentPage(1); // Reset về trang 1 khi tải lại dữ liệu
+            setCurrentPage(1);
         } catch {
             toast.error("Không thể tải danh sách cửa hàng!");
         }
@@ -92,7 +93,7 @@ export default function StorePage() {
                 await addStore(form);
                 toast.success("Thêm cửa hàng thành công!");
             }
-            resetFormState(); // Đặt lại form sau khi thành công
+            resetFormState();
             fetchStores();
         } catch (error) {
             console.error(error);
@@ -104,25 +105,39 @@ export default function StorePage() {
         setForm(store);
         setEditingId(store.id || null);
         setErrors({});
-        setShowForm(true); // Bật form khi chỉnh sửa
+        setShowForm(true);
         toast("Chỉnh sửa cửa hàng đang được bật", { icon: "✏️" });
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("Bạn có chắc muốn xoá cửa hàng này?")) return;
+        setItemToDeleteId(id);
+        setIsDeleteDialogOpen(true)
+    };
+    const performDelete = async () => {
+        if (!itemToDeleteId) return;
+
         try {
-            await deleteStore(id);
+            await deleteStore(itemToDeleteId);
             toast.success("Xoá cửa hàng thành công!");
+            
             // Nếu đang chỉnh sửa item vừa xóa, thì reset form
-            if (editingId === id) {
+            if (editingId === itemToDeleteId) {
                 resetFormState();
             }
+            
             fetchStores();
         } catch {
             toast.error("Không thể xoá cửa hàng!");
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setItemToDeleteId(null);
         }
     };
     
+    const handleCancelDelete = () => {
+        setIsDeleteDialogOpen(false);
+        setItemToDeleteId(null);
+    };
     const handleCancelEdit = () => {
         resetFormState();
     }
@@ -152,20 +167,17 @@ export default function StorePage() {
                     onCancelEdit={handleCancelEdit}
                 />
 
-                {/* Table - Đã áp dụng CSS thống nhất */}
                 <div className="overflow-x-auto">
-                    {/* Bảng sử dụng shadow lớn hơn và border mềm mại */}
                     <table className="w-full border-collapse bg-white rounded-xl shadow-lg text-sm text-gray-800">
                         <thead>
-                            {/* Header sử dụng gradient nhẹ và font đậm, căn chỉnh padding px-5 py-3 */}
                             <tr className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 uppercase text-xs font-bold border-b border-gray-200">
                                 <th className="px-5 py-3 text-center w-[60px] rounded-tl-xl">ID</th>
                                 <th className="px-5 py-3 text-left min-w-[150px]">Tên cửa hàng</th>
                                 <th className="px-5 py-3 text-left min-w-[200px]">Địa chỉ</th>
                                 <th className="px-5 py-3 text-center w-[120px]">Điện thoại</th>
-                                <th className="px-5 py-3 text-center w-[140px]">Ngày tạo</th>
-                                <th className="px-5 py-3 text-center w-[140px]">Ngày cập nhật</th>
-                                <th className="px-5 py-3 text-center w-[120px] rounded-tr-xl">Hành động</th>
+                                <th className="px-5 py-3 text-center w-[150px]">Ngày tạo</th>
+                                <th className="px-5 py-3 text-center w-[150px]">Ngày cập nhật</th>
+                                <th className="px-5 py-3 text-center w-[200px] rounded-tr-xl">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -181,7 +193,6 @@ export default function StorePage() {
                                     <td className="px-5 py-3 text-gray-600 truncate" title={store.address}>{store.address}</td>
                                     <td className="px-5 py-3 text-center text-gray-700 font-mono">{store.phone}</td>
                                     
-                                    {/* Sử dụng formatDateTime */}
                                     <td className="px-5 py-3 text-center text-xs text-gray-500">
                                         {formatDateTime(store.created_at)}
                                     </td>
@@ -189,7 +200,6 @@ export default function StorePage() {
                                         {formatDateTime(store.updated_at)}
                                     </td>
                                     
-                                    {/* Hành động - Sử dụng style badge button và icons */}
                                     <td className="px-5 py-3 text-center space-x-2">
                                         <button
                                             title='Sửa'
@@ -247,6 +257,16 @@ export default function StorePage() {
                     </div>
                 </div>
             </div>
+            {isDeleteDialogOpen && itemToDeleteId !== null && (
+                <ConfirmDialog
+                    title="Xác nhận Xóa Cửa hàng"
+                    message={`Bạn có chắc muốn xóa cửa hàng ID: ${itemToDeleteId}? Hành động này không thể hoàn tác.`}
+                    confirmText="Xác nhận Xoá"
+                    cancelText="Hủy"
+                    onConfirm={performDelete}
+                    onCancel={handleCancelDelete}
+                />
+            )}
         </div>
     );
 }

@@ -10,6 +10,7 @@ import {
 } from "@/api/services/roleService";
 import RoleTable from "@/components/adminRole/RoleTable";
 import RoleModal from "@/components/adminRole/RoleModal";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function RolePage() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -20,7 +21,8 @@ export default function RolePage() {
   const [editing, setEditing] = useState<Role | null>(null);
   const [form, setForm] = useState<CreateRoleDto>({ name: "", description: "" });
   const [error, setError] = useState<string | null>(null);
-
+const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
   useEffect(() => {
     fetchRoles();
   }, [page]);
@@ -52,11 +54,26 @@ export default function RolePage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Are you sure you want to delete this role?")) return;
-    await deleteRole(id);
-    fetchRoles();
-  }
+ async function handleDelete(id: number) {
+    setItemToDeleteId(id); 
+    setIsDeleteDialogOpen(true);
+  }
+  const performDelete = async () => {
+    if (!itemToDeleteId) return;
+    
+    try {
+      await deleteRole(itemToDeleteId);
+    } catch {
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setItemToDeleteId(null);
+      fetchRoles();
+    }
+  };
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setItemToDeleteId(null);
+  };
 
   return (
         <div className="p-8 mx-auto bg-white rounded-lg shadow">
@@ -97,6 +114,16 @@ export default function RolePage() {
                 onSubmit={handleSubmit}
                 error={error}
             />
+            {isDeleteDialogOpen && itemToDeleteId !== null && (
+                <ConfirmDialog
+                    title="Xác nhận Xoá Phân quyền"
+                    message={`Bạn có chắc muốn xoá phân quyền ID: ${itemToDeleteId}? Hành động này không thể hoàn tác.`}
+                    confirmText="Xác nhận Xoá"
+                    cancelText="Hủy bỏ"
+                    onConfirm={performDelete}
+                    onCancel={handleCancelDelete}
+                />
+            )}
         </div>
     );
 }

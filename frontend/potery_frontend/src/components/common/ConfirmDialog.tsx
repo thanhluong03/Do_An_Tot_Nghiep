@@ -19,6 +19,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[9999] bg-black/20 animate-[fadeIn_0.2s_ease-in-out]">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-md text-center border border-gray-100 transform transition-all scale-100 animate-[zoomIn_0.2s_ease-in-out]">

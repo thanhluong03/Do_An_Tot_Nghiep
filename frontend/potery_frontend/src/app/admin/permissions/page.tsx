@@ -75,7 +75,21 @@ export default function PermissionsPage() {
             return next;
         });
     }
+    function onSelectAll(select: boolean) {
+        const allAvailableKeys = Object.values(availablePermissions)
+            .flat()
+            .map((p) => p.key);
 
+        setRolePermissions((prev) => {
+            const next = new Set(prev);
+            if (select) {
+                allAvailableKeys.forEach((key) => next.add(key));
+            } else {
+                allAvailableKeys.forEach((key) => next.delete(key));
+            }
+            return next;
+        });
+    }
     async function onSave() {
         if (!selectedRoleId) return setError("Vui lòng chọn một vai trò để lưu.");
         setError(null);
@@ -84,10 +98,10 @@ export default function PermissionsPage() {
             await updatePermissionsForRole(Number(selectedRoleId), Array.from(rolePermissions));
             // fetch again to refresh state from server
             await fetchRolePermissions(Number(selectedRoleId));
-            toast.success("Phân quyền đã được cập nhật thành công."); // ✅ Thêm toast
+            toast.success("Phân quyền đã được cập nhật thành công."); 
         } catch (err) {
             console.error(err);
-            toast.error("Cập nhật phân quyền thất bại."); // ✅ Thêm toast
+            toast.error("Cập nhật phân quyền thất bại.");
         } finally {
             setSaving(false);
         }
@@ -96,16 +110,14 @@ export default function PermissionsPage() {
     async function handleCreatePermission(payload: { role_id: number; name: string; description?: string }) {
         try {
             const created = await createPermission(payload);
-            // after creation, refresh available permissions and role permissions if relevant
             const avails = await getAvailablePermissions();
             setAvailablePermissions(avails);
             if (payload.role_id === Number(selectedRoleId)) {
                 await fetchRolePermissions(Number(selectedRoleId));
             }
-            toast.success(`Đã tạo quyền: ${payload.name}`); // ✅ Thêm toast
+            toast.success(`Đã tạo quyền: ${payload.name}`);
             return created;
         } catch (err: any) {
-            // throw err to be caught by modal's try/catch
             throw err;
         }
     }
@@ -114,7 +126,7 @@ export default function PermissionsPage() {
 
     return (
         <div className="p-8 bg-white rounded-lg shadow-md mx-auto">
-            <Toaster position="top-right" /> {/* ✅ Thêm Toaster */}
+            <Toaster position="top-right" />
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
                 <h1 className="text-3xl font-bold text-[#B95D26]">Quản lý Phân quyền</h1>
                 <div className="flex items-center gap-3">
@@ -131,7 +143,7 @@ export default function PermissionsPage() {
                             </option>
                         ))}
                     </select>
-
+                  
                     <button
                         onClick={() => setModalOpen(true)}
                         className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-150 shadow-md font-medium"
@@ -153,6 +165,8 @@ export default function PermissionsPage() {
                 selected={rolePermissions}
                 onToggle={onTogglePermission}
                 loading={loading}
+                onSelectAll={onSelectAll}
+                isRoleSelected={!!selectedRoleId}
             />
 
             <div className="mt-6 flex justify-end gap-3">
