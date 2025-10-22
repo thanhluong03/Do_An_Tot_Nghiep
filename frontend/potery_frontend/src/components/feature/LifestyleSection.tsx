@@ -96,9 +96,10 @@ export const LifestyleSection: React.FC = () => {
                         size="lg"
                         className="px-8 py-3 text-lg font-semibold bg-white text-[#65604E] hover:bg-[#F5F1EB] shadow-lg transition-all duration-300 flex items-center justify-center mx-auto space-x-2 rounded-lg" // Thêm rounded-lg cho nút
                     >
-                        <span>Khám Phá Bộ Sưu Tập Lifestyle</span>
+                        <a href='/products'>Khám Phá Bộ Sưu Tập Lifestyle
                         {/* Icon mũi tên phải */}
                         <span className="ml-2 text-xl">→</span> 
+                        </a>
                     </Button>
                 </div>
                 

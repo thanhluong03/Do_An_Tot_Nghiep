@@ -54,7 +54,8 @@ export const HeroSection: React.FC = () => {
                         size="lg"
                         className="px-8 py-3 text-base font-semibold bg-[#8B7D6B] text-white hover:bg-[#65604E] shadow-lg transition-all duration-300"
                     >
-                        Khám Phá Bộ Sưu Tập
+                        <a href='/products'>Khám Phá Bộ Sưu Tập</a>
+                        
                     </Button>
                     <Button
                         variant="outline"

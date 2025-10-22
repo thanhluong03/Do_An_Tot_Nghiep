@@ -375,7 +375,7 @@ export function JournalSection() {
             <button
                 className="px-8 py-3 text-lg font-semibold bg-[#8B7D6B] text-white hover:bg-[#65604E] transition-colors rounded-lg shadow-md"
             >
-                Xem Tất Cả Bài Viết
+                <a href='/news'>Xem Tất Cả Bài Viết</a>
             </button>
         </div>
         

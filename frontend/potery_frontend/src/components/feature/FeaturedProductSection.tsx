@@ -91,13 +91,6 @@ export const FeaturedProductSection: React.FC = () => {
                 <div className="absolute top-4 right-4 bg-[#8B7D6B] text-white px-3 py-1 rounded-md text-sm font-medium z-10">
                   Sản phẩm nổi bật
                 </div>
-
-                {/* Text dọc bên trái */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <p className="text-gray-200 text-opacity-50 text-xl font-bold tracking-widest transform rotate-[-90deg] translate-x-[-120px] select-none">
-                    YOUR SWEET
-                  </p>
-                </div>
               </div>
 
               {/* Rating */}
@@ -167,7 +160,7 @@ export const FeaturedProductSection: React.FC = () => {
                   onClick={() => router.push(`/products/${product.id}`)}
                   className="flex-1 bg-[#8B7D6B] text-white hover:bg-[#65604E] px-6 py-3 text-base font-semibold rounded-lg text-center transition"
                 >
-                  Mua Ngay
+                  Xem chi tiết
                 </button>
                 <button
                   onClick={() => addToCart(product)}
