@@ -176,7 +176,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
       <div className="p-4 text-left"> 
         
         {/* 1. Category */}
-        <p className="text-sm text-gray-500 mb-1">{product.category || 'Ly, Cốc'}</p>
+        <p className="text-sm text-gray-500 mb-1">{product.category_name|| 'Ly, Cốc'}</p>
         
         {/* 2. Product Name */}
         <h3 className="font-bold text-lg text-gray-900 mb-2 truncate">
@@ -212,7 +212,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
             <span className="text-yellow-400">★</span> 
             <span className="font-medium text-gray-800">{product.rating || '5.0'}</span>
           </div>
-          <span>Đã bán {product.store.quantity_sold || 25}</span>
+          <span>Đã bán {product.total_quantity_sold ?? 0}</span>
         </div>
 
         {/* 5. Button Line */}

@@ -62,6 +62,7 @@ const mapProductDetail = (p: any): ProductDetail => {
     isFlashSale: Boolean(p.promotion),
     flashSalePrice: currentPrice < originalPrice ? currentPrice : undefined,
     flashSaleEndTime: p.promotion?.end_date ? new Date(p.promotion.end_date) : undefined,
+    total_quantity_sold: typeof p.total_quantity_sold === 'number' ? p.total_quantity_sold : undefined,
   };
 };
 
@@ -98,6 +99,7 @@ const mapProduct = (p: any): Product => {
     discount,
     images,
     category: p.category ?? '',
+    category_name: p.category_name ?? '',
     rating: Number(p.rating ?? 5),
     reviewCount: Number(p.reviewCount ?? 0),
     // Tạm thời đặt stock là 0, sẽ được cập nhật sau từ Inventory API
@@ -117,6 +119,7 @@ const mapProduct = (p: any): Product => {
     },
     createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
     updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date(),
+    total_quantity_sold: typeof p.total_quantity_sold === 'number' ? p.total_quantity_sold : undefined,
   };
 };
 

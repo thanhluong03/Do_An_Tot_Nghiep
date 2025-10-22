@@ -7,6 +7,7 @@ export interface Product {
   discount?: number;
   images: string[];
   category: string;
+  category_name?: string;
   rating: number;
   reviewCount: number;
   stock: number;
@@ -25,6 +26,7 @@ export interface Product {
     quantity_sold:number;
     quantity_stock:number;
   };
+  total_quantity_sold?: number;
   createdAt: Date;
   updatedAt: Date;
 }
