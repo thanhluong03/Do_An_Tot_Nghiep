@@ -11,10 +11,15 @@ interface Props {
     selected: Set<string>;
     onToggle: (key: string) => void;
     loading?: boolean;
+    onSelectAll: (select: boolean) => void; 
+    isRoleSelected: boolean;
 }
 
-export default function PermissionTable({ availablePermissions, selected, onToggle, loading }: Props) {
+export default function PermissionTable({ availablePermissions, selected, onToggle, loading , onSelectAll, isRoleSelected}: Props) {
     const parentKeys = Object.keys(availablePermissions);
+    const hasAvailablePermissions = parentKeys.length > 0;
+    
+    const hasSelectedPermissions = selected.size > 0;
     if (loading) {
         return <div className="py-10 text-center text-lg font-medium text-indigo-600">Đang tải danh sách quyền...</div>;
     }
@@ -27,6 +32,22 @@ export default function PermissionTable({ availablePermissions, selected, onTogg
                 <div className="text-base font-semibold text-indigo-800">Danh sách Quyền hạn ({parentKeys.length})</div>
                 <div className="text-sm text-indigo-600 mt-1">Chọn hoặc bỏ chọn các quyền áp dụng cho Vai trò đã chọn.</div>
             </div>
+            <div className="flex gap-2 p-4">
+                    <button
+                        onClick={() => onSelectAll(true)}
+                        disabled={loading || !isRoleSelected || !hasAvailablePermissions}
+                        className="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                        Chọn tất cả
+                    </button>
+                    <button
+                        onClick={() => onSelectAll(false)}
+                        disabled={loading || !isRoleSelected || !hasSelectedPermissions}
+                        className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition duration-150 shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                        Bỏ chọn tất cả
+                    </button>
+                </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
                 {parentKeys.map((parent) => {
                     const parentObj = availablePermissions[parent][0];

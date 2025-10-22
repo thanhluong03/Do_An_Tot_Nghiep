@@ -13,6 +13,14 @@ import { getCategories, Category } from "@/api/services/categoryService";
 import ProductFormModal from "@/components/adminProducts/ProductFormModal";
 import ProductsTable from "@/components/adminProducts/ProductsTable";
 import { getSuppliers, Supplier } from "@/api/services/supplierService";
+export interface ProductFormErrors {
+  name?: string;
+  price?: string;
+  description?: string;
+  main_image?: string;
+  category_id?: string;
+  supplier_id?: string;
+}
 
 const ITEMS_PER_PAGE = 10;
 
@@ -41,7 +49,9 @@ export default function ProductsPage() {
     supplier_id: 0,
     images: [] as ProductImage[],
   } as Product);
-
+  const [validationErrors, setValidationErrors] = useState<ProductFormErrors>(
+      {}
+    );
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -146,6 +156,7 @@ export default function ProductsPage() {
       supplier_id: suppliers[0]?.id || 0,
       // Không cần quantity
     } as Product);
+    setValidationErrors({});
     setIsModalOpen(true);
   };
 
@@ -157,13 +168,61 @@ export default function ProductsPage() {
       category_id: product.category_id || product.category?.id || 0,
       supplier_id: product.supplier_id || product.supplier?.id || 0,
     } as Product);
+    setValidationErrors({});
     setIsModalOpen(true);
   };
+  const validateForm = (data: Product): boolean => {
+      const errors: ProductFormErrors = {};
 
+      if (!data.name || data.name.trim() === "") {
+        errors.name = "Tên sản phẩm không được để trống.";
+      } else if (data.name.length < 3 || data.name.length > 255) {
+        errors.name = "Tên sản phẩm phải từ 3 đến 255 ký tự.";
+      }
+
+      if (data.price === undefined || data.price <= 0) {
+        errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
+      } else if (isNaN(data.price)) {
+        errors.price = "Giá sản phẩm không hợp lệ.";
+      }
+
+      if (!data.description || data.description.trim() === "") {
+        errors.description = "Mô tả sản phẩm không được để trống.";
+      }
+
+      // Kiểm tra Category/Supplier nếu danh sách có sẵn (chỉ bắt buộc nếu có dữ liệu danh mục)
+      if (categories.length > 0 && data.category_id === 0) {
+        errors.category_id = "Vui lòng chọn danh mục.";
+      }
+
+      if (suppliers.length > 0 && data.supplier_id === 0) {
+        errors.supplier_id = "Vui lòng chọn nhà cung cấp.";
+      }
+
+      setValidationErrors(errors);
+
+      if (Object.keys(errors).length > 0) {
+        toast.error("Vui lòng kiểm tra lại thông tin nhập liệu!");
+        return false;
+      }
+      return true;
+  };
   const handleSave = async (form: FormData) => {
+    const productDataForValidation: Product = {
+        name: form.get('name') as string,
+        price: Number(form.get('price')),
+        description: form.get('description') as string,
+        main_image: '',
+        category_id: Number(form.get('category_id')),
+        supplier_id: Number(form.get('supplier_id')),
+        images: [],
+    } as Product;
+    
+    if (!validateForm(productDataForValidation)) {
+        return; 
+    }
     try {
       if (editingProduct) {
-        // Cần đảm bảo rằng editingProduct.id có giá trị
         if (!editingProduct.id) {
           throw new Error("Không tìm thấy ID sản phẩm để cập nhật.");
         }
@@ -371,13 +430,18 @@ export default function ProductsPage() {
 
       {/* Modal thêm/sửa */}
       <ProductFormModal
-              isModalOpen={isModalOpen}
-              editingProduct={editingProduct}
-              formData={formData}
-              setFormData={setFormData}
-              handleSave={handleSave}
-              setIsModalOpen={setIsModalOpen}
-              categories={categories} suppliers={suppliers} />
+        isModalOpen={isModalOpen}
+        editingProduct={editingProduct}
+        formData={formData}
+        setFormData={setFormData}
+        handleSave={handleSave}
+        setIsModalOpen={setIsModalOpen}
+        categories={categories}
+        suppliers={suppliers}
+        validationErrors={validationErrors} 
+        setValidationErrors={setValidationErrors}
+      />
+              
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { getCustomers, deleteCustomer, Customer } from "@/api/services/customerService";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Trash2 } from "lucide-react";
 
 export default function CustomerPage() {
@@ -9,7 +10,8 @@ export default function CustomerPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(5);
-
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -27,35 +29,32 @@ export default function CustomerPage() {
   };
 
   const handleDelete = (id: number) => {
-    toast((t) => (
-      <div>
-        <p>Bạn có chắc muốn xoá khách hàng này?</p>
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                await deleteCustomer(id);
-                toast.success("Đã xoá khách hàng!");
-                fetchCustomers();
-              } catch {
-                toast.error("Không thể xoá khách hàng!");
-              }
-            }}
-            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-          >
-            Xoá
-          </button>
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded"
-          >
-            Huỷ
-          </button>
-        </div>
-      </div>
-    ));
-  };
+    setItemToDeleteId(id);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  // [THÊM MỚI] Hàm thực hiện API xóa sau khi xác nhận
+  const performDelete = async () => {
+    if (!itemToDeleteId) return;
+
+    try {
+      await deleteCustomer(itemToDeleteId);
+      toast.success("Đã xoá khách hàng!");
+      fetchCustomers();
+    } catch {
+      toast.error("Không thể xoá khách hàng!");
+    } finally {
+      // Đóng dialog và reset state
+      setIsDeleteDialogOpen(false);
+      setItemToDeleteId(null);
+    }
+  };
+
+  // [THÊM MỚI] Hàm hủy xóa
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setItemToDeleteId(null);
+  };
 
   const totalPages = Math.ceil(customers.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -171,6 +170,16 @@ export default function CustomerPage() {
           </div>
         </div>
       </div>
+      {isDeleteDialogOpen && itemToDeleteId !== null && (
+        <ConfirmDialog
+          title="Xác nhận Xoá Khách hàng"
+          message={`Bạn có chắc muốn xoá khách hàng ID: ${itemToDeleteId}? Hành động này không thể hoàn tác.`}
+          confirmText="Xác nhận Xoá"
+          cancelText="Hủy bỏ"
+          onConfirm={performDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
     </div>
   );
 }

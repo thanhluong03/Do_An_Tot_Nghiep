@@ -4,6 +4,19 @@ import { Supplier } from "@/api/services/supplierService";
 import { Category } from "@/api/services/categoryService";
 import { X, Upload } from "lucide-react";
 
+// Định nghĩa interface cho lỗi validation (được truyền từ ProductsPage)
+export interface ProductFormErrors {
+  name?: string;
+  price?: string;
+  description?: string;
+  main_image?: string;
+  category_id?: string;
+  supplier_id?: string;
+}
+
+// Định nghĩa các trường có thể có lỗi (để type-safe indexing)
+type ValidatableFields = keyof ProductFormErrors;
+
 interface ProductFormModalProps {
   isModalOpen: boolean;
   editingProduct: Product | null;
@@ -13,6 +26,8 @@ interface ProductFormModalProps {
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   categories: Category[];
   suppliers: Supplier[];
+  validationErrors: ProductFormErrors;
+  setValidationErrors: React.Dispatch<React.SetStateAction<ProductFormErrors>>;
 }
 
 export default function ProductFormModal({
@@ -24,6 +39,8 @@ export default function ProductFormModal({
   setIsModalOpen,
   categories,
   suppliers,
+  validationErrors,
+  setValidationErrors,
 }: ProductFormModalProps) {
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -42,14 +59,55 @@ export default function ProductFormModal({
 
   if (!isModalOpen) return null;
 
+  // Hàm xử lý thay đổi input và xóa lỗi tương ứng
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    field: ValidatableFields
+  ) => {
+    let value: string | number = e.target.value;
+
+    if (field === 'price' || field === 'category_id' || field === 'supplier_id') {
+      value = Number(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const newFiles = Array.from(e.target.files);
     setFiles(newFiles);
     setPreviewImages(newFiles.map((f) => URL.createObjectURL(f)));
+
+    // Xóa lỗi ảnh nếu người dùng chọn file
+    if(validationErrors.main_image) {
+        setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.main_image;
+            return newErrors;
+        });
+    }
   };
 
   const onSave = async () => {
+    const errors: ProductFormErrors = {};
+    if (!editingProduct && files.length === 0) {
+        errors.main_image = "Vui lòng chọn ít nhất một ảnh cho sản phẩm.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+        setValidationErrors(prev => ({ ...prev, ...errors }));
+        return;
+    }
+
     const form = new FormData();
     form.append("name", formData.name);
     form.append("price", formData.price.toString());
@@ -58,6 +116,13 @@ export default function ProductFormModal({
     form.append("supplier_id", (formData.supplier_id || 0).toString());
     files.forEach((file) => form.append("images", file));
     await handleSave(form);
+  };
+
+  const getInputClassName = (field: ValidatableFields): string => {
+    const baseClass = "w-full border rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:outline-none transition";
+    const errorClass = "border-red-500 focus:ring-red-500";
+    const normalClass = "border-gray-300 focus:ring-orange-500";
+    return `${baseClass} ${validationErrors[field] ? errorClass : normalClass}`;
   };
 
   return (
@@ -95,12 +160,13 @@ export default function ProductFormModal({
             <input
               type="text"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              onChange={(e) => handleChange(e, 'name')}
+              className={getInputClassName('name')}
               placeholder="Nhập tên sản phẩm..."
             />
+            {validationErrors.name && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.name}</p>
+            )}
           </div>
 
           {/* Giá */}
@@ -111,12 +177,13 @@ export default function ProductFormModal({
             <input
               type="number"
               value={formData.price}
-              onChange={(e) =>
-                setFormData({ ...formData, price: Number(e.target.value) })
-              }
-              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              onChange={(e) => handleChange(e, 'price')}
+              className={getInputClassName('price')}
               placeholder="Nhập giá..."
             />
+            {validationErrors.price && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
+            )}
           </div>
 
           {/* Danh mục */}
@@ -126,13 +193,8 @@ export default function ProductFormModal({
             </label>
             <select
               value={formData.category_id ?? 0}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  category_id: Number(e.target.value),
-                })
-              }
-              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              onChange={(e) => handleChange(e, 'category_id')}
+              className={getInputClassName('category_id')}
             >
               <option value={0}>-- Chọn danh mục --</option>
               {categories.map((c) => (
@@ -141,6 +203,9 @@ export default function ProductFormModal({
                 </option>
               ))}
             </select>
+            {validationErrors.category_id && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.category_id}</p>
+            )}
           </div>
 
           {/* Nhà cung cấp */}
@@ -150,13 +215,8 @@ export default function ProductFormModal({
             </label>
             <select
               value={formData.supplier_id ?? 0}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  supplier_id: Number(e.target.value),
-                })
-              }
-              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              onChange={(e) => handleChange(e, 'supplier_id')}
+              className={getInputClassName('supplier_id')}
             >
               <option value={0}>-- Chọn nhà cung cấp --</option>
               {suppliers.map((s) => (
@@ -165,6 +225,9 @@ export default function ProductFormModal({
                 </option>
               ))}
             </select>
+            {validationErrors.supplier_id && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.supplier_id}</p>
+            )}
           </div>
 
           {/* Mô tả */}
@@ -174,13 +237,14 @@ export default function ProductFormModal({
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
+              onChange={(e) => handleChange(e, 'description')}
               rows={5}
-              className="w-full border border-gray-300 rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:ring-orange-500 focus:outline-none transition"
+              className={getInputClassName('description')}
               placeholder="Nhập mô tả sản phẩm..."
             />
+            {validationErrors.description && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.description}</p>
+            )}
           </div>
 
           {/* Upload hình ảnh */}
@@ -188,7 +252,11 @@ export default function ProductFormModal({
             <label className="block text-base font-semibold text-gray-800 mb-3">
               Ảnh sản phẩm
             </label>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-orange-300 rounded-2xl p-8 cursor-pointer hover:bg-orange-50 transition">
+            <label 
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 cursor-pointer hover:bg-orange-50 transition ${
+                    validationErrors.main_image ? 'border-red-500' : 'border-orange-300'
+                }`}
+            >
               <Upload className="text-orange-500 mb-3" size={36} />
               <span className="text-base text-gray-600 font-medium">
                 Chọn hoặc kéo ảnh vào đây
@@ -201,6 +269,9 @@ export default function ProductFormModal({
                 className="hidden"
               />
             </label>
+            {validationErrors.main_image && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.main_image}</p>
+            )}
           </div>
 
           {/* Preview ảnh */}
