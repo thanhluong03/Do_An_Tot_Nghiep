@@ -58,7 +58,7 @@ export class LoginService {
         return { success: true, token, user: { id: result.customer.id, email, name } };
     }
 
-    async googleAuthRedirect(user: any) {
+    async googleAuthRedirect(user: any, redirectUrl?: string) {
         const customers = await this.customerService.getCustomers({ key: user.email, size: 1, page: 1 });
         let customer = customers?.customers?.find((c: any) => c.email === user.email);
         if (!customer) {
@@ -72,9 +72,13 @@ export class LoginService {
             });
             customer = result?.customer;
         }
-        const token = this.jwtService.sign({ email: user.email, name: user.name });
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000/';
-        return `${frontendUrl}/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}`;
+        const token = this.jwtService.sign({ email: user.email, name: user.name, id: customer?.id });
+
+        // Use provided redirect URL or default
+        const baseUrl = redirectUrl || process.env.FRONTEND_URL || 'http://localhost:3000';
+        const cleanUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+        return `${cleanUrl}/login-success?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&id=${encodeURIComponent(customer?.id || '')}`;
     }
 
     // async adminLogin(adminLoginDto: { username: string; password: string }) {

@@ -121,6 +121,18 @@ export const useAuthState = () => {
     }
   };
 
+  const loginWithGoogle = () => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    let redirectUrl = window.location.origin;
+
+    // Fix tạm thời nếu backend thêm "/" sai
+    if (redirectUrl.endsWith('/')) {
+      redirectUrl = redirectUrl.slice(0, -1);
+    }
+
+    window.location.href = `${API_BASE_URL}/login/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
+  };
+
   const logout = async () => {
     try {
       await userApi.logout();
@@ -145,6 +157,7 @@ export const useAuthState = () => {
     loading,
     isAuthenticated: !!user,
     login,
+    loginWithGoogle,
     register,
     logout,
     refreshUser,

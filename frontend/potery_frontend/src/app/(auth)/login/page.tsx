@@ -13,7 +13,7 @@ export default function LoginPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const { clear } = useCart();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,15 +34,8 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    let redirectUrl = window.location.origin;
-
-    // Fix tạm thời nếu backend thêm "/" sai
-    if (redirectUrl.endsWith('/')) {
-      redirectUrl = redirectUrl.slice(0, -1);
-    }
-
-    window.location.href = `${API_BASE_URL}/login/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
+    clear(); // Reset cart before login
+    loginWithGoogle();
   };
 
 
