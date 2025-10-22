@@ -159,7 +159,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-all">
       <div
-        className="relative aspect-[4/3] cursor-pointer"
+        className="relative aspect-square cursor-pointer" // Gần với ảnh hơn
         onClick={() => onViewDetails?.(product)}
       >
         <Image
@@ -167,90 +167,75 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           alt={product.name}
           className="object-cover w-full h-full"
           width={400}
-          height={300}
+          height={400} // Cập nhật để khớp aspect-square
           priority
         />
-        <button className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full p-2 shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </button>
+        {/* Đã xóa nút checkmark/trái tim ở góc trên bên phải để khớp với ảnh */}
       </div>
 
-      <div className="p-5 text-left">
-        <p className="text-sm text-black-500 mb-1">{product.category}</p>
-        <h3 className="font-semibold text-2xl text-gray-900 mb-2">{product.name}</h3>
+      <div className="p-4 text-left"> 
+        
+        {/* 1. Category */}
+        <p className="text-sm text-gray-500 mb-1">{product.category || 'Ly, Cốc'}</p>
+        
+        {/* 2. Product Name */}
+        <h3 className="font-bold text-lg text-gray-900 mb-2 truncate">
+          {product.name}
+        </h3>
 
-        {/* Giá sản phẩm với khuyến mãi */}
-        <div className="flex items-center gap-2 mb-4">
+        {/* 3. Price Line */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+          {/* Current Price */}
+          <span className="text-xl font-bold text-red-600">
+            {formatPrice(product.price)}
+          </span>
+          
+          {/* Original Price */}
           {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-base text-gray-400 line-through font-semibold">
+            <span className="text-sm text-gray-400 line-through">
               {formatPrice(product.originalPrice)}
             </span>
           )}
-          <span className={`text-lg font-bold ${product.originalPrice && product.originalPrice > product.price ? 'text-red-600' : 'text-[#c4975a]'}`}>
-            {formatPrice(product.price)}
-          </span>
+          
+          {/* === THAY THẾ PILL GIẢM GIÁ === */}
           {product.originalPrice && product.originalPrice > product.price && product.discount && (
-            <span className="ml-1">
-              <style>{`
-                /* Slightly smaller percent number and tighter arrows */
-                .promo-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,77,79,0.08); color: inherit; padding: 2px 6px; border-radius: 9999px; font-weight: 700; font-size: 0.72rem; border: 1px solid rgba(255,77,79,0.14); }
-                .three-arrows { display: inline-flex; flex-direction: column; gap: 0; align-items: center; justify-content: center; margin-left: 0; }
-                .arrow { width: 11px; height: 11px; color: #ff4d4f; display: inline-block; }
-                .arrow svg { width: 100%; height: 100%; display: block; }
-                /* pull arrows even closer: use more negative top margin to overlap slightly */
-                .arrow + .arrow { margin-top: -6px; }
-                @keyframes arrowDrop1 { 0% { transform: translateY(-5px); opacity: 0; } 60% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(1px); opacity: 0.8; } }
-                @keyframes arrowDrop2 { 0% { transform: translateY(-7px); opacity: 0; } 60% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(2px); opacity: 0.6; } }
-                .arrow-1 { animation: arrowDrop1 1.2s ease-in-out infinite; }
-                .arrow-2 { animation: arrowDrop2 1.2s ease-in-out 80ms infinite; }
-                .promo-percent { color: #ff4d4f; position: relative; font-size: 0.86rem; font-weight: 800; padding: 0 2px; line-height: 1; }
-              `}</style>
-
-              <span className="promo-pill" role="status" aria-label={`Giảm ${Math.round(product.discount * 100)} phần trăm`}>
-                <span className="promo-percent">{Math.round(product.discount * 100)}%</span>
-                <span className="three-arrows" aria-hidden>
-                  <span className="arrow arrow-1">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </span>
-                  <span className="arrow arrow-2">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </span>
-                </span>
-              </span>
+            <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+              Giảm {Math.round(product.discount * 100)}%
             </span>
           )}
+          {/* === KẾT THÚC THAY THẾ === */}
         </div>
 
+        {/* 4. Rating/Sales Line (MỚI) */}
+        <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
+          <div className="flex items-center gap-1">
+            <span className="text-yellow-400">★</span> 
+            <span className="font-medium text-gray-800">{product.rating || '5.0'}</span>
+          </div>
+          <span>Đã bán {product.store.quantity_sold || 25}</span>
+        </div>
+
+        {/* 5. Button Line */}
         <div className="flex gap-3">
+          {/* === NÚT GIỎ HÀNG (ĐÃ SỬA) === */}
           <button
             onClick={handleAddCartPopup}
-            disabled={loading}
-            className="flex items-center justify-center px-4 py-3 bg-[#e9d3b3] hover:bg-[#c4975a] rounded-lg disabled:opacity-50 transition"
+            className="flex items-center justify-center p-3 h-12 w-12 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition"
             title="Thêm vào giỏ hàng"
-            style={{ minWidth: '48px' }}
           >
-            {loading ? (
-              <span className="text-white text-base font-semibold">Đang thêm...</span>
-            ) : (
-              <span className="inline-block">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="2" y="6" width="20" height="14" rx="4" fill="#fff" stroke="#c4975a" strokeWidth="1.5" />
-                  <path d="M7 10V8C7 5.79086 8.79086 4 11 4H13C15.2091 4 17 5.79086 17 8V10" stroke="#c4975a" strokeWidth="1.5" strokeLinecap="round" />
-                  <circle cx="9" cy="17" r="1.5" fill="#c4975a" />
-                  <circle cx="15" cy="17" r="1.5" fill="#c4975a" />
-                </svg>
-              </span>
-            )}
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
           </button>
+          
+          {/* === NÚT MUA NGAY (ĐÃ SỬA) === */}
           <button
             onClick={handleOrderNow}
-            className="flex-1 py-3 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg text-base font-extrabold shadow transition-all tracking-wider"
+            className="flex-1 h-12 bg-[#8D806F] hover:bg-[#7a6f61] text-white rounded-lg text-base font-semibold shadow transition-all"
           >
-            Đặt hàng ngay
+            Mua Ngay
           </button>
         </div>
+
+        {/* === PHẦN MODAL (POPUP) GIỮ NGUYÊN === */}
         <Modal isOpen={showOrderNow} onClose={() => setShowOrderNow(false)} title="Đặt hàng nhanh" size="full">
           <div className="flex flex-col md:flex-row w-full gap-6">
             <div className="flex-shrink-0 w-full md:w-[300px] bg-[#faf7f2] p-6 rounded-2xl flex items-center justify-center">

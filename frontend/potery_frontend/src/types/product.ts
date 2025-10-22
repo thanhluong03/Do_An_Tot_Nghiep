@@ -22,6 +22,8 @@ export interface Product {
     id: string;
     name: string;
     address: string;
+    quantity_sold:number;
+    quantity_stock:number;
   };
   createdAt: Date;
   updatedAt: Date;

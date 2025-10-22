@@ -105,7 +105,8 @@ export const AboutSection: React.FC = () => {
                                 size="lg"
                                 className="px-8 py-3 text-lg font-semibold bg-[#8B7D6B] text-white hover:bg-[#65604E] shadow-lg transition-all duration-300 flex items-center space-x-2"
                             >
-                                <span>Tìm Hiểu Thêm Về Chúng Tôi</span>
+                                <a href='/about'>Tìm Hiểu Thêm Về Chúng Tôi</a>
+                                <span></span>
                                 {/* Icon mũi tên sang phải (Giả sử dùng emoji hoặc SVG) */}
                                 <span className="ml-2 text-xl">→</span> 
                             </Button>
