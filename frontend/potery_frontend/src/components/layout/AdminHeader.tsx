@@ -28,6 +28,7 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
     roles: "Vai trò",
     permissions: "Quyền hạn",
     importproduct: "Nhập kho",
+    conversation: "Tin nhắn khách hàng",
   };
 
   if (parts.length === 0 || parts[0] === "dashboard") {
@@ -92,6 +93,7 @@ export default function AdminHeader() {
   localStorage.removeItem("adminRole");
   localStorage.removeItem("adminPermissions");
   localStorage.removeItem("adminName");
+  localStorage.removeItem("adminID");
   // 🔁 Chuyển hướng về trang login
   router.push("/admin/login");
 };
