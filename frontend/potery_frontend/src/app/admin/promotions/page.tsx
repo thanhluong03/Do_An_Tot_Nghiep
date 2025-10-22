@@ -223,32 +223,60 @@ export default function PromotionPage() {
 
         try {
             await deletePromotion(id);
-            
+
             // Thay thế loading bằng thông báo thành công
-            toast.success(`Xoá Promotion ID ${id} thành công!`, { id: loadingToastId }); 
-            
+            toast.success(`Xoá Promotion ID ${id} thành công!`, { id: loadingToastId });
+
             await fetchPromotions();
             await fetchProductsAndAssignments();
         } catch (error) {
             console.error("Lỗi xoá:", error);
-            
+
             // Thay thế loading bằng thông báo lỗi
-            toast.error("Có lỗi xảy ra khi xoá Promotion. Vui lòng kiểm tra sản phẩm có đang sử dụng khuyến mãi này không.", { id: loadingToastId, duration: 6000 }); 
+            toast.error("Có lỗi xảy ra khi xoá Promotion. Vui lòng kiểm tra sản phẩm có đang sử dụng khuyến mãi này không.", { id: loadingToastId, duration: 6000 });
         } finally {
             setIdToDelete(null); // Xóa ID đã chọn
         }
     };
+    const handleUnassignSingleProduct = async (productId: number) => {
+        const product = productAssignments.find(a => a.productId === productId);
+        if (!product) return;
 
+        // Bổ sung Confirm Dialog nếu cần, nhưng tạm thời dùng toast loading
+        const loadingToastId = toast.loading(`Đang hủy gán khuyến mãi cho Sản phẩm ID ${productId}...`);
+
+        try {
+            await setProductPromotionAssignments([
+                { productId: productId, promotionId: null },
+            ]);
+
+            toast.success(`Hủy gán khuyến mãi cho Sản phẩm ID ${productId} thành công!`, { id: loadingToastId });
+            await fetchProductsAndAssignments(); // Tải lại danh sách sau khi hủy gán
+
+            // Xóa sản phẩm khỏi lựa chọn hàng loạt nếu nó đang được chọn
+            setProductCheckboxValue(prev => {
+                if (!Array.isArray(prev)) return undefined;
+                return prev.filter(id => Number(id) !== productId);
+            });
+
+        } catch (error) {
+            console.error("Lỗi hủy gán:", error);
+            toast.error("Hủy gán khuyến mãi thất bại.", { id: loadingToastId });
+        }
+    };
+    
     const totalPages = Math.ceil(promotions.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const currentItems = promotions.slice(startIndex, startIndex + pageSize);
     const activePromotions = promotions.filter(p => p.is_active && p.id);
-
+    const assignedProductAssignments = useMemo(() => {
+        return productAssignments.filter(a => a.promotionId !== null);
+    }, [productAssignments]);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4">
+        <div className="min-h-screen bg-white rounded-xl shadow-2xl  p-4">
             <Toaster position="top-right" />
-            
+
             {/* RENDER CONFIRM DIALOG */}
             {isConfirmOpen && idToDelete !== null && (
                 <ConfirmDialog
@@ -263,8 +291,8 @@ export default function PromotionPage() {
                     }}
                 />
             )}
-            
-            <div className="w-full mx-auto bg-white rounded-xl shadow-2xl p-8">
+
+            <div className="w-full mx-auto bg-white p-8">
 
                 <div className="flex justify-around items-center mb-8">
                     <h2 className="text-3xl font-extrabold text-[#B95D26] flex-1 pr-12">
@@ -407,7 +435,7 @@ export default function PromotionPage() {
                             {/* CỘT 1: CHỌN KHUYẾN MÃI & NÚT LƯU */}
                             <div className="md:col-span-1 flex flex-col justify-between">
                                 <div>
-                                    <h3 className="text-2xl font-bold mb-4 text-orange-700 flex items-center gap-2">
+                                    <h3 className="text-2xl font-bold mb-4 text-[#B95D26] flex items-center gap-2">
                                         Bước 1: Chọn Khuyến mãi
                                     </h3>
 
@@ -428,7 +456,7 @@ export default function PromotionPage() {
                                             value={-1}
                                             className="bg-red-50 text-red-600 font-semibold"
                                         >
-                                            --- HỦY GÁN KHUYẾN MÃI (SET NULL) ---
+                                            --- HỦY GÁN KHUYẾN MÃI ---
                                         </option>
                                         {activePromotions.map((promo) => (
                                             <option key={promo.id} value={promo.id}>
@@ -454,13 +482,12 @@ export default function PromotionPage() {
                                             selectedPromotionId === null ||
                                             selectedProductIds.length === 0
                                         }
-                                        className={`w-full px-6 py-2.5 rounded-xl font-semibold shadow-md transition-all duration-150 transform active:scale-95 ${
-                                            isSavingAssignments ||
-                                            selectedPromotionId === null ||
-                                            selectedProductIds.length === 0
+                                        className={`w-full px-6 py-2.5 rounded-xl font-semibold shadow-md transition-all duration-150 transform active:scale-95 ${isSavingAssignments ||
+                                                selectedPromotionId === null ||
+                                                selectedProductIds.length === 0
                                                 ? "bg-orange-300 text-gray-100 cursor-not-allowed shadow-none"
                                                 : "bg-orange-600 hover:bg-orange-700 text-white hover:shadow-lg"
-                                        }`}
+                                            }`}
                                     >
                                         {isSavingAssignments ? "Đang Lưu..." : "Lưu Gán Khuyến mãi"}
                                     </button>
@@ -469,7 +496,7 @@ export default function PromotionPage() {
 
                             {/* CỘT 2 & 3: CHỌN SẢN PHẨM */}
                             <div className="md:col-span-2">
-                                <h3 className="text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                                <h3 className="text-2xl font-bold mb-4 text-[#B95D26] flex items-center gap-2">
                                     Bước 2: Chọn Sản phẩm để GÁN / HỦY GÁN
                                 </h3>
 
@@ -503,6 +530,9 @@ export default function PromotionPage() {
                 <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center mt-10">
                     Tình trạng Gán Khuyến mãi của Sản phẩm
                 </h2>
+                <p className="text-sm text-gray-500 text-center mb-4 italic">
+                    (Chỉ hiển thị các sản phẩm đang có Khuyến mãi được gán)
+                </p>
                 <div className="overflow-x-auto max-h-[400px] border border-gray-100 rounded-lg shadow-inner">
                     <table className="w-full border-collapse bg-white modern-table">
                         <thead>
@@ -510,10 +540,11 @@ export default function PromotionPage() {
                                 <th className="px-5 py-3 text-left w-[120px]">ID Sản phẩm</th>
                                 <th className="px-5 py-3 text-left">Tên Sản phẩm</th>
                                 <th className="px-5 py-3 text-left w-1/3">Khuyến mãi hiện tại</th>
+                                <th className="px-5 py-3 text-center w-[300px]">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {productAssignments.map((assignment, idx) => (
+                            {assignedProductAssignments.map((assignment, idx) => (
                                 <tr key={assignment.productId} className={`border-b border-gray-100 transition hover:bg-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
                                     <td className="px-5 py-3 text-sm font-mono text-gray-600">{assignment.productId}</td>
                                     <td className="px-5 py-3 font-semibold text-gray-800">
@@ -524,15 +555,43 @@ export default function PromotionPage() {
                                             ? <span className="inline-block bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-medium">
                                                 {promotions.find(p => p.id === assignment.promotionId)?.name || `ID: ${assignment.promotionId}`}
                                             </span>
-                                            : <span className="text-gray-500 italic text-xs">Chưa áp dụng</span>
+                                            : null
                                         }
                                     </td>
+                                    {/* 👇 THÊM CỘT HÀNH ĐỘNG VỚI NÚT */}
+                                    <td className="px-5 py-3 text-center">
+                                        <div className="flex gap-2 justify-center">
+                                            {/* Nút HỦY GÁN (Unassign) */}
+                                            <button
+                                                title="Hủy Gán Khuyến Mãi"
+                                                onClick={() => handleUnassignSingleProduct(assignment.productId)}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
+                                            >
+                                                <Trash2 size={14} /> Hủy Gán
+                                            </button>
+
+                                            {/* Nút SỬA GÁN (Tùy chọn: Mở khu vực gán hàng loạt với sản phẩm này) */}
+                                            <button
+                                                title="Sửa Gán (Mở lại khu vực gán)"
+                                                onClick={() => {
+                                                    setProductCheckboxValue(String(assignment.productId)); // Chọn duy nhất sản phẩm này
+                                                    setSelectedPromotionId(assignment.promotionId); // Giữ lại khuyến mãi cũ
+                                                    setIsAssignVisible(true); // Mở khu vực gán
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn lên đầu trang
+                                                }}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
+                                            >
+                                                <Pencil size={14} /> Sửa
+                                            </button>
+                                        </div>
+                                    </td>
+                                    {/* 👆 KẾT THÚC THÊM CỘT HÀNH ĐỘNG VỚI NÚT */}
                                 </tr>
                             ))}
-                            {productAssignments.length === 0 && (
+                            {assignedProductAssignments.length === 0 && (
                                 <tr>
-                                    <td colSpan={3} className="text-center py-4 text-red-500 font-medium">
-                                        Không có sản phẩm nào được tải.
+                                    <td colSpan={4} className="text-center py-4 text-gray-500 italic">
+                                        Không có sản phẩm nào đang được gán khuyến mãi.
                                     </td>
                                 </tr>
                             )}
