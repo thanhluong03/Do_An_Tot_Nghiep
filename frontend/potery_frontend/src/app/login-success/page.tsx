@@ -31,9 +31,10 @@ export default function LoginSuccessPage() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const name = params.get('name');
-      // const email = params.get('email');
+      const email = params.get('email');
+      const userId = params.get('id');
 
-      console.log('[LoginSuccess] Params:', { token, name });
+      console.log('[LoginSuccess] Params:', { token, name, email, userId });
 
       if (!token) {
         console.warn('[LoginSuccess] No token found');
@@ -43,24 +44,56 @@ export default function LoginSuccessPage() {
 
       localStorage.setItem('token', token);
       if (name) localStorage.setItem('user_name', name);
+      if (userId) localStorage.setItem('customerId', userId);
       localStorage.setItem('auth_type', 'user');
 
-      // Lấy user thực sự từ token mới nhất
+      // Tạo user object từ params trước để tránh lỗi API
+      if (email && name) {
+        const fallbackUser = {
+          id: userId || '',
+          email,
+          full_name: name,
+          name: name
+        };
+        localStorage.setItem('customer', JSON.stringify(fallbackUser));
+      }
+
+      // Thử lấy user chi tiết từ API (không bắt buộc)
       try {
-        const customer = await userApi.getCurrentUser();
-        if (customer?.id) localStorage.setItem('customerId', String(customer.id));
-        localStorage.setItem('customer', JSON.stringify(customer));
+        if (userId) {
+          // Nếu có userId từ Google login, sử dụng trực tiếp
+          const customer = await userApi.getCustomerDetailById(userId);
+          localStorage.setItem('customer', JSON.stringify(customer));
+        } else {
+          // Fallback: lấy từ email
+          const customer = await userApi.getCurrentUser();
+          if (customer?.id) localStorage.setItem('customerId', String(customer.id));
+          localStorage.setItem('customer', JSON.stringify(customer));
+        }
       } catch (err) {
-        console.warn('Get current customer failed:', err);
+        console.warn('Get current customer failed, using fallback data:', err);
+        // Đã có fallback data ở trên rồi, không cần làm gì thêm
       }
 
       // Ensure context picks up latest token/user and header updates
       try {
         await refreshUser();
-      } catch { }
+      } catch (refreshErr) {
+        console.warn('Refresh user failed:', refreshErr);
+      }
 
       console.log('[LoginSuccess] Login success, redirecting...');
-      router.replace('/');
+
+      // Thêm delay nhỏ để đảm bảo localStorage đã được set
+      setTimeout(() => {
+        try {
+          router.replace('/');
+        } catch (routerErr) {
+          console.error('Router redirect failed:', routerErr);
+          // Fallback: dùng window.location
+          window.location.href = '/';
+        }
+      }, 100);
     };
 
     run();

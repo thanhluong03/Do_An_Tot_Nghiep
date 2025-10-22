@@ -32,12 +32,17 @@ export class LoginController {
 
     @Get('google')
     @UseGuards(AuthGuard('google'))
-    async googleAuth() { }
+    googleAuth(@Req() req: any) {
+        const redirectUrl = req.query?.redirect_url as string;
+        if (redirectUrl && req.session) {
+            req.session.redirectUrl = redirectUrl;
+        }
+    }
 
     @Get('google/callback')
     @UseGuards(AuthGuard('google'))
-    async googleAuthRedirect(@Req() req, @Res() res) {
-        const redirectUrl = await this.loginService.googleAuthRedirect(req.user);
+    async googleAuthRedirect(@Req() req: any, @Res() res: any) {
+        const redirectUrl = await this.loginService.googleAuthRedirect(req.user, req.session?.redirectUrl);
         return res.redirect(redirectUrl);
     }
 }
