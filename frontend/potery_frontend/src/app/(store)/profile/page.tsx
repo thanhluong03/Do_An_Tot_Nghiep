@@ -292,38 +292,37 @@ export default function ProfilePage() {
                     onChange={handleAvatarChange}
                     disabled={!editing}
                   />
-                  <img
-                    src={
-                      previewUrl
-                        ? previewUrl
-                        : (typeof customer.avatar_image === 'string' && customer.avatar_image
-                          ? (customer.avatar_image.startsWith('http')
-                            ? customer.avatar_image
-                            : `data:image/jpeg;base64,${customer.avatar_image}`)
-                          : (typeof customer.avatar === 'string' && customer.avatar
-                            ? (customer.avatar.startsWith('http')
-                              ? customer.avatar
-                              : `data:image/jpeg;base64,${customer.avatar}`)
-                            : '/default-avatar.png'))
-                    }
-                    alt="Avatar"
-                    className={`w-40 h-40 rounded-full object-cover border-4 border-[#E8E5DA] shadow-lg ${editing ? 'hover:opacity-80' : ''}`}
-                  />
+                  {(previewUrl || (typeof customer.avatar_image === 'string' && customer.avatar_image) || (typeof customer.avatar === 'string' && customer.avatar)) ? (
+                    <img
+                      src={
+                        previewUrl
+                          ? previewUrl
+                          : (typeof customer.avatar_image === 'string' && customer.avatar_image
+                            ? (customer.avatar_image.startsWith('http')
+                              ? customer.avatar_image
+                              : `data:image/jpeg;base64,${customer.avatar_image}`)
+                            : (typeof customer.avatar === 'string' && customer.avatar
+                              ? (customer.avatar.startsWith('http')
+                                ? customer.avatar
+                                : `data:image/jpeg;base64,${customer.avatar}`)
+                              : '/default-avatar.png'))
+                      }
+                      alt="Avatar"
+                      className={`w-40 h-40 rounded-full object-cover border-4 border-[#E8E5DA] shadow-lg ${editing ? 'hover:opacity-80' : ''}`}
+                    />
+                  ) : (
+                    <div
+                      className="w-40 h-40 rounded-full border-4 border-[#E8E5DA] shadow-lg flex items-center justify-center bg-white"
+                    >
+                      <span className="text-sm font-semibold text-[#C4975A] text-center drop-shadow-sm tracking-wide">Chọn ảnh đại diện</span>
+                    </div>
+                  )}
                   {editing && (
                     <span className="absolute bottom-2 right-3 bg-[#C4975A] text-white text-xs px-2 py-1 rounded-full shadow">
                       ✎
                     </span>
                   )}
                 </label>
-                {!(typeof customer.avatar_image === 'string' && customer.avatar_image) &&
-                  !(typeof customer.avatar === 'string' && customer.avatar) && (
-                    <div className="text-xs text-red-500 mt-2">Không có dữ liệu ảnh hoặc dữ liệu ảnh không hợp lệ</div>
-                  )}
-                {editing && (
-                  <span className="absolute bottom-2 right-3 bg-[#C4975A] text-white text-xs px-2 py-1 rounded-full shadow">
-                    ✎
-                  </span>
-                )}
               </div>
 
               <h1 className="text-2xl font-bold text-[#2C2A24] mt-4">{customer.full_name}</h1>
