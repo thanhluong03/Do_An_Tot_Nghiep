@@ -159,12 +159,8 @@ const DashboardPage = () => {
         style={{ background: "linear-gradient(135deg, #f97316, #e47e3f)" }}
       >
         <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight">
-          Chào mừng trở lại, Quản trị viên!
+          Chào mừng trở lại,{" "}<span>{localStorage.getItem("adminName") || "Quản trị viên"}</span>!
         </h1>
-        <p className="text-lg mb-8 opacity-95">
-          Hôm nay bạn có <b>{totalOrders}</b> đơn hàng mới và{" "}
-          <b>{inStockProducts}</b> sản phẩm còn tồn kho.
-        </p>
         <div className="flex space-x-4">
           <button
             onClick={() => router.push(ORDERS_ROUTE)}

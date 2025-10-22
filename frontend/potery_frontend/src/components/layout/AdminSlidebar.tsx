@@ -25,9 +25,9 @@ import {
     faGift,
     faUsersCog,
     faTruckArrowRight,
-    faBoxesStacked,
     faClipboardList,
-    faUserCheck, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
+    faUserCheck,
+    faMessage, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -41,6 +41,7 @@ interface MenuItem {
 
 const dashboardItems: MenuItem[] = [
     { name: "Dashboard", icon: faHome, href: "/admin/dashboard" },
+    { name: "Tin nhắn khách hàng", icon: faMessage, href: "/admin/conversation", color: "bg-blue-100 text-blue-600" },
 ];
 
 const salesOperationsItems: MenuItem[] = [
@@ -53,7 +54,7 @@ const salesOperationsItems: MenuItem[] = [
         ],
     },
     { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },
-     { name: "Test chat", icon: faBox, href: "/admin/conversation", color: "bg-blue-100 text-blue-600" },
+   
     { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
     { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
 ];
