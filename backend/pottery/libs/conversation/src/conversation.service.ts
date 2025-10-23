@@ -106,14 +106,14 @@ export class ConversationService {
 
     // 4. 🔥 SỬA LOGIC: Nếu chưa có, tạo mới và gán cho admin ĐẦU TIÊN
     if (!conversation) {
-      const firstAdmin = await this.userRepo.findOne({
-        where: {
-          role: {
-            name: 'ADMIN', // ✅ Sửa lỗi Type: { role: 'ADMIN' } -> { role: { name: 'ADMIN' } }
-          },
-        },
-        order: { id: 'ASC' },
-      });
+      // 🔥 SỬA LOGIC: Tìm admin hoặc superadmin đầu tiên để gán
+      const firstAdmin = await this.userRepo.createQueryBuilder('user')
+        .leftJoin('user.role', 'role')
+        .where('role.name IN (:...roles)', {
+          roles: ['ADMIN', 'SUPERADMIN'],
+        })
+        .orderBy('user.id', 'ASC')
+        .getOne();
 
       if (!firstAdmin) {
         throw new NotFoundException(
