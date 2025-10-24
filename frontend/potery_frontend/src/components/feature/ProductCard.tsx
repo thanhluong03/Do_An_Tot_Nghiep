@@ -11,6 +11,7 @@ import { cartApi } from '../../api/modules/cart';
 import { useCart } from '../../contexts/CartContext';
 import { productApi } from '../../api/modules/products';
 import { Modal } from '../common/Modal';
+import toast from 'react-hot-toast';
 
 export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Product) => void }> = ({
   product,
@@ -72,7 +73,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
     const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
     const stock = selectedStore?.quantity_stock ?? 0;
     if (quantity > stock) {
-      alert('Số lượng không đủ trong cửa hàng.');
+      toast.error('Số lượng không đủ trong cửa hàng.');
       return;
     }
     // Redirect to checkout with product id, store id, quantity as query param
@@ -84,14 +85,14 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
     const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
     const stock = selectedStore?.quantity_stock ?? 0;
     if (quantity > stock) {
-      alert('Số lượng không đủ trong cửa hàng.');
+      toast.error('Số lượng không đủ trong cửa hàng.');
       return;
     }
     setLoading(true);
     try {
       if (!isAuthenticated || !user?.id) {
         addItem(product, quantity);
-        alert('Đã thêm vào giỏ hàng!');
+        toast.success('Đã thêm vào giỏ hàng!');
       } else {
         await cartApi.add({
           customer_id: user.id,
@@ -99,11 +100,11 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           store_id: selectedStoreId || '',
           quantity,
         });
-        alert('Đã thêm vào giỏ hàng!');
+        toast.success('Đã thêm vào giỏ hàng!');
       }
       setShowAddCart(false);
     } catch {
-      alert('Không thể thêm sản phẩm.');
+      toast.error('Không thể thêm sản phẩm.');
     } finally {
       setLoading(false);
     }
@@ -115,7 +116,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
       setLoading(true);
       try {
         addItem(product, 1);
-        alert('Đã thêm vào giỏ hàng!');
+        toast.success('Đã thêm vào giỏ hàng!');
       } finally {
         setLoading(false);
       }
@@ -134,7 +135,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         }
       } catch { }
     }
-    if (!storeId) return alert('Cửa hàng không hợp lệ');
+    if (!storeId) return toast.error('Cửa hàng không hợp lệ');
 
     setLoading(true);
     try {
@@ -144,9 +145,9 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         store_id: storeId,
         quantity: 1,
       });
-      alert('Đã thêm vào giỏ hàng!');
+      toast.success('Đã thêm vào giỏ hàng!');
     } catch {
-      alert('Không thể thêm sản phẩm.');
+      toast.error('Không thể thêm sản phẩm.');
     } finally {
       setLoading(false);
     }
@@ -299,6 +300,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                       <div className="flex items-center border rounded-xl bg-white shadow-sm">
                         <button aria-label="Giảm" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-3 py-2 text-xl font-bold text-[#c4975a]">−</button>
                         <input
+                          title='number'
                           type="number"
                           value={quantity}
                           onChange={e => setQuantity(Math.max(1, Number(e.target.value) || 1))}
@@ -325,7 +327,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                       <button
                         onClick={() => {
                           const sel = stores.find((s) => s.store_id === selectedStoreId);
-                          if (!sel || (sel.quantity_stock ?? 0) < quantity) return alert('Số lượng không đủ trong cửa hàng.');
+                          if (!sel || (sel.quantity_stock ?? 0) < quantity) return toast.error('Hết hàng trong cửa hàng đã chọn.');
                           handleOrderNowConfirm();
                         }}
                         className="px-6 py-2 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg font-bold"
@@ -403,6 +405,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                       <div className="flex items-center border rounded-xl bg-white shadow-sm">
                         <button aria-label="Giảm" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-3 py-2 text-xl font-bold text-[#c4975a]">−</button>
                         <input
+                          title='number'
                           type="number"
                           value={quantity}
                           onChange={e => setQuantity(Math.max(1, Number(e.target.value) || 1))}

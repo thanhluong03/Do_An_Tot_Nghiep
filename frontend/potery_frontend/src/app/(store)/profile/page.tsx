@@ -8,6 +8,7 @@ import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, ScrollToTopButton } from '@/components/feature';
 import { useAuth } from '@/contexts/AuthContext';
 import { userApi } from '@/api/modules/users'; // 🔥 VẪN CẦN CHO LOGOUT VÀ UPDATE
+import { toast } from 'react-hot-toast';
 
 interface Customer {
   id?: number | string;
@@ -165,10 +166,10 @@ export default function ProfilePage() {
       setEditing(false);
       setSelectedFile(null);
       setPreviewUrl(null);
-      alert('✅ Cập nhật thông tin thành công!');
+      toast.success('Cập nhật thông tin thành công!');
     } catch (err) {
       console.error('Update failed:', err);
-      alert('❌ Cập nhật thất bại. Vui lòng thử lại.');
+      toast.error('Cập nhật thất bại. Vui lòng thử lại.');
     } finally {
       setSaving(false);
     }
@@ -270,15 +271,15 @@ export default function ProfilePage() {
       )}
 
       <ScrollToTopButton />
-      <section className="bg-[#F5F1EB] py-16">
+      <section className="bg-[#FAF7F2] py-20 min-h-screen">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="bg-white rounded-3xl shadow-xl p-10 grid grid-cols-1 lg:grid-cols-3 gap-10 border border-[#E8E5DA]">
-            {/* Cột trái: Avatar + thông tin ngắn */}
-            <div className="flex flex-col items-center text-center border-r border-gray-100 pr-0 lg:pr-8">
-              <div className="relative">
+          <div className="bg-white rounded-[24px] shadow-2xl shadow-gray-200 p-10 grid grid-cols-1 lg:grid-cols-3 gap-10 border border-[#E8E5DA]">
+            {/* Cột trái: Avatar + thông tin ngắn - NỀN RIÊNG BIỆT */}
+            <div className="flex flex-col items-center text-center p-6 lg:p-0 border-b border-gray-100 lg:border-r lg:border-b-0 lg:pr-10">
+              <div className="relative mb-6">
                 <label
                   htmlFor="avatar-upload"
-                  className="cursor-pointer block relative"
+                  className="cursor-pointer block relative transition-opacity duration-200"
                   onClick={editing ? (e) => {
                     const input = document.getElementById('avatar-upload') as HTMLInputElement | null;
                     if (input) input.value = '';
@@ -308,99 +309,106 @@ export default function ProfilePage() {
                               : '/default-avatar.png'))
                       }
                       alt="Avatar"
-                      className={`w-40 h-40 rounded-full object-cover border-4 border-[#E8E5DA] shadow-lg ${editing ? 'hover:opacity-80' : ''}`}
+                      className={`w-36 h-36 rounded-full object-cover border-4 border-[#F5F1EB] shadow-lg ${editing ? 'hover:opacity-80 transition-opacity' : ''}`}
                     />
                   ) : (
                     <div
-                      className="w-40 h-40 rounded-full border-4 border-[#E8E5DA] shadow-lg flex items-center justify-center bg-white"
+                      className={`w-36 h-36 rounded-full border-4 border-[#F5F1EB] shadow-lg flex items-center justify-center bg-[#fcf9f5] ${editing ? 'hover:bg-[#f3ede3] transition-colors' : ''}`}
                     >
-                      <span className="text-sm font-semibold text-[#C4975A] text-center drop-shadow-sm tracking-wide">Chọn ảnh đại diện</span>
+                      <span className="text-xs font-semibold text-[#8D806F] text-center tracking-wider">Tải ảnh đại diện</span>
                     </div>
                   )}
                   {editing && (
-                    <span className="absolute bottom-2 right-3 bg-[#C4975A] text-white text-xs px-2 py-1 rounded-full shadow">
-                      ✎
+                    <span className="absolute bottom-1 right-1 bg-[#8D806F] text-white text-xs p-1 rounded-full shadow-md border-2 border-white">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     </span>
                   )}
                 </label>
               </div>
 
-              <h1 className="text-2xl font-bold text-[#2C2A24] mt-4">{customer.full_name}</h1>
-              <p className="text-gray-500">{customer.email}</p>
+              <h1 className="text-3xl font-serif font-bold text-[#2C2A24] mt-2">{customer.full_name}</h1>
+              <p className="text-gray-500 font-light mt-1">{customer.email}</p>
 
               <button
                 onClick={handleLogout}
-                className="mt-6 px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition text-sm shadow-sm"
+                className="mt-8 px-8 py-3 bg-white border border-red-400 text-red-600 rounded-xl hover:bg-red-50 transition text-base font-semibold shadow-sm"
               >
                 Đăng xuất
               </button>
             </div>
 
             {/* Cột phải: Form chi tiết */}
-            <div className="lg:col-span-2">
-              <h2 className="text-2xl font-semibold text-[#2C2A24] mb-6">Thông tin cá nhân</h2>
+            <div className="lg:col-span-2 lg:pl-4">
+              <h2 className="text-3xl font-serif font-semibold text-[#2C2A24] mb-8 border-b pb-3 border-gray-100">Thông tin cá nhân</h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                {/* Họ và tên */}
                 <div>
-                  <label className="block text-sm font-medium text-[#2C2A24] mb-2">Họ và tên</label>
+                  <label className="block text-sm font-medium text-[#2C2A24] mb-2 tracking-wider">HỌ VÀ TÊN</label>
                   <input
+                    title='full name'
+                    type="text"
                     name="full_name"
                     value={formData.full_name || ''}
                     onChange={handleChange}
                     disabled={!editing}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#C4975A] outline-none disabled:bg-gray-50"
+                    className={`w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-[#8D806F] outline-none transition duration-200 ${!editing ? 'bg-[#F5F5F5] text-gray-700' : 'bg-white hover:border-gray-300'}`}
                   />
                 </div>
+                {/* Số điện thoại */}
                 <div>
-                  <label className="block text-sm font-medium text-[#2C2A24] mb-2">
-                    Số điện thoại
-                  </label>
+                  <label className="block text-sm font-medium text-[#2C2A24] mb-2 tracking-wider">SỐ ĐIỆN THOẠI</label>
                   <input
+                    title='phone number'
                     name="phone_number"
                     value={formData.phone_number || ''}
                     onChange={handleChange}
                     disabled={!editing}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#C4975A] outline-none disabled:bg-gray-50"
+                    className={`w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-[#8D806F] outline-none transition duration-200 ${!editing ? 'bg-[#F5F5F5] text-gray-700' : 'bg-white hover:border-gray-300'}`}
                   />
                 </div>
+                {/* Địa chỉ */}
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-[#2C2A24] mb-2">Địa chỉ</label>
+                  <label className="block text-sm font-medium text-[#2C2A24] mb-2 tracking-wider">ĐỊA CHỈ</label>
                   <textarea
+                  title='address'
                     name="address"
                     value={formData.address || ''}
                     onChange={handleChange}
                     disabled={!editing}
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#C4975A] outline-none disabled:bg-gray-50"
+                    className={`w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-[#8D806F] outline-none transition duration-200 ${!editing ? 'bg-[#F5F5F5] text-gray-700' : 'bg-white hover:border-gray-300'}`}
                   />
                 </div>
               </div>
 
-              <div className="flex justify-between border-t mt-6 pt-3 text-sm text-gray-600">
-                <span>Ngày tạo tài khoản:</span>
-                <span>
+              {/* Thông tin phụ */}
+              <div className="flex justify-between border-t mt-8 pt-4 text-sm text-black-600 font-light">
+                <span className="tracking-wide">NGÀY TẠO TÀI KHOẢN:</span>
+                <span className="font-medium text-[#2C2A24]">
                   {customer.created_at
-                    ? new Date(customer.created_at).toLocaleDateString('vi-VN')
+                    ? new Date(customer.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
                     : 'Không rõ'}
                 </span>
               </div>
 
-              <div className="mt-8 flex gap-4">
+              {/* Button Actions */}
+              <div className="mt-10 flex gap-4">
                 {editing ? (
                   <>
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-6 py-2 bg-[#C4975A] text-white rounded-full hover:bg-[#a97e4a] transition disabled:opacity-50"
+                      className="px-8 py-3 bg-[#A3764A] text-white rounded-xl font-bold hover:bg-[#8D806F] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-amber-100"
                     >
-                      {saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}
+                      {saving ? 'Đang lưu...' : 'LƯU THAY ĐỔI'}
                     </button>
                     <button
                       onClick={() => {
                         setEditing(false);
                         setFormData(customer);
                       }}
-                      className="px-6 py-2 bg-gray-200 text-[#2C2A24] rounded-full hover:bg-gray-300 transition"
+                      className="px-8 py-3 border border-gray-300 bg-white text-[#2C2A24] rounded-xl font-semibold hover:bg-gray-50 transition-colors"
                     >
                       Hủy
                     </button>
@@ -408,9 +416,9 @@ export default function ProfilePage() {
                 ) : (
                   <button
                     onClick={() => setEditing(true)}
-                    className="px-6 py-2 bg-[#65604E] text-white rounded-full hover:bg-[#3D3A2F] transition"
+                    className="px-8 py-3 bg-[#8D806F] text-white rounded-xl font-bold hover:bg-[#65604E] transition-colors shadow-md shadow-gray-300"
                   >
-                    ✎ Chỉnh sửa
+                    CHỈNH SỬA
                   </button>
                 )}
               </div>

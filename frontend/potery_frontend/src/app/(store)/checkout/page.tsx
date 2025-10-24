@@ -115,15 +115,14 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('❌ Lỗi gửi email:', error);
       console.error('❌ Chi tiết lỗi:', error);
-      // Không throw error để không làm gián đoạn flow đặt hàng
-      toast.error('⚠️ Có lỗi khi gửi email xác nhận');
+      toast.error(' Có lỗi khi gửi email xác nhận');
     }
   }, [isAuthenticated, user?.email, guestEmail]);
 
   async function handleGuestCheckout(customerInfo: any) {
     const savedCart = Cookies.get('cart_session');
     if (!savedCart) {
-      alert('Giỏ hàng trống!');
+      toast.error('Giỏ hàng trống!');
       return;
     }
 
@@ -146,9 +145,9 @@ export default function CheckoutPage() {
 
     if (res.ok) {
       Cookies.remove('cart_session'); // clear cart sau khi đặt
-      alert('Đặt hàng thành công!');
+      toast.success('Đặt hàng thành công!');
     } else {
-      alert('Đặt hàng thất bại!');
+      toast.error('Đặt hàng thất bại!');
     }
   }
 
@@ -463,6 +462,8 @@ export default function CheckoutPage() {
           
           // 🧹 XÓA SẠCH THÔNG TIN GUEST SAU KHI ĐẶT HÀNG THÀNH CÔNG
           clearGuestData();
+          window.location.href = `/confirmation?orderId=${createdId}`;
+             return;
         }
         
         clearCart();
@@ -690,6 +691,7 @@ return (
                     <CreditCard className='w-3 h-3'/> Phương thức thanh toán
                 </label>
                 <select
+                  title='payment'
                   className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition bg-white"
                   value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value as 'COD' | 'VNPAY')}
