@@ -81,7 +81,7 @@ export default function HomePage() {
         <>
           {/* Voucher Modal */}
           {isVoucherModalOpen && (
-            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-white/10">
               <VoucherModal
                 customerId={user.id}
                 isOpen={isVoucherModalOpen}

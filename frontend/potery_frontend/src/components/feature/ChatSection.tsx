@@ -157,10 +157,10 @@ export function ChatModal({
 
   // ... (Phần JSX y hệt như trước, chỉ đổi msg.created_at -> msg.sent_at)
   return (
-    <div className="fixed bottom-5 right-17 z-50 w-80 h-[500px] bg-white  shadow-lg rounded-2xl flex flex-col border border-gray-200">
+    <div className="fixed bottom-5 right-17 z-50 w-80 h-[500px] bg-[#8B7D6B] shadow-lg rounded-2xl flex flex-col ">
       {/* Header */}
-      <div className="flex justify-between items-center p-3 bg-[#8B7D6B] text-white font-semibold">
-        <span>Chat tư vấn mua hàng</span>
+      <div className="flex justify-between items-center p-4 bg-[#8B7D6B] rounded-t-lg text-white font-semibold">
+        <span>Chat Cùng Tiệm Gốm</span>
         <button onClick={onClose} className="text-white text-xl hover:text-gray-200">×</button>
       </div>
 
@@ -169,7 +169,7 @@ export function ChatModal({
         {loading ? (
           <div className="text-center text-gray-400 mt-10">⏳ Đang tải cuộc trò chuyện...</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10">💬 Bắt đầu trò chuyện với admin...</div>
+          <div className="text-center text-gray-400 mt-10">Bắt đầu trò chuyện với admin...</div>
         ) : (
           messages.map((msg, i) => (
             <div key={msg.id || i} className={`flex ${msg.sender_type === 'USER' ? 'justify-end' : 'justify-start'}`}>
