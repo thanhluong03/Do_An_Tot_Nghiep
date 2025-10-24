@@ -229,6 +229,7 @@ export default function ProductsPage() {
     {/* Giữ nguyên logic <select> cho Sắp xếp giá, nhưng style lại */}
     <div className="relative">
       <select
+        title='sort'
         value={filters.sortOrder || ''}
         onChange={handlePriceSortChange}
         className={`appearance-none px-4 py-2 pr-8 rounded-md text-sm font-medium transition cursor-pointer ${
