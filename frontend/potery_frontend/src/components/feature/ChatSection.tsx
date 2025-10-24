@@ -157,10 +157,10 @@ export function ChatModal({
 
   // ... (Phần JSX y hệt như trước, chỉ đổi msg.created_at -> msg.sent_at)
   return (
-    <div className="fixed bottom-5 right-17 z-50 w-80 h-[500px] bg-white rounded-xl shadow-lg flex flex-col border border-gray-200">
+    <div className="fixed bottom-5 right-17 z-50 w-80 h-[500px] bg-white  shadow-lg rounded-2xl flex flex-col border border-gray-200">
       {/* Header */}
-      <div className="flex justify-between items-center p-3 bg-green-600 text-white font-semibold">
-        <span>💬 Chat với Admin</span>
+      <div className="flex justify-between items-center p-3 bg-[#8B7D6B] text-white font-semibold">
+        <span>Chat tư vấn mua hàng</span>
         <button onClick={onClose} className="text-white text-xl hover:text-gray-200">×</button>
       </div>
 
@@ -176,12 +176,12 @@ export function ChatModal({
               <div
                 className={`px-3 py-2 rounded-lg max-w-[70%] ${
                   msg.sender_type === 'USER'
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-[#8B7D6B] text-white'
                     : 'bg-gray-200 text-gray-800'
                 }`}
               >
                 <p className="text-sm break-words">{msg.content}</p>
-                <p className="text-xs text-gray-500 mt-1 text-right">
+                <p className="text-xs text-white mt-1 text-right">
                   {/* Sửa tên trường */}
                   {new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -193,10 +193,10 @@ export function ChatModal({
       </div>
 
       {/* Ô nhập tin */}
-      <div className="flex p-3 border-t bg-white">
+      <div className="flex p-3 border-t border-gray-300 bg-white">
         <input
           type="text"
-          className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
           placeholder="Nhập tin nhắn..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -205,7 +205,7 @@ export function ChatModal({
         />
         <button
           onClick={handleSend}
-          className="ml-2 px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 disabled:opacity-50"
+          className="ml-2 px-4 py-2 bg-[#8B7D6B] text-white rounded-lg font-semibold hover:bg-[#8B7D6B]/80 disabled:opacity-50"
           disabled={sending || loading}
         >
           {sending ? '⏳' : 'Gửi'}
