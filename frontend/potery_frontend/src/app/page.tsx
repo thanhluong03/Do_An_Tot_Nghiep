@@ -16,7 +16,8 @@ import {
   FeaturedCollectionsSection,
   FeaturedProductSection,
   NewsletterSection,
-  ChatModal
+  ChatModal,
+  AIChatModal,
 } from '@/components/feature';
 import {
   ValuePropositionSection,
@@ -38,6 +39,8 @@ export default function HomePage() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false); // 1. Thêm state cho AI chat
+  const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
 
   // Hiển thị voucher modal 1 lần duy nhất cho mỗi user
@@ -97,8 +100,18 @@ export default function HomePage() {
             />
           )}
 
+          {/* AI Chat Modal */}
+          <AIChatModal
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+          />
+
           {/* Floating Buttons */}
-          <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+          <div
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
+              isChatDropdownOpen ? 'right-1' : 'right-1'
+            }`}
+          >
             {/* Voucher Button */}
             <button
               onClick={() => setIsVoucherModalOpen(true)}
@@ -108,33 +121,61 @@ export default function HomePage() {
               🎁
             </button>
 
-            {/* Chat Button */}
-            <button
-              onClick={async () => {
-                if (!isAuthenticated || !user?.id) return;
-                try {
-                  console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
-                  const created = await conversationApi.createConversation({
-                    sender_id: Number(user.id),
-                    sender_type: 'USER',
-                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                    user_id: Number(user.id),
-                    store_id: 1,
-                  });
+            {/* Chat Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsChatDropdownOpen(prev => !prev)}
+                className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                title="Bắt đầu trò chuyện"
+              >
+                💬
+              </button>
 
-                  const conv = created?.conversation || created?.data || created;
-                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
-                  setConversationId(conv?.id || null);
-                  setIsChatOpen(true);
-                } catch (err) {
-                  console.error('❌ Lỗi tạo conversation:', err);
-                }
-              }}
-              className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-              title="Chat với Admin"
-            >
-              💬
-            </button>
+              {isChatDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 flex flex-col gap-3 transition-all duration-300 ease-out transform origin-top-right">
+                  {/* Nút Chat với Admin */}
+                  <div className="relative group">
+                    <button
+                      onClick={async () => {
+                        if (!isAuthenticated || !user?.id) return;
+                        try {
+                          const created = await conversationApi.createConversation({
+                            sender_id: Number(user.id),
+                            sender_type: 'USER',
+                            content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                            user_id: Number(user.id),
+                            store_id: 1,
+                          });
+                          const conv = created?.conversation || created?.data || created;
+                          setConversationId(conv?.id || null);
+                          setIsChatOpen(true);
+                          setIsChatDropdownOpen(false);
+                        } catch (err) {
+                          console.error('❌ Lỗi tạo conversation:', err);
+                        }
+                      }}
+                      className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                      title="Chat với Admin"
+                    >
+                      👨‍💼
+                    </button>
+                  </div>
+                  {/* Nút Chat với AI */}
+                  <div className="relative group">
+                    <button
+                      onClick={() => {
+                        setIsAIChatOpen(true); // 2. Mở popup AI chat
+                        setIsChatDropdownOpen(false);
+                      }}
+                      className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                      title="Chat với AI"
+                    >
+                      🤖
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
