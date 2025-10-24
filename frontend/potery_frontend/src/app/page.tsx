@@ -8,6 +8,7 @@ import { useFeaturedProducts, useCategories } from '../hooks/useProducts';
 import { Product, ProductCategory } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { cartApi } from '../api/modules/cart';
+import { Gift, MessageSquare, User, Bot } from 'lucide-react';
 import { LifestyleSection } from '@/components/feature/LifestyleSection';
 import {
   VoucherModal,
@@ -115,20 +116,20 @@ export default function HomePage() {
             {/* Voucher Button */}
             <button
               onClick={() => setIsVoucherModalOpen(true)}
-              className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              className="bg-yellow-400 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
               title="Nhận Voucher Giảm Giá!"
             >
-              🎁
+              <Gift className="w-6 h-6" />
             </button>
 
             {/* Chat Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsChatDropdownOpen(prev => !prev)}
-                className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                className="bg-[#8B7D6B] text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
                 title="Bắt đầu trò chuyện"
               >
-                💬
+                <MessageSquare className="w-6 h-6" />
               </button>
 
               {isChatDropdownOpen && (
@@ -157,7 +158,7 @@ export default function HomePage() {
                       className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
                       title="Chat với Admin"
                     >
-                      👨‍💼
+                      <User className="w-5 h-5" />
                     </button>
                   </div>
                   {/* Nút Chat với AI */}
@@ -170,7 +171,7 @@ export default function HomePage() {
                       className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
                       title="Chat với AI"
                     >
-                      🤖
+                      <Bot className="w-6 h-6" />
                     </button>
                   </div>
                 </div>
