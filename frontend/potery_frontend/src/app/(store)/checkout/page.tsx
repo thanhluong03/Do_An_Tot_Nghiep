@@ -462,6 +462,8 @@ export default function CheckoutPage() {
           
           // 🧹 XÓA SẠCH THÔNG TIN GUEST SAU KHI ĐẶT HÀNG THÀNH CÔNG
           clearGuestData();
+          window.location.href = `/confirmation?orderId=${createdId}`;
+             return;
         }
         
         clearCart();
