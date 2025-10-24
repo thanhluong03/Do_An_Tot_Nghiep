@@ -77,7 +77,6 @@ export default function CartPage() {
     } catch {}
   }, [isAuthenticated]);
 
-  // 🔹 Guest: hydrate context from cookie once for consistent handlers
   useEffect(() => {
     if (isAuthenticated) return;
     if (items.length > 0) return;
@@ -244,6 +243,7 @@ export default function CartPage() {
                                 {/* Bộ đếm số lượng */}
                                 <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
                                   <button
+                                  title='update'
                                     onClick={() => handleUpdateQuantity(ci.id, ci.quantity, -1)}
                                     disabled={ci.quantity === 1}
                                     className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
@@ -254,6 +254,7 @@ export default function CartPage() {
                                     {ci.quantity}
                                   </span>
                                   <button
+                                    title='update'
                                     onClick={() => handleUpdateQuantity(ci.id, ci.quantity, 1)}
                                     className="p-2 text-gray-700 hover:bg-gray-100 transition"
                                   >
@@ -342,6 +343,7 @@ export default function CartPage() {
                                 </p>
                                 <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
                                   <button
+                                    title='update'
                                     onClick={() => updateQuantity(product.id, Math.max(1, (ci.quantity ?? 1) - 1))}
                                     disabled={ci.quantity === 1}
                                     className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
@@ -352,6 +354,7 @@ export default function CartPage() {
                                     {ci.quantity}
                                   </span>
                                   <button
+                                    title='update'
                                     onClick={() => updateQuantity(product.id, (ci.quantity ?? 1) + 1)}
                                     className="p-2 text-gray-700 hover:bg-gray-100 transition"
                                   >

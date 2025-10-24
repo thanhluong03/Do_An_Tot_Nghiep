@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts';
 import { cn } from '../../utils/cn';
 import { categoryApi } from '../../api/modules/category'; // ✅ thêm import API
 import { useCart } from '../../contexts/CartContext';
+import Link from 'next/dist/client/link';
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
@@ -66,20 +67,20 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
             <div className="px-4 py-2 text-sm text-gray-500 truncate border-b border-[#F5F1EB]">
               Xin chào, <span className="font-semibold text-[#2C2A24]">{displayName}</span>
             </div>
-            <a
+            <Link
               href="/profile"
               className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
               onClick={() => setIsOpen(false)}
             >
               Trang cá nhân
-            </a>
-            <a
+            </Link>
+            <Link
               href="/orders"
               className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
               onClick={() => setIsOpen(false)}
             >
               Đơn hàng
-            </a>
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 border-t border-[#F5F1EB]"
@@ -132,15 +133,24 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16">
 
           {/* LOGO */}
-          <div className="flex items-center space-x-3">
-            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC]">
-              <img src="/logo.png" alt="Tiệm Gốm Nhà Gạo Logo" className="w-10 h-10 object-contain" />
+          <Link href="/" className="flex items-center space-x-3 cursor-pointer group transition-transform duration-200 hover:scale-[1.02]">
+
+            {/* Vòng tròn Logo */}
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-[#E0D8CC] shadow-sm transition-all duration-300 group-hover:border-[#A38D64] group-hover:shadow-md">
+              <img
+                src="/logo.png"
+                alt="Tiệm Gốm Nhà Gạo Logo"
+                className="w-8 h-8 object-contain" // Giảm kích thước ảnh logo một chút
+              />
             </div>
+
+            {/* Tên Thương hiệu */}
             <div>
-              <h1 className="text-2xl font-serif text-[#65604E] -mb-1 leading-none">Tiệm Gốm</h1>
-              <p className="text-sm font-serif italic text-[#65604E]">Nhà Gạo</p>
+              {/* Tối ưu font và thêm hover color */}
+              <h1 className="text-xl font-serif text-[#65604E] -mb-1 leading-none transition-colors duration-200 group-hover:text-[#A38D64]">Tiệm Gốm</h1>
+              <p className="text-sm font-serif italic text-[#65604E] transition-colors duration-200 group-hover:text-[#A38D64]">Nhà Gạo</p>
             </div>
-          </div>
+          </Link>
 
           {/* NAV MENU */}
           <nav className="hidden md:flex items-center space-x-8">
@@ -176,7 +186,9 @@ export const Header: React.FC = () => {
           {/* ICONS + USER */}
           <div className="flex items-center space-x-4">
             {/* Search */}
-            <button className="p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
+            <button
+            title='as'
+             className="p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -184,29 +196,30 @@ export const Header: React.FC = () => {
             </button>
 
             {/* Cart */}
-            <a href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
+            <Link href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
               <img src="/Bag.png" alt="Giỏ hàng" className="w-5 h-5" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-[#c4975a] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border-2 border-white shadow">
                   {cartCount}
                 </span>
               )}
-            </a>
+            </Link>
 
             {/* Account / Login */}
             {isAuthenticated ? (
               <UserDropdown user={user} />
             ) : (
-              <a href="/login" className="relative p-2 text-[#2C2A24] hover:text-[#65604E]" title="Đăng nhập">
+              <Link href="/login" className="relative p-2 text-[#2C2A24] hover:text-[#65604E]" title="Đăng nhập">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-              </a>
+              </Link>
             )}
 
             {/* Mobile Menu */}
             <button
+              title='Mở menu'
               className="md:hidden p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
