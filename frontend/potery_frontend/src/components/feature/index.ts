@@ -12,3 +12,6 @@ export { NewsletterSection } from './NewsLetterSection';
 export { VoucherModal } from './VoucherPopup';
 export { ChatModal } from './ChatSection';
 export { ScrollToTopButton } from './ScrollToTopButton';
+export { ValuePropositionSection } from './ValueProppositionSection';
+export { AIChatPage } from './AIPage';
+export { AIChatModal } from './AIChatModal';

@@ -89,7 +89,7 @@ export class ConversationService {
     if (!customerId) {
       throw new Error('Thiếu customerId (từ user_id) khi tạo conversation');
     }
-
+ 
     const customerExists = await this.customerRepo.findOne({
       where: { id: customerId },
     });
@@ -102,11 +102,11 @@ export class ConversationService {
       where: {
         customer_id: customerId,
       },
+      relations: ['customer', 'user'], // Eager load relations
     });
 
     // 4. 🔥 SỬA LOGIC: Nếu chưa có, tạo mới và gán cho admin ĐẦU TIÊN
     if (!conversation) {
-      // 🔥 SỬA LOGIC: Tìm admin hoặc superadmin đầu tiên để gán
       const firstAdmin = await this.userRepo.createQueryBuilder('user')
         .leftJoin('user.role', 'role')
         .where('role.name IN (:...roles)', {
@@ -126,7 +126,10 @@ export class ConversationService {
         user_id: firstAdmin.id,
         started_at: new Date(),
       });
-      conversation = await this.conversationRepo.save(newConv);
+      const savedConv = await this.conversationRepo.save(newConv);
+      // Refetch to get relations
+      conversation = await this.conversationRepo.findOne({ where: { id: savedConv.id }, relations: ['customer', 'user']});
+      if (!conversation) throw new Error('Không thể tạo conversation mới.');
     }
 
     let initialMessage: Message | null = null;

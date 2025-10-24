@@ -4,18 +4,21 @@ import { Controller, Get, Param, Post, Body } from '@nestjs/common';
 import { ConversationService } from '../../libs/conversation/src/conversation.service';
 // 🔥 SỬA LẠI: DÙNG DTO ĐỂ VALIDATE VÀ NHẬN ĐÚNG PAYLOAD
 import { CreateConversationDto, MarkReadDto } from './conversation.dto';
+import { SuccessResponseDto } from 'src/order/order.dto';
 
 @Controller('conversations')
 export class ConversationController {
   constructor(private readonly conversationService: ConversationService) {}
 
   @Post('create-conversation')
-  async createConversation(
-    // 🔥 SỬA LẠI: Dùng DTO để NestJS biết cần nhận những trường nào, bao gồm cả 'store_id'
-    @Body() createConversationDto: CreateConversationDto,
-  ) {
-    // 🔥 SỬA LẠI: Truyền DTO đã được validate vào service
-    return this.conversationService.createConversation(createConversationDto);
+  async createConversation(@Body() createConversationDto: CreateConversationDto,) {
+    const conversation = await this.conversationService.createConversation(
+      createConversationDto,
+    );
+    return new SuccessResponseDto(
+      'Conversation created successfully',
+      conversation,
+    );
   }
 
   // ... (Các hàm khác giữ nguyên)

@@ -157,7 +157,7 @@ export function ChatModal({
 
   // ... (Phần JSX y hệt như trước, chỉ đổi msg.created_at -> msg.sent_at)
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-80 h-[500px] bg-white rounded-xl shadow-lg flex flex-col border border-gray-200">
+    <div className="fixed bottom-5 right-17 z-50 w-80 h-[500px] bg-white rounded-xl shadow-lg flex flex-col border border-gray-200">
       {/* Header */}
       <div className="flex justify-between items-center p-3 bg-green-600 text-white font-semibold">
         <span>💬 Chat với Admin</span>
