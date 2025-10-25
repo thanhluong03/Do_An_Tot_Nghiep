@@ -20,7 +20,26 @@ import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
 import { Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
-
+interface PageButtonProps {
+  page: number;
+  isActive: boolean;
+  onClick: (page: number) => void;
+}
+const PageButton: React.FC<PageButtonProps> = ({ page, isActive, onClick }) => {
+  return (
+    <button
+      onClick={() => onClick(page)}
+      disabled={isActive}
+      className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition duration-200 
+                ${isActive
+          ? 'bg-[#B95D26] text-white shadow-md'
+          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+        }`}
+    >
+      {page}
+    </button>
+  );
+};
 interface SelectOption {
   id: number;
   name: string;
@@ -47,9 +66,9 @@ export default function AdminOrderPage() {
   const [editingOrder, setEditingOrder] = useState<FullOrderDetails | null>(null);
   const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
+  const [totalOrders, setTotalOrders] = useState(0);
   useEffect(() => {
-     getCustomers()
+    getCustomers()
       .then(setCustomers)
       .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
     listDropdownStores()
@@ -59,8 +78,12 @@ export default function AdminOrderPage() {
 
   async function fetchAllOrders() {
     try {
-      const data = await listOrders({});
+      // ⭐️ CẬP NHẬT: Thay đổi cách nhận dữ liệu từ listOrders
+      const response = await listOrders({ size: 10000, page: 1 }); // Lấy số lượng lớn để đếm cho tabs
+      const data = response.data;
+
       const ordersWithNames = data.map((order) => ({
+        // ... (logic mapping)
         ...order,
         customer_name:
           customers.find((u) => u.id === order.customer_id)?.full_name ||
@@ -75,7 +98,6 @@ export default function AdminOrderPage() {
       toast.error("Không thể tải thống kê đơn hàng!");
     }
   }
-
   async function fetchOrders() {
     setLoading(true);
     setError(null);
@@ -88,8 +110,12 @@ export default function AdminOrderPage() {
         status: orderStatusFilter || undefined,
         payment_status: paymentStatusFilter || undefined,
       };
-      const data = await listOrders(params);
-      const ordersWithNames = data.map((order) => ({
+
+      // ⭐️ CẬP NHẬT: Nhận đối tượng response có data và total
+      const response = await listOrders(params);
+
+      const ordersWithNames = response.data.map((order) => ({
+        // ... (logic mapping)
         ...order,
         customer_name:
           customers.find((u) => u.id === order.customer_id)?.full_name ||
@@ -99,7 +125,9 @@ export default function AdminOrderPage() {
           : parseFloat(order.total_amount as string),
         items: order.items || [],
       }));
+
       setOrders(ordersWithNames);
+      setTotalOrders(response.total); // <-- LƯU TỔNG SỐ ĐƠN HÀNG
     } catch {
       setError("Không thể tải danh sách đơn hàng!");
     } finally {
@@ -114,40 +142,42 @@ export default function AdminOrderPage() {
     }
   }, [customers, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
 
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+  };
+  const handleExportExcel = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/orders/export-excel", {
+        method: "GET",
+        credentials: "include",
+      });
 
-const handleExportExcel = async () => {
-  try {
-    const response = await fetch("http://localhost:3000/orders/export-excel", {
-      method: "GET",
-      credentials: "include",
-    });
+      if (!response.ok) {
+        toast.error("Không thể xuất file Excel!");
+        return;
+      }
 
-    if (!response.ok) {
-      toast.error("Không thể xuất file Excel!");
-      return;
+      // Tạo blob từ dữ liệu nhận về
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Tạo thẻ <a> ẩn để tải file
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "DanhSachDonHang.xlsx";
+      document.body.appendChild(link);
+      link.click();
+
+      // Dọn dẹp
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Đã tải file Excel thành công!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi khi tải file Excel!");
     }
-
-    // Tạo blob từ dữ liệu nhận về
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    // Tạo thẻ <a> ẩn để tải file
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "DanhSachDonHang.xlsx";
-    document.body.appendChild(link);
-    link.click();
-
-    // Dọn dẹp
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    toast.success("Đã tải file Excel thành công!");
-  } catch (err) {
-    console.error(err);
-    toast.error("Lỗi khi tải file Excel!");
-  }
-};
+  };
   const handleDeleteOrder = (id: number) => {
     setOrderToDeleteId(id);
     setIsDeleteModalOpen(true);
@@ -223,7 +253,43 @@ const handleExportExcel = async () => {
       setLoading(false);
     }
   };
+  const renderPageNumbers = () => {
+    const totalPages = Math.ceil(totalOrders / pagination.size);
+    const currentPage = pagination.page;
+    const maxButtons = 5;
+    const pages = [];
 
+    if (totalPages <= 1) return null;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+    if (endPage - startPage + 1 < maxButtons) {
+      startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+    if (startPage > 1) {
+      pages.push(
+        <PageButton key={1} page={1} isActive={false} onClick={handlePageChange} />
+      );
+      if (startPage > 2) {
+        pages.push(<span key="dots-start" className="px-1 py-2 text-sm text-gray-500">...</span>);
+      }
+    }
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <PageButton key={i} page={i} isActive={i === currentPage} onClick={handlePageChange} />
+      );
+    }
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pages.push(<span key="dots-end" className="px-1 py-2 text-sm text-gray-500">...</span>);
+      }
+      pages.push(
+        <PageButton key={totalPages} page={totalPages} isActive={false} onClick={handlePageChange} />
+      );
+    }
+
+    return pages;
+  };
   return (
     <div className="p-6 bg-white min-h-screen shadow-md border border-gray-200">
       <Toaster position="top-right" />
@@ -233,8 +299,6 @@ const handleExportExcel = async () => {
             Quản lý đơn hàng
           </h1>
         </div>
-
-        {/* Bộ lọc + nút Excel */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <select
@@ -281,6 +345,34 @@ const handleExportExcel = async () => {
           {error && <p className="text-center text-red-600 py-6 font-medium">Lỗi: {error}</p>}
           {!loading && !error && (
             <OrderTable orders={orders} onView={handleViewOrder} onEditStatus={handleEditStatus} onDelete={handleDeleteOrder} />
+          )}
+          {!loading && !error && totalOrders > pagination.size && (
+            <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-4 border-t border-gray-200 p-4">
+              <div className="text-sm text-gray-600 mb-4 md:mb-0">
+                Hiển thị <span className="font-bold text-gray-800">{((pagination.page - 1) * pagination.size) + 1}</span> -
+                <span className="font-bold text-gray-800"> {Math.min(pagination.page * pagination.size, totalOrders)}</span> trên tổng số <span className="font-bold text-indigo-600">{totalOrders}</span> đơn hàng
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 shadow-sm"
+                >
+                  &larr;
+                </button>
+
+                <div className="flex items-center space-x-1">
+                  {renderPageNumbers()}
+                </div>
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page * pagination.size >= totalOrders}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 shadow-sm"
+                >
+                  &rarr;
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
