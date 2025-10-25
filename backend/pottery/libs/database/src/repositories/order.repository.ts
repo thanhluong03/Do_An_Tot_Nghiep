@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { OrderEntity, OrderStatus, PaymentStatus } from '../entities/order.entity';
 import { OrderItemEntity } from '../entities/order_item.entity'; 
+export interface FindAllOrdersResult { 
+    orders: OrderEntity[];
+    total: number;
+}
 @Injectable()
 export class OrderRepository {
     constructor(
@@ -52,6 +56,7 @@ export class OrderRepository {
     //     });
     //     return Array.isArray(result) ? result : [];
     // }
+    
      async findAll(params: {
         size: number;
         page: number;
@@ -60,10 +65,9 @@ export class OrderRepository {
         store_id?: number;
         status?: OrderStatus;
         payment_status?: PaymentStatus;
-    }): Promise<OrderEntity[]> {
-        
-        const query = this.orderRepository.createQueryBuilder('order');
-        query.where('order.deleted_at IS NULL'); 
+    }): Promise<FindAllOrdersResult> { // <-- CẬP NHẬT KIỂU TRẢ VỀ
+    const query = this.orderRepository.createQueryBuilder('order');
+    query.where('order.deleted_at IS NULL');
 
         if (params.customer_id !== undefined) {
             query.andWhere('order.customer_id = :customer_id', { customer_id: params.customer_id });
@@ -91,12 +95,12 @@ export class OrderRepository {
         }
 
         query.orderBy('order.created_at', 'DESC');
-        query.skip((params.page - 1) * params.size);
-        query.take(params.size);
+        const [orders, total] = await query
+            .skip((params.page - 1) * params.size)
+            .take(params.size)
+            .getManyAndCount(); 
 
-        const [result] = await query.getManyAndCount();
-        
-        return result; 
+        return { orders, total };
     }
 
     async update(id: number, data: Partial<OrderEntity>): Promise<void> {

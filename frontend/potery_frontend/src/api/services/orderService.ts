@@ -89,13 +89,25 @@ export const listDropdownStores = async (): Promise<Store[]> => {
     name: s.name || s.store_name || s.storeName || "Không rõ tên"
   }));
 };
-
-
-export async function listOrders(params: ListOrderParams): Promise<Order[]> {
-    const res = await axios.get(`${API_URL}/listorders`, { params });
-    return res.data.data || [];
+export interface ListOrdersResponse {
+    data: Order[];
+    total: number; 
 }
+export async function listOrders(params: ListOrderParams): Promise<ListOrdersResponse> {
+    const res = await axios.get(`${API_URL}/listorders`, { params });
+    
+    const responseData = res.data.data;
 
+    if (!responseData || typeof responseData.total === 'undefined') {
+        throw new Error("Invalid response format from server for listOrders");
+    }
+
+    const orders: Order[] = responseData.data || []; // Lấy danh sách từ responseData.data
+    const total: number = responseData.total;      // Lấy total từ responseData.total
+
+    // Trả về object có cấu trúc phân trang
+    return { data: orders, total: total }; 
+}
 
 export async function getOrderDetail(id: number): Promise<Order> {
     const res = await axios.get(`${API_URL}/orderdetail/${id}`);

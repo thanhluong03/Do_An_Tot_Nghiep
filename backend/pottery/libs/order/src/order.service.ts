@@ -7,7 +7,10 @@ import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryReposit
 import { CategoryRepository } from '@app/database';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
-
+interface OrdersWithTotal {
+    orders: OrderEntity[];
+    total: number;
+}
 @Injectable()
 export class OrderService {
     constructor(
@@ -230,8 +233,8 @@ export class OrderService {
         };
     }
 
-    async getOrders(params: IListOrder): Promise<OrderEntity[]> {
-        const orders = await this.orderRepository.findAll(params);
+    async getOrders(params: IListOrder): Promise<OrdersWithTotal> {
+        const { orders, total } = await this.orderRepository.findAll(params);
         for (const order of orders) {
             let customerName = '';
             if (order.customer_id) {
@@ -244,7 +247,7 @@ export class OrderService {
             const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
             (order as any).product_count = totalQuantity;
         }
-        return orders;
+        return { orders, total };
     }
 
     async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
@@ -277,7 +280,7 @@ export class OrderService {
     }
 
     async exportOrdersToExcel(res: Response): Promise<void> {
-    const orders = await this.orderRepository.findAll({ size: 1000, page: 1 });
+   const { orders } = await this.orderRepository.findAll({ size: 1000, page: 1 });
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Orders');
         worksheet.columns = [
