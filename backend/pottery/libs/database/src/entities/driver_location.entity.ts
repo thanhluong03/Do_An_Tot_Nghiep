@@ -3,6 +3,10 @@ import { BaseEntity } from './base.entity'
 import { OrderEntity } from './order.entity'
 import { UserEntity } from './user.entity'
 
+export enum DriverStatus {
+    WAITING_ACCEPT = 'WAITING_ACCEPT',
+    ACCEPTED = 'ACCEPTED',
+}
 @Entity('driver_locations')
 export class DriverLocationEntity extends BaseEntity {
 
@@ -20,6 +24,13 @@ export class DriverLocationEntity extends BaseEntity {
 
     @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     timestamp: Date
+
+    @Column({
+        type: 'enum',
+        enum: DriverStatus,
+        nullable: true,
+    })
+    driver_status: DriverStatus;
 
     @ManyToOne(() => OrderEntity, (order) => order.driverLocations)
     @JoinColumn({ name: 'order_id' })

@@ -107,11 +107,12 @@
       "^@app/promotion(|/.*)$": "<rootDir>/libs/promotion/src/$1",
       "^@app/review(|/.*)$": "<rootDir>/libs/review/src/$1",
       "^@app/role(|/.*)$": "<rootDir>/libs/role/src/$1",
+      "^@app/send_mail(|/.*)$": "<rootDir>/libs/send_mail/src/$1",
       "^@app/store(|/.*)$": "<rootDir>/libs/store/src/$1",
       "^@app/supplier(|/.*)$": "<rootDir>/libs/supplier/src/$1",
       "^@app/user(|/.*)$": "<rootDir>/libs/user/src/$1",
       "^@app/voucher(|/.*)$": "<rootDir>/libs/voucher/src/$1",
-      "^@app/send_mail(|/.*)$": "<rootDir>/libs/send_mail/src/$1"
+      "^@app/driver_location(|/.*)$": "<rootDir>/libs/driver_location/src/$1"
     }
   }
 }
