@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { OrderEntity, OrderStatus, PaymentStatus } from '../entities/order.entity';
-import { OrderItemEntity } from '../entities/order_item.entity'; 
-export interface FindAllOrdersResult { 
+import { OrderItemEntity } from '../entities/order_item.entity';
+export interface FindAllOrdersResult {
     orders: OrderEntity[];
     total: number;
 }
@@ -56,8 +56,8 @@ export class OrderRepository {
     //     });
     //     return Array.isArray(result) ? result : [];
     // }
-    
-     async findAll(params: {
+
+    async findAll(params: {
         size: number;
         page: number;
         key?: string;
@@ -66,13 +66,13 @@ export class OrderRepository {
         status?: OrderStatus;
         payment_status?: PaymentStatus;
     }): Promise<FindAllOrdersResult> { // <-- CẬP NHẬT KIỂU TRẢ VỀ
-    const query = this.orderRepository.createQueryBuilder('order');
-    query.where('order.deleted_at IS NULL');
+        const query = this.orderRepository.createQueryBuilder('order');
+        query.where('order.deleted_at IS NULL');
 
         if (params.customer_id !== undefined) {
             query.andWhere('order.customer_id = :customer_id', { customer_id: params.customer_id });
         }
-        
+
         if (params.store_id !== undefined) {
             query
                 .innerJoin(OrderItemEntity, 'item', 'item.order_id = order.id')
@@ -86,10 +86,10 @@ export class OrderRepository {
         if (params.payment_status !== undefined) {
             query.andWhere('order.payment_status = :payment_status', { payment_status: params.payment_status });
         }
-        
+
         if (params.key) {
             query.andWhere(
-                '(CAST(order.id AS TEXT) LIKE :key)', 
+                '(CAST(order.id AS TEXT) LIKE :key)',
                 { key: `%${params.key}%` }
             );
         }
@@ -98,7 +98,7 @@ export class OrderRepository {
         const [orders, total] = await query
             .skip((params.page - 1) * params.size)
             .take(params.size)
-            .getManyAndCount(); 
+            .getManyAndCount();
 
         return { orders, total };
     }
@@ -113,5 +113,13 @@ export class OrderRepository {
 
     async softDelete(id: number): Promise<void> {
         await this.orderRepository.softDelete(id);
+    }
+
+    async findOrdersForAdmin(statuses: OrderStatus[]): Promise<OrderEntity[]> {
+        return this.orderRepository.find({
+            where: statuses.map(status => ({ status, deleted_at: IsNull() })),
+            relations: ['customer', 'orderItems', 'orderItems.product'],
+            order: { order_date: 'DESC' },
+        });
     }
 }

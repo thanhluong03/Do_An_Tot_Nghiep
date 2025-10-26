@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository } from '@app/database';
 import { ProductRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
@@ -8,31 +8,31 @@ import { CategoryRepository } from '@app/database';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
 interface OrdersWithTotal {
-    orders: OrderEntity[];
-    total: number;
+  orders: OrderEntity[];
+  total: number;
 }
 @Injectable()
 export class OrderService {
-    constructor(
-        @Inject(OrderRepository)
-        private readonly orderRepository: OrderRepository,
-        @Inject(InventoryRepository)
-        private readonly inventoryRepository: InventoryRepository,
-        @Inject(CategoryRepository)
-        private readonly categoryRepository: CategoryRepository,
-        @Inject(OrderStatusHistoryRepository)
-        private readonly orderStatusHistoryRepository: OrderStatusHistoryRepository,
-        @Inject(UserRepository)
-        private readonly userRepository: UserRepository,
-        @Inject(CustomerRepository)
-        private readonly customerRepository: CustomerRepository,
-        @Inject(ProductImageRepository)
-        private readonly productImageRepository: ProductImageRepository,
-        @Inject(ProductRepository)
-        private readonly productRepository: ProductRepository,
-    ) { }
+  constructor(
+    @Inject(OrderRepository)
+    private readonly orderRepository: OrderRepository,
+    @Inject(InventoryRepository)
+    private readonly inventoryRepository: InventoryRepository,
+    @Inject(CategoryRepository)
+    private readonly categoryRepository: CategoryRepository,
+    @Inject(OrderStatusHistoryRepository)
+    private readonly orderStatusHistoryRepository: OrderStatusHistoryRepository,
+    @Inject(UserRepository)
+    private readonly userRepository: UserRepository,
+    @Inject(CustomerRepository)
+    private readonly customerRepository: CustomerRepository,
+    @Inject(ProductImageRepository)
+    private readonly productImageRepository: ProductImageRepository,
+    @Inject(ProductRepository)
+    private readonly productRepository: ProductRepository,
+  ) { }
 
-    async createOrder(data: ICreateOrder): Promise<OrderEntity> {
+  async createOrder(data: ICreateOrder): Promise<OrderEntity> {
     // ✅ Thêm xử lý phân biệt guest / user
     const { items, status, payment_status, payment_method, guest_id, customer_id, ...orderData } = data;
 
@@ -152,175 +152,217 @@ export class OrderService {
     return order;
   }
 
-    async getOrderById(id: number): Promise<any> {
-        const order = await this.orderRepository.findById(id);
-        if (!order) return null;
-        let itemsWithImages: any[] = [];
-        const currentOrder: any = order.current_order as any;
-        if (currentOrder?.items && Array.isArray(currentOrder.items)) {
-            itemsWithImages = await Promise.all(currentOrder.items.map(async (item: any) => {
-                let product_images = item.product_images;
-                if (!product_images || !Array.isArray(product_images) || product_images.length === 0) {
-                    const images = await this.productImageRepository.findByProductId(item.product_id);
-                    product_images = images.map((img: any) => ({
-                        id: img.id,
-                        image_data: img.image_data ? img.image_data.toString('base64') : null,
-                        is_main_image: img.is_main_image ?? false,
-                        priority: img.priority ?? 0,
-                    }));
-                } else {
-                    product_images = product_images.map((img: any) => ({
-                        ...img,
-                        image_data: img.image_data && Buffer.isBuffer(img.image_data)
-                            ? img.image_data.toString('base64')
-                            : img.image_data,
-                    }));
-                }
-                const main_image = product_images.find((img: any) => img.is_main_image) || null;
-                return {
-                    ...item,
-                    product_images,
-                    main_image,
-                };
-            }));
+  async getOrderById(id: number): Promise<any> {
+    const order = await this.orderRepository.findById(id);
+    if (!order) return null;
+    let itemsWithImages: any[] = [];
+    const currentOrder: any = order.current_order as any;
+    if (currentOrder?.items && Array.isArray(currentOrder.items)) {
+      itemsWithImages = await Promise.all(currentOrder.items.map(async (item: any) => {
+        let product_images = item.product_images;
+        if (!product_images || !Array.isArray(product_images) || product_images.length === 0) {
+          const images = await this.productImageRepository.findByProductId(item.product_id);
+          product_images = images.map((img: any) => ({
+            id: img.id,
+            image_data: img.image_data ? img.image_data.toString('base64') : null,
+            is_main_image: img.is_main_image ?? false,
+            priority: img.priority ?? 0,
+          }));
+        } else {
+          product_images = product_images.map((img: any) => ({
+            ...img,
+            image_data: img.image_data && Buffer.isBuffer(img.image_data)
+              ? img.image_data.toString('base64')
+              : img.image_data,
+          }));
         }
-        const statusHistoryRaw = await this.orderStatusHistoryRepository.getHistoryByOrderId(id);
-        const statusHistory: any[] = [];
-        for (const history of statusHistoryRaw) {
-            let actorInfo: any = null;
-            if (history.user_id) {
-                const user = await this.userRepository.findById(history.user_id);
-                let userName = 'Người dùng';
-                if (user) {
-                    if (user.full_name) userName = user.full_name;
-                    else if (user.username) userName = user.username;
-                } else {
-                    console.error('Không tìm thấy user với id:', history.user_id);
-                }
-                actorInfo = {
-                    user_id: history.user_id,
-                    name: userName,
-                };
-            } else if (history.customer_id) {
-                const customer = await this.customerRepository.findById(history.customer_id);
-                let customerName = 'Khách hàng';
-                if (customer) {
-                    if (customer.full_name) customerName = customer.full_name;
-                    else if (customer.username) customerName = customer.username;
-                } else {
-                    console.error('Không tìm thấy customer với id:', history.customer_id);
-                }
-                actorInfo = {
-                    customer_id: history.customer_id,
-                    name: customerName,
-                };
-            } else {
-                actorInfo = null;
-            }
-            const { user_id, customer_id, ...restHistory } = history;
-            statusHistory.push({
-                ...restHistory,
-                actor: actorInfo,
-            });
-        }
+        const main_image = product_images.find((img: any) => img.is_main_image) || null;
         return {
-            ...order,
-            current_order: {
-                ...order.current_order,
-                items: itemsWithImages,
-            },
-            statusHistory,
+          ...item,
+          product_images,
+          main_image,
         };
+      }));
     }
+    const statusHistoryRaw = await this.orderStatusHistoryRepository.getHistoryByOrderId(id);
+    const statusHistory: any[] = [];
+    for (const history of statusHistoryRaw) {
+      let actorInfo: any = null;
+      if (history.user_id) {
+        const user = await this.userRepository.findById(history.user_id);
+        let userName = 'Người dùng';
+        if (user) {
+          if (user.full_name) userName = user.full_name;
+          else if (user.username) userName = user.username;
+        } else {
+          console.error('Không tìm thấy user với id:', history.user_id);
+        }
+        actorInfo = {
+          user_id: history.user_id,
+          name: userName,
+        };
+      } else if (history.customer_id) {
+        const customer = await this.customerRepository.findById(history.customer_id);
+        let customerName = 'Khách hàng';
+        if (customer) {
+          if (customer.full_name) customerName = customer.full_name;
+          else if (customer.username) customerName = customer.username;
+        } else {
+          console.error('Không tìm thấy customer với id:', history.customer_id);
+        }
+        actorInfo = {
+          customer_id: history.customer_id,
+          name: customerName,
+        };
+      } else {
+        actorInfo = null;
+      }
+      const { user_id, customer_id, ...restHistory } = history;
+      statusHistory.push({
+        ...restHistory,
+        actor: actorInfo,
+      });
+    }
+    return {
+      ...order,
+      current_order: {
+        ...order.current_order,
+        items: itemsWithImages,
+      },
+      statusHistory,
+    };
+  }
 
-    async getOrders(params: IListOrder): Promise<OrdersWithTotal> {
-        const { orders, total } = await this.orderRepository.findAll(params);
-        for (const order of orders) {
-            let customerName = '';
-            if (order.customer_id) {
-                const customer = await this.customerRepository.findById(order.customer_id);
-                customerName = customer?.full_name || customer?.username || '';
-            }
-            (order as any).customer_name = customerName;
-            const currentOrder: any = order.current_order || {};
-            const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
-            const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
-            (order as any).product_count = totalQuantity;
-        }
-        return { orders, total };
+  async getOrders(params: IListOrder): Promise<OrdersWithTotal> {
+    const { orders, total } = await this.orderRepository.findAll(params);
+    for (const order of orders) {
+      let customerName = '';
+      if (order.customer_id) {
+        const customer = await this.customerRepository.findById(order.customer_id);
+        customerName = customer?.full_name || customer?.username || '';
+      }
+      (order as any).customer_name = customerName;
+      const currentOrder: any = order.current_order || {};
+      const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+      const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+      (order as any).product_count = totalQuantity;
     }
+    return { orders, total };
+  }
 
-    async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
-        const order = await this.orderRepository.findById(id);
-        if (!order || (order as any).deleted_at) {
-            throw new NotFoundException(`Order with id ${id} not found or has been deleted`);
-        }
-        const updateData: Partial<OrderEntity> = {};
-        let statusChanged = false;
-        if (data.status !== undefined && data.status !== order.status) {
-            updateData.status = data.status;
-            statusChanged = true;
-        }
-        if (data.payment_status !== undefined) updateData.payment_status = data.payment_status;
-        if (data.shipping_address !== undefined) updateData.shipping_address = data.shipping_address;
-        if (data.payment_method !== undefined) updateData.payment_method = data.payment_method;
-        await this.orderRepository.update(id, updateData);
-        if (statusChanged && updateData.status) {
-            await this.orderStatusHistoryRepository.logStatusChange(
-                id,
-                updateData.status as unknown as OrderStatusHistory,
-                user_id,
-                customer_id
-            );
-        }
+  async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
+    const order = await this.orderRepository.findById(id);
+    if (!order || (order as any).deleted_at) {
+      throw new NotFoundException(`Order with id ${id} not found or has been deleted`);
     }
+    const updateData: Partial<OrderEntity> = {};
+    let statusChanged = false;
+    if (data.status !== undefined && data.status !== order.status) {
+      updateData.status = data.status;
+      statusChanged = true;
+    }
+    if (data.payment_status !== undefined) updateData.payment_status = data.payment_status;
+    if (data.shipping_address !== undefined) updateData.shipping_address = data.shipping_address;
+    if (data.payment_method !== undefined) updateData.payment_method = data.payment_method;
+    await this.orderRepository.update(id, updateData);
+    if (statusChanged && updateData.status) {
+      await this.orderStatusHistoryRepository.logStatusChange(
+        id,
+        updateData.status as unknown as OrderStatusHistory,
+        user_id,
+        customer_id
+      );
+    }
+  }
 
-    async deleteOrder(id: number): Promise<void> {
-        await this.orderRepository.softDelete(id);
-    }
+  async deleteOrder(id: number): Promise<void> {
+    await this.orderRepository.softDelete(id);
+  }
 
-    async exportOrdersToExcel(res: Response): Promise<void> {
-   const { orders } = await this.orderRepository.findAll({ size: 1000, page: 1 });
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Orders');
-        worksheet.columns = [
-            { header: 'STT', key: 'index', width: 8 },
-            { header: 'Tên khách hàng', key: 'customerName', width: 25 },
-            { header: 'Ngày đặt', key: 'orderDate', width: 20 },
-            { header: 'Tổng tiền', key: 'totalAmount', width: 15 },
-            { header: 'Vị trí ship', key: 'shippingAddress', width: 30 },
-            { header: 'Trạng thái thanh toán', key: 'paymentStatus', width: 20 },
-            { header: 'Phương thức thanh toán', key: 'paymentMethod', width: 20 },
-            { header: 'Số lượng sản phẩm', key: 'productCount', width: 15 },
-            { header: 'Tên sản phẩm', key: 'productNames', width: 40 },
-        ];
-        let idx = 1;
-        for (const order of orders) {
-            let customerName = '';
-            if (order.customer_id) {
-                const customer = await this.customerRepository.findById(order.customer_id);
-                customerName = customer?.full_name || customer?.username || '';
-            }
-            const currentOrder: any = order.current_order || {};
-            const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
-            const productNames = items.map((item: any) => item.product_name).join(', ');
-            const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
-            worksheet.addRow({
-                index: idx,
-                customerName,
-                orderDate: order.order_date ? new Date(order.order_date).toLocaleString('vi-VN') : '',
-                totalAmount: order.total_amount,
-                shippingAddress: order.shipping_address || '',
-                paymentStatus: order.payment_status || '',
-                paymentMethod: order.payment_method || '',
-                productCount: totalQuantity,
-                productNames,
-            });
-            idx++;
-        }
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=orders.xlsx');
-        await workbook.xlsx.write(res);
-        res.end();
+  async exportOrdersToExcel(res: Response): Promise<void> {
+    const { orders } = await this.orderRepository.findAll({ size: 1000, page: 1 });
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Orders');
+    worksheet.columns = [
+      { header: 'STT', key: 'index', width: 8 },
+      { header: 'Tên khách hàng', key: 'customerName', width: 25 },
+      { header: 'Ngày đặt', key: 'orderDate', width: 20 },
+      { header: 'Tổng tiền', key: 'totalAmount', width: 15 },
+      { header: 'Vị trí ship', key: 'shippingAddress', width: 30 },
+      { header: 'Trạng thái thanh toán', key: 'paymentStatus', width: 20 },
+      { header: 'Phương thức thanh toán', key: 'paymentMethod', width: 20 },
+      { header: 'Số lượng sản phẩm', key: 'productCount', width: 15 },
+      { header: 'Tên sản phẩm', key: 'productNames', width: 40 },
+    ];
+    let idx = 1;
+    for (const order of orders) {
+      let customerName = '';
+      if (order.customer_id) {
+        const customer = await this.customerRepository.findById(order.customer_id);
+        customerName = customer?.full_name || customer?.username || '';
+      }
+      const currentOrder: any = order.current_order || {};
+      const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+      const productNames = items.map((item: any) => item.product_name).join(', ');
+      const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+      worksheet.addRow({
+        index: idx,
+        customerName,
+        orderDate: order.order_date ? new Date(order.order_date).toLocaleString('vi-VN') : '',
+        totalAmount: order.total_amount,
+        shippingAddress: order.shipping_address || '',
+        paymentStatus: order.payment_status || '',
+        paymentMethod: order.payment_method || '',
+        productCount: totalQuantity,
+        productNames,
+      });
+      idx++;
     }
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=orders.xlsx');
+    await workbook.xlsx.write(res);
+    res.end();
+  }
+
+  async getOrdersForAdmin() {
+    try {
+      const orders = await this.orderRepository.findOrdersForAdmin([
+        OrderStatus.CONFIRMED,
+      ]);
+
+      const formattedOrders = await Promise.all(orders.map(async (order) => {
+        let customerName = '';
+        if (order.customer_id) {
+          const customer = await this.customerRepository.findById(order.customer_id);
+          customerName = customer?.full_name || customer?.username || 'Khách hàng';
+        }
+
+        const currentOrder: any = order.current_order || {};
+        const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+        const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+
+        return {
+          id: order.id,
+          customer_name: customerName,
+          order_date: order.order_date,
+          total_amount: order.total_amount,
+          status: order.status,
+          shipping_address: order.shipping_address,
+          payment_status: order.payment_status,
+          payment_method: order.payment_method,
+          product_count: totalQuantity,
+          current_order: order.current_order,
+        };
+      }));
+
+      return {
+        success: true,
+        message: 'Lấy danh sách đơn hàng cho admin thành công',
+        data: formattedOrders,
+      };
+    } catch (error) {
+      console.error('Error getting orders for admin:', error);
+      throw new BadRequestException('Không thể lấy danh sách đơn hàng');
+    }
+  }
 }

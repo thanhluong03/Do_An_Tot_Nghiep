@@ -33,4 +33,17 @@ export class UserRepository {
     async softDelete(id: number): Promise<void> {
         await this.repository.softDelete(id)
     }
+
+    async findDrivers(): Promise<UserEntity[]> {
+        return this.repository.createQueryBuilder('user')
+            .leftJoinAndSelect('user.role', 'role')
+            .where('user.deleted_at IS NULL')
+            .andWhere('user.is_active = :isActive', { isActive: true })
+            .andWhere('(role.name = :roleName OR user.role_id = :roleId)', {
+                roleName: 'DRIVER',
+                roleId: 4
+            })
+            .orderBy('user.created_at', 'DESC')
+            .getMany();
+    }
 }

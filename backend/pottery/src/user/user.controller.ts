@@ -72,4 +72,9 @@ export class UserController {
     async deleteUser(@Param('id') id: number) {
         return await this.userService.deleteUser(Number(id));
     }
+
+    @Get('drivers')
+    async getDrivers() {
+        return await this.userService.getDrivers();
+    }
 }

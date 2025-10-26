@@ -127,6 +127,12 @@
       "@app/role/*": [
         "libs/role/src/*"
       ],
+      "@app/send_mail": [
+        "libs/send_mail/src"
+      ],
+      "@app/send_mail/*": [
+        "libs/send_mail/src/*"
+      ],
       "@app/store": [
         "libs/store/src"
       ],
@@ -151,11 +157,11 @@
       "@app/voucher/*": [
         "libs/voucher/src/*"
       ],
-      "@app/send_mail": [
-        "libs/send_mail/src"
+      "@app/driver_location": [
+        "libs/driver_location/src"
       ],
-      "@app/send_mail/*": [
-        "libs/send_mail/src/*"
+      "@app/driver_location/*": [
+        "libs/driver_location/src/*"
       ]
     }
   }

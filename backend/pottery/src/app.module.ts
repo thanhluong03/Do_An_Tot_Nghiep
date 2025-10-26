@@ -43,6 +43,8 @@ import { ImportProductModule } from '@app/import_product';
 import { ConversationModule } from './conversation/conversation.module';
 import { DeliveryProofController } from './delivery_proof/delivery_proof.controller';
 import { DeliveryProofModule } from '@app/delivery_proof';
+import { DriverLocationController } from './driver_location/driver_location.controller';
+import { DriverLocationModule } from '@app/driver_location';
 import { MailController } from './mail/mail.controller';
 import { SendMailModule } from '@app/send_mail';
 @Module({
@@ -71,14 +73,33 @@ import { SendMailModule } from '@app/send_mail';
     ImportProductModule,
     ConversationModule,
     DeliveryProofModule,
-    SendMailModule
+    SendMailModule,
+    DriverLocationModule,
   ],
   controllers: [
-    AppController, ProductController, SupplierController, RoleController, PermissionController, StoreController,
-    UserController, ReviewController, PromotionController, VoucherController, CustomerController, OrderController, LoginController, InventoryController, NewsController, CartItemController, CategoryController,
-    PaymentTransactionController, ImportProductController, DeliveryProofController,
+    AppController,
+    ProductController,
+    SupplierController,
+    RoleController,
+    PermissionController,
+    StoreController,
+    UserController,
+    ReviewController,
+    PromotionController,
+    VoucherController,
+    CustomerController,
+    OrderController,
+    LoginController,
+    InventoryController,
+    NewsController,
+    CartItemController,
+    CategoryController,
+    PaymentTransactionController,
+    ImportProductController,
+    DeliveryProofController,
+    DriverLocationController,
     AdminLoginController,
-    MailController
+    MailController,
   ],
   providers: [AppService],
 })

@@ -19,6 +19,7 @@ export class ReviewEntity extends BaseEntity {
     comment: string
 
     @OneToOne(() => OrderItemEntity, (orderItem) => orderItem.review)
+    @JoinColumn({ name: 'orderitem_id' })
     order_item: OrderItemEntity;
 
     @ManyToOne(() => CustomerEntity, (customer) => customer.reviews)

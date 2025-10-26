@@ -58,6 +58,7 @@ import {
   ImportProductRepository,
   OrderStatusHistoryRepository,
   DeliveryProofRepository,
+  DriverLocationRepository,
 } from './repositories';
 
 const postgresRepositories = [
@@ -83,6 +84,7 @@ const postgresRepositories = [
   ImportProductRepository,
   OrderStatusHistoryRepository,
   DeliveryProofRepository,
+  DriverLocationRepository,
 ];
 const postgresEntities = [
   ProductEntity,

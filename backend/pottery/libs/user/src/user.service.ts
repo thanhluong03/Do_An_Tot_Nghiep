@@ -14,9 +14,13 @@ export class UserService {
             size: params.size || 10,
             key: params.key,
         });
+        const formattedUsers = users.map(user => ({
+            ...user,
+            avatar_image: user.avatar_image ? user.avatar_image.toString('base64') : null,
+        }));
         return {
-            message: users.length > 0 ? 'Users fetched successfully' : 'No users found',
-            users,
+            message: formattedUsers.length > 0 ? 'Users fetched successfully' : 'No users found',
+            users: formattedUsers,
         };
     }
 
@@ -70,5 +74,17 @@ export class UserService {
             throw new NotFoundException(`User with id ${id} not found`);
         }
         return user;
+    }
+
+    async getDrivers(): Promise<{ message: string, users: any[] }> {
+        const users = await this.userRepository.findDrivers();
+        const formattedUsers = users.map(user => ({
+            ...user,
+            avatar_image: user.avatar_image ? user.avatar_image.toString('base64') : null,
+        }));
+        return {
+            message: formattedUsers.length > 0 ? 'Drivers fetched successfully' : 'No drivers found',
+            users: formattedUsers,
+        };
     }
 }

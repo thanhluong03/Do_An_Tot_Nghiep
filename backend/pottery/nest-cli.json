@@ -70,6 +70,15 @@
         "tsConfigPath": "libs/delivery_proof/tsconfig.lib.json"
       }
     },
+    "driver_location": {
+      "type": "library",
+      "root": "libs/driver_location",
+      "entryFile": "index",
+      "sourceRoot": "libs/driver_location/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/driver_location/tsconfig.lib.json"
+      }
+    },
     "import_product": {
       "type": "library",
       "root": "libs/import_product",
