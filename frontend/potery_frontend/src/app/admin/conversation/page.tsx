@@ -11,6 +11,7 @@ interface Conversation {
   customer_id: number;
   last_message?: string;
   last_message_time?: string;
+  unread?: boolean;
 }
 
 export default function AdminChatPage() {
@@ -73,6 +74,7 @@ export default function AdminChatPage() {
 
         // 🚨 Lấy ID của người gửi tin nhắn cuối cùng
         const lastSenderId = msg.sender_id;
+        const isFromAdmin = msg.sender_type === "ADMIN";
 
         if (idx !== -1) {
           // Cập nhật hội thoại hiện có
@@ -81,7 +83,8 @@ export default function AdminChatPage() {
             last_message: msg.content,
             last_message_time: msg.sent_at,
             // Cập nhật người gửi tin nhắn cuối cùng
-            user_id: lastSenderId, 
+            user_id: lastSenderId,
+            unread: !isFromAdmin,
           };
         } else {
           // Nếu hội thoại mới (chưa có), thêm vào đầu danh sách
@@ -91,6 +94,7 @@ export default function AdminChatPage() {
             customer_id: lastSenderId, // Giả định customer_id = sender_id nếu là hội thoại mới
             last_message: msg.content,
             last_message_time: msg.sent_at,
+            unread: !isFromAdmin,
           });
         }
 
@@ -141,20 +145,24 @@ export default function AdminChatPage() {
 
               const displayTime = conv.last_message_time
                 ? new Date(conv.last_message_time).toLocaleTimeString("vi-VN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
                 : "";
 
               return (
                 <div
                   key={conv.id}
-                  onClick={() => setSelectedConv(conv.id)}
+                  onClick={() => {
+                    setSelectedConv(conv.id);
+                    setConversations((prev) =>
+                      prev.map((c) => (c.id === conv.id ? { ...c, unread: false } : c))
+                    );
+                  }}
                   className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border 
-                    ${
-                      isActive
-                        ? "bg-orange-50 border-orange-200 shadow-sm"
-                        : "hover:bg-orange-50 border-transparent"
+                    ${isActive
+                      ? "bg-orange-50 border-orange-200 shadow-sm"
+                      : "hover:bg-orange-50 border-transparent"
                     }`}
                 >
                   <img
@@ -167,13 +175,17 @@ export default function AdminChatPage() {
                     className="w-10 h-10 rounded-full object-cover border border-orange-300"
                   />
                   <div className="flex flex-col flex-grow min-w-0 relative">
-                    <span className="font-medium text-gray-800 pr-10"> 
+                    <span className="font-medium text-gray-800 pr-10">
                       {customer?.full_name || customer?.username || "Khách hàng"}
                     </span>
                     <div className="flex items-end justify-between min-w-0">
-                      <span className="text-xs text-gray-500 truncate max-w-[calc(100%-40px)]">
+                      <span
+                        className={`text-xs truncate max-w-[calc(100%-40px)] ${conv.unread ? "font-semibold text-gray-900" : "text-gray-400"
+                          }`}
+                      >
                         {displayMessage}
                       </span>
+
                       <div className="text-[10px] text-gray-400 flex-shrink-0 ml-1">
                         {displayTime}
                       </div>
@@ -187,7 +199,7 @@ export default function AdminChatPage() {
       </div>
 
       {/* Khung chat */}
-      <div className="flex-1 bg-white p-4">
+      <div className="flex-1 flex flex-col bg-white">
         {selectedConv ? (
           <AdminChatBox
             conversationId={selectedConv}
@@ -195,11 +207,12 @@ export default function AdminChatPage() {
             customer={selectedCustomer}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-500 text-lg">
+          <div className="flex items-center justify-center flex-1 text-gray-500">
             Chọn một hội thoại để bắt đầu trò chuyện
           </div>
         )}
       </div>
+
     </div>
   );
 }

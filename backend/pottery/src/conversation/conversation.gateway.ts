@@ -45,6 +45,7 @@ export class ConversationGateway {
     this.server.emit('conversation_updated', {
       conversation_id: saved.conversation_id,
       sender_id: saved.sender_id,
+      sender_type: saved.sender_type,
       content: saved.content,
       sent_at: saved.sent_at,
     });
