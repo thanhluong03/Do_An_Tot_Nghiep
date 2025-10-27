@@ -16,33 +16,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoginPage = pathname === '/admin/login';
 
   // Chuyển path sang permission dạng 'admin/products', 'admin/dashboard', ...
-  const permissionPath = pathname.replace(/^\/(admin\/)/, 'admin/');
-  // Biến cờ toàn cục để kiểm soát toast chỉ hiển thị 1 lần duy nhất
-  const previousValidPathRef = React.useRef<string>('/admin/dashboard');
+  const permissionPath = pathname.replace(/^\//, '');
   const [hasAccess, setHasAccess] = React.useState<boolean>(true);
   const [checked, setChecked] = React.useState<boolean>(false);
+
+  const getFirstAvailablePage = (permissions: string[]) => {
+    return permissions.includes('admin/dashboard')
+      ? '/admin/dashboard'
+      : `/${permissions[0]}`;
+  };
 
   React.useEffect(() => {
     if (!isLoginPage) {
       const roleId = localStorage.getItem('adminRoleId');
       const permissions = JSON.parse(localStorage.getItem(`adminPermissions_${roleId}`) || '[]');
       const access = permissions.includes(permissionPath);
-      // Log để debug
-      console.log('[AdminLayout] roleId:', roleId);
-      console.log('[AdminLayout] permissions:', permissions);
-      console.log('[AdminLayout] permissionPath:', permissionPath);
-      console.log('[AdminLayout] access:', access);
-      if (!access) {
+      if (!access && permissions.length > 0) {
+        const firstAvailablePage = getFirstAvailablePage(permissions);
+        router.replace(firstAvailablePage);
         setHasAccess(false);
-        setChecked(true);
-        setTimeout(() => {
-          router.replace(previousValidPathRef.current);
-        }, 1500);
+      } else if (permissions.length === 0) {
+        localStorage.clear();
+        router.replace('/admin/login');
+        setHasAccess(false);
       } else {
-        previousValidPathRef.current = pathname;
         setHasAccess(true);
-        setChecked(true);
       }
+      setChecked(true);
     } else {
       setChecked(true);
     }

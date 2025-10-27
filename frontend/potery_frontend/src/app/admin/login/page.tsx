@@ -40,13 +40,25 @@ export default function AdminLoginPage() {
         }
       }
 
-      
+
       if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
         toast.error("Tài khoản không có quyền truy cập quản trị!");
         return;
       }
+
+      if (data.roleName === "DRIVER") {
+        const baseUrl =
+          process.env.FRONTEND_URL_DRIVER || "http://localhost:3001";
+        window.location.href = `${baseUrl}/driver/order-deliver`;
+        return;
+      }
+
       toast.success("Đăng nhập thành công!");
-      window.location.href = "/admin/dashboard";
+      const firstPermission = data.permissions[0];
+      const redirectPath = data.permissions.includes("admin/dashboard")
+        ? "/admin/dashboard"
+        : `/${firstPermission}`;
+      window.location.href = redirectPath;
     } catch (error) {
       toast.error("Lỗi kết nối server");
     }
