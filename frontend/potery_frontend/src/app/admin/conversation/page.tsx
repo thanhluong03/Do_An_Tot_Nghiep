@@ -12,6 +12,7 @@ interface Conversation {
   last_message?: string;
   last_message_time?: string;
   unread?: boolean;
+
 }
 
 export default function AdminChatPage() {
@@ -175,9 +176,17 @@ export default function AdminChatPage() {
                     className="w-10 h-10 rounded-full object-cover border border-orange-300"
                   />
                   <div className="flex flex-col flex-grow min-w-0 relative">
-                    <span className="font-medium text-gray-800 pr-10">
-                      {customer?.full_name || customer?.username || "Khách hàng"}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-800">
+                        {customer?.full_name || customer?.username || "Khách hàng"}
+                      </span>
+
+                      {/* 🔹 Dấu chấm nhỏ báo chưa đọc */}
+                      {conv.unread && (
+                        <span className="w-3 h-3 bg-[#B95D26] rounded-full flex-shrink-0"></span>
+                      )}
+                    </div>
+
                     <div className="flex items-end justify-between min-w-0">
                       <span
                         className={`text-xs truncate max-w-[calc(100%-40px)] ${conv.unread ? "font-semibold text-gray-900" : "text-gray-400"
@@ -191,6 +200,7 @@ export default function AdminChatPage() {
                       </div>
                     </div>
                   </div>
+
                 </div>
               );
             })}
