@@ -8,7 +8,7 @@ import { SuccessResponseDto } from 'src/order/order.dto';
 
 @Controller('conversations')
 export class ConversationController {
-  constructor(private readonly conversationService: ConversationService) {}
+  constructor(private readonly conversationService: ConversationService) { }
 
   @Post('create-conversation')
   async createConversation(@Body() createConversationDto: CreateConversationDto,) {
@@ -23,19 +23,36 @@ export class ConversationController {
 
   // ... (Các hàm khác giữ nguyên)
 
+  // @Get('get-all')
+  // async getAllConversations() {
+  //   return this.conversationService.getConversations({});
+  // }
+
+  // @Get('get-by-user/:user_id')
+  // async getConversationsByUser(@Param('user_id') user_id: number) {
+  //   return this.conversationService.getConversations({ user_id });
+  // }
+
+  // @Get('get-by-customer/:customer_id')
+  // async getConversationsByCustomer(@Param('customer_id') customer_id: number) {
+  //   return this.conversationService.getConversations({ customer_id });
+  // }
   @Get('get-all')
   async getAllConversations() {
-    return this.conversationService.getConversations({});
+    const data = await this.conversationService.getConversations({});
+    return new SuccessResponseDto('Success', data);
   }
 
   @Get('get-by-user/:user_id')
   async getConversationsByUser(@Param('user_id') user_id: number) {
-    return this.conversationService.getConversations({ user_id });
+    const data = await this.conversationService.getConversations({ user_id });
+    return new SuccessResponseDto('Success', data);
   }
 
   @Get('get-by-customer/:customer_id')
   async getConversationsByCustomer(@Param('customer_id') customer_id: number) {
-    return this.conversationService.getConversations({ customer_id });
+    const data = await this.conversationService.getConversations({ customer_id });
+    return new SuccessResponseDto('Success', data);
   }
 
   @Get('get-conversation-detail/:id')

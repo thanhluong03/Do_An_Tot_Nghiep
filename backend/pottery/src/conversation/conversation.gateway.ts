@@ -19,7 +19,7 @@ export class ConversationGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly conversationService: ConversationService) {}
+  constructor(private readonly conversationService: ConversationService) { }
 
   /** 💬 Gửi message qua WS */
   @SubscribeMessage('send_message')
@@ -28,7 +28,7 @@ export class ConversationGateway {
     @ConnectedSocket() client: Socket,
   ) {
     console.log(`--- [send_message] Client ${client.id} sending:`, dto);
-    
+
     const saved = await this.conversationService.saveMessage(dto);
     const room = `conversation_${saved.conversation_id}`;
 
@@ -37,11 +37,17 @@ export class ConversationGateway {
       console.warn(`[send_message] Client ${client.id} NOT in room ${room}. Forcing join.`);
       client.join(room);
     }
-    
+
     const clientsInRoom = this.server.sockets.adapter.rooms.get(room);
     console.log(`[send_message] Emitting 'new_message' to room ${room}. Clients in room: ${clientsInRoom ? Array.from(clientsInRoom) : 'NONE'}`);
 
     this.server.to(room).emit('new_message', saved);
+    this.server.emit('conversation_updated', {
+      conversation_id: saved.conversation_id,
+      sender_id: saved.sender_id,
+      content: saved.content,
+      sent_at: saved.sent_at,
+    });
     return { event: 'new_message', data: saved };
   }
 
@@ -55,7 +61,7 @@ export class ConversationGateway {
       console.error(`[join_conversation] FAILED: Client ${client.id} sent invalid payload.`);
       return;
     }
-    
+
     const room = `conversation_${data.conversation_id}`;
     console.log(`--- [join_conversation] Client ${client.id} joining room: ${room} ---`);
     client.join(room);

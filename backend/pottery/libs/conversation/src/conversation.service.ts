@@ -11,6 +11,7 @@ import {
   Conversation,
   Message,
   ConversationQuery,
+  ConversationWithLastMessage,
 } from './conversation.interface';
 // 🔹 Import DTOs
 import {
@@ -29,27 +30,105 @@ export class ConversationService {
     private readonly customerRepo: Repository<CustomerEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
-  ) {}
+  ) { }
 
-  /** 📋 Lấy danh sách conversation (Hộp thư chung) */
-  async getConversations(query: ConversationQuery): Promise<Conversation[]> {
+  // /** 📋 Lấy danh sách conversation (Hộp thư chung) */
+  // async getConversations(query: ConversationQuery): Promise<Conversation[]> {
+  //   const qb = this.conversationRepo
+  //     .createQueryBuilder('c')
+  //     // Join để lấy thông tin customer (user) và admin (user)
+  //     .leftJoinAndSelect('c.customer', 'customer')
+  //     .leftJoinAndSelect('c.user', 'admin');
+
+  //   // Lọc theo admin (nếu cần, nhưng get-all sẽ bỏ qua cái này)
+  //   if (query.user_id)
+  //     qb.andWhere('c.user_id = :user_id', { user_id: query.user_id });
+
+  //   // Lọc theo customer (nếu cần)
+  //   if (query.customer_id)
+  //     qb.andWhere('c.customer_id = :customer_id', {
+  //       customer_id: query.customer_id,
+  //     });
+
+  //   return qb.orderBy('c.started_at', 'DESC').getMany();
+  // }
+  // async getConversations(query: ConversationQuery): Promise<ConversationWithLastMessage[]> {
+  //   const qb = this.conversationRepo
+  //     .createQueryBuilder('c')
+  //     .leftJoinAndSelect('c.customer', 'customer')
+  //     .leftJoinAndSelect('c.user', 'admin')
+  //     // 🔥 Subquery: lấy tin nhắn mới nhất cho mỗi conversation
+  //     .leftJoin(
+  //       (subQb) =>
+  //         subQb
+  //           .select('m.conversation_id', 'conversation_id')
+  //           .addSelect('m.content', 'last_message')
+  //           .addSelect('m.sent_at', 'last_message_time')
+  //           .from(MessageEntity, 'm')
+  //           .where(
+  //             'm.sent_at = (SELECT MAX(m2.sent_at) FROM messages m2 WHERE m2.conversation_id = m.conversation_id)',
+  //           ),
+  //       'lm',
+  //       'lm.conversation_id = c.id',
+  //     );
+
+  //   if (query.user_id) qb.andWhere('c.user_id = :user_id', { user_id: query.user_id });
+  //   if (query.customer_id) qb.andWhere('c.customer_id = :customer_id', { customer_id: query.customer_id });
+
+  //   // 🔥 Sắp theo thời gian tin nhắn mới nhất
+  //   qb.orderBy('lm.last_message_time', 'DESC');
+
+  //   const result = await qb.getRawAndEntities();
+
+  //   // Map dữ liệu lại để thêm trường last_message & last_message_time
+  //   return result.entities.map((conv, index) => ({
+  //     ...conv,
+  //     last_message: result.raw[index].lm_last_message,
+  //     last_message_time: result.raw[index].lm_last_message_time,
+  //   }));
+  // }
+  async getConversations(query: ConversationQuery): Promise<ConversationWithLastMessage[]> {
     const qb = this.conversationRepo
       .createQueryBuilder('c')
-      // Join để lấy thông tin customer (user) và admin (user)
       .leftJoinAndSelect('c.customer', 'customer')
-      .leftJoinAndSelect('c.user', 'admin');
+      .leftJoinAndSelect('c.user', 'admin')
+      // Subquery: lấy tin nhắn mới nhất cho mỗi conversation
+      .leftJoin(
+        (subQb) =>
+          subQb
+            .select('m.conversation_id', 'conversation_id')
+            .addSelect('m.content', 'last_message')
+            .addSelect('m.sent_at', 'last_message_time')
+            .from(MessageEntity, 'm')
+            .where(
+              'm.sent_at = (SELECT MAX(m2.sent_at) FROM messages m2 WHERE m2.conversation_id = m.conversation_id)',
+            ),
+        'latest_msg',
+        'latest_msg.conversation_id = c.id',
+      );
 
-    // Lọc theo admin (nếu cần, nhưng get-all sẽ bỏ qua cái này)
     if (query.user_id)
       qb.andWhere('c.user_id = :user_id', { user_id: query.user_id });
-
-    // Lọc theo customer (nếu cần)
     if (query.customer_id)
       qb.andWhere('c.customer_id = :customer_id', {
         customer_id: query.customer_id,
       });
 
-    return qb.orderBy('c.started_at', 'DESC').getMany();
+    qb.addSelect('latest_msg.last_message', 'last_message');
+    qb.addSelect('latest_msg.last_message_time', 'last_message_time');
+    qb.orderBy('latest_msg.last_message_time', 'DESC');
+
+    const rawData = await qb.getRawMany();
+    const entities = await qb.getMany();
+
+    return entities.map((conv, i) => ({
+      id: conv.id,
+      user_id: conv.user_id,
+      customer_id: conv.customer_id,
+      started_at: conv.started_at,
+      last_message: rawData[i]?.last_message || null,
+      last_message_time: rawData[i]?.last_message_time || null,
+    }));
   }
 
   /** 🔍 Lấy chi tiết conversation + messages */
@@ -89,7 +168,7 @@ export class ConversationService {
     if (!customerId) {
       throw new Error('Thiếu customerId (từ user_id) khi tạo conversation');
     }
- 
+
     const customerExists = await this.customerRepo.findOne({
       where: { id: customerId },
     });
@@ -128,7 +207,7 @@ export class ConversationService {
       });
       const savedConv = await this.conversationRepo.save(newConv);
       // Refetch to get relations
-      conversation = await this.conversationRepo.findOne({ where: { id: savedConv.id }, relations: ['customer', 'user']});
+      conversation = await this.conversationRepo.findOne({ where: { id: savedConv.id }, relations: ['customer', 'user'] });
       if (!conversation) throw new Error('Không thể tạo conversation mới.');
     }
 

@@ -122,7 +122,7 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
           src={
             customer?.avatar_image
               ? `data:image/png;base64,${customer.avatar_image}`
-              : "/default-avatar.png"
+              : "/noAva.png"
           }
           alt="avatar"
           className="w-10 h-10 rounded-full border-2 border-white"
@@ -135,11 +135,10 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
         </div>
       </div>
 
-      {/* 🔹 Nội dung chat */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
         {messages.map((m, i) => (
           <div
-            key={m.id || `msg-${i}`} // Key ổn định hơn
+            key={m.id || `msg-${i}`}
             className={`flex flex-col ${m.sender_type === "ADMIN" ? "items-end" : "items-start"}`}
           >
             <div
