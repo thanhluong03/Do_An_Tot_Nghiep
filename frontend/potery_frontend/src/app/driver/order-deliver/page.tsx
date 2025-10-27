@@ -9,7 +9,6 @@ import {
   DriverLocation,
   DriverStatus,
 } from '@/api/services/deliveryService';
-import { useAuth } from '@/contexts'; // Import useAuth để lấy ID tài xế
 import toast, { Toaster } from 'react-hot-toast';
 import { Check, X, Package, Clock, MapPin, User, Phone, Truck, Inbox } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -40,9 +39,8 @@ const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden transition-all hover:shadow-md">
       <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
         <h3 className="font-bold text-lg text-indigo-700">Đơn hàng #{order.id}</h3>
-        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-          isWaiting ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-        }`}>
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${isWaiting ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+          }`}>
           {isWaiting ? 'Chờ xác nhận' : 'Đang giao'}
         </span>
       </div>
@@ -94,8 +92,15 @@ function OrderDeliverContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DriverStatus>(DriverStatus.WAITING_ACCEPT);
-  const { user } = useAuth();
-  const driverId = user?.id; // Lấy ID tài xế từ context
+  const [driverId, setDriverId] = useState<number | null>(null);
+
+  // Lấy ID tài xế từ localStorage sau khi component mount
+  useEffect(() => {
+    const roleId = localStorage.getItem('adminRoleId');
+    if (roleId) {
+      setDriverId(parseInt(roleId));
+    }
+  }, []);
 
   const fetchDriverOrders = useCallback(async () => {
     if (!driverId) {

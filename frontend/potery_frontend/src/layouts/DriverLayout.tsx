@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../utils/cn';
-import { useAuth } from '../contexts';
-import { LayoutDashboard, Package, History, User, LogOut, Menu, X } from 'lucide-react';
+import { Package, History, User, LogOut, Menu } from 'lucide-react';
 
 interface DriverLayoutProps {
   children: React.ReactNode;
@@ -11,15 +10,29 @@ interface DriverLayoutProps {
 
 export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const [driverName, setDriverName] = useState('Tài xế');
+
+  // Lấy thông tin driver từ localStorage sau khi component mount
+  useEffect(() => {
+    const name = localStorage.getItem('adminName') || 'Tài xế';
+    setDriverName(name);
+  }, []);
+
+  // Function logout đơn giản
+  const handleLogout = () => {
+    localStorage.removeItem('adminID');
+    localStorage.removeItem('adminName');
+    localStorage.removeItem('adminRole');
+    localStorage.removeItem('adminRoleId');
+    localStorage.removeItem('adminPermissions');
+    window.location.href = '/admin/login';
+  };
 
   const driverMenuItems = [
     { name: 'Đơn hàng mới', href: '/driver/order-deliver', icon: <Package className="w-5 h-5" /> },
     { name: 'Lịch sử giao', href: '/driver/history', icon: <History className="w-5 h-5" /> },
     { name: 'Tài khoản', href: '/profile', icon: <User className="w-5 h-5" /> },
   ];
-
-  const displayName = user?.full_name || user?.full_name || 'Tài xế';
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -58,13 +71,13 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
         </nav>
 
         <div className="p-4 border-t border-gray-700">
-           <button
-              onClick={logout}
-              className="w-full flex items-center px-4 py-3 text-gray-300 hover:bg-red-800/50 hover:text-white rounded-lg transition-colors duration-200"
-            >
-              <LogOut className="w-5 h-5 mr-3" />
-              Đăng xuất
-            </button>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-3 text-gray-300 hover:bg-red-800/50 hover:text-white rounded-lg transition-colors duration-200"
+          >
+            <LogOut className="w-5 h-5 mr-3" />
+            Đăng xuất
+          </button>
         </div>
       </aside>
 
@@ -84,10 +97,10 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
 
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                Xin chào, <span className="font-semibold text-gray-800">{displayName}</span>
+                Xin chào, <span className="font-semibold text-gray-800">{driverName}</span>
               </span>
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                {displayName.charAt(0).toUpperCase()}
+                {driverName.charAt(0).toUpperCase()}
               </div>
             </div>
           </div>
