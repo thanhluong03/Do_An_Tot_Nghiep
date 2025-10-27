@@ -19,8 +19,8 @@ export interface OrderItem {
     category_id?: number;
     category_name?: string;
     store_name?: string;
-    store_address?: string;
-    product_images?: ProductImage[];
+    store_address?: string;
+    product_images?: ProductImage[];
 }
 
 export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELED' | 'REJECTED';
@@ -78,13 +78,15 @@ export interface UpdateOrderPayload {
 export interface Store {
   id: number;
   name: string;
+  store_name?: string;
+  storeName?: string;
 }
 
 export const listDropdownStores = async (): Promise<Store[]> => {
   const res = await axios.get(`${API_URL_STORES}/liststore`);
   const storesData = res.data.stores || res.data;
   const stores: Store[] = Array.isArray(storesData) ? storesData : [];
-  return stores.map(s => ({
+  return stores.map((s: any) => ({
     id: s.id as number,
     name: s.name || s.store_name || s.storeName || "Không rõ tên"
   }));
@@ -124,10 +126,10 @@ export async function deleteOrder(id: number): Promise<void> {
 
 
 export async function getRevenueData(): Promise<{ month: string; revenue: number }[]> {
-  const orders = await listOrders({});
+  const response = await listOrders({});
   const map = new Map<string, number>();
 
-  orders.forEach(order => {
+  response.data.forEach(order => {
     if (order.status === 'DELIVERED' && order.total_amount) {
       const month = new Date(order.order_date).toLocaleString('en-US', { month: 'short' });
       const prev = map.get(month) || 0;

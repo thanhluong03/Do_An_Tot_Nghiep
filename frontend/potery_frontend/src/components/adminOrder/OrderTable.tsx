@@ -1,13 +1,16 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Order, OrderStatus, PaymentStatus } from "@/api/services/orderService";
-import { Trash2, Package, Eye } from "lucide-react";
+import { User } from "@/api/services/userService";
+import { Trash2, Package, Eye, Truck } from "lucide-react";
 
 interface OrderTableProps {
   orders: Order[];
+  drivers: User[];
   onView: (order: Order) => void;
   onEditStatus: (order: Order) => void;
   onDelete: (id: number) => void;
+  onAssignDriver: (orderId: number, driverId: number) => void;
 }
 
 // Định dạng tiền Việt Nam
@@ -62,7 +65,16 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
   return translations[status] || status;
 };
 
-export default function OrderTable({ orders, onView, onEditStatus, onDelete }: OrderTableProps) {
+export default function OrderTable({
+  orders,
+  drivers,
+  onView,
+  onEditStatus,
+  onDelete,
+  onAssignDriver,
+}: OrderTableProps) {
+  const [selectedDriver, setSelectedDriver] = useState<{ [key: number]: string }>({});
+
   return (
     <div className="overflow-x-auto bg-white border border-gray-200 rounded-2xl shadow-lg">
       <table className="min-w-full text-sm text-left text-gray-700">
@@ -73,6 +85,7 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
             <th className="px-4 py-3 text-center font-semibold">Trạng thái đơn hàng</th>
             <th className="px-4 py-3 text-center font-semibold">Trạng thái thanh toán</th>
             <th className="px-4 py-3 font-semibold">Ngày đặt</th>
+            <th className="px-4 py-3 text-center font-semibold">Gán tài xế</th>
             <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
           </tr>
         </thead>
@@ -117,6 +130,32 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
                 : "Không có ngày"}
             </td>
 
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                {order.status === 'CONFIRMED' ? (
+                  <div className="flex items-center space-x-2 min-w-[250px]">
+                    <select
+                      value={selectedDriver[order.id] || ''}
+                      onChange={(e) => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
+                      className="block w-full pl-3 pr-10 py-2 text-xs border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md"
+                    >
+                      <option value="">Chọn tài xế</option>
+                      {drivers.map(driver => (
+                        <option key={driver.id} value={driver.id}>{driver.full_name || driver.username}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => onAssignDriver(order.id, Number(selectedDriver[order.id]))}
+                      disabled={!selectedDriver[order.id]}
+                      className="p-2 text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      title="Gán tài xế"
+                    >
+                      <Truck className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">Không thể gán</span>
+                )}
+              </td>
 
               <td className="px-4 py-3 text-center space-x-2">
                 <button
@@ -145,7 +184,7 @@ export default function OrderTable({ orders, onView, onEditStatus, onDelete }: O
             ))
           ) : (
             <tr>
-              <td colSpan={7} className="py-10 text-center text-gray-500 font-medium">
+              <td colSpan={8} className="py-10 text-center text-gray-500 font-medium">
                 Không tìm thấy đơn hàng nào
               </td>
             </tr>
