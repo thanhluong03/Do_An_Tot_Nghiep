@@ -20,3 +20,8 @@ export interface ConversationQuery {
     customer_id?: number;
     search?: string;
 }
+export interface ConversationWithLastMessage extends Conversation {
+    last_message?: string;
+    last_message_time?: string;
+    is_read?: boolean;
+}
