@@ -13,7 +13,9 @@ import {
   PaymentStatus,
 } from "@/api/services/orderService";
 import { getCustomers, Customer } from "@/api/services/customerService";
+import { getAvailableDrivers, assignDriverToOrder } from "@/api/services/deliveryService";
 import OrderTable from "@/components/adminOrder/OrderTable";
+import { User } from "@/api/services/userService";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
 import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
@@ -55,6 +57,7 @@ export default function AdminOrderPage() {
   const [orders, setOrders] = useState<FullOrderDetails[]>([]);
   const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [drivers, setDrivers] = useState<User[]>([]);
   const [stores, setStores] = useState<SelectOption[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
@@ -74,6 +77,9 @@ export default function AdminOrderPage() {
     listDropdownStores()
       .then(setStores)
       .catch(() => toast.error("Không thể tải danh sách cửa hàng!"));
+    getAvailableDrivers()
+      .then(setDrivers)
+      .catch(() => toast.error("Không thể tải danh sách tài xế!"));
   }, []);
 
   async function fetchAllOrders() {
@@ -240,6 +246,7 @@ export default function AdminOrderPage() {
   };
 
   const handleUpdateOrder = async (id: number, data: any) => {
+  const handleOrderUpdated = async () => {
     setLoading(true);
     try {
       await updateOrder(id, data);
@@ -248,7 +255,26 @@ export default function AdminOrderPage() {
       await fetchAllOrders();
       setEditingOrder(null);
     } catch {
-      toast.error("Cập nhật đơn hàng thất bại!");
+      toast.error("Không thể làm mới danh sách đơn hàng!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignDriver = async (orderId: number, driverId: number) => {
+    if (!driverId) {
+      toast.error("Vui lòng chọn một tài xế.");
+      return;
+    }
+    try {
+      setLoading(true);
+      await assignDriverToOrder({ order_id: orderId, driver_id: driverId });
+      toast.success(`Gán tài xế cho đơn hàng #${orderId} thành công!`);
+      await fetchOrders();
+      await fetchAllOrders();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || "Gán tài xế thất bại!";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -344,7 +370,13 @@ export default function AdminOrderPage() {
           {loading && <p className="text-center text-indigo-600 py-6 font-medium">Đang tải danh sách đơn hàng...</p>}
           {error && <p className="text-center text-red-600 py-6 font-medium">Lỗi: {error}</p>}
           {!loading && !error && (
-            <OrderTable orders={orders} onView={handleViewOrder} onEditStatus={handleEditStatus} onDelete={handleDeleteOrder} />
+            <OrderTable
+              orders={orders}
+              drivers={drivers}
+              onView={handleViewOrder}
+              onEditStatus={handleEditStatus}
+              onDelete={handleDeleteOrder}
+              onAssignDriver={handleAssignDriver} />
           )}
           {!loading && !error && totalOrders > pagination.size && (
             <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-4 border-t border-gray-200 p-4">
@@ -387,7 +419,7 @@ export default function AdminOrderPage() {
           currentPaymentStatus={editingOrder.payment_status}
           currentPaymentMethod={editingOrder.payment_method}
           onClose={() => setEditingOrder(null)}
-          onUpdated={(data) => handleUpdateOrder(editingOrder.id, data)}
+          onUpdated={handleOrderUpdated}
         />
       )}
       {isDeleteModalOpen && orderToDeleteId !== null && (

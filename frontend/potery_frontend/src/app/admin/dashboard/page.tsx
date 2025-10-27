@@ -57,7 +57,7 @@ const DashboardPage = () => {
         ]);
 
         setRevenueData(revenue);
-        setOrders(orderList);
+        setOrders(orderList.data);
         setUsers(userList);
         setProducts(productList);
         setInventories(inventoryList.data || []);
