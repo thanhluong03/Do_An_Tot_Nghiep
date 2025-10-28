@@ -13,6 +13,44 @@ export class ProductImageDto {
   image_data: Buffer;
 }
 
+export class ProductAttributeDto {
+  @Expose()
+  @IsString()
+  name: string;
+}
+
+export class ProductClassificationDto {
+  @Expose()
+  @IsString()
+  name: string;
+
+  @Expose()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductAttributeDto)
+  attributes: ProductAttributeDto[];
+}
+
+export class ClassificationAttributeRelationshipDto {
+  @Expose()
+  @IsNumber()
+  product_attribute_id_1: number;
+
+  @Expose()
+  @IsNumber()
+  product_attribute_id_2: number;
+
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  price?: number;
+
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  quantity?: number;
+}
+
 export class CreateProductDto {
   @Expose()
   @IsString()
@@ -44,6 +82,20 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => ProductImageDto)
   images?: ProductImageDto[];
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductClassificationDto)
+  classifications?: ProductClassificationDto[];
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ClassificationAttributeRelationshipDto)
+  relationships?: ClassificationAttributeRelationshipDto[];
 }
 
 export class UpdateProductDto {
@@ -78,6 +130,30 @@ export class UpdateProductDto {
   @ValidateNested({ each: true })
   @Type(() => ProductImageDto)
   images?: ProductImageDto[];
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductClassificationDto)
+  classifications?: ProductClassificationDto[];
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ClassificationAttributeRelationshipDto)
+  relationships?: ClassificationAttributeRelationshipDto[];
+
+  @Expose()
+  @IsOptional()
+  @IsString()
+  keepImageIndices?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsString()
+  imageOperations?: string;
 }
 
 export class ProductResponseDto {
@@ -110,6 +186,12 @@ export class ProductResponseDto {
 
   @Expose()
   main_image?: any;
+
+  @Expose()
+  classifications?: ProductClassificationDto[];
+
+  @Expose()
+  relationships?: ClassificationAttributeRelationshipDto[];
 }
 
 export class ListProductRequestDto {

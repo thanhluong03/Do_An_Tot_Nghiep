@@ -1,13 +1,17 @@
 // src/api/services/productApi.ts
 
 import axios from "axios";
+import {
+    ProductClassification,
+    ClassificationAttributeRelationship
+} from "@/types/product";
+
 const API_URL = "http://localhost:3000/products";
 
 export interface ProductImage {
     url?: string; // nếu backend trả link
-    image_data?: { data: number[] }; // nếu backend trả Buffer
+    image_data?: string | { data: number[] }; // có thể là string base64 hoặc Buffer
 }
-
 
 export interface Product {
     id?: number;
@@ -23,6 +27,8 @@ export interface Product {
     category?: { id: number; name: string };
     supplier_id?: number;
     supplier?: { id: number; name: string };
+    classifications?: ProductClassification[];
+    relationships?: ClassificationAttributeRelationship[];
 }
 
 // Định nghĩa kiểu dữ liệu cho payload gửi lên (Không bao gồm ID, quantity và các trường meta)
@@ -33,6 +39,12 @@ type ProductPayload = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'catego
 // Lấy danh sách sản phẩm
 export const getProducts = async (): Promise<Product[]> => {
     const res = await axios.get(`${API_URL}/listproduct`);
+    return res.data;
+};
+
+// Lấy chi tiết sản phẩm
+export const getProductDetail = async (id: number): Promise<Product> => {
+    const res = await axios.get(`${API_URL}/productdetail/${id}`);
     return res.data;
 };
 

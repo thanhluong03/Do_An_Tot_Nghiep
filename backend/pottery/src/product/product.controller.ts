@@ -37,6 +37,7 @@ export class ProductController {
             category_id: createProductDto.category_id,
             supplier_id: createProductDto.supplier_id,
         };
+        // Handle images
         if (files && files.length > 0) {
             console.log('Processing', files.length, 'files');
             productData.images = files.map((file, index) => {
@@ -47,6 +48,40 @@ export class ProductController {
             });
         } else {
             console.log('No files received');
+        }
+
+        // Handle classifications
+        if (createProductDto.classifications) {
+            let parsedClassifications;
+            try {
+                // Nếu classifications là string (từ FormData), parse nó
+                if (typeof createProductDto.classifications === 'string') {
+                    parsedClassifications = JSON.parse(createProductDto.classifications);
+                } else {
+                    parsedClassifications = createProductDto.classifications;
+                }
+                console.log('Processing classifications:', parsedClassifications);
+                productData.classifications = parsedClassifications;
+            } catch (error) {
+                console.error('Error parsing classifications:', error);
+            }
+        }
+
+        // Handle relationships
+        if (createProductDto.relationships) {
+            let parsedRelationships;
+            try {
+                // Nếu relationships là string (từ FormData), parse nó
+                if (typeof createProductDto.relationships === 'string') {
+                    parsedRelationships = JSON.parse(createProductDto.relationships);
+                } else {
+                    parsedRelationships = createProductDto.relationships;
+                }
+                console.log('Processing relationships:', parsedRelationships);
+                productData.relationships = parsedRelationships;
+            } catch (error) {
+                console.error('Error parsing relationships:', error);
+            }
         }
 
         try {
@@ -80,16 +115,86 @@ export class ProductController {
         @UploadedFiles() files: Express.Multer.File[],
         @Body() updateProductDto: UpdateProductDto,
     ): Promise<ProductResponseDto> {
+        console.log('Updating product with ID:', id);
+        console.log('Update DTO received:', {
+            name: updateProductDto.name,
+            filesCount: files?.length || 0,
+            hasClassifications: !!updateProductDto.classifications,
+            hasRelationships: !!updateProductDto.relationships,
+        });
+
+        const productData: any = { ...updateProductDto };
+
+        // Handle images
         if (files && files.length > 0) {
-            updateProductDto.images = files.map((file) => ({
+            console.log('Processing', files.length, 'update images');
+            productData.images = files.map((file) => ({
                 image_data: file.buffer,
             }));
         }
 
-        const product = await this.productService.update(Number(id), updateProductDto);
-        return plainToInstance(ProductResponseDto, product, {
-            excludeExtraneousValues: true,
-        });
+        if (updateProductDto.keepImageIndices) {
+            try {
+                const keepIndices = JSON.parse(updateProductDto.keepImageIndices);
+                console.log('Keep image indices:', keepIndices);
+                productData.keepImageIndices = keepIndices;
+            } catch (error) {
+                console.error('Error parsing keepImageIndices:', error);
+            }
+        }
+        if (updateProductDto.imageOperations) {
+            try {
+                const imageOps = JSON.parse(updateProductDto.imageOperations);
+                console.log('Image operations:', imageOps);
+                productData.imageOperations = imageOps;
+            } catch (error) {
+                console.error('Error parsing imageOperations:', error);
+            }
+        }
+
+        // Handle classifications for update
+        if (updateProductDto.classifications) {
+            let parsedClassifications;
+            try {
+                // Nếu classifications là string (từ FormData), parse nó
+                if (typeof updateProductDto.classifications === 'string') {
+                    parsedClassifications = JSON.parse(updateProductDto.classifications);
+                } else {
+                    parsedClassifications = updateProductDto.classifications;
+                }
+                console.log('Processing update classifications:', parsedClassifications);
+                productData.classifications = parsedClassifications;
+            } catch (error) {
+                console.error('Error parsing update classifications:', error);
+            }
+        }
+
+        // Handle relationships for update
+        if (updateProductDto.relationships) {
+            let parsedRelationships;
+            try {
+                // Nếu relationships là string (từ FormData), parse nó
+                if (typeof updateProductDto.relationships === 'string') {
+                    parsedRelationships = JSON.parse(updateProductDto.relationships);
+                } else {
+                    parsedRelationships = updateProductDto.relationships;
+                }
+                console.log('Processing update relationships:', parsedRelationships);
+                productData.relationships = parsedRelationships;
+            } catch (error) {
+                console.error('Error parsing update relationships:', error);
+            }
+        }
+
+        try {
+            const product = await this.productService.update(Number(id), productData);
+            return plainToInstance(ProductResponseDto, product, {
+                excludeExtraneousValues: true,
+            });
+        } catch (error) {
+            console.error('Error updating product:', error);
+            throw error;
+        }
     }
 
     @Delete('deleteproduct/:id')

@@ -1,4 +1,16 @@
-import { ProductEntity, ProductRepository, ProductImageRepository, InventoryRepository, ProductPromotionRepository, PromotionRepository, PromotionEntity, CategoryRepository } from '@app/database';
+import {
+  ProductEntity,
+  ProductRepository,
+  ProductImageRepository,
+  InventoryRepository,
+  ProductPromotionRepository,
+  PromotionRepository,
+  PromotionEntity,
+  CategoryRepository,
+  ProductClassificationRepository,
+  ProductAttributeRepository,
+  ClassificationAttributeRelationshipRepository,
+} from '@app/database';
 import { InventoryEntity } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateProduct, IListProduct, IUpdateProduct } from './product.interface';
@@ -9,6 +21,7 @@ export class ProductService {
   findById(id: number) {
     throw new Error('Method not implemented.');
   }
+
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly productImageRepository: ProductImageRepository,
@@ -16,6 +29,9 @@ export class ProductService {
     private readonly productPromotionRepository: ProductPromotionRepository,
     private readonly promotionRepository: PromotionRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly productClassificationRepository: ProductClassificationRepository,
+    private readonly productAttributeRepository: ProductAttributeRepository,
+    private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
   ) { }
 
 
@@ -23,7 +39,8 @@ export class ProductService {
     try {
       console.log('Creating product with data:', {
         name: data.name,
-        imagesCount: data.images?.length || 0
+        imagesCount: data.images?.length || 0,
+        classificationsCount: data.classifications?.length || 0,
       });
 
       const product = await this.productRepository.create({
@@ -50,6 +67,82 @@ export class ProductService {
 
         await this.productImageRepository.createMany(productImages);
         console.log('Product images created successfully');
+      }
+
+      // Handle classifications and attributes
+      if (data.classifications && data.classifications.length > 0) {
+        console.log('Creating', data.classifications.length, 'product classifications');
+
+        const attributeIdMap: { [classIndex: number]: { [attrIndex: number]: number } } = {};
+
+        for (let classIndex = 0; classIndex < data.classifications.length; classIndex++) {
+          const classificationData = data.classifications[classIndex];
+
+          // Create classification
+          const classification = await this.productClassificationRepository.create({
+            product_id: product.id,
+            name: classificationData.name,
+          });
+
+          // Create attributes for this classification
+          if (classificationData.attributes && classificationData.attributes.length > 0) {
+            attributeIdMap[classIndex] = {};
+
+            for (let attrIndex = 0; attrIndex < classificationData.attributes.length; attrIndex++) {
+              const attr = classificationData.attributes[attrIndex];
+              const createdAttribute = await this.productAttributeRepository.create({
+                product_classification_id: classification.id,
+                name: attr.name,
+              });
+
+              attributeIdMap[classIndex][attrIndex] = createdAttribute.id;
+            }
+          }
+        }
+
+        console.log('Product classifications created successfully');
+
+        // Handle classification attribute relationships (pricing matrix)
+        if (data.relationships && data.relationships.length > 0) {
+          console.log('Creating', data.relationships.length, 'attribute relationships');
+          console.log('AttributeIdMap:', attributeIdMap);
+
+          const processedRelationships = data.relationships.map((rel) => {
+            let actualAttr1Id = rel.product_attribute_id_1;
+            let actualAttr2Id = rel.product_attribute_id_2;
+
+            console.log('Original relationship:', rel);
+            console.log('Before mapping - attr1Id:', actualAttr1Id, 'attr2Id:', actualAttr2Id);
+
+            // Nếu là số nhỏ (index), map với ID thực tế
+            if (actualAttr1Id < 100 && attributeIdMap[0]) {
+              const mappedId = attributeIdMap[0][actualAttr1Id];
+              console.log('Mapping attr1 index', actualAttr1Id, 'to ID', mappedId);
+              actualAttr1Id = mappedId || actualAttr1Id;
+            }
+
+            if (actualAttr2Id < 100 && attributeIdMap[1]) {
+              const mappedId = attributeIdMap[1][actualAttr2Id];
+              console.log('Mapping attr2 index', actualAttr2Id, 'to ID', mappedId);
+              actualAttr2Id = mappedId || actualAttr2Id;
+            }
+
+            console.log('After mapping - attr1Id:', actualAttr1Id, 'attr2Id:', actualAttr2Id);
+
+            return {
+              ...rel,
+              product_attribute_id_1: actualAttr1Id,
+              product_attribute_id_2: actualAttr2Id,
+            };
+          });
+
+          console.log('Final processed relationships:', processedRelationships);
+          await this.classificationAttributeRelationshipRepository.createMany(
+            processedRelationships,
+          );
+
+          console.log('Attribute relationships created successfully');
+        }
       }
 
       return product;
@@ -103,6 +196,26 @@ export class ProductService {
       is_main_image: image.is_main_image,
       priority: image.priority,
     }));
+
+    // Load classifications
+    const classifications = await this.productClassificationRepository.findByProductId(id);
+    const processedClassifications = await Promise.all(
+      classifications.map(async (classification) => {
+        const attributes = await this.productAttributeRepository.findByClassificationId(classification.id);
+        return {
+          id: classification.id,
+          name: classification.name,
+          attributes: attributes.map((attr) => ({
+            id: attr.id,
+            name: attr.name,
+          })),
+        };
+      })
+    );
+
+    // Load relationships
+    const relationships = await this.classificationAttributeRelationshipRepository.findByProductId(id);
+
     let categoryName: string | null = null;
     if (product.category_id) {
       const category = await this.categoryRepository.findById(product.category_id);
@@ -113,34 +226,358 @@ export class ProductService {
       images: processedImages,
       main_image: processedImages.find((img) => img.is_main_image) || null,
       category_name: categoryName,
+      classifications: processedClassifications,
+      relationships: relationships.map((rel) => ({
+        id: rel.id,
+        product_attribute_id_1: rel.product_attribute_id_1,
+        product_attribute_id_2: rel.product_attribute_id_2,
+        price: rel.price,
+        quantity: rel.quantity,
+      })),
     };
   }
 
   async update(id: number, data: IUpdateProduct) {
-    const product = {
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      category_id: data.category_id,
-      supplier_id: data.supplier_id,
-    } as Partial<ProductEntity>;
+    try {
+      console.log('Updating product with ID:', id);
+      console.log('Update data:', {
+        name: data.name,
+        imagesCount: data.images?.length || 0,
+        classificationsCount: data.classifications?.length || 0,
+      });
 
-    await this.productRepository.update(id, product);
+      const product = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category_id: data.category_id,
+        supplier_id: data.supplier_id,
+      } as Partial<ProductEntity>;
 
-    if (data.images && data.images.length > 0) {
-      await this.productImageRepository.deleteByProductId(id);
+      await this.productRepository.update(id, product);
 
-      const productImages = data.images.map((image, index) => ({
-        product_id: id,
-        image_data: image.image_data,
-        is_main_image: index === 0,
-        priority: index + 1,
-      }));
+      // Handle images update với logic thông minh
+      console.log('Processing smart image updates...');
 
-      await this.productImageRepository.createMany(productImages);
+      if (data.imageOperations) {
+        // Logic mới: xử lý operations
+        console.log('Using new imageOperations logic:', data.imageOperations);
+        const { keep, remove, update } = data.imageOperations;
+
+        // Xóa các ảnh được đánh dấu remove
+        if (remove && remove.length > 0) {
+          console.log('Removing images with IDs:', remove);
+          for (const imageId of remove) {
+            await this.productImageRepository.softDelete(imageId);
+          }
+        }
+
+        // Thêm ảnh mới (nếu có)
+        if (data.images && data.images.length > 0) {
+          // Lấy priority cao nhất hiện tại của ảnh còn lại
+          const remainingImages = await this.productImageRepository.findByProductId(id);
+          const maxPriority = remainingImages.length > 0 ? Math.max(...remainingImages.map(img => img.priority || 0)) : 0;
+
+          const newImages = data.images.map((image, index) => ({
+            product_id: id,
+            image_data: image.image_data,
+            is_main_image: false, // Sẽ update main image sau
+            priority: maxPriority + index + 1,
+          }));
+
+          await this.productImageRepository.createMany(newImages);
+          console.log('Added', data.images.length, 'new images');
+        }
+
+        // Update main image (ảnh đầu tiên còn lại)
+        const allRemainingImages = await this.productImageRepository.findByProductId(id);
+        if (allRemainingImages.length > 0) {
+          // Reset tất cả is_main_image
+          for (const img of allRemainingImages) {
+            if (img.is_main_image) {
+              await this.productImageRepository.update(img.id, { is_main_image: false });
+            }
+          }
+          // Set ảnh đầu tiên làm main (theo priority)
+          const sortedImages = allRemainingImages.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+          if (sortedImages.length > 0) {
+            await this.productImageRepository.update(sortedImages[0].id, { is_main_image: true });
+          }
+        }
+
+      } else if (data.keepImageIndices !== undefined) {
+        // Logic cũ: keepImageIndices (để tương thích)
+        console.log('Using legacy keepImageIndices logic:', data.keepImageIndices);
+
+        // Lấy tất cả ảnh hiện có của sản phẩm
+        const existingImages = await this.productImageRepository.findByProductId(id);
+        console.log('Found', existingImages.length, 'existing images');
+
+        // Xóa những ảnh không có trong keepImageIndices
+        const imagesToDelete = existingImages.filter((_, index) =>
+          !data.keepImageIndices!.includes(index)
+        );
+
+        for (const imageToDelete of imagesToDelete) {
+          await this.productImageRepository.softDelete(imageToDelete.id);
+          console.log('Deleted image with ID:', imageToDelete.id);
+        }
+
+        // Cập nhật priority cho những ảnh còn lại
+        const remainingImages = existingImages.filter((_, index) =>
+          data.keepImageIndices!.includes(index)
+        );
+
+        // Sắp xếp lại priority theo thứ tự trong keepImageIndices
+        for (let i = 0; i < data.keepImageIndices.length; i++) {
+          const originalIndex = data.keepImageIndices[i];
+          const imageToUpdate = existingImages[originalIndex];
+          if (imageToUpdate) {
+            await this.productImageRepository.update(imageToUpdate.id, {
+              priority: i + 1,
+              is_main_image: i === 0
+            });
+            console.log(`Updated image ${imageToUpdate.id}: priority=${i + 1}, is_main=${i === 0}`);
+          }
+        }
+
+        // Thêm ảnh mới với priority bắt đầu từ số ảnh còn lại + 1
+        if (data.images && data.images.length > 0) {
+          const startPriority = data.keepImageIndices.length + 1;
+          const newImages = data.images.map((image, index) => ({
+            product_id: id,
+            image_data: image.image_data,
+            is_main_image: (data.keepImageIndices?.length || 0) === 0 && index === 0,
+            priority: startPriority + index,
+          }));
+
+          await this.productImageRepository.createMany(newImages);
+          console.log('Added', data.images.length, 'new images starting from priority', startPriority);
+        }
+      }
+      // Nếu chỉ có ảnh mới (không có keepImageIndices), thay thế toàn bộ
+      else if (data.images && data.images.length > 0) {
+        console.log('Full image replacement');
+        await this.productImageRepository.deleteByProductId(id);
+
+        const newImages = data.images.map((image, index) => ({
+          product_id: id,
+          image_data: image.image_data,
+          is_main_image: index === 0,
+          priority: index + 1,
+        }));
+
+        await this.productImageRepository.createMany(newImages);
+        console.log('Replaced all images with', data.images.length, 'new images');
+      }
+      // Nếu không có gì, giữ nguyên ảnh hiện có
+      else {
+        console.log('No image changes, keeping existing images');
+      }
+
+      // Handle classifications update
+      if (data.classifications !== undefined) {
+        console.log('Updating product classifications intelligently');
+
+        // Lấy classifications hiện tại
+        const existingClassifications = await this.productClassificationRepository.findByProductId(id);
+        const existingRelationships = await this.classificationAttributeRelationshipRepository.findByProductId(id);
+
+        if (data.classifications && data.classifications.length > 0) {
+          console.log('Processing classification updates');
+
+          const attributeIdMap: { [classIndex: number]: { [attrIndex: number]: number } } = {};
+
+          for (let classIndex = 0; classIndex < data.classifications.length; classIndex++) {
+            const classificationData = data.classifications[classIndex];
+            let classification;
+
+            // Cập nhật hoặc tạo mới classification
+            if (existingClassifications[classIndex]) {
+              // UPDATE classification hiện có
+              console.log(`Updating existing classification ${classIndex}:`, classificationData.name);
+              await this.productClassificationRepository.update(
+                existingClassifications[classIndex].id,
+                { name: classificationData.name }
+              );
+              classification = existingClassifications[classIndex];
+              classification.name = classificationData.name;
+            } else {
+              // CREATE classification mới
+              console.log(`Creating new classification ${classIndex}:`, classificationData.name);
+              classification = await this.productClassificationRepository.create({
+                product_id: id,
+                name: classificationData.name,
+              });
+            }
+
+            // Xử lý attributes
+            if (classificationData.attributes && classificationData.attributes.length > 0) {
+              attributeIdMap[classIndex] = {};
+
+              // Lấy attributes hiện có của classification này
+              const existingAttributes = await this.productAttributeRepository.findByClassificationId(classification.id);
+
+              for (let attrIndex = 0; attrIndex < classificationData.attributes.length; attrIndex++) {
+                const attr = classificationData.attributes[attrIndex];
+                let createdAttribute;
+
+                if (existingAttributes[attrIndex]) {
+                  // UPDATE attribute hiện có
+                  console.log(`Updating existing attribute ${attrIndex}:`, attr.name);
+                  await this.productAttributeRepository.update(
+                    existingAttributes[attrIndex].id,
+                    { name: attr.name }
+                  );
+                  createdAttribute = existingAttributes[attrIndex];
+                  createdAttribute.name = attr.name;
+                } else {
+                  // CREATE attribute mới
+                  console.log(`Creating new attribute ${attrIndex}:`, attr.name);
+                  createdAttribute = await this.productAttributeRepository.create({
+                    product_classification_id: classification.id,
+                    name: attr.name,
+                  });
+                }
+
+                attributeIdMap[classIndex][attrIndex] = createdAttribute.id;
+              }
+
+              // Xóa các attributes thừa (nếu có)
+              if (existingAttributes.length > classificationData.attributes.length) {
+                for (let i = classificationData.attributes.length; i < existingAttributes.length; i++) {
+                  console.log(`Soft deleting excess attribute ${i}`);
+                  await this.productAttributeRepository.deleteByClassificationId(existingAttributes[i].id);
+                }
+              }
+            }
+          }
+
+          // Xóa các classifications thừa (nếu có)
+          if (existingClassifications.length > data.classifications.length) {
+            for (let i = data.classifications.length; i < existingClassifications.length; i++) {
+              console.log(`Soft deleting excess classification ${i}`);
+              await this.productAttributeRepository.deleteByClassificationId(existingClassifications[i].id);
+              await this.productClassificationRepository.softDelete(existingClassifications[i].id);
+            }
+          }
+
+          console.log('Updated attributeIdMap:', attributeIdMap);
+
+          // Handle relationships update
+          if (data.relationships && data.relationships.length > 0) {
+            console.log('Updating classification attribute relationships');
+
+            // Map relationships to existing ones or create new
+            const relationshipsToUpdate: Array<{
+              id: number;
+              product_attribute_id_1: number;
+              product_attribute_id_2: number;
+              price: number;
+              quantity: number;
+            }> = [];
+
+            const relationshipsToCreate: Array<{
+              product_attribute_id_1: number;
+              product_attribute_id_2: number;
+              price: number;
+              quantity: number;
+            }> = [];
+
+            data.relationships.forEach((rel, index) => {
+              let actualAttr1Id = rel.product_attribute_id_1;
+              let actualAttr2Id = rel.product_attribute_id_2;
+
+              console.log('Processing relationship update:', rel);
+
+              // Map indices to actual IDs if needed
+              if (actualAttr1Id < 100 && attributeIdMap[0]) {
+                const mappedId = attributeIdMap[0][actualAttr1Id];
+                console.log('Update: Mapping attr1 index', actualAttr1Id, 'to ID', mappedId);
+                actualAttr1Id = mappedId || actualAttr1Id;
+              }
+
+              if (actualAttr2Id < 100 && attributeIdMap[1]) {
+                const mappedId = attributeIdMap[1][actualAttr2Id];
+                console.log('Update: Mapping attr2 index', actualAttr2Id, 'to ID', mappedId);
+                actualAttr2Id = mappedId || actualAttr2Id;
+              }
+
+              const processedRel = {
+                product_attribute_id_1: actualAttr1Id,
+                product_attribute_id_2: actualAttr2Id,
+                price: rel.price || 0,
+                quantity: rel.quantity || 0,
+              };
+
+              // Tìm relationship tương ứng trong existing
+              const existingRel = existingRelationships.find(
+                r => r.product_attribute_id_1 === actualAttr1Id &&
+                  r.product_attribute_id_2 === actualAttr2Id
+              );
+
+              if (existingRel) {
+                // UPDATE relationship hiện có
+                relationshipsToUpdate.push({
+                  id: existingRel.id,
+                  ...processedRel
+                });
+              } else {
+                // CREATE relationship mới
+                relationshipsToCreate.push(processedRel);
+              }
+            });
+
+            // Thực hiện updates
+            for (const relUpdate of relationshipsToUpdate) {
+              console.log('Updating existing relationship:', relUpdate.id);
+              await this.classificationAttributeRelationshipRepository.update(relUpdate.id, {
+                price: relUpdate.price,
+                quantity: relUpdate.quantity,
+              });
+            }
+
+            // Thực hiện creates
+            if (relationshipsToCreate.length > 0) {
+              console.log('Creating new relationships:', relationshipsToCreate.length);
+              await this.classificationAttributeRelationshipRepository.createMany(relationshipsToCreate);
+            }
+
+            // Xóa relationships không còn sử dụng
+            const currentAttrIds = data.relationships.map(rel => [rel.product_attribute_id_1, rel.product_attribute_id_2]);
+            const relationshipsToDelete = existingRelationships.filter(rel => {
+              return !currentAttrIds.some(([id1, id2]) =>
+                (rel.product_attribute_id_1 === id1 && rel.product_attribute_id_2 === id2) ||
+                (attributeIdMap[0] && attributeIdMap[0][id1] === rel.product_attribute_id_1 &&
+                  attributeIdMap[1] && attributeIdMap[1][id2] === rel.product_attribute_id_2)
+              );
+            });
+
+            for (const relToDelete of relationshipsToDelete) {
+              console.log('Soft deleting unused relationship:', relToDelete.id);
+              await this.classificationAttributeRelationshipRepository.update(relToDelete.id, {
+                deleted_at: new Date(),
+              });
+            }
+
+            console.log('Classification relationships updated successfully');
+          }
+        } else {
+          // Nếu không có classifications mới, xóa tất cả
+          console.log('No classifications provided, soft deleting all existing');
+          await this.classificationAttributeRelationshipRepository.deleteByProductId(id);
+          for (const classification of existingClassifications) {
+            await this.productAttributeRepository.deleteByClassificationId(classification.id);
+            await this.productClassificationRepository.softDelete(classification.id);
+          }
+        }
+      }
+
+      return await this.findOne(id);
+    } catch (error) {
+      console.error('Error in ProductService.update:', error);
+      throw error;
     }
-
-    return await this.findOne(id);
   }
 
   async softDelete(id: number) {

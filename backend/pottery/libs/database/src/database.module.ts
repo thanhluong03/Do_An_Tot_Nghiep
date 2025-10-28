@@ -59,6 +59,9 @@ import {
   OrderStatusHistoryRepository,
   DeliveryProofRepository,
   DriverLocationRepository,
+  ProductClassificationRepository,
+  ProductAttributeRepository,
+  ClassificationAttributeRelationshipRepository,
 } from './repositories';
 
 const postgresRepositories = [
@@ -85,6 +88,9 @@ const postgresRepositories = [
   OrderStatusHistoryRepository,
   DeliveryProofRepository,
   DriverLocationRepository,
+  ProductClassificationRepository,
+  ProductAttributeRepository,
+  ClassificationAttributeRelationshipRepository,
 ];
 const postgresEntities = [
   ProductEntity,
