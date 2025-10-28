@@ -34,6 +34,7 @@ export interface AssignDriverDto {
 }
 export interface AcceptOrderDto {
     order_id: number;
+    driver_id: number;
     latitude?: number;
     longitude?: number;
 }

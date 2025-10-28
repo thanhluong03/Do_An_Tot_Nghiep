@@ -79,6 +79,15 @@
         "tsConfigPath": "libs/driver_location/tsconfig.lib.json"
       }
     },
+    "geocoding": {
+      "type": "library",
+      "root": "libs/geocoding",
+      "entryFile": "index",
+      "sourceRoot": "libs/geocoding/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/geocoding/tsconfig.lib.json"
+      }
+    },
     "import_product": {
       "type": "library",
       "root": "libs/import_product",

@@ -9,7 +9,8 @@ interface Props {
   currentPaymentStatus: PaymentStatus;
   currentPaymentMethod: PaymentMethod;
   onClose: () => void;
-  onUpdated: () => void;
+  onUpdated: (id: number, data: any) => void;
+
 }
 
 export default function OrderStatusModal({
@@ -26,17 +27,23 @@ export default function OrderStatusModal({
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
-    setLoading(true);
-    try {
-      await updateOrder(orderId, { status, payment_status: paymentStatus, payment_method: paymentMethod });
-      onUpdated();
-      onClose();
-    } catch (err) {
-      alert("Cập nhật thất bại, vui lòng thử lại!");
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const updateData = {
+      status,
+      payment_status: paymentStatus,
+      payment_method: paymentMethod,
+    };
+
+    await onUpdated(orderId, updateData); // ✅ gọi hàm của cha
+    onClose();
+  } catch (err) {
+    alert("Cập nhật thất bại, vui lòng thử lại!");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black/30 z-[1100] flex justify-center items-center p-4">

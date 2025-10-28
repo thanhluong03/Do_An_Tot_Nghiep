@@ -7,6 +7,14 @@ import { reviewsApi } from '../../../../api/modules/reviews';
 import Image from 'next/image';
 import { formatPrice } from '../../../../utils/format';
 import { Star } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { useTrackingSocket } from '../../../../hooks/useTrackingSocket';
+import { trackingApi } from '../../../../api/services/trackingService';
+
+// Dynamic import for TrackingMap to avoid SSR issues
+const TrackingMap = dynamic(() => import('../../../../components/map/TrackingMap'), {
+  ssr: false,
+});
 
 interface PageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -47,6 +55,11 @@ function OrderDetailClient({ id }: { id: string }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
+  // tracking state
+  const [trackingData, setTrackingData] = useState<any | null>(null);
+  const [routeData, setRouteData] = useState<Array<[number, number]>>([]);
+  const [showMap, setShowMap] = useState(false);
+
   // ---------------- Fetch order detail ----------------
   useEffect(() => {
     (async () => {
@@ -75,6 +88,31 @@ function OrderDetailClient({ id }: { id: string }) {
           }
           setReviewedProducts(reviewed);
         }
+
+        // Load tracking data
+        try {
+          const { trackingApi } = await import('../../../../api/services/trackingService');
+          const tracking = await trackingApi.getOrderTracking(parseInt(id));
+          setTrackingData(tracking);
+
+          // If both driver and customer coordinates exist, get route
+          if (
+            tracking.driver_location &&
+            tracking.customer_coordinates
+          ) {
+            const route = await trackingApi.getRoute(
+              tracking.driver_location.latitude,
+              tracking.driver_location.longitude,
+              tracking.customer_coordinates.latitude,
+              tracking.customer_coordinates.longitude,
+            );
+            if (route && route.coordinates) {
+              setRouteData(route.coordinates);
+            }
+          }
+        } catch (trackingError) {
+          console.error('Failed to load tracking data:', trackingError);
+        }
       } catch (e: any) {
         setError(e?.message || 'Không thể tải chi tiết đơn hàng');
       } finally {
@@ -82,6 +120,43 @@ function OrderDetailClient({ id }: { id: string }) {
       }
     })();
   }, [id]);
+
+  // WebSocket for real-time tracking - only for shipping orders
+  const { lastLocation } = useTrackingSocket(
+    {
+      orderId: parseInt(id),
+      userType: 'customer',
+      enabled: !!order && ['SHIPPING', 'CONFIRMED'].includes(order.status),
+    },
+    {
+      onLocationUpdate: (data) => {
+        console.log('🔔 Real-time location update:', data);
+        // Update tracking data when new location is received
+        setTrackingData((prev: any) => ({
+          ...prev,
+          driver_location: {
+            latitude: data.latitude,
+            longitude: data.longitude,
+            timestamp: data.timestamp,
+          },
+        }));
+
+        // Update route if both points exist
+        if (trackingData?.customer_coordinates) {
+          trackingApi.getRoute(
+            data.latitude,
+            data.longitude,
+            trackingData.customer_coordinates.latitude,
+            trackingData.customer_coordinates.longitude,
+          ).then(route => {
+            if (route?.coordinates) {
+              setRouteData(route.coordinates);
+            }
+          });
+        }
+      },
+    },
+  );
 
   // ---------------- Helper ----------------
   const getStatusColor = (status: string) => {
@@ -171,8 +246,40 @@ function OrderDetailClient({ id }: { id: string }) {
 
         {/* shipping */}
         <div className="bg-white rounded-xl border p-4 shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Địa chỉ giao hàng</h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold">Địa chỉ giao hàng</h2>
+            {trackingData?.driver_location && trackingData?.customer_coordinates && (
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                {showMap ? 'Ẩn bản đồ' : 'Xem bản đồ'}
+              </button>
+            )}
+          </div>
           <div className="text-gray-700">{order.shipping_address || 'Chưa có địa chỉ'}</div>
+          
+          {/* Tracking Map */}
+          {showMap && trackingData && (
+            <div className="mt-4">
+              <TrackingMap
+                driverLat={trackingData.driver_location?.latitude}
+                driverLon={trackingData.driver_location?.longitude}
+                customerLat={trackingData.customer_coordinates?.latitude}
+                customerLon={trackingData.customer_coordinates?.longitude}
+                routeCoordinates={routeData}
+                driverName="Tài xế"
+                customerName="Khách hàng"
+                orderStatus={order.status}
+                height="400px"
+              />
+              {trackingData.driver_location && (
+                <div className="text-xs text-gray-500 mt-2">
+                  Cập nhật lần cuối: {new Date(trackingData.driver_location.timestamp).toLocaleString('vi-VN')}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* payment */}

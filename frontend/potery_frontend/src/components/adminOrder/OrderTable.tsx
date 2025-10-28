@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Order, OrderStatus, PaymentStatus } from "@/api/services/orderService";
 import { User } from "@/api/services/userService";
-import { Trash2, Package, Eye, Truck } from "lucide-react";
+import { Trash2, Package, Eye, Truck, MapPin } from "lucide-react";
 
 interface OrderTableProps {
   orders: Order[];
@@ -11,6 +11,7 @@ interface OrderTableProps {
   onEditStatus: (order: Order) => void;
   onDelete: (id: number) => void;
   onAssignDriver: (orderId: number, driverId: number) => void;
+  onViewTracking?: (order: Order) => void;
 }
 
 // Định dạng tiền Việt Nam
@@ -72,6 +73,7 @@ export default function OrderTable({
   onEditStatus,
   onDelete,
   onAssignDriver,
+  onViewTracking,
 }: OrderTableProps) {
   const [selectedDriver, setSelectedDriver] = useState<{ [key: number]: string }>({});
 
@@ -172,6 +174,15 @@ export default function OrderTable({
                 >
                   <Package className="w-4 h-4" />
                 </button>
+                {(order.status === 'SHIPPING' || order.status === 'CONFIRMED') && onViewTracking && (
+                  <button
+                    title="Xem tracking"
+                    onClick={() => onViewTracking(order)}
+                    className="p-2 rounded-md text-green-600 bg-green-100 hover:bg-green-200"
+                  >
+                    <MapPin className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   title="Xóa đơn hàng"
                   onClick={() => onDelete(order.id)}

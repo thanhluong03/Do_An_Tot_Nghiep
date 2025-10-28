@@ -18,6 +18,7 @@ import OrderTable from "@/components/adminOrder/OrderTable";
 import { User } from "@/api/services/userService";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
+import OrderTrackingModal from "@/components/adminOrder/OrderTrackingModal";
 import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
 import { Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
@@ -66,6 +67,9 @@ export default function AdminOrderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<FullOrderDetails | null>(null);
+  const [trackingOrderId, setTrackingOrderId] = useState<number | null>(null);
+  const [trackingOrderStatus, setTrackingOrderStatus] = useState<string>('');
+  const [trackingCustomerAddress, setTrackingCustomerAddress] = useState<string>('');
   const [editingOrder, setEditingOrder] = useState<FullOrderDetails | null>(null);
   const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -245,21 +249,24 @@ export default function AdminOrderPage() {
     }
   };
 
-  const handleUpdateOrder = async (id: number, data: any) => {
-  const handleOrderUpdated = async () => {
+  const handleOrderUpdated = async (orderId: number, updateData: any) => {
     setLoading(true);
     try {
-      await updateOrder(id, data);
+      // Call API to update order
+      await updateOrder(orderId, updateData);
       toast.success("Cập nhật đơn hàng thành công!");
       await fetchOrders();
       await fetchAllOrders();
       setEditingOrder(null);
-    } catch {
-      toast.error("Không thể làm mới danh sách đơn hàng!");
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || "Không thể cập nhật đơn hàng!";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+
 
   const handleAssignDriver = async (orderId: number, driverId: number) => {
     if (!driverId) {
@@ -376,7 +383,12 @@ export default function AdminOrderPage() {
               onView={handleViewOrder}
               onEditStatus={handleEditStatus}
               onDelete={handleDeleteOrder}
-              onAssignDriver={handleAssignDriver} />
+              onAssignDriver={handleAssignDriver}
+              onViewTracking={(order) => {
+                setTrackingOrderId(order.id);
+                setTrackingOrderStatus(order.status);
+                setTrackingCustomerAddress(order.shipping_address || '');
+              }} />
           )}
           {!loading && !error && totalOrders > pagination.size && (
             <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-4 border-t border-gray-200 p-4">
@@ -422,6 +434,18 @@ export default function AdminOrderPage() {
           onUpdated={handleOrderUpdated}
         />
       )}
+      {trackingOrderId && (
+        <OrderTrackingModal
+          orderId={trackingOrderId}
+          orderStatus={trackingOrderStatus}
+          customerAddress={trackingCustomerAddress}
+          onClose={() => {
+            setTrackingOrderId(null);
+            setTrackingOrderStatus('');
+            setTrackingCustomerAddress('');
+          }}
+        />
+      )}
       {isDeleteModalOpen && orderToDeleteId !== null && (
         <ConfirmDialog
           title="Xác nhận Xóa Đơn hàng"
@@ -435,3 +459,4 @@ export default function AdminOrderPage() {
     </div>
   );
 }
+
