@@ -10,4 +10,4 @@ import { ImportProductRepository } from '@app/database/repositories/import_produ
   providers: [ImportProductService, ImportProductRepository],
   exports: [ImportProductService, ImportProductRepository],
 })
-export class ImportProductModule { }
+export class ImportProductModule {}

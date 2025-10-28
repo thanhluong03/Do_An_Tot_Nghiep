@@ -243,4 +243,9 @@ export class ProductController {
             excludeExtraneousValues: true,
         });
     }
+
+    @Get('classifications/:productId')
+    async getProductClassifications(@Param('productId') productId: number) {
+        return await this.productService.getProductClassifications(productId);
+    }
 }
