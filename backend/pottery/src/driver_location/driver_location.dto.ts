@@ -40,6 +40,10 @@ export class AcceptOrderDto {
 
     @IsNotEmpty()
     @IsNumber()
+    driver_id: number;
+
+    @IsNotEmpty()
+    @IsNumber()
     latitude: number;
 
     @IsNotEmpty()
@@ -67,6 +71,10 @@ export class UpdateLocationDto {
     @IsNotEmpty()
     @IsNumber()
     order_id: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    driver_id: number;
 
     @IsNotEmpty()
     @IsNumber()

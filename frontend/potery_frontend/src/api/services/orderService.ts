@@ -96,8 +96,11 @@ export interface ListOrdersResponse {
     total: number; 
 }
 export async function listOrders(params: ListOrderParams): Promise<ListOrdersResponse> {
-    const res = await axios.get(`${API_URL}/listorders`, { params });
-    
+    // Create a mutable copy of params to avoid "read-only" errors.
+    const queryParams = { ...params };
+    if (queryParams.store_id === "") queryParams.store_id = undefined;
+
+    const res = await axios.get(`${API_URL}/listorders`, { params: queryParams });
     const responseData = res.data.data;
 
     if (!responseData || typeof responseData.total === 'undefined') {

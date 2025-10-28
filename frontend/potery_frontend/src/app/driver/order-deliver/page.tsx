@@ -9,6 +9,7 @@ import {
   DriverLocation,
   DriverStatus,
 } from '@/api/services/deliveryService';
+import { useAuth } from '@/contexts'; // Import useAuth để lấy ID tài xế
 import toast, { Toaster } from 'react-hot-toast';
 import { Check, X, Package, Clock, MapPin, User, Phone, Truck, Inbox } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -39,8 +40,9 @@ const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden transition-all hover:shadow-md">
       <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
         <h3 className="font-bold text-lg text-indigo-700">Đơn hàng #{order.id}</h3>
-        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${isWaiting ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-          }`}>
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+          isWaiting ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+        }`}>
           {isWaiting ? 'Chờ xác nhận' : 'Đang giao'}
         </span>
       </div>
@@ -54,8 +56,8 @@ const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
           <span>{order.shipping_address}</span>
         </div>
         <div className="flex items-center text-gray-600">
-          <Phone className="w-4 h-4 mr-2" />
-          <span>{order.customer_phone || 'Chưa có SĐT'}</span>
+          <Package className="w-4 h-4 mr-2" />
+          <span>Trạng thái: {order.status}</span>
         </div>
         <div className="pt-4 border-t mt-4 flex justify-between items-center">
           <span className="text-gray-500">Tổng tiền:</span>
@@ -82,6 +84,17 @@ const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
           </button>
         </div>
       )}
+      {!isWaiting && (
+        <div className="p-4 bg-blue-50 border-t">
+          <a
+            href={`/driver/tracking/${order.id}`}
+            className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-white bg-blue-600 border border-blue-700 rounded-lg hover:bg-blue-700 transition"
+          >
+            <MapPin className="w-4 h-4" />
+            Xem tracking
+          </a>
+        </div>
+      )}
     </div>
   );
 };
@@ -92,15 +105,11 @@ function OrderDeliverContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DriverStatus>(DriverStatus.WAITING_ACCEPT);
-  const [driverId, setDriverId] = useState<number | null>(null);
-
-  // Lấy ID tài xế từ localStorage sau khi component mount
-  useEffect(() => {
-    const roleId = localStorage.getItem('adminRoleId');
-    if (roleId) {
-      setDriverId(parseInt(roleId));
-    }
-  }, []);
+  
+  // ✅ Lấy driver_id từ localStorage (admin login) thay vì useAuth
+  const driverId = typeof window !== 'undefined' 
+    ? Number(localStorage.getItem('adminID')) 
+    : null;
 
   const fetchDriverOrders = useCallback(async () => {
     if (!driverId) {
@@ -126,9 +135,39 @@ function OrderDeliverContent() {
   }, [fetchDriverOrders]);
 
   const handleAcceptOrder = async (orderId: number) => {
-    if (!driverId) return;
+    if (!driverId) {
+      toast.error('Không thể xác thực tài xế. Vui lòng đăng nhập lại.');
+      return;
+    }
+    
     setIsProcessing(true);
-    const promise = acceptOrder({ order_id: orderId });
+    
+    // Get current GPS location
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+          });
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch (geoError) {
+        console.warn('Geolocation error:', geoError);
+        toast.error('Không thể lấy vị trí GPS. Nhận đơn mà không có vị trí.');
+      }
+    }
+
+    const promise = acceptOrder({ 
+      order_id: orderId,
+      driver_id: driverId,
+      latitude,
+      longitude,
+    });
 
     toast.promise(promise, {
       loading: 'Đang xử lý nhận đơn...',

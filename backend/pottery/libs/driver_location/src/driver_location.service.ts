@@ -83,42 +83,47 @@ export class DriverLocationService {
         }
     }
 
-    async acceptOrder(data: IAcceptOrder) {
-        try {
-            const { order_id, latitude, longitude } = data;
+      async acceptOrder(data: IAcceptOrder & { driver_id: number }) {
+    try {
+      const { order_id, latitude, longitude, driver_id } = data;
 
-            const driverLocation = await this.driverLocationRepository.findByOrderIdAndStatus(
-                order_id,
-                DriverStatus.WAITING_ACCEPT,
-            );
+      const driverLocation = await this.driverLocationRepository.findByOrderIdAndStatus(
+        order_id,
+        DriverStatus.WAITING_ACCEPT,
+      );
 
-            if (!driverLocation) {
-                throw new NotFoundException('Không tìm thấy đơn hàng chờ chấp nhận');
-            }
+      if (!driverLocation) {
+        throw new NotFoundException('Không tìm thấy đơn hàng chờ chấp nhận');
+      }
+
+      // Verify driver_id matches
+      if (driverLocation.driver_id !== driver_id) {
+        throw new BadRequestException('Driver không khớp với đơn hàng được gán');
+      }
 
             await this.driverLocationRepository.update(driverLocation.id, {
-                driver_status: DriverStatus.ACCEPTED,
-                latitude,
-                longitude,
-                timestamp: new Date(),
-            });
+        driver_status: DriverStatus.ACCEPTED,
+        latitude,
+        longitude,
+        timestamp: new Date(),
+      });
 
-            await this.orderRepository.update(order_id, {
-                status: OrderStatus.SHIPPING,
-            });
+      await this.orderRepository.update(order_id, {
+        status: OrderStatus.SHIPPING,
+      });
 
-            return {
-                success: true,
-                message: 'Chấp nhận đơn hàng thành công',
-            };
-        } catch (error) {
-            console.error('Error accepting order:', error);
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
-            throw new BadRequestException('Không thể chấp nhận đơn hàng');
-        }
+      return {
+        success: true,
+        message: 'Chấp nhận đơn hàng thành công',
+      };
+    } catch (error) {
+      console.error('Error accepting order:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể chấp nhận đơn hàng');
     }
+  }
 
     async rejectOrder(data: IRejectOrder) {
         try {
@@ -152,37 +157,42 @@ export class DriverLocationService {
         }
     }
 
-    async updateLocation(data: IUpdateLocation) {
-        try {
-            const { order_id, latitude, longitude } = data;
+  async updateLocation(data: IUpdateLocation & { driver_id: number }) {
+    try {
+      const { order_id, latitude, longitude, driver_id } = data;
 
-            const driverLocation = await this.driverLocationRepository.findByOrderIdAndStatus(
-                order_id,
-                DriverStatus.ACCEPTED,
-            );
+      const driverLocation = await this.driverLocationRepository.findByOrderIdAndStatus(
+        order_id,
+        DriverStatus.ACCEPTED,
+      );
 
-            if (!driverLocation) {
-                throw new NotFoundException('Không tìm thấy đơn hàng đang giao');
-            }
+      if (!driverLocation) {
+        throw new NotFoundException('Không tìm thấy đơn hàng đang giao');
+      }
 
-            await this.driverLocationRepository.update(driverLocation.id, {
-                latitude,
-                longitude,
-                timestamp: new Date(),
-            });
+      // Verify driver_id matches
+      if (driverLocation.driver_id !== driver_id) {
+        throw new BadRequestException('Driver không khớp với đơn hàng');
+      }
 
-            return {
-                success: true,
-                message: 'Cập nhật vị trí thành công',
-            };
-        } catch (error) {
-            console.error('Error updating location:', error);
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
-            throw new BadRequestException('Không thể cập nhật vị trí');
-        }
+      await this.driverLocationRepository.update(driverLocation.id, {
+        latitude,
+        longitude,
+        timestamp: new Date(),
+      });
+
+      return {
+        success: true,
+        message: 'Cập nhật vị trí thành công',
+      };
+    } catch (error) {
+      console.error('Error updating location:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Không thể cập nhật vị trí');
     }
+  }
 
     async getLocationHistory(orderId: number) {
         try {
