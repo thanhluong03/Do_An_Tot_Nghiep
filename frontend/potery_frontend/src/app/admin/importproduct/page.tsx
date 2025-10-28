@@ -14,6 +14,8 @@ import {
     getProductImageUrl,
     ListImportProductDto,
     Product,
+    getProductClassifications,
+    ProductClassification,
 } from "@/api/services/importProductsService";
 
 import ImportProductForm from "@/components/adminImportProduct/ImportProductForm";
@@ -57,6 +59,10 @@ export default function ImportProductPage() {
     const [selectedSupplier, setSelectedSupplier] = useState<string>("");
     const [selectedProducts, setSelectedProducts] = useState<ProductSelectionState>({});
     const [isAdding, setIsAdding] = useState(false);
+
+    // NEW: State for classifications
+    const [selectedProductClassifications, setSelectedProductClassifications] = useState<Record<string, ProductClassification[]>>({});
+    const [classificationSelections, setClassificationSelections] = useState<Record<string, Record<number, { checked: boolean; quantity: string; price: string }>>>({});
 
     const [loadingImportHistory, setLoadingImportHistory] = useState(false);
     const [loadingProductList, setLoadingProductList] = useState(false);
@@ -208,6 +214,41 @@ export default function ImportProductPage() {
         }
     }, [selectedSupplier, allProductsForForm, filteredProducts]);
 
+    // Load classifications for selected products
+    useEffect(() => {
+        const loadClassificationsForSelectedProducts = async () => {
+            const checkedProductIds = Object.keys(selectedProducts).filter(
+                productId => selectedProducts[productId]?.checked
+            );
+
+            for (const productId of checkedProductIds) {
+                if (!selectedProductClassifications[productId]) {
+                    try {
+                        const classifications = await getProductClassifications(Number(productId));
+                        setSelectedProductClassifications(prev => ({
+                            ...prev,
+                            [productId]: classifications
+                        }));
+
+                        // Initialize classification selections
+                        const initialSelections: Record<number, { checked: boolean; quantity: string; price: string }> = {};
+                        classifications.forEach(c => {
+                            initialSelections[c.id] = { checked: false, quantity: "", price: "" };
+                        });
+                        setClassificationSelections(prev => ({
+                            ...prev,
+                            [productId]: initialSelections
+                        }));
+                    } catch (error) {
+                        console.error('Error loading classifications for product', productId, error);
+                    }
+                }
+            }
+        };
+
+        loadClassificationsForSelectedProducts();
+    }, [selectedProducts, selectedProductClassifications]);
+
 
     const handleCheckboxChange = (productId: string) => {
         setSelectedProducts((prev) => {
@@ -243,17 +284,52 @@ export default function ImportProductPage() {
         });
     };
 
+    // Classification handlers
+    const handleClassificationCheckboxChange = (productId: string, classificationId: number) => {
+        setClassificationSelections(prev => ({
+            ...prev,
+            [productId]: {
+                ...prev[productId],
+                [classificationId]: {
+                    ...prev[productId]?.[classificationId],
+                    checked: !prev[productId]?.[classificationId]?.checked
+                }
+            }
+        }));
+    };
+
+    const handleClassificationInputChange = (
+        productId: string,
+        classificationId: number,
+        field: "quantity" | "price",
+        value: string
+    ) => {
+        const cleanedValue = value.replace(/[^0-9]/g, '');
+        setClassificationSelections(prev => ({
+            ...prev,
+            [productId]: {
+                ...prev[productId],
+                [classificationId]: {
+                    ...prev[productId]?.[classificationId],
+                    [field]: cleanedValue
+                }
+            }
+        }));
+    };
+
     const resetForm = useCallback(() => {
         setSelectedSupplier("");
         setFilteredProducts([]);
         setSelectedProducts(
             Object.fromEntries(
-                allProductsForForm.map((p: any) => [
+                allProductsForForm.map((p: Product) => [
                     p.id,
                     { checked: false, quantity: "", price: "" },
                 ])
             )
         );
+        setSelectedProductClassifications({});
+        setClassificationSelections({});
         setEditingItem(null);
     }, [allProductsForForm]);
 
@@ -264,28 +340,71 @@ export default function ImportProductPage() {
             return;
         }
 
-        const selectedItems = Object.entries(selectedProducts)
-            .filter(([_, val]) => val.checked)
-            .map(([id, val]) => ({
-                product_id: Number(id),
-                import_quantity: Number(val.quantity) || 0,
-                import_price: Number(val.price) || 0,
-            }))
-            .filter((item) => item.import_quantity > 0);
+        // Collect all classification selections from all selected products
+        const allClassificationData: Array<{
+            product_id: number;
+            supplier_id: number;
+            classifications: Array<{
+                classification_attribute_relationship_id: number;
+                import_quantity: number;
+                import_price: number;
+            }>;
+        }> = [];
 
-        if (selectedItems.length === 0) {
+        Object.entries(selectedProducts).forEach(([productId, productData]) => {
+            if (productData.checked) {
+                const productClassifications = selectedProductClassifications[productId] || [];
+                const productClassificationSelections = classificationSelections[productId] || {};
+
+                if (productClassifications.length > 0) {
+                    // Product has classifications
+                    const selectedClassifications = Object.entries(productClassificationSelections)
+                        .filter(([_, classData]) => classData.checked && Number(classData.quantity) > 0)
+                        .map(([classificationId, classData]) => ({
+                            classification_attribute_relationship_id: Number(classificationId),
+                            import_quantity: Number(classData.quantity),
+                            import_price: Number(classData.price)
+                        }));
+
+                    if (selectedClassifications.length > 0) {
+                        allClassificationData.push({
+                            product_id: Number(productId),
+                            supplier_id: Number(selectedSupplier),
+                            classifications: selectedClassifications
+                        });
+                    }
+                } else {
+                    // Product has no classifications, use old logic
+                    if (Number(productData.quantity) > 0) {
+                        allClassificationData.push({
+                            product_id: Number(productId),
+                            supplier_id: Number(selectedSupplier),
+                            classifications: [] // Empty classifications for products without variants
+                        });
+                    }
+                }
+            }
+        });
+
+        if (allClassificationData.length === 0) {
             toast.error("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ!");
             return;
         }
 
-        const payload: CreateImportProductDto = {
-            supplier_id: Number(selectedSupplier),
-            items: selectedItems,
-        };
-
         try {
-            await createImportProduct(payload);
-            toast.success(`Tạo phiếu nhập kho với ${selectedItems.length} sản phẩm thành công!`);
+            // Create import for each product
+            for (const productImportData of allClassificationData) {
+                await createImportProduct(productImportData);
+            }
+
+            const totalProducts = allClassificationData.length;
+            const totalClassifications = allClassificationData.reduce(
+                (sum, item) => sum + item.classifications.length, 0
+            );
+
+            toast.success(
+                `Tạo phiếu nhập kho thành công! ${totalProducts} sản phẩm, ${totalClassifications} phân loại`
+            );
             resetForm();
 
             // Cập nhật lại tồn kho của trang hiện tại
@@ -311,8 +430,8 @@ export default function ImportProductPage() {
     };
     const performDelete = async () => {
         if (itemToDeleteId === null) return;
-    
-    const id = itemToDeleteId;
+
+        const id = itemToDeleteId;
         setIsDeleteDialogOpen(false);
         setItemToDeleteId(null);
 
@@ -391,6 +510,10 @@ export default function ImportProductPage() {
                             handleInputChange={handleInputChange}
                             handleSubmit={handleSubmit}
                             getProductImage={getProductImage}
+                            selectedProductClassifications={selectedProductClassifications}
+                            classificationSelections={classificationSelections}
+                            handleClassificationCheckboxChange={handleClassificationCheckboxChange}
+                            handleClassificationInputChange={handleClassificationInputChange}
                         />
                     </div>
                 )}

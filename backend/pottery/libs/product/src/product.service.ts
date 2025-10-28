@@ -826,4 +826,26 @@ export class ProductService {
       })
     );
   }
+
+  async getProductClassifications(productId: number) {
+    try {
+      const relationships = await this.classificationAttributeRelationshipRepository.findByProductIdForImport(productId);
+      const classifications = relationships.map(relationship => ({
+        id: relationship.id,
+        name: `${relationship.attribute1?.name || ''} - ${relationship.attribute2?.name || ''}`,
+        price: relationship.price || 0,
+        quantity: relationship.quantity || 0,
+        product_attribute_id_1: relationship.product_attribute_id_1,
+        product_attribute_id_2: relationship.product_attribute_id_2,
+        attribute1_name: relationship.attribute1?.name || '',
+        attribute2_name: relationship.attribute2?.name || '',
+      }));
+
+      console.log('Returning classifications:', classifications);
+      return classifications;
+    } catch (error) {
+      console.error('Error getting product classifications:', error);
+      return [];
+    }
+  }
 }

@@ -1,27 +1,25 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { ProductEntity } from './product.entity';
 import { SupplierEntity } from './supplier.entity';
+import { ImportProductDetailEntity } from './import_product_detail.entity';
 
 @Entity('import_products')
 export class ImportProductEntity extends BaseEntity {
-    @Column({ type: 'integer', nullable: false })
-    product_id: number
+  @Column({ type: 'integer', nullable: false })
+  product_id: number;
 
-    @Column({ type: 'integer', nullable: false })
-    supplier_id: number
+  @Column({ type: 'integer', nullable: false })
+  supplier_id: number;
 
-    @Column({ type: 'integer', nullable: true })
-    import_quantity: number
+  @ManyToOne(() => ProductEntity, { eager: true })
+  @JoinColumn({ name: 'product_id' })
+  product: ProductEntity;
 
-    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-    import_price: number
+  @ManyToOne(() => SupplierEntity, { eager: true })
+  @JoinColumn({ name: 'supplier_id' })
+  supplier: SupplierEntity;
 
-    @ManyToOne(() => ProductEntity, { eager: true })
-    @JoinColumn({ name: 'product_id' })
-    product: ProductEntity;
-
-    @ManyToOne(() => SupplierEntity, { eager: true })
-    @JoinColumn({ name: 'supplier_id' })
-    supplier: SupplierEntity;
+  @OneToMany(() => ImportProductDetailEntity, (detail) => detail.import_product)
+  details: ImportProductDetailEntity[];
 }

@@ -17,35 +17,55 @@ export interface ListImportProductDto {
     supplier_id?: number;
 }
 
-export interface ImportProductItemDto {
-    product_id: number | string;
+export interface ImportProductClassificationDto {
+    classification_attribute_relationship_id: number | string;
     import_quantity: number;
-    import_price?: number;
+    import_price: number;
 }
 
 export interface CreateImportProductDto {
+    product_id: number | string;
     supplier_id: number | string;
-    items: ImportProductItemDto[];
+    classifications: ImportProductClassificationDto[];
 }
 
 /**
  * Cập nhật: DTO cập nhật đơn nhập hàng. 
  */
 export interface UpdateImportProductDto {
-    supplier_id: number | string;
-    items: ImportProductItemDto[]; 
+    classifications?: ImportProductClassificationDto[];
 }
 
 export interface ImportProduct {
     id: number;
     supplier_id: number;
     product_id: number;
-    import_quantity: number;
-    import_price?: number;
+    product_name?: string;
+    supplier_name?: string;
+    details?: ImportProductDetail[];
     created_at?: string;
     updated_at?: string;
-    // Thêm trường items để xử lý trường hợp API trả về nhiều items trong 1 phiếu nhập (nếu có)
-    items?: ImportProductItemDto[]; 
+}
+
+export interface ImportProductDetail {
+    id: number;
+    classification_attribute_relationship_id: number;
+    classification_name: string;
+    attribute1_name?: string;
+    attribute2_name?: string;
+    import_quantity: number;
+    import_price: number;
+}
+
+export interface ProductClassification {
+    id: number;
+    name: string;
+    price?: number;
+    quantity?: number;
+    product_attribute_id_1: number;
+    product_attribute_id_2: number;
+    attribute1_name?: string;
+    attribute2_name?: string;
 }
 
 export interface SelectOption {
@@ -60,7 +80,7 @@ export interface Product {
     price: number;
     quantity: number;
     total_quantity_divided: number;
-    supplier_id: number | string; 
+    supplier_id: number | string;
     category_id?: number;
     images?: { url?: string; image_data?: string | { data: number[] } }[];
     main_image?: string | { data: number[] };
@@ -92,9 +112,9 @@ export const getProductImageUrl = (product: Product): string => {
     const firstImage = product.images?.[0];
 
     if (firstImage?.url && typeof firstImage.url === "string" && firstImage.url !== "") {
-          return firstImage.url;
+        return firstImage.url;
     }
-    
+
     if (product.main_image) {
         if (typeof product.main_image === "string" && product.main_image !== "") {
             return product.main_image;
@@ -107,17 +127,17 @@ export const getProductImageUrl = (product: Product): string => {
 
     if (firstImage?.image_data) {
         const imageData = firstImage.image_data;
-        
+
         if (typeof imageData === "object" && imageData !== null && "data" in imageData && Array.isArray(imageData.data)) {
             const base64Url = bufferToBase64(imageData as { data: number[] });
             if (base64Url) return base64Url;
         }
-        
+
         else if (typeof imageData === "string" && imageData !== "") {
             return `data:image/png;base64,${imageData.startsWith('data:') ? imageData.split(',')[1] : imageData}`;
         }
     }
-    
+
     return "/no-image.jpg";
 };
 
@@ -131,19 +151,19 @@ export const listImportProducts = async (
     const res = await axios.get(`${API_URL_IMPORTPRODUCT}/list`, {
         params: dto
     });
-    
+
     const responseData = res.data;
-    
+
     // Logic xử lý response để luôn trả về đúng format ListResponse
     const dataItems = responseData.data || responseData.items || responseData;
     const total = responseData.total || (Array.isArray(dataItems) ? dataItems.length : 0);
     const page = responseData.page || dto.page || 1;
     const size = responseData.size || dto.size || 10;
-    
+
     if (Array.isArray(dataItems)) {
         return { data: dataItems, total, page, size };
     }
-    
+
     // Nếu không có dữ liệu trả về, vẫn trả về ListResponse rỗng
     return { data: [], total: 0, page: 1, size: 10 };
 };
@@ -158,7 +178,7 @@ export const createImportProduct = async (data: CreateImportProductDto): Promise
  */
 export const updateImportProduct = async (id: number, data: UpdateImportProductDto): Promise<ImportProduct> => {
     const res = await axios.put(`${API_URL_IMPORTPRODUCT}/updateimportproduct/${id}`, data);
-    
+
     return res.data;
 };
 
@@ -173,10 +193,10 @@ export const listProducts = async (dto: { page: number, size: number }): Promise
     const responseData = res.data.data || res.data;
     const list: Product[] = Array.isArray(responseData.data) ? responseData.data : Array.isArray(responseData.items) ? responseData.items : Array.isArray(responseData) ? responseData : [];
 
-    return { 
-        data: list, 
-        total: responseData.total || res.data.total || list.length, 
-        page: responseData.page || res.data.page || dto.page || 1, 
+    return {
+        data: list,
+        total: responseData.total || res.data.total || list.length,
+        page: responseData.page || res.data.page || dto.page || 1,
         size: responseData.size || res.data.size || dto.size || 10,
     };
 };
@@ -184,7 +204,7 @@ export const listProducts = async (dto: { page: number, size: number }): Promise
 export const listDropdownProducts = async (): Promise<SelectOption[]> => {
     const res = await listProducts({ page: 1, size: 1000 });
     const products: Product[] = res.data;
-    
+
     return Array.isArray(products)
         ? products.map(p => ({
             id: p.id as number,
@@ -199,4 +219,9 @@ export const listDropdownSuppliers = async (): Promise<SelectOption[]> => {
     const suppliersData = res.data.suppliers || res.data.data || res.data;
     const suppliers: any[] = Array.isArray(suppliersData) ? suppliersData : [];
     return suppliers.map(s => ({ id: s.id as number, name: s.name || s.name }));
+};
+
+export const getProductClassifications = async (productId: number): Promise<ProductClassification[]> => {
+    const res = await axios.get(`${API_URL_PRODUCTS}/classifications/${productId}`);
+    return Array.isArray(res.data) ? res.data : [];
 };
