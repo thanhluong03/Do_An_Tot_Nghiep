@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, Inject } from '@nestjs/common';
 import { GeocodingService, GeocodeResult } from '@app/geocoding';
-import { OrderRepository, DriverLocationRepository } from '@app/database';
+import { OrderRepository, DriverLocationRepository, UserRepository } from '@app/database';
 import { DriverLocationService } from '@app/driver_location';
 
 interface CurrentLocation {
@@ -18,6 +18,8 @@ export class TrackingController {
     private readonly orderRepository: OrderRepository,
     @Inject(DriverLocationRepository)
     private readonly driverLocationRepository: DriverLocationRepository,
+    @Inject(UserRepository)
+    private readonly userRepository: UserRepository,
     private readonly driverLocationService: DriverLocationService,
   ) {}
 
@@ -55,6 +57,32 @@ export class TrackingController {
       };
     }
 
+    // Fallback: derive driver start coordinates from driver's saved address
+    // Only when we don't have a valid current GPS (lat/lon missing or null)
+    let driverStartCoordinates: GeocodeResult | null = null;
+    try {
+      const needFallback =
+        !driverLocation ||
+        driverLocation.latitude === null ||
+        driverLocation.longitude === null ||
+        typeof driverLocation.latitude !== 'number' ||
+        typeof driverLocation.longitude !== 'number';
+
+      if (needFallback && driverLocation?.driver_id) {
+        const driver = await this.userRepository.findById(driverLocation.driver_id);
+        if (driver?.address) {
+          try {
+            const geo = await this.geocodingService.geocode(driver.address);
+            if (geo) driverStartCoordinates = geo;
+          } catch (geErr) {
+            // swallow geocoding errors for fallback
+          }
+        }
+      }
+    } catch (e) {
+      // ignore fallback errors
+    }
+
     return {
       order_id: order.id,
       order_status: order.status,
@@ -69,6 +97,13 @@ export class TrackingController {
       driver_location: currentLocation,
       driver_id: driverLocation?.driver_id || null,
       driver_status: driverLocation?.driver_status || null,
+      driver_start_coordinates: driverStartCoordinates
+        ? {
+            latitude: driverStartCoordinates.latitude,
+            longitude: driverStartCoordinates.longitude,
+            display_name: driverStartCoordinates.display_name,
+          }
+        : null,
     };
   }
 

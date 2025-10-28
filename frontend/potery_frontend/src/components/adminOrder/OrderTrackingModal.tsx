@@ -35,10 +35,12 @@ export default function OrderTrackingModal({
       setTrackingData(tracking);
 
       // If both driver and customer coordinates exist, get route
-      if (tracking.driver_location && tracking.customer_coordinates) {
+      const dLat = tracking.driver_location?.latitude ?? tracking.driver_start_coordinates?.latitude;
+      const dLon = tracking.driver_location?.longitude ?? tracking.driver_start_coordinates?.longitude;
+      if (dLat != null && dLon != null && tracking.customer_coordinates) {
         const route = await trackingApi.getRoute(
-          tracking.driver_location.latitude,
-          tracking.driver_location.longitude,
+          dLat,
+          dLon,
           tracking.customer_coordinates.latitude,
           tracking.customer_coordinates.longitude,
         );
@@ -76,7 +78,7 @@ export default function OrderTrackingModal({
         }));
 
         // Refresh route if customer coordinates exist
-        if (trackingData?.customer_coordinates) {
+        if ((trackingData?.customer_coordinates) || (lastLocation && trackingData?.customer_coordinates)) {
           setTimeout(async () => {
             const route = await trackingApi.getRoute(
               data.latitude,
@@ -177,12 +179,12 @@ export default function OrderTrackingModal({
               </div>
 
               {/* Map */}
-              {trackingData.driver_location || trackingData.customer_coordinates ? (
+              {trackingData.driver_location || trackingData.driver_start_coordinates || trackingData.customer_coordinates ? (
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-3">Bản đồ tracking</h3>
                   <TrackingMap
-                    driverLat={trackingData.driver_location?.latitude}
-                    driverLon={trackingData.driver_location?.longitude}
+                    driverLat={trackingData.driver_location?.latitude ?? trackingData.driver_start_coordinates?.latitude}
+                    driverLon={trackingData.driver_location?.longitude ?? trackingData.driver_start_coordinates?.longitude}
                     customerLat={trackingData.customer_coordinates?.latitude}
                     customerLon={trackingData.customer_coordinates?.longitude}
                     routeCoordinates={routeData}
