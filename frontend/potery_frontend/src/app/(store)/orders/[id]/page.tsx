@@ -248,7 +248,7 @@ function OrderDetailClient({ id }: { id: string }) {
         <div className="bg-white rounded-xl border p-4 shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Địa chỉ giao hàng</h2>
-            {trackingData?.driver_location && trackingData?.customer_coordinates && (
+            {(trackingData?.driver_location || trackingData?.driver_start_coordinates) && trackingData?.customer_coordinates && (
               <button
                 onClick={() => setShowMap(!showMap)}
                 className="text-sm text-blue-600 hover:underline"
@@ -263,8 +263,8 @@ function OrderDetailClient({ id }: { id: string }) {
           {showMap && trackingData && (
             <div className="mt-4">
               <TrackingMap
-                driverLat={trackingData.driver_location?.latitude}
-                driverLon={trackingData.driver_location?.longitude}
+                driverLat={trackingData.driver_location?.latitude ?? trackingData.driver_start_coordinates?.latitude}
+                driverLon={trackingData.driver_location?.longitude ?? trackingData.driver_start_coordinates?.longitude}
                 customerLat={trackingData.customer_coordinates?.latitude}
                 customerLon={trackingData.customer_coordinates?.longitude}
                 routeCoordinates={routeData}
@@ -273,9 +273,11 @@ function OrderDetailClient({ id }: { id: string }) {
                 orderStatus={order.status}
                 height="400px"
               />
-              {trackingData.driver_location && (
+              {(trackingData.driver_location || trackingData.driver_start_coordinates) && (
                 <div className="text-xs text-gray-500 mt-2">
-                  Cập nhật lần cuối: {new Date(trackingData.driver_location.timestamp).toLocaleString('vi-VN')}
+                  {trackingData.driver_location
+                    ? `Cập nhật lần cuối: ${new Date(trackingData.driver_location.timestamp).toLocaleString('vi-VN')}`
+                    : `Điểm xuất phát (từ địa chỉ tài xế): ${trackingData.driver_start_coordinates?.display_name ?? ''}`}
                 </div>
               )}
             </div>

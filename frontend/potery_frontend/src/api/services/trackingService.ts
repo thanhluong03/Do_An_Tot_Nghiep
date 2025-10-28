@@ -26,6 +26,11 @@ export interface OrderTrackingData {
   } | null;
   driver_id: number | null;
   driver_status: string | null;
+  driver_start_coordinates?: {
+    latitude: number;
+    longitude: number;
+    display_name: string;
+  } | null;
 }
 
 export interface RouteData {

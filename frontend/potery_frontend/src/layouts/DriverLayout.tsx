@@ -11,6 +11,7 @@ interface DriverLayoutProps {
 export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [driverName, setDriverName] = useState('Tài xế');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Lấy thông tin driver từ localStorage sau khi component mount
   useEffect(() => {
@@ -95,13 +96,28 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
 
             <div className="flex-1"></div>
 
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Xin chào, <span className="font-semibold text-gray-800">{driverName}</span>
-              </span>
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                {driverName.charAt(0).toUpperCase()}
-              </div>
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+              >
+                <span className="text-sm text-gray-600">
+                  Xin chào, <span className="font-semibold text-gray-800">{driverName}</span>
+                </span>
+                <div className="w-9 h-9 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                  {driverName.charAt(0).toUpperCase()}
+                </div>
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" /> Đăng xuất
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

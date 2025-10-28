@@ -55,6 +55,10 @@ function MapUpdater({ center }: { center: [number, number] }) {
   const prevCenterRef = useRef<[number, number]>([0, 0]);
 
   useEffect(() => {
+    const latOk = Number.isFinite(center?.[0]);
+    const lonOk = Number.isFinite(center?.[1]);
+    if (!latOk || !lonOk) return;
+
     if (
       !prevCenterRef.current ||
       prevCenterRef.current[0] !== center[0] ||
@@ -82,20 +86,27 @@ export default function TrackingMap({
 }: TrackingMapProps) {
   const [center, setCenter] = useState<[number, number]>([10.762622, 106.660172]); // Default to Ho Chi Minh City
 
+  const isValid = (n?: number) => typeof n === 'number' && Number.isFinite(n);
+
   useEffect(() => {
     // Calculate center based on available points
-    if (driverLat && driverLon && customerLat && customerLon) {
-      const lat = (driverLat + customerLat) / 2;
-      const lon = (driverLon + customerLon) / 2;
-      setCenter([lat, lon]);
-    } else if (driverLat && driverLon) {
-      setCenter([driverLat, driverLon]);
-    } else if (customerLat && customerLon) {
-      setCenter([customerLat, customerLon]);
+    const hasDriver = isValid(driverLat) && isValid(driverLon);
+    const hasCustomer = isValid(customerLat) && isValid(customerLon);
+
+    if (hasDriver && hasCustomer) {
+      const lat = ((driverLat as number) + (customerLat as number)) / 2;
+      const lon = ((driverLon as number) + (customerLon as number)) / 2;
+      if (isValid(lat) && isValid(lon)) setCenter([lat, lon]);
+    } else if (hasDriver) {
+      setCenter([driverLat as number, driverLon as number]);
+    } else if (hasCustomer) {
+      setCenter([customerLat as number, customerLon as number]);
     }
   }, [driverLat, driverLon, customerLat, customerLon]);
 
-  if (!driverLat && !customerLat) {
+  const canShowAnyPoint = (isValid(driverLat) && isValid(driverLon)) || (isValid(customerLat) && isValid(customerLon));
+
+  if (!canShowAnyPoint) {
     return (
       <div
         style={{ height }}
@@ -124,9 +135,9 @@ export default function TrackingMap({
         />
 
         {/* Driver Marker */}
-        {driverLat && driverLon && (
+        {isValid(driverLat) && isValid(driverLon) && (
           <Marker
-            position={[driverLat, driverLon]}
+            position={[driverLat as number, driverLon as number]}
             icon={driverIcon}
             key={`driver-${driverLat}-${driverLon}`}
           >
@@ -147,8 +158,8 @@ export default function TrackingMap({
         )}
 
         {/* Customer Marker */}
-        {customerLat && customerLon && (
-          <Marker position={[customerLat, customerLon]} icon={customerIcon}>
+        {isValid(customerLat) && isValid(customerLon) && (
+          <Marker position={[customerLat as number, customerLon as number]} icon={customerIcon}>
             <Popup>
               <div>
                 <strong>{customerName}</strong>
@@ -171,14 +182,14 @@ export default function TrackingMap({
         {/* Direct line if no route provided but both points exist */}
         {showRoute &&
           !routeCoordinates &&
-          driverLat &&
-          driverLon &&
-          customerLat &&
-          customerLon && (
+          isValid(driverLat) &&
+          isValid(driverLon) &&
+          isValid(customerLat) &&
+          isValid(customerLon) && (
             <Polyline
               positions={[
-                [driverLat, driverLon],
-                [customerLat, customerLon],
+                [driverLat as number, driverLon as number],
+                [customerLat as number, customerLon as number],
               ]}
               pathOptions={limeOptions}
             />

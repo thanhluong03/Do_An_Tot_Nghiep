@@ -33,6 +33,7 @@ export default function CheckoutPage() {
   const { items, clear: clearCart } = useCart();
 
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
@@ -357,6 +358,7 @@ export default function CheckoutPage() {
     const cartItems = serverItems.length > 0 ? serverItems : items;
     if (!cartItems.length) return setError('❌ Giỏ hàng trống');
     if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
+    if (!city.trim()) return setError('❌ Vui lòng nhập Tỉnh/Thành phố');
 
     setCreating(true);
     setError(null);
@@ -392,7 +394,7 @@ export default function CheckoutPage() {
             full_name: guestName.trim(),
             email: fallbackEmail,
             phone_number: guestPhone.trim(),
-            address: address.trim(),
+            address: `${address.trim()}, ${city.trim()}`,
           });
 
           customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
@@ -429,7 +431,7 @@ export default function CheckoutPage() {
 
       const payload = {
         customer_id: customerId,
-        shipping_address: address,
+        shipping_address: `${address.trim()}, ${city.trim()}`,
         voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
         payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
         items: payloadItems,
@@ -681,7 +683,20 @@ return (
                   rows={3}
                   value={address}
                   onChange={e => setAddress(e.target.value)}
-                  placeholder="Số nhà, đường, phường, quận, tỉnh/thành"
+                  placeholder="Số nhà, đường, phường, quận"
+                />
+              </div>
+
+              {/* City */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <MapPin className='w-3 h-3'/> Tỉnh/Thành phố *
+                </label>
+                <input
+                  className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
                 />
               </div>
               
@@ -705,7 +720,7 @@ return (
               
               {/* Submit Button */}
               <button
-                disabled={creating || loadingCart || finalTotal === 0 || !address.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
+                disabled={creating || loadingCart || finalTotal === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
                 onClick={handleCreate}
                 className="w-full bg-[#A38D64] text-white px-6 py-3 rounded-md text-base font-bold disabled:opacity-50 hover:bg-[#8D7A58] transition shadow-md hover:shadow-lg"
               >
