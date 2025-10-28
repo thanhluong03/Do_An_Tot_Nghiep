@@ -1,3 +1,23 @@
+// Product Classification and Attribute types
+export interface ProductAttribute {
+  id?: number;
+  name: string;
+}
+
+export interface ProductClassification {
+  id?: number;
+  name: string;
+  attributes: ProductAttribute[];
+}
+
+export interface ClassificationAttributeRelationship {
+  id?: number;
+  product_attribute_id_1: number;
+  product_attribute_id_2: number;
+  price?: number;
+  quantity?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -23,10 +43,12 @@ export interface Product {
     id: string;
     name: string;
     address: string;
-    quantity_sold:number;
-    quantity_stock:number;
+    quantity_sold: number;
+    quantity_stock: number;
   };
   total_quantity_sold?: number;
+  classifications?: ProductClassification[];
+  relationships?: ClassificationAttributeRelationship[];
   createdAt: Date;
   updatedAt: Date;
 }

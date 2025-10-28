@@ -15,6 +15,7 @@ export default function AdminLoginPage() {
       const res = await fetch(`http://localhost:3000/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 

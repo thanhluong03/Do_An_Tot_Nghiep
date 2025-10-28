@@ -21,3 +21,6 @@ export * from './import_product.repository';
 export * from './order_status_history.repository';
 export * from './delivery_proof.repository';
 export * from './driver_location.repository';
+export * from './product-classification.repository';
+export * from './product-attribute.repository';
+export * from './classification-attribute-relationship.repository';

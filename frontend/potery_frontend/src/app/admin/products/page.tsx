@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
   getProducts,
+  getProductDetail,
   addProduct,
   updateProduct,
   deleteProduct,
@@ -27,7 +28,7 @@ const ITEMS_PER_PAGE = 10;
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Lọc & tìm kiếm
@@ -50,8 +51,8 @@ export default function ProductsPage() {
     images: [] as ProductImage[],
   } as Product);
   const [validationErrors, setValidationErrors] = useState<ProductFormErrors>(
-      {}
-    );
+    {}
+  );
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -151,7 +152,7 @@ export default function ProductsPage() {
       price: 0,
       main_image: "",
       images: [],
-      
+
       category_id: categories[0]?.id || 0,
       supplier_id: suppliers[0]?.id || 0,
       // Không cần quantity
@@ -160,66 +161,74 @@ export default function ProductsPage() {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (product: Product) => {
-    setEditingProduct(product);
-    // Khi chỉnh sửa, lấy các thông tin cần thiết từ product, bỏ qua quantity
-    setFormData({
-      ...product,
-      category_id: product.category_id || product.category?.id || 0,
-      supplier_id: product.supplier_id || product.supplier?.id || 0,
-    } as Product);
-    setValidationErrors({});
-    setIsModalOpen(true);
+  const openEditModal = async (product: Product) => {
+    try {
+      // Lấy chi tiết sản phẩm bao gồm classifications và relationships
+      const productDetail = await getProductDetail(Number(product.id));
+      setEditingProduct(productDetail);
+
+      // Khi chỉnh sửa, lấy các thông tin cần thiết từ product, bỏ qua quantity
+      setFormData({
+        ...productDetail,
+        category_id: productDetail.category_id || productDetail.category?.id || 0,
+        supplier_id: productDetail.supplier_id || productDetail.supplier?.id || 0,
+      } as Product);
+      setValidationErrors({});
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching product detail:', error);
+      toast.error("Không thể tải chi tiết sản phẩm!");
+    }
   };
   const validateForm = (data: Product): boolean => {
-      const errors: ProductFormErrors = {};
+    const errors: ProductFormErrors = {};
 
-      if (!data.name || data.name.trim() === "") {
-        errors.name = "Tên sản phẩm không được để trống.";
-      } else if (data.name.length < 3 || data.name.length > 255) {
-        errors.name = "Tên sản phẩm phải từ 3 đến 255 ký tự.";
-      }
+    if (!data.name || data.name.trim() === "") {
+      errors.name = "Tên sản phẩm không được để trống.";
+    } else if (data.name.length < 3 || data.name.length > 255) {
+      errors.name = "Tên sản phẩm phải từ 3 đến 255 ký tự.";
+    }
 
-      if (data.price === undefined || data.price <= 0) {
-        errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
-      } else if (isNaN(data.price)) {
-        errors.price = "Giá sản phẩm không hợp lệ.";
-      }
+    if (data.price === undefined || data.price <= 0) {
+      errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
+    } else if (isNaN(data.price)) {
+      errors.price = "Giá sản phẩm không hợp lệ.";
+    }
 
-      if (!data.description || data.description.trim() === "") {
-        errors.description = "Mô tả sản phẩm không được để trống.";
-      }
+    if (!data.description || data.description.trim() === "") {
+      errors.description = "Mô tả sản phẩm không được để trống.";
+    }
 
-      // Kiểm tra Category/Supplier nếu danh sách có sẵn (chỉ bắt buộc nếu có dữ liệu danh mục)
-      if (categories.length > 0 && data.category_id === 0) {
-        errors.category_id = "Vui lòng chọn danh mục.";
-      }
+    // Kiểm tra Category/Supplier nếu danh sách có sẵn (chỉ bắt buộc nếu có dữ liệu danh mục)
+    if (categories.length > 0 && data.category_id === 0) {
+      errors.category_id = "Vui lòng chọn danh mục.";
+    }
 
-      if (suppliers.length > 0 && data.supplier_id === 0) {
-        errors.supplier_id = "Vui lòng chọn nhà cung cấp.";
-      }
+    if (suppliers.length > 0 && data.supplier_id === 0) {
+      errors.supplier_id = "Vui lòng chọn nhà cung cấp.";
+    }
 
-      setValidationErrors(errors);
+    setValidationErrors(errors);
 
-      if (Object.keys(errors).length > 0) {
-        toast.error("Vui lòng kiểm tra lại thông tin nhập liệu!");
-        return false;
-      }
-      return true;
+    if (Object.keys(errors).length > 0) {
+      toast.error("Vui lòng kiểm tra lại thông tin nhập liệu!");
+      return false;
+    }
+    return true;
   };
   const handleSave = async (form: FormData) => {
     const productDataForValidation: Product = {
-        name: form.get('name') as string,
-        price: Number(form.get('price')),
-        description: form.get('description') as string,
-        main_image: '',
-        category_id: Number(form.get('category_id')),
-        supplier_id: Number(form.get('supplier_id')),
-        images: [],
+      name: form.get('name') as string,
+      price: Number(form.get('price')),
+      description: form.get('description') as string,
+      main_image: '',
+      category_id: Number(form.get('category_id')),
+      supplier_id: Number(form.get('supplier_id')),
+      images: [],
     } as Product;
-    
+
     if (!validateForm(productDataForValidation)) {
-        return; 
+      return;
     }
     try {
       if (editingProduct) {
@@ -275,17 +284,17 @@ export default function ProductsPage() {
           </div>
         </div>
       ),
-      { 
+      {
         duration: Infinity, // Giữ toast cho đến khi người dùng tương tác
         position: 'top-center', // Giữ nguyên position, logic căn giữa sẽ nằm ở `style`
-     
+
         style: {
           width: '100%',
-          maxWidth: '100%', 
-          padding: '0', 
+          maxWidth: '100%',
+          padding: '0',
           background: 'transparent',
           boxShadow: 'none',
-        
+
         },
       }
     );
@@ -317,7 +326,7 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex justify-end mb-4">
-        
+
           <button
             onClick={openAddModal}
             className="px-4 py-2 bg-[#F54900] hover:bg-orange-600 text-white rounded-lg shadow-md transition"
@@ -361,7 +370,7 @@ export default function ProductsPage() {
             </select>
 
             <select
-                title="Lọc theo thời gian"
+              title="Lọc theo thời gian"
               value={dateSort}
               onChange={(e) => setDateSort(e.target.value as "newest" | "oldest" | "")}
               className="border border-gray-300 rounded-xl p-2 flex-1 focus:ring-2 focus:ring-indigo-500"
@@ -401,11 +410,10 @@ export default function ProductsPage() {
                   <button
                     key={i + 1}
                     onClick={() => handlePageChange(i + 1)}
-                    className={`px-3 py-1 rounded-lg ${
-                      currentPage === i + 1
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-200 hover:bg-gray-300"
-                    }`}
+                    className={`px-3 py-1 rounded-lg ${currentPage === i + 1
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-200 hover:bg-gray-300"
+                      }`}
                   >
                     {i + 1}
                   </button>
@@ -438,10 +446,10 @@ export default function ProductsPage() {
         setIsModalOpen={setIsModalOpen}
         categories={categories}
         suppliers={suppliers}
-        validationErrors={validationErrors} 
+        validationErrors={validationErrors}
         setValidationErrors={setValidationErrors}
       />
-              
+
     </div>
   );
 }
