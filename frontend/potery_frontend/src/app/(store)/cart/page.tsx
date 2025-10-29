@@ -423,10 +423,7 @@ export default function CartPage() {
           {/* KẾT THÚC THẺ DIV BỌC NỘI DUNG CHÍNH */}
 
         </div>
-        
-        {/* ======================================================= */}
-        {/* KHỐI GỢI Ý SẢN PHẨM - ĐÃ TINH CHỈNH CSS */}
-        {/* ======================================================= */}
+
         {relatedProducts.length > 0 && (
           <div className="max-w-7xl mx-auto mt-20 px-4 md:px-6 lg:px-8 bg-white rounded-2xl shadow-2xl shadow-gray-300/50 p-6 md:p-10">
             

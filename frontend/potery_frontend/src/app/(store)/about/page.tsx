@@ -235,7 +235,7 @@ export default function NewsPage() {
               Góc cảm hứng
             </h2>
             <p className="text-[#65604E] text-lg leading-relaxed mb-4">
-              Mỗi sản phẩm của Nhà Gạo không chỉ là vật dụng – mà còn là kết tinh của đất, lửa và bàn tay người thợ.
+              Mỗi sản phẩm của Nhà Gạo không chỉ là vật dụng mà còn là kết tinh của đất, lửa và bàn tay người thợ.
               <br />
               <br />
               Chúng tôi hy vọng bạn sẽ tìm thấy nguồn cảm hứng sống chậm, sống đẹp và trân trọng giá trị thủ công trong từng câu chuyện được kể.

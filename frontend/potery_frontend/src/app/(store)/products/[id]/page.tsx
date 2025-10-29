@@ -25,7 +25,6 @@ export default async function ProductDetailPage(props: PageProps) {
 
   return (
     <BaseLayout>
-      
       <ProductDetailClient product={product} />
     </BaseLayout>
   );
