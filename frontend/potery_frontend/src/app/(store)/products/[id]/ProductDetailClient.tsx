@@ -178,7 +178,7 @@ export function ProductDetailClient({ product }: { product: any }) {
   // Find selected classification and its price
   const getSelectedClassificationData = () => {
     if (!selectedClassifications.attribute1_id || !selectedClassifications.attribute2_id) {
-      return { price: product.price, quantity_stock: 0 };
+      return { price: product.price, quantity_stock: 0, originalPrice: product.price };
     }
 
     const selectedClassification = storeClassifications.find((c: StoreClassification) =>
@@ -186,14 +186,33 @@ export function ProductDetailClient({ product }: { product: any }) {
       c.attribute2_id === selectedClassifications.attribute2_id
     );
 
-    return selectedClassification ? {
-      price: selectedClassification.price,
-      quantity_stock: selectedClassification.quantity_stock
-    } : { price: product.price, quantity_stock: 0 };
+    if (selectedClassification) {
+      const originalPrice = selectedClassification.price;
+      let finalPrice = selectedClassification.price;
+
+      // Apply promotion discount if exists
+      if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+        const discountValue = Number(product.promotion.discount_value);
+        if (product.promotion.discount_type === 'PERCENTAGE') {
+          finalPrice = originalPrice * (1 - discountValue / 100);
+        } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+          finalPrice = Math.max(0, originalPrice - discountValue);
+        }
+      }
+
+      return {
+        price: finalPrice,
+        originalPrice: originalPrice,
+        quantity_stock: selectedClassification.quantity_stock
+      };
+    }
+
+    return { price: product.price, originalPrice: product.price, quantity_stock: 0 };
   };
 
   const classificationData = getSelectedClassificationData();
   const currentPrice = classificationData.price;
+  const comboOriginalPrice = classificationData.originalPrice;
   const currentStock = classificationData.quantity_stock;
 
   // Check if a specific attribute combination is available in current store
@@ -231,10 +250,11 @@ export function ProductDetailClient({ product }: { product: any }) {
     }));
   };
 
-  // Calculate discount percentage if applicable
+  // Calculate discount percentage only for real promotions (not for combo selection)
   const getDiscountPercentage = () => {
-    if (product.originalPrice && product.originalPrice > currentPrice) {
-      return Math.round(((product.originalPrice - currentPrice) / product.originalPrice) * 100);
+    // Only show discount if there's a real promotion (flash sale, promotion, etc.)
+    if ((product.isFlashSale || product.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice) {
+      return Math.round(((comboOriginalPrice - currentPrice) / comboOriginalPrice) * 100);
     }
     return 0;
   };
@@ -355,12 +375,13 @@ export function ProductDetailClient({ product }: { product: any }) {
           {/* --- Price & mô tả --- */}
           <div className="p-5 rounded-2xl bg-white shadow space-y-5">
             <div className="flex items-baseline gap-3">
-              {product.originalPrice && product.originalPrice > currentPrice && (
+              {/* Only show original price and discount for real promotions */}
+              {(product.isFlashSale || product.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice && (
                 <span className="text-lg text-gray-500 line-through">
-                  {formatPrice(product.originalPrice)}
+                  {formatPrice(comboOriginalPrice)}
                 </span>
               )}
-              <span className={`text-3xl font-bold ${product.originalPrice ? 'text-red-600' : 'text-[#2C2A24]'}`}>
+              <span className={`text-3xl font-bold ${(product.isFlashSale || product.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice ? 'text-red-600' : 'text-[#2C2A24]'}`}>
                 {formatPrice(currentPrice)}
               </span>
               {getDiscountPercentage() > 0 && (
@@ -397,10 +418,10 @@ export function ProductDetailClient({ product }: { product: any }) {
                             onClick={() => handleClassificationChange('attribute1', attr.id, attr.name)}
                             disabled={!isAvailable}
                             className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
-                                ? 'border-orange-500 bg-orange-50 text-orange-600'
-                                : isAvailable
-                                  ? 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                  : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                              ? 'border-orange-500 bg-orange-50 text-orange-600'
+                              : isAvailable
+                                ? 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
                               }`}
                           >
                             {attr.name}
@@ -426,10 +447,10 @@ export function ProductDetailClient({ product }: { product: any }) {
                             onClick={() => handleClassificationChange('attribute2', attr.id, attr.name)}
                             disabled={!isAvailable}
                             className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
-                                ? 'border-orange-500 bg-orange-50 text-orange-600'
-                                : isAvailable
-                                  ? 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                  : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                              ? 'border-orange-500 bg-orange-50 text-orange-600'
+                              : isAvailable
+                                ? 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
                               }`}
                           >
                             {attr.name}
