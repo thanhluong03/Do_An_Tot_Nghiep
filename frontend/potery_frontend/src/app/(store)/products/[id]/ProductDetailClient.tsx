@@ -121,56 +121,27 @@ export function ProductDetailClient({ product }: { product: any }) {
   console.log('🏪 Current store:', currentStore);
   console.log('📦 Store classifications:', storeClassifications);
 
-  // Get unique attributes for each classification type
-  const getUniqueAttributes = () => {
-    const attribute1Map = new Map<number, Attribute>();
-    const attribute2Map = new Map<number, Attribute>();
+  // Get unique attributes and classification names from product.classifications
+  const getUniqueAttributesAndNames = () => {
+    let attribute1: Attribute[] = [];
+    let attribute2: Attribute[] = [];
+    let attribute1Name = 'Phân loại 1';
+    let attribute2Name = 'Phân loại 2';
 
-    // Use product.relationships to get attribute names since storeClassifications has empty names
-    if (product.relationships && Array.isArray(product.relationships)) {
-      product.relationships.forEach((rel: ProductRelationship) => {
-        // Add attribute1 (màu sắc)
-        if (rel.product_attribute_id_1 && rel.attribute1_name) {
-          attribute1Map.set(rel.product_attribute_id_1, {
-            id: rel.product_attribute_id_1,
-            name: rel.attribute1_name
-          });
-        }
-        // Add attribute2 (kích thước)
-        if (rel.product_attribute_id_2 && rel.attribute2_name) {
-          attribute2Map.set(rel.product_attribute_id_2, {
-            id: rel.product_attribute_id_2,
-            name: rel.attribute2_name
-          });
-        }
-      });
+    if (product.classifications && Array.isArray(product.classifications)) {
+      if (product.classifications[0]) {
+        attribute1Name = product.classifications[0].name;
+        attribute1 = product.classifications[0].attributes || [];
+      }
+      if (product.classifications[1]) {
+        attribute2Name = product.classifications[1].name;
+        attribute2 = product.classifications[1].attributes || [];
+      }
     }
-
-    // Fallback: if relationships don't have names, try classifications
-    if (attribute1Map.size === 0 || attribute2Map.size === 0) {
-      storeClassifications.forEach((classification: StoreClassification) => {
-        if (classification.attribute1_id && classification.attribute1_name) {
-          attribute1Map.set(classification.attribute1_id, {
-            id: classification.attribute1_id,
-            name: classification.attribute1_name
-          });
-        }
-        if (classification.attribute2_id && classification.attribute2_name) {
-          attribute2Map.set(classification.attribute2_id, {
-            id: classification.attribute2_id,
-            name: classification.attribute2_name
-          });
-        }
-      });
-    }
-
-    return {
-      attribute1: Array.from(attribute1Map.values()),
-      attribute2: Array.from(attribute2Map.values())
-    };
+    return { attribute1, attribute2, attribute1Name, attribute2Name };
   };
 
-  const { attribute1, attribute2 } = getUniqueAttributes();
+  const { attribute1, attribute2, attribute1Name, attribute2Name } = getUniqueAttributesAndNames();
 
   console.log('🎨 Attribute1 (colors):', attribute1);
   console.log('📏 Attribute2 (sizes):', attribute2);
@@ -406,7 +377,9 @@ export function ProductDetailClient({ product }: { product: any }) {
                 {/* Phân loại 1 */}
                 {attribute1.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Phân loại 1</h3>
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">
+                      {attribute1Name}
+                    </h3>
                     <div className="flex flex-wrap gap-2">
                       {attribute1.map((attr: Attribute) => {
                         const isAvailable = isAttributeAvailable(attr.id, 'attribute1');
@@ -435,7 +408,9 @@ export function ProductDetailClient({ product }: { product: any }) {
                 {/* Phân loại 2 */}
                 {attribute2.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Phân loại 2</h3>
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">
+                      {attribute2Name}
+                    </h3>
                     <div className="flex flex-wrap gap-2">
                       {attribute2.map((attr: Attribute) => {
                         const isAvailable = isAttributeAvailable(attr.id, 'attribute2');
