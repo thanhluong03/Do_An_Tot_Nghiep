@@ -10,39 +10,82 @@ const api = axios.create({
   },
 });
 export interface StoreInventory {
-    store_id: string;
-    store_name: string;
-    store_address: string;
-    quantity_stock: number; // Tồn kho tại cửa hàng này
+  store_id: string;
+  store_name: string;
+  store_address: string;
+  quantity_stock: number; // Tồn kho tại cửa hàng này
+  classifications: {
+    id?: number;
+    attribute1_id: number;
+    attribute2_id: number;
+    attribute1_name: string;
+    attribute2_name: string;
+    price: number;
+    quantity_stock: number;
+    quantity_sold: number;
+  }[];
 }
 
-// Kiểu Product Detail chứa danh sách các Store Inventory
+// Kiểu Product Detail chứa danh sách các Store Inventory với classification
 export interface ProductDetail extends Product {
-    stores: StoreInventory[]; // Mảng các cửa hàng phân phối
-    promotion: any;           // Dữ liệu promotion (nếu có)
+  stores: StoreInventory[]; // Mảng các cửa hàng phân phối với phân loại
+  promotion: any;           // Dữ liệu promotion (nếu có)
+  classifications?: any[];  // Thông tin phân loại sản phẩm
+  relationships?: any[];    // Ma trận giá phân loại
+  cheapestStore?: StoreInventory | null; // Cửa hàng có combo rẻ nhất
+  cheapestClassification?: any | null;   // Combo rẻ nhất
 }
 const mapProductDetail = (p: any): ProductDetail => {
   const baseProduct = mapProduct(p);
 
   const stores: StoreInventory[] = Array.isArray(p.stores)
     ? p.stores.map((s: any) => ({
-        store_id: String(s.store_id ?? ''),
-        store_name: s.store_name ?? 'Cửa hàng',
-        store_address: s.store_address ?? '',
-        quantity_stock: Number(s.quantity_stock ?? 0),
-      }))
+      store_id: String(s.store_id ?? ''), // Keep as string for consistency
+      store_name: s.store_name ?? 'Cửa hàng',
+      store_address: s.store_address ?? '',
+      quantity_stock: Number(s.quantity_stock ?? 0),
+      classifications: Array.isArray(s.classifications)
+        ? s.classifications.map((c: any) => ({
+          id: c.id,
+          attribute1_id: c.attribute1_id,
+          attribute2_id: c.attribute2_id,
+          attribute1_name: c.attribute1_name || '',
+          attribute2_name: c.attribute2_name || '',
+          price: Number(c.price || 0),
+          quantity_stock: Number(c.quantity_stock || 0),
+          quantity_sold: Number(c.quantity_sold || 0),
+        }))
+        : [],
+    }))
     : [];
 
-  const originalPrice = Number(p.price ?? 0);
-  let currentPrice = originalPrice;
+  // Find the store and combo with minimum price across all stores
+  let minPrice = Number(p.price ?? 0);
+  let maxPrice = Number(p.price ?? 0);
+  let cheapestStore = null;
+  let cheapestClassification = null;
 
-  // Nếu có promotion → tính toán giảm giá
+  stores.forEach(store => {
+    store.classifications.forEach(classification => {
+      if (classification.price > 0 && classification.quantity_stock > 0) {
+        if (classification.price < minPrice || minPrice === Number(p.price ?? 0)) {
+          minPrice = classification.price;
+          cheapestStore = store;
+          cheapestClassification = classification;
+        }
+        maxPrice = Math.max(maxPrice, classification.price);
+      }
+    });
+  });
+
+  // Apply promotion discount to min price if exists
+  let currentPrice = minPrice;
   if (p.promotion && p.promotion.discount_type && p.promotion.discount_value) {
     const discountValue = Number(p.promotion.discount_value);
     if (p.promotion.discount_type === 'PERCENTAGE') {
-      currentPrice = originalPrice * (1 - discountValue / 100);
+      currentPrice = minPrice * (1 - discountValue / 100);
     } else if (p.promotion.discount_type === 'FIXED') {
-      currentPrice = Math.max(0, originalPrice - discountValue);
+      currentPrice = Math.max(0, minPrice - discountValue);
     }
   }
 
@@ -53,57 +96,82 @@ const mapProductDetail = (p: any): ProductDetail => {
     id: String(p.id ?? p._id ?? ''),
     name: p.name ?? 'Sản phẩm',
     description: p.description ?? '',
-    price: currentPrice, // ✅ giá sau giảm
-    originalPrice: currentPrice < originalPrice ? originalPrice : undefined, // hiển thị nếu có giảm
-    discount: currentPrice < originalPrice ? (originalPrice - currentPrice) / originalPrice : undefined,
+    price: currentPrice, // ✅ Use minimum classification price
+    originalPrice: minPrice < maxPrice ? maxPrice : undefined, // Show max price as original if there's a range
+    discount: minPrice < maxPrice ? (maxPrice - minPrice) / maxPrice : undefined,
     stock: totalStock,
     stores,
     promotion: p.promotion,
+    classifications: p.classifications || [],
+    relationships: p.relationships || [],
     isFlashSale: Boolean(p.promotion),
-    flashSalePrice: currentPrice < originalPrice ? currentPrice : undefined,
+    flashSalePrice: currentPrice < minPrice ? currentPrice : undefined,
     flashSaleEndTime: p.promotion?.end_date ? new Date(p.promotion.end_date) : undefined,
     total_quantity_sold: typeof p.total_quantity_sold === 'number' ? p.total_quantity_sold : undefined,
+    // Add cheapest store and classification info for auto-selection
+    cheapestStore: cheapestStore,
+    cheapestClassification: cheapestClassification,
   };
 };
 
 // Hàm ánh xạ (mapping) sản phẩm từ API raw data sang kiểu Product frontend
-// Lưu ý: Trường 'stock' sẽ được set tạm bằng 0 và được cập nhật sau từ Inventory API trong getProducts
+// Calculate minimum price from classifications for product listing
 const mapProduct = (p: any): Product => {
   const images: string[] = Array.isArray(p.images)
     ? p.images
-        .sort((a: any, b: any) => (a?.priority || 0) - (b?.priority || 0))
-        .map((img: any) => (img?.image_data ? `data:image/jpeg;base64,${img.image_data}` : ''))
-        .filter(Boolean)
+      .sort((a: any, b: any) => (a?.priority || 0) - (b?.priority || 0))
+      .map((img: any) => (img?.image_data ? `data:image/jpeg;base64,${img.image_data}` : ''))
+      .filter(Boolean)
     : [];
 
-  const originalPrice = Number(p.price ?? 0);
-  let currentPrice = originalPrice;
+  // Find minimum price from classifications if available
+  let minPrice = Number(p.price ?? 0);
+  let maxPrice = Number(p.price ?? 0);
+
+  // Check if this product has stores with classifications
+  if (Array.isArray(p.stores)) {
+    p.stores.forEach((store: any) => {
+      if (Array.isArray(store.classifications)) {
+        store.classifications.forEach((classification: any) => {
+          const classPrice = Number(classification.price || 0);
+          if (classPrice > 0) {
+            minPrice = Math.min(minPrice, classPrice);
+            maxPrice = Math.max(maxPrice, classPrice);
+          }
+        });
+      }
+    });
+  }
+
+  // Use minimum price as the display price
+  let currentPrice = minPrice > 0 ? minPrice : Number(p.price ?? 0);
   let discount: number | undefined = undefined;
+
   if (p.promotion && p.promotion.discount_type && p.promotion.discount_value) {
     const discountValue = Number(p.promotion.discount_value);
     if (p.promotion.discount_type === 'PERCENTAGE') {
-      currentPrice = originalPrice * (1 - discountValue / 100);
+      currentPrice = currentPrice * (1 - discountValue / 100);
     } else if (p.promotion.discount_type === 'FIXED') {
-      currentPrice = Math.max(0, originalPrice - discountValue);
+      currentPrice = Math.max(0, currentPrice - discountValue);
     }
-    if (currentPrice < originalPrice) {
-      discount = (originalPrice - currentPrice) / originalPrice;
+    if (currentPrice < minPrice) {
+      discount = (minPrice - currentPrice) / minPrice;
     }
   }
+
   return {
     id: String(p.id ?? p._id ?? ''),
     name: p.name ?? 'Sản phẩm',
     description: p.description ?? '',
-    price: currentPrice,
-    originalPrice: currentPrice < originalPrice ? originalPrice : undefined,
+    price: currentPrice, // Use minimum classification price
+    originalPrice: minPrice < maxPrice ? maxPrice : undefined, // Show price range
     discount,
     images,
     category: p.category ?? '',
     category_name: p.category_name ?? '',
     rating: Number(p.rating ?? 5),
     reviewCount: Number(p.reviewCount ?? 0),
-    // Tạm thời đặt stock là 0, sẽ được cập nhật sau từ Inventory API
-    stock: Number(p.quantity_stock ?? p.quantity ?? 0), 
+    stock: Number(p.quantity_stock ?? p.quantity ?? 0),
     isFlashSale: Boolean(p.isFlashSale),
     flashSalePrice: p.flashSalePrice ? Number(p.flashSalePrice) : undefined,
     flashSaleEndTime: p.flashSaleEndTime ? new Date(p.flashSaleEndTime) : undefined,
@@ -116,6 +184,8 @@ const mapProduct = (p: any): Product => {
       id: String(p.store_id ?? ''),
       name: p.store_name ?? 'Cửa hàng',
       address: p.store_address ?? '',
+      quantity_sold: Number(p.quantity_sold ?? 0),
+      quantity_stock: Number(p.quantity_stock ?? 0),
     },
     createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
     updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date(),
@@ -126,32 +196,32 @@ const mapProduct = (p: any): Product => {
 
 // --- API INVENTORY MỚI THÊM VÀO ---
 interface InventoryItem {
-    product_id: string; // Tên trường có thể khác (ví dụ: productId) - Giả định là product_id
-    quantity: number;   // Tên trường có thể khác (ví dụ: stock) - Giả định là quantity
+  product_id: string; // Tên trường có thể khác (ví dụ: productId) - Giả định là product_id
+  quantity: number;   // Tên trường có thể khác (ví dụ: stock) - Giả định là quantity
 }
 
 // Hàm lấy danh sách tồn kho
 const getInventoryList = async (): Promise<InventoryItem[]> => {
-    try {
-        // Sử dụng endpoint /inventory/list từ log NestJS
-        const response = await api.get('/inventory/list'); 
-        // Giả định API Inventory trả về mảng hoặc đối tượng có trường items/data
-        const rawData = response.data;
-        const inventoryArray = Array.isArray(rawData) 
-            ? rawData 
-            : Array.isArray(rawData?.items) ? rawData.items 
-            : Array.isArray(rawData?.data) ? rawData.data
-            : [];
-            
-        return inventoryArray.map((item: any) => ({
-            product_id: String(item.product_id ?? item.productId ?? ''), // Ánh xạ ID sản phẩm
-            quantity: Number(item.quantity_stock ?? item.quantity ?? item.stock ?? 0),        // Ánh xạ số lượng tồn
-        }));
-    } catch (error) {
-        console.error('Failed to fetch inventory list:', error);
-        // Trả về mảng rỗng nếu thất bại để tránh lỗi dừng chương trình
-        return []; 
-    }
+  try {
+    // Sử dụng endpoint /inventory/list từ log NestJS
+    const response = await api.get('/inventory/list');
+    // Giả định API Inventory trả về mảng hoặc đối tượng có trường items/data
+    const rawData = response.data;
+    const inventoryArray = Array.isArray(rawData)
+      ? rawData
+      : Array.isArray(rawData?.items) ? rawData.items
+        : Array.isArray(rawData?.data) ? rawData.data
+          : [];
+
+    return inventoryArray.map((item: any) => ({
+      product_id: String(item.product_id ?? item.productId ?? ''), // Ánh xạ ID sản phẩm
+      quantity: Number(item.quantity_stock ?? item.quantity ?? item.stock ?? 0),        // Ánh xạ số lượng tồn
+    }));
+  } catch (error) {
+    console.error('Failed to fetch inventory list:', error);
+    // Trả về mảng rỗng nếu thất bại để tránh lỗi dừng chương trình
+    return [];
+  }
 };
 // -----------------------------------
 export const productApi = {
@@ -166,30 +236,30 @@ export const productApi = {
     minPrice?: number; // ĐÃ THÊM THAM SỐ
     maxPrice?: number;
   }): Promise<{ products: Product[]; total: number; page: number; limit: number }> => {
-    
+
     // ... (Giữ nguyên phần chuẩn bị params)
     const axiosParams: Record<string, any> = {};
     if (params?.page) axiosParams.page = params.page;
     if (params?.limit) axiosParams.size = params.limit;
     let url = '/products/listproduct-by-inventory'; // Endpoint mặc định
-      if (params?.category) {
-          // Nếu có category, gọi endpoint category dynamic route
-          url = `/products/listproduct-by-category/${params.category}`; // VÍ DỤ: /products/listproduct-by-category/bat dia 
-      }
+    if (params?.category) {
+      // Nếu có category, gọi endpoint category dynamic route
+      url = `/products/listproduct-by-category/${params.category}`; // VÍ DỤ: /products/listproduct-by-category/bat dia 
+    }
     if (params?.search) {
       axiosParams.search = params.search;
-      axiosParams.key = params.search; 
+      axiosParams.key = params.search;
     }
     if (params?.sortBy) axiosParams.sortBy = params.sortBy;
     if (params?.sortOrder) axiosParams.sortOrder = params.sortOrder;
-    if (params?.minPrice) axiosParams.min_price = params.minPrice; 
-    if (params?.maxPrice) axiosParams.max_price = params.maxPrice; 
+    if (params?.minPrice) axiosParams.min_price = params.minPrice;
+    if (params?.maxPrice) axiosParams.max_price = params.maxPrice;
     try {
       // 1. Gọi API lấy danh sách sản phẩm
       const productsPromise = api.get(url, { params: axiosParams });
-      
+
       // 2. Gọi API lấy danh sách tồn kho (Có thể gọi đồng thời)
-      const inventoryPromise = getInventoryList(); 
+      const inventoryPromise = getInventoryList();
 
       const [productResponse, inventoryList] = await Promise.all([productsPromise, inventoryPromise]);
 
@@ -205,7 +275,7 @@ export const productApi = {
               : Array.isArray(raw?.rows)
                 ? raw.rows
                 : [];
-      
+
       // Ánh xạ sản phẩm ban đầu
       const products: Product[] = productArray.map(mapProduct);
 
@@ -214,7 +284,7 @@ export const productApi = {
         map.set(item.product_id, item.quantity);
         return map;
       }, new Map<string, number>());
-      
+
       // 3. Cập nhật số lượng tồn kho (stock) cho từng sản phẩm
       const finalProducts: Product[] = products.map(product => {
         // Lấy số lượng từ Map, nếu không tìm thấy thì đặt là 0
@@ -239,48 +309,48 @@ export const productApi = {
 
   // Lấy chi tiết sản phẩm (Cần thêm logic lấy tồn kho nếu muốn chính xác)
   getProductById: async (id: string): Promise<ProductDetail> => { // Thay đổi kiểu trả về thành ProductDetail
-        try {
-            // Endpoint giả định: /products/productdetail/:id
-            const response = await api.get(`/products/productdetail-by-inventory/${id}`);
-            
-            // Sử dụng hàm ánh xạ chi tiết mới (mapProductDetail)
-            const productDetail = mapProductDetail(response.data); 
-            
-            // Loại bỏ getInventoryList không cần thiết
-            
-            return productDetail;
-        } catch (error) {
-            console.error(`Failed to fetch product with id ${id}:`, error);
-            throw new Error('Failed to fetch product');
-        }
-    },
+    try {
+      // Endpoint giả định: /products/productdetail/:id
+      const response = await api.get(`/products/productdetail-by-inventory/${id}`);
+
+      // Sử dụng hàm ánh xạ chi tiết mới (mapProductDetail)
+      const productDetail = mapProductDetail(response.data);
+
+      // Loại bỏ getInventoryList không cần thiết
+
+      return productDetail;
+    } catch (error) {
+      console.error(`Failed to fetch product with id ${id}:`, error);
+      throw new Error('Failed to fetch product');
+    }
+  },
 
   // ... (Giữ nguyên các hàm khác)
-   getCategories: async (): Promise<ProductCategory[]> => {
-        try {
-            const response = await api.get('/categories/listcategory');
-            const rawData = response.data;
-            
-            // Xử lý dữ liệu trả về: Backend có thể trả về một mảng trực tiếp, 
-            // hoặc mảng nằm trong trường 'data', 'items', 'categories',...
-            const categoriesArray = Array.isArray(rawData) 
-                ? rawData 
-                : Array.isArray(rawData?.data) ? rawData.data
-                : Array.isArray(rawData?.items) ? rawData.items
-                : Array.isArray(rawData?.categories) ? rawData.categories
-                : [];
+  getCategories: async (): Promise<ProductCategory[]> => {
+    try {
+      const response = await api.get('/categories/listcategory');
+      const rawData = response.data;
 
-            return categoriesArray.map((c: any) => ({
-                id: String(c.id ?? c._id ?? ''),
-                name: c.name ?? 'Danh mục không tên',
-                slug: c.slug ?? c.name, // Giả sử slug là tên (hoặc trường slug nếu có)
-            }));
-        } catch (error) {
-            console.error('Failed to fetch categories:', error);
-            // Trả về mảng rỗng để tránh lỗi nếu API thất bại
-            return []; 
-        }
-    },
+      // Xử lý dữ liệu trả về: Backend có thể trả về một mảng trực tiếp, 
+      // hoặc mảng nằm trong trường 'data', 'items', 'categories',...
+      const categoriesArray = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.data) ? rawData.data
+          : Array.isArray(rawData?.items) ? rawData.items
+            : Array.isArray(rawData?.categories) ? rawData.categories
+              : [];
+
+      return categoriesArray.map((c: any) => ({
+        id: String(c.id ?? c._id ?? ''),
+        name: c.name ?? 'Danh mục không tên',
+        slug: c.slug ?? c.name, // Giả sử slug là tên (hoặc trường slug nếu có)
+      }));
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      // Trả về mảng rỗng để tránh lỗi nếu API thất bại
+      return [];
+    }
+  },
 
 
   getFeaturedProducts: async (limit: number = 8): Promise<Product[]> => {
@@ -310,17 +380,17 @@ export const productApi = {
         params: axiosParams,
       });
       let products: Product[] = Array.isArray(response.data) ? response.data.map(mapProduct) : [];
-      
+
       // Tích hợp tồn kho cho kết quả tìm kiếm
       const inventoryList = await getInventoryList();
       const inventoryMap = inventoryList.reduce((map, item) => {
-          map.set(item.product_id, item.quantity);
-          return map;
+        map.set(item.product_id, item.quantity);
+        return map;
       }, new Map<string, number>());
-      
+
       products = products.map(product => ({
-          ...product,
-          stock: inventoryMap.get(product.id) ?? 0,
+        ...product,
+        stock: inventoryMap.get(product.id) ?? 0,
       }));
 
       return products;

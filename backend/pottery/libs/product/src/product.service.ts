@@ -3,6 +3,7 @@ import {
   ProductRepository,
   ProductImageRepository,
   InventoryRepository,
+  InventoryDetailRepository,
   ProductPromotionRepository,
   PromotionRepository,
   PromotionEntity,
@@ -26,6 +27,7 @@ export class ProductService {
     private readonly productRepository: ProductRepository,
     private readonly productImageRepository: ProductImageRepository,
     private readonly inventoryRepository: InventoryRepository,
+    private readonly inventoryDetailRepository: InventoryDetailRepository,
     private readonly productPromotionRepository: ProductPromotionRepository,
     private readonly promotionRepository: PromotionRepository,
     private readonly categoryRepository: CategoryRepository,
@@ -763,6 +765,7 @@ export class ProductService {
     }
     const product = await this.productRepository.findById(productId);
     if (!product) throw new NotFoundException('product not found');
+
     const images = await this.productImageRepository.findByProductId(productId);
     const processedImages = images.map((image) => ({
       id: image.id,
@@ -770,24 +773,68 @@ export class ProductService {
       is_main_image: image.is_main_image,
       priority: image.priority,
     }));
+
+    // Load classifications
+    const classifications = await this.productClassificationRepository.findByProductId(productId);
+    const processedClassifications = await Promise.all(
+      classifications.map(async (classification) => {
+        const attributes = await this.productAttributeRepository.findByClassificationId(classification.id);
+        return {
+          id: classification.id,
+          name: classification.name,
+          attributes: attributes.map((attr) => ({
+            id: attr.id,
+            name: attr.name,
+          })),
+        };
+      })
+    );
+
+    // Load relationships (combinations)
+    const relationships = await this.classificationAttributeRelationshipRepository.findByProductId(productId);
+
     let promotion: PromotionEntity | null = null;
     const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
     if (productPromotion && productPromotion.promotion_id) {
       promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
     }
+
     let categoryName: string | null = null;
     if (product.category_id) {
       const category = await this.categoryRepository.findById(product.category_id);
       categoryName = category ? category.name : null;
     }
-    const stores = invList.map((inv: InventoryEntity) => ({
-      store_id: inv.store_id,
-      store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
-      store_address: inv.store && inv.store.address ? inv.store.address : null,
-      quantity_stock: inv.quantity_stock,
-      quantity_sold: inv.quantity_sold,
+
+    const stores = await Promise.all(invList.map(async (inv: InventoryEntity) => {
+      // Get inventory details for this store (with classifications)
+      const inventoryDetails = await this.inventoryDetailRepository.findByInventoryId(inv.id);
+
+      const classifications = inventoryDetails.map(detail => {
+        const relationship = detail.classification_attribute_relationship;
+        return {
+          id: relationship?.id,
+          attribute1_id: relationship?.product_attribute_id_1,
+          attribute2_id: relationship?.product_attribute_id_2,
+          attribute1_name: relationship?.attribute1?.name || '',
+          attribute2_name: relationship?.attribute2?.name || '',
+          price: relationship?.price || 0,
+          quantity_stock: detail.quantity_stock,
+          quantity_sold: detail.quantity_sold,
+        };
+      });
+
+      return {
+        store_id: inv.store_id,
+        store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
+        store_address: inv.store && inv.store.address ? inv.store.address : null,
+        quantity_stock: inv.quantity_stock, // Total for this store
+        quantity_sold: inv.quantity_sold,   // Total for this store
+        classifications, // Available combinations for this store
+      };
     }));
+
     const total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+
     return {
       ...product,
       images: processedImages,
@@ -796,6 +843,16 @@ export class ProductService {
       total_quantity_sold,
       promotion,
       category_name: categoryName,
+      classifications: processedClassifications,
+      relationships: relationships.map((rel) => ({
+        id: rel.id,
+        product_attribute_id_1: rel.product_attribute_id_1,
+        product_attribute_id_2: rel.product_attribute_id_2,
+        price: rel.price,
+        quantity: rel.quantity,
+        attribute1_name: rel.attribute1?.name || '',
+        attribute2_name: rel.attribute2?.name || '',
+      })),
     };
   }
 

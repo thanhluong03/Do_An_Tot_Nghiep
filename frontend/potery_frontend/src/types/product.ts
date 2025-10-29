@@ -16,6 +16,28 @@ export interface ClassificationAttributeRelationship {
   product_attribute_id_2: number;
   price?: number;
   quantity?: number;
+  attribute1_name?: string;
+  attribute2_name?: string;
+}
+
+export interface StoreClassification {
+  id?: number;
+  attribute1_id: number;
+  attribute2_id: number;
+  attribute1_name: string;
+  attribute2_name: string;
+  price: number;
+  quantity_stock: number;
+  quantity_sold: number;
+}
+
+export interface ProductStore {
+  store_id: string;
+  store_name: string;
+  store_address: string;
+  quantity_stock: number;
+  quantity_sold: number;
+  classifications: StoreClassification[];
 }
 
 export interface Product {
@@ -46,6 +68,7 @@ export interface Product {
     quantity_sold: number;
     quantity_stock: number;
   };
+  stores?: ProductStore[];
   total_quantity_sold?: number;
   classifications?: ProductClassification[];
   relationships?: ClassificationAttributeRelationship[];

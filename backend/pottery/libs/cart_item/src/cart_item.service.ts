@@ -18,11 +18,15 @@ export class CartItemService {
                 return { message: 'Product not found', cartItem: null };
             }
             const quantity = data.quantity ?? 1;
-            const existing = await this.cartItemRepository.findByCustomerProductStore(
+
+            // Check if item exists with same classification
+            const existing = await this.cartItemRepository.findByCustomerProductStoreClassification(
                 data.customer_id,
                 data.product_id,
-                data.store_id
+                data.store_id,
+                data.classification_attribute_relationship_id
             );
+
             if (existing) {
                 const newQuantity = (existing.quantity || 0) + quantity;
                 await this.cartItemRepository.update(existing.id, { quantity: newQuantity });
@@ -37,6 +41,7 @@ export class CartItemService {
                     customer_id: data.customer_id,
                     store_id: data.store_id,
                     quantity,
+                    classification_attribute_relationship_id: data.classification_attribute_relationship_id,
                 });
                 return {
                     message: 'Cart item created successfully',
@@ -92,8 +97,31 @@ export class CartItemService {
                         store = inventory.store;
                     }
                 }
+
+                // Populate classification data from relationship if available
+                let classificationData: any = {};
+                if (cartItem.classificationRelationship) {
+                    console.log('🔍 Classification relationship found:', {
+                        id: cartItem.classificationRelationship.id,
+                        price: cartItem.classificationRelationship.price,
+                        attribute1: cartItem.classificationRelationship.attribute1,
+                        attribute2: cartItem.classificationRelationship.attribute2
+                    });
+
+                    classificationData = {
+                        attribute1_id: cartItem.classificationRelationship.attribute1?.id,
+                        attribute2_id: cartItem.classificationRelationship.attribute2?.id,
+                        attribute1_name: cartItem.classificationRelationship.attribute1?.name,
+                        attribute2_name: cartItem.classificationRelationship.attribute2?.name,
+                        classificationPrice: Number(cartItem.classificationRelationship.price) || null,
+                    };
+                } else {
+                    console.log('❌ No classification relationship found for cart item:', cartItem.id);
+                }
+
                 return {
                     ...cartItem,
+                    ...classificationData,
                     ...(product ? { product } : {}),
                     ...(store ? { store } : {}),
                 };

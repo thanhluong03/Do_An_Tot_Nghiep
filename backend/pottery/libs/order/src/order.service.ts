@@ -1,10 +1,11 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository } from '@app/database';
 import { ProductRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryRepository } from '@app/database';
 import { CategoryRepository } from '@app/database';
+import { InventoryDetailRepository, ClassificationAttributeRelationshipRepository } from '@app/database';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
 interface OrdersWithTotal {
@@ -14,22 +15,16 @@ interface OrdersWithTotal {
 @Injectable()
 export class OrderService {
   constructor(
-    @Inject(OrderRepository)
     private readonly orderRepository: OrderRepository,
-    @Inject(InventoryRepository)
     private readonly inventoryRepository: InventoryRepository,
-    @Inject(CategoryRepository)
     private readonly categoryRepository: CategoryRepository,
-    @Inject(OrderStatusHistoryRepository)
     private readonly orderStatusHistoryRepository: OrderStatusHistoryRepository,
-    @Inject(UserRepository)
     private readonly userRepository: UserRepository,
-    @Inject(CustomerRepository)
     private readonly customerRepository: CustomerRepository,
-    @Inject(ProductImageRepository)
     private readonly productImageRepository: ProductImageRepository,
-    @Inject(ProductRepository)
     private readonly productRepository: ProductRepository,
+    private readonly inventoryDetailRepository: InventoryDetailRepository,
+    private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
   ) { }
 
   async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -108,12 +103,49 @@ export class OrderService {
         store_name: store?.store_name,
         store_address: store?.address,
         product_images,
+        // Preserve classification information
+        classification_attribute_relationship_id: item.classification_attribute_relationship_id,
+        attribute1_name: item.attribute1_name,
+        attribute2_name: item.attribute2_name,
       });
 
       total_amount += item.price_at_order * item.quantity;
 
-      //inventory.quantity_stock -= item.quantity;
-      //inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
+      // Cập nhật inventory khi đặt hàng thành công
+      if (item.classification_attribute_relationship_id) {
+        // Cập nhật inventory_details
+        const inventoryDetail = await this.inventoryDetailRepository.findByInventoryAndClassification(
+          inventory.id,
+          item.classification_attribute_relationship_id
+        );
+
+        if (inventoryDetail) {
+          // Kiểm tra số lượng tồn kho
+          if (inventoryDetail.quantity_stock < item.quantity) {
+            throw new NotFoundException(
+              `Số lượng tồn kho không đủ cho combo ${item.attribute1_name || ''} - ${item.attribute2_name || ''} tại cửa hàng ${item.store_id}`
+            );
+          }
+
+          // Cập nhật inventory detail
+          await this.inventoryDetailRepository.update(inventoryDetail.id, {
+            quantity_stock: inventoryDetail.quantity_stock - item.quantity,
+            quantity_sold: (inventoryDetail.quantity_sold || 0) + item.quantity,
+          });
+
+          // Cập nhật classification_attribute_relationship
+          const classification = await this.classificationAttributeRelationshipRepository.findById(
+            item.classification_attribute_relationship_id
+          );
+
+          if (classification) {
+            await this.classificationAttributeRelationshipRepository.update(classification.id, {
+              quantity: classification.quantity - item.quantity,
+            });
+          }
+        }
+      }
+
       await this.inventoryRepository.create(inventory);
     }
 
