@@ -44,6 +44,11 @@ export class InventoryController {
         return await this.inventoryService.list(input);
     }
 
+    @Get('details/:id')
+    async getInventoryDetails(@Param('id') id: string) {
+        return await this.inventoryService.getInventoryDetails(Number(id));
+    }
+
     @Post('transfer')
     async transfer(@Body() dto: TransferInventoryDto) {
         return await this.inventoryService.transferInventory({

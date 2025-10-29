@@ -64,11 +64,11 @@ export class OrderService {
         );
       }
 
-      if (inventory.quantity_stock < item.quantity) {
-        throw new NotFoundException(
-          `Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
-        );
-      }
+      // if (inventory.quantity_stock < item.quantity) {
+      //   throw new NotFoundException(
+      //     `Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`,
+      //   );
+      // }
 
       const product = inventory.product;
       const store = inventory.store;
@@ -112,8 +112,8 @@ export class OrderService {
 
       total_amount += item.price_at_order * item.quantity;
 
-      inventory.quantity_stock -= item.quantity;
-      inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
+      //inventory.quantity_stock -= item.quantity;
+      //inventory.quantity_sold = (inventory.quantity_sold || 0) + item.quantity;
       await this.inventoryRepository.create(inventory);
     }
 

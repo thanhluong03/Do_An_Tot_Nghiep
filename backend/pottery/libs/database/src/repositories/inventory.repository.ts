@@ -10,14 +10,17 @@ export class InventoryRepository {
         private readonly repository: Repository<InventoryEntity>,
     ) { }
 
-    async findByProductAndStore(product_id: number, store_id: number): Promise<InventoryEntity | null> {
+    async findByProductAndStore(
+        product_id: number,
+        store_id: number,
+    ): Promise<InventoryEntity | null> {
         return this.repository.findOne({
             where: {
                 product_id,
                 store_id,
                 deleted_at: IsNull(),
             },
-            relations: ['product', 'store'],
+            relations: ['product', 'store', 'inventory_details'],
         });
     }
 
@@ -26,19 +29,32 @@ export class InventoryRepository {
     }
 
     async findById(id: number): Promise<InventoryEntity | null> {
-        return this.repository.findOne({ where: { id, deleted_at: IsNull() } });
+        return this.repository.findOne({
+            where: { id, deleted_at: IsNull() },
+            relations: ['product', 'store', 'inventory_details'],
+        });
     }
 
     async findAll(): Promise<InventoryEntity[]> {
-        return this.repository.find({ where: { deleted_at: IsNull() }, order: { created_at: 'DESC' } });
+        return this.repository.find({
+            where: { deleted_at: IsNull() },
+            order: { created_at: 'DESC' },
+            relations: ['product', 'store', 'inventory_details'],
+        });
     }
 
     async findByProduct(product_id: number): Promise<InventoryEntity[]> {
-        return this.repository.find({ where: { product_id, deleted_at: IsNull() } });
+        return this.repository.find({
+            where: { product_id, deleted_at: IsNull() },
+            relations: ['product', 'store', 'inventory_details'],
+        });
     }
 
     async findByStore(store_id: number): Promise<InventoryEntity[]> {
-        return this.repository.find({ where: { store_id, deleted_at: IsNull() } });
+        return this.repository.find({
+            where: { store_id, deleted_at: IsNull() },
+            relations: ['product', 'store', 'inventory_details'],
+        });
     }
 
     async update(id: number, data: Partial<InventoryEntity>): Promise<void> {

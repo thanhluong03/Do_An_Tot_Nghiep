@@ -3,9 +3,9 @@ import axios from "axios";
 // Bạn cần đảm bảo file productApi.ts (hoặc file chứa Product) tồn tại
 import { Store } from "./storeService";
 
-const API_URL_INVENTORY = "http://localhost:3000/inventory"; 
-const API_URL_PRODUCTS = "http://localhost:3000/products"; 
-const API_URL_STORES = "http://localhost:3000/stores"; 
+const API_URL_INVENTORY = "http://localhost:3000/inventory";
+const API_URL_PRODUCTS = "http://localhost:3000/products";
+const API_URL_STORES = "http://localhost:3000/stores";
 
 // --- Interfaces (Tương thích với DTOs) ---
 
@@ -16,20 +16,31 @@ export interface ListInventoryDto {
     product_id?: number;
     store_id?: number;
     // Bổ sung cho page.tsx
-    fromDate?: string; 
+    fromDate?: string;
     toDate?: string;
 }
 
 export interface CreateInventoryDto {
-    product_id: number | string | number[] | string[]; 
+    product_id: number | string | number[] | string[];
     store_id: number | string | number[] | string[];
+    inventory_details: InventoryDetailItemDto[]; // Bắt buộc phải có
+}
+
+export interface InventoryDetailItemDto {
+    classification_attribute_relationship_id: number;
     quantity_stock: number;
+    quantity_sold?: number;
+}
+
+export interface EnhancedInventoryFormData {
+    product_id: number | string | number[] | string[];
+    store_id: number | string | number[] | string[];
+    inventory_details: InventoryDetailItemDto[]; // Bắt buộc phải có
 }
 // ... (Các interfaces khác giữ nguyên)
 
 export interface UpdateInventoryDto {
-    quantity_stock?: number;
-    quantity_sold?: number;
+    inventory_details?: InventoryDetailItemDto[];
 }
 
 export interface Inventory {
@@ -40,7 +51,7 @@ export interface Inventory {
     quantity_sold: number;
     created_at: string;
     updated_at: string;
-    product_name?: string; 
+    product_name?: string;
     store_name?: string;
 }
 export interface Product {
@@ -49,14 +60,25 @@ export interface Product {
     price: number;
     quantity: number;
     category_id?: number;
-     total_quantity_divided: number;
+    total_quantity_divided: number;
     // Chấp nhận cả url (string) hoặc image_data (Buffer/string Base64)
-    images?: { url?: string; image_data?: string | { data: number[] } }[]; 
+    images?: { url?: string; image_data?: string | { data: number[] } }[];
     main_image?: string | { data: number[] };
 }
 export interface SelectOption {
     id: number;
     name: string;
+}
+
+export interface ProductClassification {
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+    product_attribute_id_1: number;
+    product_attribute_id_2: number;
+    attribute1_name: string;
+    attribute2_name: string;
 }
 const bufferToBase64 = (buffer: { data: number[] }): string | null => {
     try {
@@ -77,13 +99,13 @@ export const getProductImageUrl = (product: Product): string => {
 
     // 1. Kiểm tra URL trong trường images
     if (firstImage?.url && typeof firstImage.url === "string" && firstImage.url !== "") {
-         return firstImage.url;
+        return firstImage.url;
     }
-    
+
     // 2. Kiểm tra URL/Buffer trong trường main_image
     if (product.main_image) {
         if (typeof product.main_image === "string" && product.main_image !== "") {
-            return product.main_image; 
+            return product.main_image;
         }
         if (typeof product.main_image === "object" && product.main_image !== null && "data" in product.main_image && Array.isArray(product.main_image.data)) {
             const base64Url = bufferToBase64(product.main_image as { data: number[] });
@@ -94,21 +116,21 @@ export const getProductImageUrl = (product: Product): string => {
     // 3. Kiểm tra dữ liệu Buffer/Base64 trong trường images
     if (firstImage?.image_data) {
         const imageData = firstImage.image_data;
-        
+
         // Xử lý dữ liệu Buffer { data: number[] }
         if (typeof imageData === "object" && imageData !== null && "data" in imageData && Array.isArray(imageData.data)) {
             const base64Url = bufferToBase64(imageData as { data: number[] });
             if (base64Url) return base64Url;
-        } 
-        
+        }
+
         // Xử lý chuỗi Base64
         else if (typeof imageData === "string" && imageData !== "") {
             return `data:image/png;base64,${imageData}`;
         }
     }
-    
+
     // 4. Mặc định
-    return "/no-image.jpg"; 
+    return "/no-image.jpg";
 };
 
 
@@ -118,16 +140,16 @@ export const listInventories = async (
     // Truyền các tham số lọc/phân trang/tìm kiếm lên backend
     const res = await axios.get(`${API_URL_INVENTORY}/list`, {
         params: dto
-    }); 
-    
+    });
+
     const responseData = res.data;
     if (responseData && (Array.isArray(responseData.data) || Array.isArray(responseData.items))) {
-         return responseData;
+        return responseData;
     }
     if (Array.isArray(responseData)) {
         return { data: responseData, total: responseData.length, page: dto.page || 1, size: dto.size || 10 };
     }
-    return { data: [], total: 0, page: 1, size: 10 }; 
+    return { data: [], total: 0, page: 1, size: 10 };
 };
 
 export const createInventory = async (data: CreateInventoryDto): Promise<Inventory> => {
@@ -144,11 +166,27 @@ export const deleteInventory = async (id: number): Promise<void> => {
     await axios.delete(`${API_URL_INVENTORY}/deleteinventory/${id}`);
 };
 
+export interface InventoryDetailsResponse {
+    inventory: Inventory;
+    inventory_details: {
+        id: number;
+        classification_attribute_relationship_id: number;
+        quantity_stock: number;
+        quantity_sold: number;
+        classification_attribute_relationship: object;
+    }[];
+}
+
+export const getInventoryDetails = async (id: number): Promise<InventoryDetailsResponse> => {
+    const res = await axios.get(`${API_URL_INVENTORY}/details/${id}`);
+    return res.data;
+};
+
 export const listDropdownProducts = async (): Promise<SelectOption[]> => {
     const res = await axios.get(`${API_URL_PRODUCTS}/listproduct`);
     const products: Product[] = res.data;
-    return Array.isArray(products) 
-        ? products.map(p => ({ id: p.id as number, name: p.name })) 
+    return Array.isArray(products)
+        ? products.map(p => ({ id: p.id as number, name: p.name }))
         : [];
 };
 
@@ -168,4 +206,15 @@ export const listDropdownStores = async (): Promise<SelectOption[]> => {
     const storesData = res.data.stores || res.data;
     const stores: Store[] = Array.isArray(storesData) ? storesData : [];
     return stores.map(s => ({ id: s.id as number, name: s.store_name }));
+};
+
+// Get product classifications for a specific product
+export const getProductClassifications = async (productId: number): Promise<ProductClassification[]> => {
+    try {
+        const res = await axios.get(`${API_URL_PRODUCTS}/classifications/${productId}`);
+        return Array.isArray(res.data) ? res.data : [];
+    } catch (error) {
+        console.error("Error fetching product classifications:", error);
+        return [];
+    }
 };

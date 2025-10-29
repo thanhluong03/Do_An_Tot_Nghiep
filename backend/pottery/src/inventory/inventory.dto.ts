@@ -1,6 +1,26 @@
 
-import { IsInt, IsNotEmpty, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import {
+    IsInt,
+    IsNotEmpty,
+    IsOptional,
+    IsArray,
+    ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class InventoryDetailItemDto {
+    @IsInt()
+    @IsNotEmpty()
+    classification_attribute_relationship_id: number;
+
+    @IsInt()
+    @IsNotEmpty()
+    quantity_stock: number;
+
+    @IsOptional()
+    @IsInt()
+    quantity_sold?: number;
+}
 
 export class ListInventoryDto {
     @IsInt()
@@ -30,22 +50,19 @@ export class CreateInventoryDto {
     @IsNotEmpty()
     store_id: number | string;
 
-    @IsInt()
-    @IsNotEmpty()
-    quantity_stock: number;
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => InventoryDetailItemDto)
+    inventory_details: InventoryDetailItemDto[]; // Bắt buộc phải có
 }
 
 export class UpdateInventoryDto {
     @IsOptional()
-    @IsInt()
-    quantity_stock?: number;
-
-    @IsOptional()
-    @IsInt()
-    quantity_sold?: number;
-}
-
-export class TransferInventoryDto {
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => InventoryDetailItemDto)
+    inventory_details?: InventoryDetailItemDto[];
+} export class TransferInventoryDto {
     @IsInt()
     @IsNotEmpty()
     product_id: number;
