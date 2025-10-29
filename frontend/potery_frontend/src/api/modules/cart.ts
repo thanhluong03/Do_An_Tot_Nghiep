@@ -7,7 +7,8 @@ export interface AddCartItemPayload {
   customer_id: string | number;
   product_id: string | number;
   quantity: number;
-  store_id:string | number;
+  store_id: string | number;
+  classification_attribute_relationship_id?: number | null;
 }
 
 export const cartApi = {
@@ -18,6 +19,7 @@ export const cartApi = {
       product_id: Number(payload.product_id),
       store_id: Number(payload.store_id),
       quantity: Number(payload.quantity || 1),
+      classification_attribute_relationship_id: payload.classification_attribute_relationship_id || null,
     };
     const res = await api.post('/cartitems/createcartitem', [coerced]);
     // Returns an array of { message, cartItem }

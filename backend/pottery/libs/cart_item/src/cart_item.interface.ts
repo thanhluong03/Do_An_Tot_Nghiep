@@ -3,6 +3,7 @@ export class ICreateCartItem {
     customer_id: number
     store_id: number
     quantity?: number
+    classification_attribute_relationship_id?: number
 }
 
 export interface IUpdateCartItem {

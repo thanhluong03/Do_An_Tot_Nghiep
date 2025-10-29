@@ -65,6 +65,21 @@ export class OrderItemDto {
     @Expose()
     @IsNumber()
     price_at_order: number;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    classification_attribute_relationship_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    attribute1_name?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    attribute2_name?: string;
 }
 
 export class CreateOrderDto {
@@ -73,7 +88,7 @@ export class CreateOrderDto {
     @IsPositive()
     customer_id: number;
 
-     @Expose()
+    @Expose()
     @IsOptional()
     @IsString()
     guest_id?: string;
@@ -82,7 +97,7 @@ export class CreateOrderDto {
     @IsOptional()
     @IsString()
     shipping_address?: string;
-    
+
 
     @Expose()
     @IsOptional()

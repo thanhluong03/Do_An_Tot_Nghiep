@@ -3,6 +3,9 @@ export interface IOrderItem {
     store_id: number;
     quantity: number;
     price_at_order: number;
+    classification_attribute_relationship_id?: number;
+    attribute1_name?: string;
+    attribute2_name?: string;
     product_name?: string;
     product_images?: {
         id?: number;

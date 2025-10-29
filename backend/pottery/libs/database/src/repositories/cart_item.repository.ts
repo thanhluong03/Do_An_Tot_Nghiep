@@ -17,6 +17,7 @@ export class CartItemRepository {
     async findById(id: number): Promise<CartItemEntity | null> {
         return this.repository.findOne({
             where: { id, deleted_at: IsNull() },
+            relations: ['classificationRelationship', 'classificationRelationship.attribute1', 'classificationRelationship.attribute2'],
         })
     }
 
@@ -36,6 +37,7 @@ export class CartItemRepository {
     async findAllByCustomer(customer_id: number): Promise<CartItemEntity[]> {
         return this.repository.find({
             where: { customer_id: customer_id, deleted_at: IsNull() },
+            relations: ['classificationRelationship', 'classificationRelationship.attribute1', 'classificationRelationship.attribute2'],
             order: { created_at: 'DESC' },
         });
     }
@@ -55,6 +57,31 @@ export class CartItemRepository {
                 store_id,
                 deleted_at: IsNull(),
             },
+        });
+    }
+
+    async findByCustomerProductStoreClassification(
+        customer_id: number,
+        product_id: number,
+        store_id: number,
+        classification_attribute_relationship_id?: number
+    ): Promise<CartItemEntity | null> {
+        const whereCondition: any = {
+            customer_id,
+            product_id,
+            store_id,
+            deleted_at: IsNull(),
+        };
+
+        // Handle classification - if provided, match exactly; if null/undefined, match null
+        if (classification_attribute_relationship_id) {
+            whereCondition.classification_attribute_relationship_id = classification_attribute_relationship_id;
+        } else {
+            whereCondition.classification_attribute_relationship_id = IsNull();
+        }
+
+        return this.repository.findOne({
+            where: whereCondition,
         });
     }
 }

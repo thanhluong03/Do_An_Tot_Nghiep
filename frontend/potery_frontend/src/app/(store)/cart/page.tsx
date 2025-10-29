@@ -22,13 +22,27 @@ export default function CartPage() {
   const [cookieItems, setCookieItems] = useState<typeof items>([]);
   const { user, isAuthenticated } = useAuth();
   const [serverItems, setServerItems] = useState<
-    Array<{ id: string; product_id: string | number; quantity: number; store_id: number | string }>
+    Array<{
+      id: string;
+      product_id: string | number;
+      quantity: number;
+      store_id: number | string;
+      classifications?: {
+        attribute1_id?: number;
+        attribute2_id?: number;
+        attribute1_name?: string;
+        attribute2_name?: string;
+      };
+      classificationId?: number;
+      price?: number;
+      classificationPrice?: number;
+    }>
   >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverProducts, setServerProducts] = useState<Record<string, any>>({});
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  
+
   // 🔹 Fetch cart from server (Logic giữ nguyên)
   useEffect(() => {
     let mounted = true;
@@ -38,13 +52,38 @@ export default function CartPage() {
       setError(null);
       try {
         const data = await cartApi.getByCustomer(user.id as string);
+        console.log('🛒 Raw cart data from backend:', data);
         if (mounted) {
-          const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
-            id: String(ci.id ?? ci._id ?? ''),
-            product_id: ci.product_id,
-            quantity: Number(ci.quantity ?? 1),
-            store_id: ci.store?.id || ci.store_id || '', 
-          }));
+          const mapped = (Array.isArray(data) ? data : []).map((ci: any) => {
+            console.log('🔍 Cart item data:', {
+              id: ci.id,
+              product_id: ci.product_id,
+              classification_id: ci.classification_attribute_relationship_id,
+              classificationPrice: ci.classificationPrice,
+              classificationRelationship: ci.classificationRelationship,
+              attribute1_name: ci.attribute1_name,
+              attribute2_name: ci.attribute2_name
+            });
+
+            return {
+              id: String(ci.id ?? ci._id ?? ''),
+              product_id: ci.product_id,
+              quantity: Number(ci.quantity ?? 1),
+              store_id: ci.store?.id || ci.store_id || '',
+              // Add classification info from server cart
+              classificationId: ci.classification_attribute_relationship_id,
+              classifications: ci.classification_attribute_relationship_id ? {
+                attribute1_id: ci.attribute1_id,
+                attribute2_id: ci.attribute2_id,
+                attribute1_name: ci.attribute1_name || '',
+                attribute2_name: ci.attribute2_name || ''
+              } : undefined,
+              // Use classification price from the classification relationship
+              price: ci.classificationPrice || null,
+              classificationPrice: ci.classificationPrice || null
+            };
+          });
+          console.log('🛒 Mapped cart items:', mapped);
           setServerItems(mapped);
         }
       } catch {
@@ -74,7 +113,7 @@ export default function CartPage() {
       if (parsed) {
         if (Array.isArray(parsed)) setCookieItems(parsed);
       }
-    } catch {}
+    } catch { }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -127,30 +166,33 @@ export default function CartPage() {
           }
         });
         setServerProducts(next);
-      } catch {}
+      } catch { }
     })();
     return () => {
       mounted = false;
     };
   }, [serverItems, serverProducts]);
 
-  // 🔹 Total calculation (Logic giữ nguyên)
+  // 🔹 Total calculation - Updated to use classification prices
   const total = React.useMemo(() => {
     if (serverItems.length > 0) {
       const calculatedTotal = serverItems.reduce(
-        (acc, ci) =>
-          acc +
-          (serverProducts[String(ci.product_id)]?.price ?? 0) *
-            (ci.quantity ?? 1),
+        (acc, ci) => {
+          const product = serverProducts[String(ci.product_id)];
+          if (!product) return acc;
+          // Use classification price if available, otherwise use product base price
+          const actualPrice = ci.classificationPrice || ci.price || product.price;
+          return acc + actualPrice * (ci.quantity ?? 1);
+        },
         0
       );
       return calculatedTotal + 30000;
     }
-    return subtotal + 30000; 
+    return subtotal + 30000;
   }, [serverItems, serverProducts, subtotal]);
 
   const subTotalOnly = React.useMemo(() => total - 30000, [total]);
-  
+
   // 🔹 Handlers
   // Hàm xử lý tăng/giảm số lượng
   const handleUpdateQuantity = async (ciId: string, currentQuantity: number, delta: 1 | -1) => {
@@ -182,9 +224,9 @@ export default function CartPage() {
   return (
     <BaseLayout>
       {/* DIV bao ngoài cùng (Nền trang) */}
-      <div className={`${BG_COLOR} min-h-screen py-16`}> 
+      <div className={`${BG_COLOR} min-h-screen py-16`}>
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          
+
           {/* KHỐI NỘI DUNG CHÍNH: Nền trắng, bóng mờ sang trọng */}
           <div className="bg-white rounded-2xl shadow-2xl shadow-gray-300/50 p-6 md:p-10">
 
@@ -204,7 +246,7 @@ export default function CartPage() {
             {error && <div className="text-center text-red-600 py-10">{error}</div>}
 
             {!loading && !error && (
-            <>
+              <>
                 {isAuthenticated && serverItems.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-10">
                     {/* Bên trái: Danh sách sản phẩm */}
@@ -212,7 +254,31 @@ export default function CartPage() {
                       {serverItems.map((ci) => {
                         const product = serverProducts[String(ci.product_id)];
                         if (!product) return null;
-                        const totalPrice = product.price * ci.quantity;
+
+                        // Use classification price if available, otherwise use product base price
+                        const actualPrice = ci.classificationPrice || ci.price || product.price;
+                        const totalPrice = actualPrice * ci.quantity;
+
+                        console.log('🔍 Cart item pricing:', {
+                          productId: ci.product_id,
+                          productName: product.name,
+                          productBasePrice: product.price,
+                          classificationPrice: ci.classificationPrice,
+                          fallbackPrice: ci.price,
+                          actualPrice: actualPrice,
+                          classifications: ci.classifications
+                        });
+
+                        // Debug log for pricing
+                        console.log('🔍 Cart item pricing:', {
+                          productName: product.name,
+                          basePrice: product.price,
+                          classificationPrice: ci.price,
+                          actualPrice: actualPrice,
+                          classifications: ci.classifications,
+                          classificationId: ci.classificationId
+                        });
+
                         return (
                           // KHỐI SẢN PHẨM
                           <div
@@ -237,13 +303,29 @@ export default function CartPage() {
                                   </h3>
                                 </Link>
                                 <p className={`text-sm ${LIGHT_TEXT}`}>
-                                  Đơn giá: {formatPrice(product.price)}
+                                  Đơn giá: {formatPrice(actualPrice)}
                                 </p>
-                                
+
+                                {/* Show classification info if available */}
+                                {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
+                                  <div className="flex gap-2 mt-2">
+                                    {ci.classifications.attribute1_name && (
+                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
+                                        {ci.classifications.attribute1_name}
+                                      </span>
+                                    )}
+                                    {ci.classifications.attribute2_name && (
+                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
+                                        {ci.classifications.attribute2_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
                                 {/* Bộ đếm số lượng */}
                                 <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
                                   <button
-                                  title='update'
+                                    title='update'
                                     onClick={() => handleUpdateQuantity(ci.id, ci.quantity, -1)}
                                     disabled={ci.quantity === 1}
                                     className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
@@ -262,18 +344,18 @@ export default function CartPage() {
                                   </button>
                                 </div>
                               </div>
-                              
+
                               {/* Tổng tiền và Nút xóa */}
                               <div className="text-right flex flex-col items-end gap-2">
-                                  <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>
-                                      {formatPrice(totalPrice)}
-                                  </p>
-                                  <button
-                                      onClick={() => handleRemoveItem(ci.id)}
-                                      className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
-                                  >
-                                      <Trash2 className="w-4 h-4" /> Xóa
-                                  </button>
+                                <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>
+                                  {formatPrice(totalPrice)}
+                                </p>
+                                <button
+                                  onClick={() => handleRemoveItem(ci.id)}
+                                  className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
+                                >
+                                  <Trash2 className="w-4 h-4" /> Xóa
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -286,7 +368,7 @@ export default function CartPage() {
                       <h3 className={`text-xl font-serif font-semibold ${DARK_TEXT} mb-5 border-b pb-3`}>
                         Tóm tắt đơn hàng
                       </h3>
-                      
+
                       <div className="space-y-3 mb-6">
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
                           <span>Tạm tính ({serverItems.length} sản phẩm):</span>
@@ -297,7 +379,7 @@ export default function CartPage() {
                           <span>{formatPrice(30000)}</span>
                         </div>
                       </div>
-                      
+
                       {/* Tổng cộng */}
                       <div className={`border-t border-gray-300 pt-4 flex justify-between font-bold text-xl text-[${ACCENT_COLOR}]`}>
                         <span>Tổng cộng:</span>
@@ -318,10 +400,17 @@ export default function CartPage() {
                     <div className="space-y-6">
                       {(items.length > 0 ? items : cookieItems).map((ci) => {
                         const product = ci.product;
-                        const totalPrice = product.price * (ci.quantity ?? 1);
+                        const actualPrice = ci.price || product.price; // Use classification price if available
+                        const totalPrice = actualPrice * (ci.quantity ?? 1);
+
+                        // Generate unique key including classification info
+                        const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                          ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+                          : product.id;
+
                         return (
                           <div
-                            key={product.id}
+                            key={uniqueKey}
                             className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-5 shadow-lg shadow-gray-100/50"
                           >
                             <Link href={`/products/${product.id}`} className="flex-shrink-0">
@@ -339,12 +428,35 @@ export default function CartPage() {
                                   </h3>
                                 </Link>
                                 <p className={`text-sm ${LIGHT_TEXT}`}>
-                                  Đơn giá: {formatPrice(product.price)}
+                                  Đơn giá: {formatPrice(actualPrice)}
                                 </p>
+
+                                {/* Show classification info if available */}
+                                {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
+                                  <div className="flex gap-2 mt-2">
+                                    {ci.classifications.attribute1_name && (
+                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
+                                        {ci.classifications.attribute1_name}
+                                      </span>
+                                    )}
+                                    {ci.classifications.attribute2_name && (
+                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
+                                        {ci.classifications.attribute2_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Bộ đếm số lượng */}
                                 <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
                                   <button
                                     title='update'
-                                    onClick={() => updateQuantity(product.id, Math.max(1, (ci.quantity ?? 1) - 1))}
+                                    onClick={() => {
+                                      const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                        ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+                                        : undefined;
+                                      updateQuantity(product.id, Math.max(1, (ci.quantity ?? 1) - 1), cartKey);
+                                    }}
                                     disabled={ci.quantity === 1}
                                     className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
                                   >
@@ -355,7 +467,12 @@ export default function CartPage() {
                                   </span>
                                   <button
                                     title='update'
-                                    onClick={() => updateQuantity(product.id, (ci.quantity ?? 1) + 1)}
+                                    onClick={() => {
+                                      const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                        ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+                                        : undefined;
+                                      updateQuantity(product.id, (ci.quantity ?? 1) + 1, cartKey);
+                                    }}
                                     className="p-2 text-gray-700 hover:bg-gray-100 transition"
                                   >
                                     <Plus className="w-4 h-4" />
@@ -367,7 +484,12 @@ export default function CartPage() {
                                   {formatPrice(totalPrice)}
                                 </p>
                                 <button
-                                  onClick={() => removeItem(product.id)}
+                                  onClick={() => {
+                                    const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                      ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+                                      : undefined;
+                                    removeItem(product.id, cartKey);
+                                  }}
                                   className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
                                 >
                                   <Trash2 className="w-4 h-4" /> Xóa
@@ -386,7 +508,7 @@ export default function CartPage() {
                       <div className="space-y-3 mb-6">
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
                           <span>Tạm tính ({(items.length > 0 ? items : cookieItems).length} sản phẩm):</span>
-                          <span>{formatPrice(items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + ci.product.price * (ci.quantity ?? 1), 0)))}</span>
+                          <span>{formatPrice(items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0)))}</span>
                         </div>
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
                           <span>Phí vận chuyển:</span>
@@ -395,7 +517,7 @@ export default function CartPage() {
                       </div>
                       <div className={`border-t border-gray-300 pt-4 flex justify-between font-bold text-xl text-[${ACCENT_COLOR}]`}>
                         <span>Tổng cộng:</span>
-                        <span>{formatPrice((items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + ci.product.price * (ci.quantity ?? 1), 0))) + 30000)}</span>
+                        <span>{formatPrice((items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0))) + 30000)}</span>
                       </div>
                       <Link
                         href="/checkout"
@@ -419,19 +541,22 @@ export default function CartPage() {
               </>
             )}
 
-          </div> 
+          </div>
           {/* KẾT THÚC THẺ DIV BỌC NỘI DUNG CHÍNH */}
 
         </div>
 
+        {/* ======================================================= */}
+        {/* KHỐI GỢI Ý SẢN PHẨM - ĐÃ TINH CHỈNH CSS */}
+        {/* ======================================================= */}
         {relatedProducts.length > 0 && (
           <div className="max-w-7xl mx-auto mt-20 px-4 md:px-6 lg:px-8 bg-white rounded-2xl shadow-2xl shadow-gray-300/50 p-6 md:p-10">
-            
+
             {/* Tiêu đề Khối Gợi ý: Font serif, nhẹ nhàng, có đường phân cách */}
             <h2 className={`text-3xl font-serif font-light text-center mb-10 ${DARK_TEXT} border-b border-gray-200 pb-4`}>
               Có thể bạn sẽ thích
             </h2>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {relatedProducts.map((p) => (
                 <div
@@ -449,10 +574,10 @@ export default function CartPage() {
                   </Link>
                   <div className="mt-3 text-center">
                     <Link href={`/products/${p.id}`}>
-                        {/* Tên sản phẩm */}
-                        <h3 className={`font-medium ${DARK_TEXT} line-clamp-1 hover:text-[${ACCENT_COLOR}] transition`}>
-                          {p.name}
-                        </h3>
+                      {/* Tên sản phẩm */}
+                      <h3 className={`font-medium ${DARK_TEXT} line-clamp-1 hover:text-[${ACCENT_COLOR}] transition`}>
+                        {p.name}
+                      </h3>
                     </Link>
                     {/* Giá: Màu accent, font đậm */}
                     <p className={`text-[${ACCENT_COLOR}] font-bold text-lg mt-1 mb-3`}>
@@ -475,7 +600,7 @@ export default function CartPage() {
           </div>
         )}
       </div>
-      
+
     </BaseLayout>
   );
 }

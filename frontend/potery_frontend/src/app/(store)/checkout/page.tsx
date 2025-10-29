@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { BaseLayout } from '../../../layouts';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useCart } from '../../../contexts/CartContext';
+import { useCart, CartItem } from '../../../contexts/CartContext';
 import { orderApi } from '../../../api/modules/orders';
 import { paymentApi } from '../../../api/modules/payments';
 import { mailApi } from '../../../api/modules/mail';
@@ -14,36 +15,53 @@ import { voucherApi, Voucher } from '../../../api/modules/voucher';
 import { customersApi } from '../../../api/modules/customers';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
-import { 
-  ShoppingBag, 
-  Tag, 
-  MapPin, 
-  CreditCard, 
-  Wallet, 
-  User, 
-  Phone, 
-  Mail, 
-  CheckCircle, 
-  X, 
-  Clock 
+import {
+  ShoppingBag,
+  Tag,
+  MapPin,
+  CreditCard,
+  Wallet,
+  User,
+  Phone,
+  Mail,
+  CheckCircle,
+  X,
+  Clock
 } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
   const { items, clear: clearCart } = useCart();
 
+  // Constants
+  const SHIPPING_FEE = 30000; // Phí vận chuyển cố định 30.000đ
+
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
-  
+
   // Guest info
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
 
-  const [serverItems, setServerItems] = useState<Array<{ id: string; product_id: number; quantity: number; store_id: number }>>([]);
+  const [serverItems, setServerItems] = useState<Array<{
+    id: string;
+    product_id: number;
+    quantity: number;
+    store_id: number;
+    price?: number;
+    classificationPrice?: number;
+    classifications?: {
+      attribute1_id?: number;
+      attribute2_id?: number;
+      attribute1_name?: string;
+      attribute2_name?: string;
+    };
+    classificationId?: number;
+  }>>([]);
   const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[] }>>({});
   const [loadingCart, setLoadingCart] = useState(false);
 
@@ -80,12 +98,12 @@ export default function CheckoutPage() {
     localStorage.removeItem('guest_phone');
     localStorage.removeItem('guest_email');
     localStorage.removeItem('auth_type');
-    
+
     // Reset state về rỗng
     setGuestName('');
     setGuestEmail('');
     setGuestPhone('');
-    
+
     console.log('✅ Đã xóa sạch thông tin guest');
   }, []);
 
@@ -167,12 +185,12 @@ export default function CheckoutPage() {
             localStorage.setItem('auth_type', 'user');
           }
         }
-        
+
         const params = new URLSearchParams(window.location.search);
         const productId = params.get('productId');
         const storeId = params.get('storeId');
         const quantity = params.get('quantity');
-        
+
         // Nếu có đủ 3 param → ưu tiên hiển thị đơn hàng mua ngay
         if (productId && storeId && quantity) {
           const detail = await productApi.getProductById(productId);
@@ -195,7 +213,7 @@ export default function CheckoutPage() {
           setLoadingCart(false);
           return;
         }
-        
+
         // Load cart cho user đã đăng nhập
         if (isAuthenticated && user?.id) {
           const data = await cartApi.getByCustomer(user.id as string);
@@ -204,7 +222,20 @@ export default function CheckoutPage() {
             product_id: Number(ci.product_id),
             quantity: Number(ci.quantity ?? 1),
             store_id: Number(ci.store?.id ?? ci.store_id ?? 0),
+            // Add classification info from server cart
+            classificationId: ci.classification_attribute_relationship_id,
+            classifications: ci.classification_attribute_relationship_id ? {
+              attribute1_id: ci.attribute1_id,
+              attribute2_id: ci.attribute2_id,
+              attribute1_name: ci.attribute1_name || '',
+              attribute2_name: ci.attribute2_name || ''
+            } : undefined,
+            // Use classification price from the classification relationship
+            price: ci.classificationRelationship?.price || null,
+            classificationPrice: ci.classificationPrice || null
           }));
+
+          console.log('🛒 Server cart items with classifications:', mapped);
           setServerItems(mapped);
         } else {
           // Load cart cho guest
@@ -215,12 +246,12 @@ export default function CheckoutPage() {
               if (ss) localItems = JSON.parse(ss);
             }
           } catch { }
-          
+
           if (!localItems) {
             const saved = Cookies.get('cart_session');
             if (saved) localItems = JSON.parse(saved);
           }
-          
+
           if (localItems) {
             const mapped = await Promise.all(
               localItems.map(async (i: any, idx: number) => {
@@ -238,9 +269,19 @@ export default function CheckoutPage() {
                   product_id: pid,
                   quantity: Number(i.quantity ?? 1),
                   store_id: storeId || 1,
+                  // Preserve guest cart classification information
+                  classifications: i.classifications ? {
+                    attribute1_id: i.classifications.attribute1_id,
+                    attribute2_id: i.classifications.attribute2_id,
+                    attribute1_name: i.classifications.attribute1_name || '',
+                    attribute2_name: i.classifications.attribute2_name || ''
+                  } : undefined,
+                  classificationId: i.classificationId,
+                  price: i.price, // Keep the classification price from guest cart
                 };
               })
             );
+            console.log('🛒 Guest cart items with classifications:', mapped);
             setServerItems(mapped);
           }
         }
@@ -286,7 +327,7 @@ export default function CheckoutPage() {
       const results = await Promise.allSettled(missing.map(pid => productApi.getProductById(String(pid))));
       if (!mounted) return;
 
-      const next: Record<number, any> = { ...serverProducts };
+      const next: Record<number, { id: number; name: string; price: number; images: string[] }> = { ...serverProducts };
       results.forEach((r, idx) => {
         const pid = missing[idx];
         if (r.status === 'fulfilled' && r.value) {
@@ -304,13 +345,38 @@ export default function CheckoutPage() {
   }, [serverItems, serverProducts]);
 
   /** ===================== TÍNH TOÁN GIÁ ===================== */
-  const { total, discountAmount, finalTotal } = useMemo(() => {
+  const { total, discountAmount, finalTotal, totalWithShipping } = useMemo(() => {
     const initialTotal = serverItems.length > 0
       ? serverItems.reduce((acc, ci) => {
         const product = serverProducts[ci.product_id];
-        return acc + (product ? product.price * ci.quantity : 0);
+        if (!product) return acc;
+
+        // Use classification price if available, otherwise use product base price
+        const actualPrice = ci.classificationPrice || ci.price || product.price;
+
+        console.log('🔍 Server cart item price calculation:', {
+          product: product.name,
+          basePrice: product.price,
+          classificationPrice: ci.classificationPrice,
+          fallbackPrice: ci.price,
+          actualPrice: actualPrice,
+          classification: ci.classifications
+        });
+
+        return acc + actualPrice * ci.quantity;
       }, 0)
-      : items.reduce((acc, cur) => acc + cur.product.price * cur.quantity, 0);
+      : items.reduce((acc, cur) => {
+        // For guest items, use classification price if available
+        const actualPrice = cur.price || cur.product.price;
+        console.log('🔍 Guest cart item price calculation:', {
+          product: cur.product.name,
+          basePrice: cur.product.price,
+          classificationPrice: cur.price,
+          actualPrice: actualPrice,
+          classification: cur.classifications
+        });
+        return acc + actualPrice * cur.quantity;
+      }, 0);
 
     let discount = 0;
     if (selectedVoucher) {
@@ -322,10 +388,17 @@ export default function CheckoutPage() {
         else discount = discountValue;
       }
     }
-    return { total: initialTotal, discountAmount: discount, finalTotal: Math.max(0, initialTotal - discount) };
-  }, [items, serverItems, serverProducts, selectedVoucher]);
 
-  /** ===================== CHỌN VOUCHER ===================== */
+    const afterDiscount = Math.max(0, initialTotal - discount);
+    const withShipping = afterDiscount + SHIPPING_FEE;
+
+    return {
+      total: initialTotal,
+      discountAmount: discount,
+      finalTotal: afterDiscount,
+      totalWithShipping: withShipping
+    };
+  }, [items, serverItems, serverProducts, selectedVoucher, SHIPPING_FEE]);  /** ===================== CHỌN VOUCHER ===================== */
   const handleSelectVoucher = (voucher: Voucher) => {
     const minOrder = Number(voucher.min_order_value ?? voucher.order_conditions ?? 0);
     if (total < minOrder) {
@@ -341,6 +414,7 @@ export default function CheckoutPage() {
     const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${orderId}`;
 
     try {
+      console.log('💳 Khởi tạo thanh toán VNPay với số tiền:', formatPrice(amount));
       const pay = await paymentApi.createVnPayPayment(orderId, amount, returnUrl);
       const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
       console.log('✅ Response từ API thanh toán:', pay);
@@ -356,6 +430,10 @@ export default function CheckoutPage() {
   const handleCreate = async () => {
     if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
     const cartItems = serverItems.length > 0 ? serverItems : items;
+    console.log('🛒 Using cart items for checkout:', cartItems);
+    console.log('🔧 Server items length:', serverItems.length);
+    console.log('🔧 Guest items length:', items.length);
+
     if (!cartItems.length) return setError('❌ Giỏ hàng trống');
     if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
     if (!city.trim()) return setError('❌ Vui lòng nhập Tỉnh/Thành phố');
@@ -410,37 +488,107 @@ export default function CheckoutPage() {
       }
 
       // ✅ Build payload sau khi có customerId
-      const totalBeforeDiscount = total;
-      const totalAfterDiscount = finalTotal;
-      const discount = totalBeforeDiscount - totalAfterDiscount;
+      const totalBeforeDiscount = total; // Giá hàng hóa trước discount
+      const discount = totalBeforeDiscount - finalTotal; // Số tiền discount
+      const totalAfterDiscount = finalTotal; // Giá hàng hóa sau discount 
+      const finalTotalWithShipping = totalAfterDiscount + SHIPPING_FEE; // Tổng cuối cùng bao gồm phí vận chuyển
+
+      console.log('💰 Chi tiết tính toán payload:', {
+        total,
+        finalTotal,
+        totalWithShipping,
+        SHIPPING_FEE,
+        totalBeforeDiscount,
+        discount,
+        totalAfterDiscount,
+        finalTotalWithShipping
+      });
 
       const payloadItems = cartItems.map(ci => {
-        const pid = 'product_id' in ci ? Number((ci as any).product_id) : Number((ci as any).product?.id ?? 0);
-        const basePrice = Number(serverProducts[pid]?.price ?? (ci as any).product?.price ?? 0);
-        const share = totalBeforeDiscount > 0 ? (basePrice * ci.quantity) / totalBeforeDiscount : 0;
-        const discountedPrice = basePrice - (share * discount) / ci.quantity;
-        const storeId = 'store_id' in ci ? Number((ci as any).store_id) : 1;
+        // Type guard to determine if this is a server item or guest item
+        const isServerItem = 'product_id' in ci;
+
+        const pid = isServerItem ? Number(ci.product_id) : Number(ci.product?.id ?? 0);
+        const quantity = ci.quantity;
+        const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
+
+        // Get actual price - prioritize classification price, then product price
+        let actualPrice: number;
+        if (isServerItem) {
+          // Server cart item
+          const serverItem = ci as typeof serverItems[0];
+          actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
+        } else {
+          // Guest cart item
+          const guestItem = ci as CartItem;
+          actualPrice = guestItem.price || guestItem.product.price;
+        }
+
+        // Calculate discounted price
+        const share = totalBeforeDiscount > 0 ? (actualPrice * quantity) / totalBeforeDiscount : 0;
+        const discountedPrice = actualPrice - (share * discount) / quantity;
+
+        // Get classification information
+        let classificationId = null;
+        let attribute1Name = '';
+        let attribute2Name = '';
+
+        if (isServerItem) {
+          const serverItem = ci as typeof serverItems[0];
+          classificationId = serverItem.classificationId || null;
+          attribute1Name = serverItem.classifications?.attribute1_name || '';
+          attribute2Name = serverItem.classifications?.attribute2_name || '';
+        } else {
+          const guestItem = ci as CartItem;
+          classificationId = guestItem.classificationId || null;
+          attribute1Name = guestItem.classifications?.attribute1_name || '';
+          attribute2Name = guestItem.classifications?.attribute2_name || '';
+        }
+
+        console.log('📦 Order item payload:', {
+          product_id: pid,
+          quantity: quantity,
+          price_at_order: Math.round(discountedPrice),
+          store_id: storeId,
+          classification_attribute_relationship_id: classificationId,
+          attribute1_name: attribute1Name,
+          attribute2_name: attribute2Name,
+          originalPrice: actualPrice,
+          isServerItem
+        });
 
         return {
           product_id: pid,
-          quantity: ci.quantity,
+          quantity: quantity,
           price_at_order: Math.round(discountedPrice),
-          store_id: Number(storeId),
+          store_id: storeId,
+          classification_attribute_relationship_id: classificationId,
+          attribute1_name: attribute1Name,
+          attribute2_name: attribute2Name,
         };
       });
+
+      // Phân bổ phí vận chuyển vào tất cả items để backend tính đúng total_amount
+      const totalItemsValue = payloadItems.reduce((sum, item) => sum + (item.price_at_order * item.quantity), 0);
+      const shippingPerItem = totalItemsValue > 0 ? SHIPPING_FEE / payloadItems.length : 0;
+
+      const itemsWithShipping = payloadItems.map(item => ({
+        ...item,
+        price_at_order: Math.round(item.price_at_order + (shippingPerItem / item.quantity))
+      }));
 
       const payload = {
         customer_id: customerId,
         shipping_address: `${address.trim()}, ${city.trim()}`,
         voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
         payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-        items: payloadItems,
-        total_amount: totalAfterDiscount,
-        discount_amount: discount,
-        original_amount: totalBeforeDiscount,
+        items: itemsWithShipping, // Items đã bao gồm phí vận chuyển phân bổ
       };
 
-      console.log('📦 Gửi đơn hàng:', payload);
+      console.log('📦 Gửi đơn hàng với payload bao gồm phí vận chuyển:', payload);
+      console.log('💰 Items gửi backend:', itemsWithShipping);
+      console.log('📋 Backend sẽ tự tính total =', itemsWithShipping.reduce((sum: number, item: any) => sum + (item.price_at_order * item.quantity), 0));
+      console.log('🚚 Phí vận chuyển đã được phân bổ:', shippingPerItem, '/ item');
 
       const res = await orderApi.createOrder(payload);
       const createdId = Number(res?.data?.id ?? res?.id);
@@ -456,18 +604,18 @@ export default function CheckoutPage() {
         if (!isAuthenticated) {
           clearGuestData();
         }
-        await handlePayment(createdId, totalAfterDiscount);
+        await handlePayment(createdId, finalTotalWithShipping);
       } else {
         // Với COD, chỉ gửi email cho guest, user đăng nhập không cần email
         if (!isAuthenticated) {
           await sendOrderConfirmationEmail(createdId);
-          
+
           // 🧹 XÓA SẠCH THÔNG TIN GUEST SAU KHI ĐẶT HÀNG THÀNH CÔNG
           clearGuestData();
           window.location.href = `/confirmation?orderId=${createdId}`;
-             return;
+          return;
         }
-        
+
         clearCart();
         try {
           sessionStorage.removeItem('cart_session');
@@ -475,8 +623,9 @@ export default function CheckoutPage() {
         } catch { }
         window.location.href = '/orders';
       }
-    } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Không thể tạo đơn hàng';
+    } catch (e: unknown) {
+      const error = e as Error & { response?: { data?: { error?: string; message?: string } }; message?: string };
+      const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Không thể tạo đơn hàng';
       setError(msg);
       toast.error(msg);
     } finally {
@@ -499,11 +648,11 @@ export default function CheckoutPage() {
       }
     })();
   }, [isAuthenticated, user?.id]);
-return (
+  return (
     <BaseLayout>
       {/* Container chính: Thu hẹp tối đa (max-w-3xl) và màu nền tinh tế */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white min-h-screen shadow-sm rounded-lg">
-        
+
         {/* Tiêu đề: Đơn giản, font serif */}
         <h1 className="text-3xl font-serif font-bold mb-8 text-[#8B7D6B] text-center tracking-wide relative pb-2 border-b border-[#D4C3A3]/50">
           Xác nhận Thanh toán
@@ -511,37 +660,86 @@ return (
 
         {/* Cấu trúc Layout: Đổi sang 2 cột cho màn hình lớn hơn */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          
+
           {/* Left: Cart Items + Voucher (3/5 width) */}
           <div className="lg:col-span-3 space-y-5">
-            
+
             {/* Giỏ hàng */}
             <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5"> {/* Giảm padding, border, shadow */}
               <h2 className="text-lg font-semibold mb-4 text-[#2C2A24] flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-[#A38D64]" /> Chi tiết đơn hàng
               </h2>
-              
+
               {loadingCart ? (
                 <div className="text-center text-[#65604E] py-6 text-sm flex items-center justify-center gap-2">
-                  <Clock className="w-4 h-4 animate-spin text-[#A38D64]"/> Đang tải giỏ hàng...
+                  <Clock className="w-4 h-4 animate-spin text-[#A38D64]" /> Đang tải giỏ hàng...
                 </div>
               ) : (serverItems.length === 0 && items.length === 0) ? (
                 <div className="text-center text-gray-400 py-6 text-sm">Giỏ hàng trống</div>
               ) : (
                 <div className="divide-y divide-[#F5F3EF]">
-                  {(serverItems.length > 0 ? serverItems : items.map((i, idx) => ({ id: `guest-${idx}`, product_id: Number(i.product.id), quantity: i.quantity, store_id: Number(i.product.store?.id || 0) }))).map(ci => {
+                  {(serverItems.length > 0 ?
+                    serverItems :
+                    items.map((i, idx) => ({
+                      id: `guest-${idx}`,
+                      product_id: Number(i.product.id),
+                      quantity: i.quantity,
+                      store_id: Number(i.product.store?.id || 0),
+                      classifications: i.classifications,
+                      classificationId: i.classificationId,
+                      price: i.price || i.product.price
+                    }))
+                  ).map((ci) => {
                     const p = serverProducts[ci.product_id] || contextProducts[ci.product_id];
                     if (!p) return null;
+                    const actualPrice = ci.price || p.price;
+
+                    // Debug log
+                    console.log('🔍 Checkout item:', {
+                      id: ci.id,
+                      product: p.name,
+                      classifications: ci.classifications,
+                      classificationId: ci.classificationId,
+                      price: actualPrice,
+                      originalPrice: p.price
+                    });
+
                     return (
                       <div key={ci.id} className="flex justify-between py-3 items-center">
-                        <div className="flex items-center gap-3"> {/* Giảm khoảng cách */}
-                          {p.images?.[0] && <img src={p.images[0]} alt={p.name} className="w-12 h-12 object-cover rounded-md border border-[#F1F0E8]" />} {/* Ảnh 48x48 */}
+                        <div className="flex items-center gap-3">
+                          {p.images?.[0] && (
+                            <Image
+                              src={p.images[0]}
+                              alt={p.name}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 object-cover rounded-md border border-[#F1F0E8]"
+                            />
+                          )}
                           <div>
                             <div className="font-medium text-sm text-[#2C2A24]">{p.name}</div>
                             <div className="text-xs text-[#7C7768]">SL: {ci.quantity}</div>
+
+                            {/* Show classification info if available */}
+                            {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
+                              <div className="flex gap-1 mt-1">
+                                {ci.classifications.attribute1_name && (
+                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                    {ci.classifications.attribute1_name}
+                                  </span>
+                                )}
+                                {ci.classifications.attribute2_name && (
+                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                    {ci.classifications.attribute2_name}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="font-semibold text-sm text-[#2C2A24]">{formatPrice(p.price * ci.quantity)}</div>
+                        <div className="font-semibold text-sm text-[#2C2A24]">
+                          {formatPrice(actualPrice * ci.quantity)}
+                        </div>
                       </div>
                     );
                   })}
@@ -583,11 +781,11 @@ return (
                               {type === 'PERCENT' || type === 'PERCENTAGE' ? `${discountVal}%` : formatPrice(discountVal)}
                             </p>
                             <p className={`text-xs mt-0.5 ${eligible ? 'text-[#3D6647]' : 'text-red-600'}`}>
-                              {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5'/> : <X className='w-3 h-3 inline-block mr-0.5'/>} 
+                              {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5' /> : <X className='w-3 h-3 inline-block mr-0.5' />}
                               {eligible ? 'Đủ ĐK' : `Min: ${formatPrice(minOrder)}`}
                             </p>
                           </div>
-                          
+
                         </div>
                       </div>
                     );
@@ -601,7 +799,7 @@ return (
 
           {/* Right: Summary + Form (2/5 width) */}
           <div className="lg:col-span-2 space-y-5">
-            
+
             {/* Tổng cộng */}
             <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 sticky top-4"> {/* Giảm padding, border, shadow */}
               <h2 className="text-lg font-semibold mb-4 text-[#2C2A24]">💰 Tóm tắt đơn hàng</h2>
@@ -609,6 +807,10 @@ return (
                 <div className="flex justify-between text-sm text-[#5A5547]">
                   <span>Tổng tiền hàng</span>
                   <span className="font-medium">{formatPrice(total)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-[#5A5547]">
+                  <span>Phí vận chuyển</span>
+                  <span className="font-medium">{formatPrice(SHIPPING_FEE)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-[#3D6647] text-sm font-semibold border-t border-dashed border-gray-200 pt-2">
@@ -619,8 +821,8 @@ return (
                 <div className="flex justify-between border-t border-gray-300 pt-3 items-center">
                   <span className="text-base font-bold text-[#2C2A24]">Thành tiền</span>
                   <div className="text-right">
-                    {discountAmount > 0 && <div className="text-xs text-gray-400 line-through">{formatPrice(total)}</div>}
-                    <span className="text-xl font-bold text-[#A38D64]">{formatPrice(finalTotal)}</span> {/* Font 2xl -> xl */}
+                    {discountAmount > 0 && <div className="text-xs text-gray-400 line-through">{formatPrice(total + SHIPPING_FEE)}</div>}
+                    <span className="text-xl font-bold text-[#A38D64]">{formatPrice(totalWithShipping)}</span> {/* Font 2xl -> xl */}
                   </div>
                 </div>
               </div>
@@ -631,13 +833,13 @@ return (
               <h2 className="text-lg font-semibold text-[#2C2A24] flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#A38D64]" /> Thông tin giao nhận
               </h2>
-              
+
               {/* Guest Info */}
               {!isAuthenticated && (
                 <>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                        <User className='w-3 h-3'/> Họ và tên *
+                      <User className='w-3 h-3' /> Họ và tên *
                     </label>
                     <input
                       className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
@@ -649,7 +851,7 @@ return (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                          <Phone className='w-3 h-3'/> SĐT *
+                        <Phone className='w-3 h-3' /> SĐT *
                       </label>
                       <input
                         className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
@@ -660,7 +862,7 @@ return (
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                          <Mail className='w-3 h-3'/> Email (Không bắt buộc)
+                        <Mail className='w-3 h-3' /> Email (Không bắt buộc)
                       </label>
                       <input
                         className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
@@ -672,11 +874,11 @@ return (
                   </div>
                 </>
               )}
-              
+
               {/* Address */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <MapPin className='w-3 h-3'/> Địa chỉ giao hàng *
+                  <MapPin className='w-3 h-3' /> Địa chỉ giao hàng *
                 </label>
                 <textarea
                   className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
@@ -690,7 +892,7 @@ return (
               {/* City */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <MapPin className='w-3 h-3'/> Tỉnh/Thành phố *
+                  <MapPin className='w-3 h-3' /> Tỉnh/Thành phố *
                 </label>
                 <input
                   className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
@@ -699,11 +901,11 @@ return (
                   placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
                 />
               </div>
-              
+
               {/* Payment Method */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <CreditCard className='w-3 h-3'/> Phương thức thanh toán
+                  <CreditCard className='w-3 h-3' /> Phương thức thanh toán
                 </label>
                 <select
                   title='payment'
@@ -715,20 +917,20 @@ return (
                   <option value="VNPAY">💳 Thanh toán qua VNPay</option>
                 </select>
               </div>
-              
+
               {error && <div className="bg-red-50 border border-red-300 text-red-700 text-xs px-3 py-2 rounded-md">{error}</div>}
-              
+
               {/* Submit Button */}
               <button
-                disabled={creating || loadingCart || finalTotal === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
+                disabled={creating || loadingCart || totalWithShipping === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
                 onClick={handleCreate}
                 className="w-full bg-[#A38D64] text-white px-6 py-3 rounded-md text-base font-bold disabled:opacity-50 hover:bg-[#8D7A58] transition shadow-md hover:shadow-lg"
               >
-                {creating ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin'/> Đang xử lý...</span> : paymentMethod === 'VNPAY' ? `THANH TOÁN ${formatPrice(finalTotal)}` : `ĐẶT HÀNG COD ${formatPrice(finalTotal)}`}
+                {creating ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span> : paymentMethod === 'VNPAY' ? `THANH TOÁN ${formatPrice(totalWithShipping)}` : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
               </button>
-              
+
               <p className="text-center text-xs text-gray-500 pt-1">
-                  *Bằng việc đặt hàng, bạn đồng ý với Điều khoản và Điều kiện của chúng tôi.
+                *Bằng việc đặt hàng, bạn đồng ý với Điều khoản và Điều kiện của chúng tôi.
               </p>
 
             </div>

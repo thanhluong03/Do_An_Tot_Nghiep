@@ -19,18 +19,16 @@ interface RevenueData {
 
 // Minimal interfaces
 interface Order { status?: string }
-interface User { is_active?: boolean; active?: boolean; age?: number }
+interface Customer { is_active?: boolean; active?: boolean; age?: number }
 interface Product { id?: number; stock?: number; quantity?: number; name?: string }
-interface Review { rating?: number }
 
 const DashboardPage = () => {
   // State cho tất cả dữ liệu dashboard
   const [loading, setLoading] = useState(true);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [inventories, setInventories] = useState<Inventory[]>([]);
 
   const router = useRouter();
@@ -48,17 +46,17 @@ const DashboardPage = () => {
   useEffect(() => {
     (async () => {
       try {
-        const [revenue, orderList, userList, productList, inventoryList] = await Promise.all([
+        const [revenue, orderList, customerList, productList, inventoryList] = await Promise.all([
           getRevenueData(),
-          (await import("@/api/services/orderService")).listOrders({}),
-          (await import("@/api/services/userService")).listUsers({}),
+          (await import("@/api/services/orderService")).listOrderAll({}),
+          (await import("@/api/services/customerService")).getCustomers({}),
           (await import("@/api/services/productApi")).getProducts(),
           listInventories({}),
         ]);
 
         setRevenueData(revenue);
         setOrders(orderList.data);
-        setUsers(userList);
+        setCustomers(customerList);
         setProducts(productList);
         setInventories(inventoryList.data || []);
 
@@ -81,8 +79,8 @@ const DashboardPage = () => {
   const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
   const totalOrders = orders.length;
   const deliveredOrders = orders.filter(o => o.status === "DELIVERED").length;
-  const totalCustomers = users.length;
-  const activeCustomers = users.filter(u => u.is_active || u.active).length;
+  const totalCustomers = customers.length;
+  const activeCustomers = customers.filter(u => u.is_active || u.active).length;
   const totalProducts = products.length;
   const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
   const bestSeller = products.length
@@ -117,39 +115,6 @@ const DashboardPage = () => {
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
-  // 👥 Nhân khẩu khách hàng
-  const ageGroups = ["<18", "18-25", "26-35", "36-45", "46-55", "56+"];
-  const ageMap = users.reduce((acc, u) => {
-    const age = u.age || 0;
-    let group = "56+";
-    if (age < 18) group = "<18";
-    else if (age <= 25) group = "18-25";
-    else if (age <= 35) group = "26-35";
-    else if (age <= 45) group = "36-45";
-    else if (age <= 55) group = "46-55";
-    acc[group] = (acc[group] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const customerDemographicsData = ageGroups.map(group => ({
-    age: group,
-    count: ageMap[group] || 0,
-  }));
-
-  const totalReviews = reviews.length;
-  const positiveReviews = reviews.filter(r => (r.rating || 0) >= 4).length;
-  const avgRating = totalReviews
-    ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
-    : 0;
-  type FeedbackDatum = { name: string; value: number; fill?: string; avg: number; total: number };
-  const feedbackGaugeData: FeedbackDatum[] = [
-    {
-      name: "Phản hồi tích cực",
-      value: Math.round((positiveReviews / (totalReviews || 1)) * 100),
-      fill: "#22c55e",
-      avg: avgRating,
-      total: totalReviews,
-    },
-  ];
 
   return (
     <div className="bg-[#f7f8fa] min-h-screen p-6">
@@ -213,18 +178,6 @@ const DashboardPage = () => {
           <div className="text-xs text-gray-400">Top 10</div>
         </div>
         <BestSellerChart data={bestSellerData} />
-      </div>
-
-      {/* Nhân khẩu & Feedback */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl shadow p-6 border border-gray-100">
-          <div className="font-semibold text-lg mb-2">Nhân khẩu khách hàng</div>
-          <CustomerDemographicsChart data={customerDemographicsData} />
-        </div>
-        <div className="bg-white rounded-2xl shadow p-3 border border-gray-100">
-          <div className="font-semibold text-lg mb-2">Phản hồi của khách hàng</div>
-          <CustomerFeedbackGauge data={feedbackGaugeData} />
-        </div>
       </div>
     </div>
   );

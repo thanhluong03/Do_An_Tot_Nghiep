@@ -37,13 +37,14 @@ export class ImportProductService {
             return total + (Number(classification.quantity) || 0);
         }, 0);
 
-        // Update the product's total_quantity_divided
+        // Update the product's total_quantity_divided và quantity
         await this.productRepository.update(productId, {
             total_quantity_divided: totalQuantity,
+            quantity: totalQuantity,
         });
 
         console.log(
-            `Updated total_quantity_divided for product ${productId}: ${totalQuantity}`,
+            `Updated total_quantity_divided and quantity for product ${productId}: ${totalQuantity}`,
         );
     }
 
@@ -108,54 +109,43 @@ export class ImportProductService {
 
         if (data.classifications) {
             // Delete existing details
-            const existingDetails =
-                await this.importProductDetailRepository.findByImportProductId(id);
+            const existingDetails = await this.importProductDetailRepository.findByImportProductId(id);
+            let totalOld = 0;
             for (const detail of existingDetails) {
-                // Revert classification quantity
-                const classification =
-                    await this.classificationAttributeRelationshipRepository.findById(
-                        detail.classification_attribute_relationship_id,
-                    );
+                const classification = await this.classificationAttributeRelationshipRepository.findById(detail.classification_attribute_relationship_id);
                 if (classification) {
-                    classification.quantity =
-                        Number(classification.quantity || 0) -
-                        (detail.import_quantity || 0);
-                    await this.classificationAttributeRelationshipRepository.update(
-                        detail.classification_attribute_relationship_id,
-                        { quantity: classification.quantity },
-                    );
+                    classification.quantity = Number(classification.quantity || 0) - (detail.import_quantity || 0);
+                    await this.classificationAttributeRelationshipRepository.update(detail.classification_attribute_relationship_id, { quantity: classification.quantity });
                 }
+                totalOld += detail.import_quantity || 0;
                 await this.importProductDetailRepository.softDeleteDetail(detail.id);
             }
 
             // Create new details
+            let totalNew = 0;
             for (const item of data.classifications) {
-                const classificationId = Number(
-                    item.classification_attribute_relationship_id,
-                );
-
+                const classificationId = Number(item.classification_attribute_relationship_id);
                 await this.importProductDetailRepository.createDetail({
                     import_product_id: id,
                     classification_attribute_relationship_id: classificationId,
                     import_quantity: item.import_quantity,
                     import_price: item.import_price,
                 });
-
-                // Update classification quantity
-                const classification =
-                    await this.classificationAttributeRelationshipRepository.findById(
-                        classificationId,
-                    );
+                const classification = await this.classificationAttributeRelationshipRepository.findById(classificationId);
                 if (classification) {
-                    classification.quantity =
-                        Number(classification.quantity || 0) + item.import_quantity;
-                    await this.classificationAttributeRelationshipRepository.update(
-                        classificationId,
-                        {
-                            quantity: classification.quantity,
-                        },
-                    );
+                    classification.quantity = Number(classification.quantity || 0) + item.import_quantity;
+                    await this.classificationAttributeRelationshipRepository.update(classificationId, { quantity: classification.quantity });
                 }
+                totalNew += item.import_quantity || 0;
+            }
+            // Update product quantity: trừ đi nhập cũ, cộng nhập mới
+            const product = await this.productRepository.findById(importProduct.product_id);
+            if (product) {
+                const newQuantity = Number(product.quantity || 0) - totalOld + totalNew;
+                await this.productRepository.update(importProduct.product_id, {
+                    quantity: newQuantity,
+                    total_quantity_divided: newQuantity,
+                });
             }
         }
 
@@ -169,28 +159,29 @@ export class ImportProductService {
         }
 
         // Delete all details and revert quantities
-        const details =
-            await this.importProductDetailRepository.findByImportProductId(id);
+        const details = await this.importProductDetailRepository.findByImportProductId(id);
+        let totalDelete = 0;
         for (const detail of details) {
-            const classification =
-                await this.classificationAttributeRelationshipRepository.findById(
-                    detail.classification_attribute_relationship_id,
-                );
+            const classification = await this.classificationAttributeRelationshipRepository.findById(detail.classification_attribute_relationship_id);
             if (classification) {
-                classification.quantity =
-                    Number(classification.quantity || 0) - (detail.import_quantity || 0);
-                await this.classificationAttributeRelationshipRepository.update(
-                    detail.classification_attribute_relationship_id,
-                    { quantity: classification.quantity },
-                );
+                classification.quantity = Number(classification.quantity || 0) - (detail.import_quantity || 0);
+                await this.classificationAttributeRelationshipRepository.update(detail.classification_attribute_relationship_id, { quantity: classification.quantity });
             }
+            totalDelete += detail.import_quantity || 0;
             await this.importProductDetailRepository.softDeleteDetail(detail.id);
         }
 
         await this.importProductRepository.softDelete(id);
 
-        // Update total_quantity_divided for the product
-        await this.updateTotalQuantityDivided(importProduct.product_id);
+        // Trừ số lượng nhập đã xóa khỏi product
+        const product = await this.productRepository.findById(importProduct.product_id);
+        if (product) {
+            const newQuantity = Number(product.quantity || 0) - totalDelete;
+            await this.productRepository.update(importProduct.product_id, {
+                quantity: newQuantity,
+                total_quantity_divided: newQuantity,
+            });
+        }
 
         return { deleted: true };
     }

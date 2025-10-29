@@ -7,6 +7,11 @@ export interface OrderItemPayload {
   product_id: number;
   quantity: number;
   price_at_order: number;
+  store_id?: number;
+  classification_attribute_relationship_id?: number | null;
+  // Optional fields for display purposes
+  attribute1_name?: string;
+  attribute2_name?: string;
 }
 
 export interface CreateOrderPayload {
@@ -31,9 +36,9 @@ export const orderApi = {
     return res.data; // { success, data }
   },
   async updateOrder(id: number | string, data: any) {
-  const res = await api.put(`/orders/updateorder/${id}`, data);
-  return res.data;
-},
+    const res = await api.put(`/orders/updateorder/${id}`, data);
+    return res.data;
+  },
 };
 
 
