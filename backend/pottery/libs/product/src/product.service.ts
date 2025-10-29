@@ -840,8 +840,6 @@ export class ProductService {
         attribute1_name: relationship.attribute1?.name || '',
         attribute2_name: relationship.attribute2?.name || '',
       }));
-
-      console.log('Returning classifications:', classifications);
       return classifications;
     } catch (error) {
       console.error('Error getting product classifications:', error);

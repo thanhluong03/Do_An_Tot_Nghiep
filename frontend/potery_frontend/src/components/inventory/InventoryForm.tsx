@@ -1,29 +1,35 @@
 // src/components/inventory/InventoryForm.tsx (MÀU CHỦ ĐẠO LÀ MÀU CAM)
 
-import React, { useMemo } from 'react';
-import { SelectOption, Product } from "@/api/services/inventoryService";
+import React, { useMemo, useState, useEffect } from 'react';
+import Image from 'next/image';
+import toast from 'react-hot-toast';
+import { SelectOption, Product, getProductClassifications, ProductClassification, getProductImageUrl } from "@/api/services/inventoryService";
 import { InventoryFormState, FormName } from "@/app/admin/inventory/page";
-import CheckboxList from "./Checkboxlist"; 
+import CheckboxList from "./Checkboxlist";
 import { Package, Store, Box, MinusCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
 import { getCategories, Category } from "@/api/services/categoryService";
-
-
 interface InventoryFormProps {
     form: InventoryFormState;
     editingId: number | null;
     errors: { [key: string]: string };
     products: SelectOption[];
     stores: SelectOption[];
-    allProducts: Product[]; 
-    getDisplayName: (list: SelectOption[], id: number | string | undefined) => string; 
+    allProducts: Product[];
+    getDisplayName: (list: SelectOption[], id: number | string | undefined) => string;
     handleValueChange: (name: "product_id" | "store_id", value: string | string[] | undefined) => void;
     handleNumberChange: (name: FormName, value: number) => void;
     handleSubmit: () => Promise<void>;
+    handleSubmitWithClassifications?: (classificationData: { [classificationId: number]: number }) => Promise<void>;
     handleCancelEdit: () => void;
+    editClassificationData?: { [classificationId: number]: number };
+}
+
+interface ClassificationQuantity {
+    classificationId: number;
+    quantity: number;
 }
 
 const InventoryForm: React.FC<InventoryFormProps> = ({
-    
     form,
     editingId,
     errors,
@@ -34,14 +40,131 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     handleValueChange,
     handleNumberChange,
     handleSubmit,
-    handleCancelEdit
+    handleSubmitWithClassifications,
+    handleCancelEdit,
+    editClassificationData
 }) => {
-    
-    const onNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // State để quản lý phân loại sản phẩm
+    const [productClassifications, setProductClassifications] = useState<{ [productId: number]: ProductClassification[] }>({});
+    const [classificationQuantities, setClassificationQuantities] = useState<{ [classificationId: number]: number }>({});
+    const [showClassifications, setShowClassifications] = useState(false);
+
+    // Load classifications khi sản phẩm được chọn
+    useEffect(() => {
+        const loadClassifications = async () => {
+            if (!form.product_id) return;
+
+            const selectedProductIds: number[] = [];
+            if (Array.isArray(form.product_id)) {
+                selectedProductIds.push(...form.product_id.map(id => Number(id)));
+            } else if (form.product_id !== 'all' && form.product_id) {
+                selectedProductIds.push(Number(form.product_id));
+            }
+
+            if (selectedProductIds.length === 0) return;
+
+            try {
+                const newClassifications: { [productId: number]: ProductClassification[] } = {};
+                let hasClassifications = false;
+
+                for (const productId of selectedProductIds) {
+                    const classifications = await getProductClassifications(productId);
+                    newClassifications[productId] = classifications;
+                    if (classifications.length > 0) {
+                        hasClassifications = true;
+                    }
+                }
+
+                setProductClassifications(newClassifications);
+                setShowClassifications(hasClassifications);
+                // Chỉ reset quantities khi không đang edit
+                if (!editingId) {
+                    setClassificationQuantities({}); // Reset quantities
+                }
+            } catch (error) {
+                console.error("Error loading classifications:", error);
+            }
+        };
+
+        loadClassifications();
+    }, [form.product_id, editingId]);
+
+    // Load edit classification data when editing
+    useEffect(() => {
+        if (editingId && editClassificationData) {
+            setClassificationQuantities(editClassificationData);
+        }
+    }, [editingId, editClassificationData]);
+
+    const handleClassificationQuantityChange = (classificationId: number, quantity: number) => {
+        setClassificationQuantities(prev => ({
+            ...prev,
+            [classificationId]: Math.max(0, quantity)
+        }));
+    };
+
+    const handleFormSubmit = async () => {
+        if (editingId) {
+            // Cho edit mode, kiểm tra xem có classification data không
+            const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+
+            if (hasClassificationData && handleSubmitWithClassifications) {
+                // Nếu có classification data, sử dụng handleSubmitWithClassifications
+                await handleSubmitWithClassifications(classificationQuantities);
+            } else {
+                // Nếu không có classification data, dùng handleSubmit thông thường
+                await handleSubmit();
+            }
+        } else {
+            // Cho create, kiểm tra nếu có classification data thì gửi kèm
+            const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+
+            if (hasClassificationData) {
+                // Tính tổng quantity từ classifications
+                const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
+
+                // Tạo inventory details
+                const inventoryDetails = Object.entries(classificationQuantities)
+                    .filter(([, qty]) => qty > 0)
+                    .map(([classificationId, quantity]) => ({
+                        classification_attribute_relationship_id: parseInt(classificationId),
+                        quantity_stock: quantity,
+                        quantity_sold: 0
+                    }));
+
+                // Gọi API với classification data
+                try {
+                    const productId = form.product_id;
+                    const storeId = form.store_id;
+
+                    // Import createInventory từ inventoryService
+                    const { createInventory } = await import("@/api/services/inventoryService");
+
+                    await createInventory({
+                        product_id: productId as string | string[],
+                        store_id: storeId as string | string[],
+                        quantity_stock: totalQuantity,
+                        inventory_details: inventoryDetails
+                    });
+
+                    toast.success("Chia hàng theo phân loại thành công!");
+                    handleCancelEdit();
+
+                    // Reload trang để refresh data
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Error creating inventory with classifications:', error);
+                    toast.error("Lỗi khi chia hàng theo phân loại!");
+                }
+            } else {
+                toast.error("Vui lòng nhập số lượng cho ít nhất một phân loại!");
+            }
+        }
+    }; const onNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         let numericValue = 0;
         if (value !== "" && value !== null && value !== undefined) {
-            const cleanValue = value.replace(/[^0-9]/g, ''); 
+            const cleanValue = value.replace(/[^0-9]/g, '');
             const parsed = Number(cleanValue);
             numericValue = isNaN(parsed) ? 0 : parsed;
         }
@@ -65,15 +188,15 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     const [categories, setCategories] = React.useState<Category[]>([]);
 
     React.useEffect(() => {
-    const fetchCategories = async () => {
-        try {
-        const data = await getCategories();
-        setCategories(data);
-        } catch (error) {
-        console.error("Lỗi khi tải danh mục:", error);
-        }
-    };
-    fetchCategories();
+        const fetchCategories = async () => {
+            try {
+                const data = await getCategories();
+                setCategories(data);
+            } catch (error) {
+                console.error("Lỗi khi tải danh mục:", error);
+            }
+        };
+        fetchCategories();
     }, []);
 
     // Đổi màu sắc: Primary (Thêm mới) là Orange, Accent (Sửa) là Red-Orange/Red
@@ -81,9 +204,9 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     const ACCENT_COLOR_CLASS = 'red'; // Dùng red-600
 
     const colorClass = editingId ? ACCENT_COLOR_CLASS : PRIMARY_COLOR_CLASS;
-    
+
     // Class CSS cho container dựa trên chế độ
-    const modeClass = editingId 
+    const modeClass = editingId
         ? 'border-red-200 shadow-2xl transition duration-500 hover:shadow-red-500/20' // Màu đỏ cam cho Sửa
         : 'border-orange-200 shadow-2xl transition duration-500 hover:shadow-orange-500/20'; // Màu cam cho Thêm mới
 
@@ -91,23 +214,23 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     const accentColor = editingId ? 'text-red-700' : 'text-orange-700';
 
     // Class CSS cho nút chính
-    const btnPrimaryClass = editingId 
-        ? "bg-red-600 hover:bg-red-700" 
+    const btnPrimaryClass = editingId
+        ? "bg-red-600 hover:bg-red-700"
         : "bg-orange-600 hover:bg-orange-700";
-    
+
     // Class CSS cho Icon
     const iconColor = editingId ? 'text-red-500' : 'text-orange-500';
 
     return (
         <div className={`p-10 rounded-2xl bg-white border ${modeClass}`}>
-            
-            <h3 className={`text-3xl font-extrabold mb-8 flex items-center gap-4 ${accentColor} border-b-4 border-gray-100 pb-4`}>
-                <Zap size={30} className={iconColor}/> 
+
+            <label className={`text-xl font-bold mb-6 flex items-center gap-3 ${accentColor} border-b-2 border-gray-100 pb-3`}>
+                <Zap size={18} className={iconColor} />
                 {editingId ? `SỬA TỒN KHO ID: ${editingId}` : "QUẢN LÝ TỒN KHO LINH HOẠT"}
-            </h3>
+            </label>
 
             {/* Điều chỉnh Grid chính */}
-            <div className={`grid gap-8 ${editingId === null ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}> 
+            <div className={`grid gap-8 ${editingId === null ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
 
                 {/* --- KHỐI THÊM MỚI (Card Sản phẩm & Cửa hàng) --- */}
                 {editingId === null ? (
@@ -115,7 +238,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         {/* 1. Card Chọn Sản phẩm (Cột 1) */}
                         <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
                             <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
-                                <Package size={18} className="text-orange-500"/>
+                                <Package size={18} className="text-orange-500" />
                                 1. CHỌN SẢN PHẨM
                             </h4>
                             <div className="p-4">
@@ -128,8 +251,8 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                     onChange={handleValueChange}
                                     error={errors.product_id}
                                     allProducts={allProducts}
-                                    categories={categories} 
-                                    
+                                    categories={categories}
+
                                 />
                             </div>
                         </div>
@@ -137,7 +260,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         {/* 2. Card Chọn Cửa hàng (Cột 2) */}
                         <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
                             <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
-                                <Store size={18} className="text-orange-500"/>
+                                <Store size={18} className="text-orange-500" />
                                 2. CHỌN CỬA HÀNG
                             </h4>
                             <div className="p-4">
@@ -149,95 +272,250 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                     selectedValues={form.store_id}
                                     onChange={handleValueChange}
                                     error={errors.store_id}
-                                    allProducts={[]} 
-                                    
+                                    allProducts={[]}
+
                                 />
                             </div>
                         </div>
-                        
-                        {/* 3. SL Tồn kho (Cột 1, Hàng 2) */}
-                        <div className="col-span-1 pt-4"> 
-                            <label className="block text-sm font-extrabold text-gray-800 mb-2 flex items-center gap-2">
-                                <Box size={18} className="text-orange-500"/> SỐ LƯỢNG TỒN KHO *
-                            </label>
-                            <input
-                                type="number"
-                                name="quantity_stock"
-                                placeholder="Nhập Số lượng Tồn kho"
-                                value={typeof form.quantity_stock === 'number' ? form.quantity_stock : ''}
-                                onChange={onNumberInputChange}
-                                className={`w-full border ${errors.quantity_stock ? 'border-red-500' : 'border-gray-300'} rounded-xl px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-orange-500 outline-none transition duration-150 shadow-sm`}
-                            />
-                            {errors.quantity_stock && <p className="text-red-500 text-xs mt-1 font-medium">{errors.quantity_stock}</p>}
-                        </div>
-                        
-                        {/* 4. Vị trí trống (Cột 2, Hàng 2) */}
-                        <div className="col-span-1 pt-4">
-                            {/* Giữ trống cho cân đối. */}
+
+                        {/* 3. Phân loại sản phẩm và số lượng (Cột 1, Hàng 2) */}
+                        <div className="col-span-2 pt-4">
+                            <div>
+                                <label className="block text-sm font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                                    <Box size={18} className="text-orange-500" /> CHIA THEO PHÂN LOẠI SẢN PHẨM
+                                </label>
+
+                                {Object.keys(productClassifications).length > 0 ? (
+                                    <div className="space-y-4">
+                                        {Object.entries(productClassifications).map(([productId, classifications]) => {
+                                            const product = allProducts.find(p => p.id === Number(productId));
+                                            return (
+                                                <div key={productId} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                                    <div className="flex items-center gap-3 mb-3 pb-2 border-b">
+                                                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-white">
+                                                            {product && (
+                                                                <Image
+                                                                    src={getProductImageUrl(product)}
+                                                                    alt={product.name}
+                                                                    width={48}
+                                                                    height={48}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="font-semibold text-gray-800">{product?.name}</h5>
+                                                            <p className="text-sm text-gray-600">Còn lại: {product?.total_quantity_divided || 0}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {classifications.length > 0 ? (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            {classifications.map(classification => (
+                                                                <div key={classification.id} className="border border-gray-300 rounded-lg p-3 bg-white">
+                                                                    <div className="flex justify-between items-start mb-2">
+                                                                        <div className="flex-1">
+                                                                            <h6 className="font-medium text-gray-800 text-sm">{classification.name}</h6>
+                                                                            <p className="text-xs text-gray-600">
+                                                                                {classification.attribute1_name} | {classification.attribute2_name}
+                                                                            </p>
+                                                                            <p className="text-xs text-green-600 font-medium">
+                                                                                Giá: {classification.price?.toLocaleString()}đ
+                                                                            </p>
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <p className="text-xs text-gray-600">Còn</p>
+                                                                            <p className="font-medium text-blue-600">{classification.quantity}</p>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-2">
+                                                                        <label className="text-sm font-medium text-gray-700 min-w-[40px]">Chia:</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            max={classification.quantity}
+                                                                            value={classificationQuantities[classification.id] || 0}
+                                                                            onChange={(e) => handleClassificationQuantityChange(classification.id, parseInt(e.target.value) || 0)}
+                                                                            className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-orange-500"
+                                                                            placeholder="0"
+                                                                        />
+                                                                    </div>
+
+                                                                    {(classificationQuantities[classification.id] || 0) > classification.quantity && (
+                                                                        <p className="text-xs text-red-500 mt-1">Vượt quá số lượng có sẵn!</p>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-center py-3 text-gray-500">Sản phẩm này chưa có phân loại</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg bg-gray-50">
+                                        <Box size={48} className="mx-auto mb-3 text-gray-400" />
+                                        <p>Vui lòng chọn sản phẩm để xem phân loại</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </>
                 ) : (
-                    // --- KHỐI SỬA (3 cột) ---
+                    // --- KHỐI SỬA (layout gọn gàng) ---
                     <>
-                        {/* 1. Sản phẩm (Readonly) */}
-                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-md flex flex-col justify-center">
-                            <label className="text-xs uppercase font-bold text-gray-500 mb-2 flex items-center gap-2">
-                                <Package size={14} className="text-gray-400"/> Sản phẩm
-                            </label>
-                            <div className="flex items-center gap-4">
-                                {editingProduct?.image_url && (
-                                    <img 
-                                        src={editingProduct.image_url} 
-                                        alt={productDisplayName} 
-                                        className="w-10 h-10 object-cover rounded-lg shadow-inner border border-gray-300"
-                                    />
-                                )}
-                                <span title={productDisplayName} className="font-extrabold text-lg text-gray-900 truncate">
-                                    {productDisplayName}
-                                </span>
+                        {/* Thông tin sản phẩm và cửa hàng */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            {/* 1. Sản phẩm (Readonly) */}
+                            <div className="p-4 bg-red-50 rounded-lg border border-red-200 shadow-sm">
+                                <label className="text-xs uppercase font-semibold text-red-600 mb-2 flex items-center gap-2">
+                                    <Package size={14} className="text-red-500" /> Sản phẩm
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    {editingProduct && (
+                                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-white shadow-sm">
+                                            <Image
+                                                src={getProductImageUrl(editingProduct)}
+                                                alt={productDisplayName}
+                                                width={40}
+                                                height={40}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold text-gray-900 text-sm truncate">{productDisplayName}</h4>
+                                        <p className="text-xs text-red-600">Còn: {editingProduct?.total_quantity_divided || 0}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 2. Cửa hàng (Readonly) */}
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
+                                <label className="text-xs uppercase font-semibold text-blue-600 mb-2 flex items-center gap-2">
+                                    <Store size={14} className="text-blue-500" /> Cửa hàng
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                                        <Store size={16} className="text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold text-gray-900 text-sm truncate">{storeDisplayName}</h4>
+                                        <p className="text-xs text-blue-600">Điểm nhận hàng</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        
-                        {/* 2. Cửa hàng (Readonly) */}
-                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-md flex flex-col justify-center">
-                            <label className="text-xs uppercase font-bold text-gray-500 mb-2 flex items-center gap-2">
-                                <Store size={14} className="text-gray-400"/> Cửa hàng
-                            </label>
-                            <p title={storeDisplayName} className="font-extrabold text-lg text-gray-900 truncate pt-2">
-                                {storeDisplayName}
-                            </p>
-                        </div>
-                        
-                        {/* 3. SL Tồn kho */}
-                        <div> 
-                            <label className="block text-sm font-extrabold text-gray-800 mb-2 flex items-center gap-2">
-                                <Box size={18} className="text-red-500"/> SL TỒN KHO *
-                            </label>
-                            <input
-                                type="number"
-                                name="quantity_stock"
-                                placeholder="Nhập Số lượng Tồn kho"
-                                value={typeof form.quantity_stock === 'number' ? form.quantity_stock : ''}
-                                onChange={onNumberInputChange}
-                                className={`w-full border ${errors.quantity_stock ? 'border-red-500' : 'border-gray-300'} rounded-xl px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-red-500 outline-none transition duration-150 shadow-sm`}
-                            />
-                            {errors.quantity_stock && <p className="text-red-500 text-xs mt-1 font-medium">{errors.quantity_stock}</p>}
-                        </div>
 
-                        {/* 4. SL Đã bán */}
+                        {/* 3. Phân loại sản phẩm (Compact) */}
                         <div className="col-span-1">
-                            <label className="block text-sm font-extrabold text-gray-800 mb-2 flex items-center gap-2">
-                                <MinusCircle size={18} className="text-red-500"/> SL ĐÃ BÁN *
-                            </label>
-                            <input
-                                type="number"
-                                name="quantity_sold"
-                                placeholder="Nhập Số lượng Đã bán"
-                                value={typeof form.quantity_sold === 'number' ? form.quantity_sold : ''}
-                                onChange={onNumberInputChange}
-                                className={`w-full border ${errors.quantity_sold ? 'border-red-500' : 'border-gray-300'} rounded-xl px-4 py-3 text-lg font-mono focus:ring-2 focus:ring-red-500 outline-none transition duration-150 shadow-sm`}
-                            />
-                            {errors.quantity_sold && <p className="text-red-500 text-xs mt-1 font-medium">{errors.quantity_sold}</p>}
+                            <div className="bg-orange-50 rounded-lg border border-orange-200 p-4 shadow-sm">
+                                <label className="block text-sm font-semibold text-orange-700 mb-4 flex items-center gap-2">
+                                    <Box size={16} className="text-orange-500" />
+                                    Chỉnh sửa phân loại
+                                </label>
+
+                                {Object.keys(productClassifications).length > 0 ? (
+                                    <div className="space-y-4">
+                                        {Object.entries(productClassifications).map(([productId, classifications]) => {
+                                            const product = allProducts.find(p => p.id === Number(productId));
+                                            return (
+                                                <div key={productId} className="bg-white rounded-lg border border-orange-200 p-4">
+                                                    {/* Header sản phẩm compact */}
+                                                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-orange-100">
+                                                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100">
+                                                            {product && (
+                                                                <Image
+                                                                    src={getProductImageUrl(product)}
+                                                                    alt={product.name}
+                                                                    width={32}
+                                                                    height={32}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h5 className="font-semibold text-gray-900 text-sm">{product?.name}</h5>
+                                                            <div className="flex items-center gap-3 mt-1">
+                                                                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">
+                                                                    Tổng: {product?.total_quantity_divided || 0}
+                                                                </span>
+                                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">
+                                                                    {classifications.length} loại
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {classifications.length > 0 ? (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                                            {classifications.map(classification => (
+                                                                <div key={classification.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow">
+                                                                    {/* Thông tin phân loại compact */}
+                                                                    <div className="mb-3">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                                                            <h6 className="font-medium text-gray-900 text-xs">{classification.name}</h6>
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <p className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
+                                                                                {classification.attribute1_name}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
+                                                                                {classification.attribute2_name}
+                                                                            </p>
+                                                                        </div>
+                                                                        <div className="mt-2">
+                                                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                                                                                Còn: {classification.quantity}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Input số lượng compact */}
+                                                                    <div>
+                                                                        <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                                                            Số lượng:
+                                                                        </label>
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                max={classification.quantity + (classificationQuantities[classification.id] || 0)}
+                                                                                value={classificationQuantities[classification.id] || 0}
+                                                                                onChange={(e) => handleClassificationQuantityChange(classification.id, parseInt(e.target.value) || 0)}
+                                                                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono text-center focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                                                                                placeholder="0"
+                                                                            />
+                                                                            <div className="absolute inset-y-0 right-1 flex items-center pointer-events-none">
+                                                                                <span className="text-xs text-gray-400">/{classification.quantity + (classificationQuantities[classification.id] || 0)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-6 bg-gray-50 rounded border border-dashed border-gray-300">
+                                                            <Box size={32} className="mx-auto mb-2 text-gray-400" />
+                                                            <p className="text-gray-500 text-sm">Không có phân loại</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 bg-white rounded border border-dashed border-orange-300">
+                                        <Box size={40} className="mx-auto mb-3 text-orange-400" />
+                                        <h5 className="font-medium text-orange-600 mb-1">Không có phân loại</h5>
+                                        <p className="text-orange-500 text-sm">Sản phẩm này chưa có phân loại nào.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </>
                 )}
@@ -245,19 +523,19 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
             {/* --- Button controls --- */}
             <div className="flex justify-end gap-3 pt-8 border-t mt-8 border-gray-100">
-                
+
                 <button
                     onClick={handleCancelEdit}
                     className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
                 >
-                     {editingId ? "HỦY BỎ" : "ĐÓNG FORM"} 
+                    {editingId ? "HỦY BỎ" : "ĐÓNG FORM"}
                 </button>
-                
+
                 <button
-                    onClick={handleSubmit}
+                    onClick={handleFormSubmit}
                     className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform hover:scale-[1.02] ${btnPrimaryClass}`}
                 >
-                    
+
                     {editingId ? "CẬP NHẬT TỒN KHO" : "THÊM MỚI TỒN KHO"}
                 </button>
             </div>

@@ -5,15 +5,21 @@ export interface ListInventoryInput {
     product_id?: number;
     store_id?: number;
 }
+
+export interface InventoryDetailItemInput {
+    classification_attribute_relationship_id: number;
+    quantity_stock: number;
+    quantity_sold?: number;
+}
+
 export interface CreateInventoryInput {
     product_id: number | string | number[] | string[];
     store_id: number | string | number[] | string[];
-    quantity_stock: number;
+    inventory_details: InventoryDetailItemInput[]; // Bắt buộc phải có details
 }
 
 export interface UpdateInventoryInput {
-    quantity_stock?: number;
-    quantity_sold?: number;
+    inventory_details?: InventoryDetailItemInput[];
 }
 
 export interface TransferInventoryInput {

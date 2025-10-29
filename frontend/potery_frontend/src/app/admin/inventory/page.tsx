@@ -9,12 +9,15 @@ import {
     createInventory,
     updateInventory,
     deleteInventory,
+    getInventoryDetails,
     listDropdownProducts,
     listDropdownStores,
     listAllProducts,
     Inventory,
     CreateInventoryDto,
     UpdateInventoryDto,
+    InventoryDetailItemDto,
+    InventoryDetailsResponse,
     SelectOption,
     Product,
 } from "@/api/services/inventoryService";
@@ -39,7 +42,7 @@ export default function InventoryPage() {
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
-    
+
     const [inventories, setInventories] = useState<Inventory[]>([]);
     const [products, setProducts] = useState<SelectOption[]>([]);
     const [stores, setStores] = useState<SelectOption[]>([]);
@@ -65,6 +68,7 @@ export default function InventoryPage() {
     });
 
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [editClassificationData, setEditClassificationData] = useState<{ [classificationId: number]: number }>({});
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     const getDisplayName = useCallback(
@@ -91,13 +95,13 @@ export default function InventoryPage() {
                 listDropdownProducts(),
                 listDropdownStores(),
                 listAllProducts(),
-                 getCategories()
+                getCategories()
             ]);
 
             setProducts(Array.isArray(productRes) ? productRes : []);
             setStores(Array.isArray(storeRes) ? storeRes : []);
             setAllProducts(Array.isArray(allProductRes) ? allProductRes : []);
-            
+
         } catch (error) {
             toast.error("Lỗi khi tải danh sách sản phẩm/cửa hàng.");
             setProducts([]);
@@ -161,23 +165,44 @@ export default function InventoryPage() {
         setEditingId(null);
         setIsAdding(false);
         setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
+        setEditClassificationData({});
         setErrors({});
     };
 
     // Mở form chỉnh sửa
-    const handleEdit = (item: Inventory) => {
-        setEditingId(item.id);
-        setIsAdding(false);
-        setForm({
-            product_id: String(item.product_id), 
-            store_id: String(item.store_id),
-            quantity_stock: item.quantity_stock || 0,
-            quantity_sold: item.quantity_sold || 0,
-        });
-        setErrors({}); // Xóa lỗi cũ
+    const handleEdit = async (item: Inventory) => {
+        try {
+            setEditingId(item.id);
+            setIsAdding(false);
+
+            // Load inventory details to get classification data
+            const inventoryDetails = await getInventoryDetails(item.id);
+
+            // Extract classification quantities from inventory details
+            const classificationData: { [classificationId: number]: number } = {};
+            if (inventoryDetails.inventory_details && inventoryDetails.inventory_details.length > 0) {
+                inventoryDetails.inventory_details.forEach(detail => {
+                    classificationData[detail.classification_attribute_relationship_id] = detail.quantity_stock;
+                });
+            }
+
+            setEditClassificationData(classificationData);
+
+            setForm({
+                product_id: String(item.product_id),
+                store_id: String(item.store_id),
+                quantity_stock: item.quantity_stock || 0,
+                quantity_sold: item.quantity_sold || 0,
+            });
+
+            setErrors({}); // Xóa lỗi cũ
+        } catch (error) {
+            console.error("Error loading inventory details:", error);
+            toast.error("Không thể tải chi tiết tồn kho");
+        }
     };
 
-   const handleDelete = (id: number) => { 
+    const handleDelete = (id: number) => {
         setItemToDeleteId(id);
         setIsDeleteDialogOpen(true);
     };
@@ -199,7 +224,7 @@ export default function InventoryPage() {
             toast.error(msg);
         }
     };
-    
+
     // Huỷ xoá <--- THÊM HÀM NÀY
     const handleCancelDelete = () => {
         setIsDeleteDialogOpen(false);
@@ -219,14 +244,14 @@ export default function InventoryPage() {
             }
         }
 
-       if (form.quantity_stock < 0) {
-    newErrors.quantity_stock = "SL Tồn kho phải ≥ 0.";
-} else if (isCreating && form.product_id && !Array.isArray(form.product_id)) {
-    const product = allProducts.find(p => p.id === Number(form.product_id));
-    if (product && form.quantity_stock > (product.total_quantity_divided || 0)) {
-        newErrors.quantity_stock = `Số lượng nhập (${form.quantity_stock}) vượt quá số lượng còn trong kho (${product.total_quantity_divided || 0}).`;
-    }
-}
+        if (form.quantity_stock < 0) {
+            newErrors.quantity_stock = "SL Tồn kho phải ≥ 0.";
+        } else if (isCreating && form.product_id && !Array.isArray(form.product_id)) {
+            const product = allProducts.find(p => p.id === Number(form.product_id));
+            if (product && form.quantity_stock > (product.total_quantity_divided || 0)) {
+                newErrors.quantity_stock = `Số lượng nhập (${form.quantity_stock}) vượt quá số lượng còn trong kho (${product.total_quantity_divided || 0}).`;
+            }
+        }
 
         if (!isCreating && form.quantity_sold < 0) {
             newErrors.quantity_sold = "SL Đã bán phải ≥ 0.";
@@ -247,13 +272,13 @@ export default function InventoryPage() {
                 const storeId = form.store_id;
 
                 const createDto: CreateInventoryDto = {
-                    product_id: productId as string | string[], 
+                    product_id: productId as string | string[],
                     store_id: storeId as string | string[],
                     quantity_stock: form.quantity_stock,
                 };
                 await createInventory(createDto);
                 toast.success("Tạo tồn kho thành công!");
-                await fetchDropdownData(); 
+                await fetchDropdownData();
             } else {
                 // Logic cho CẬP NHẬT
                 const updateDto: UpdateInventoryDto = {
@@ -269,6 +294,68 @@ export default function InventoryPage() {
             fetchData();
         } catch (error) {
             toast.error("Số lượng trong kho không đủ!");
+        }
+    };
+
+    // Hàm submit với dữ liệu phân loại
+    const handleSubmitWithClassifications = async (classificationQuantities: { [classificationId: number]: number }) => {
+        const isCreating = editingId === null;
+        if (!validate(isCreating)) return;
+
+        try {
+            if (isCreating) {
+                const productId = form.product_id;
+                const storeId = form.store_id;
+
+                // Tính tổng quantity từ classifications
+                const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
+
+                // Tạo inventory_details từ classification data
+                const inventoryDetails = Object.entries(classificationQuantities)
+                    .filter(([_, quantity]) => quantity > 0)
+                    .map(([classificationId, quantity]) => ({
+                        classification_attribute_relationship_id: parseInt(classificationId),
+                        quantity_stock: quantity,
+                        quantity_sold: 0
+                    }));
+
+                const createDto: CreateInventoryDto = {
+                    product_id: productId as string | string[],
+                    store_id: storeId as string | string[],
+                    quantity_stock: totalQuantity,
+                    inventory_details: inventoryDetails
+                };
+
+                await createInventory(createDto);
+                toast.success("Chia hàng theo phân loại thành công!");
+                await fetchDropdownData();
+            } else {
+                // Logic cho CẬP NHẬT với phân loại
+                const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
+
+                // Tạo inventory_details từ classification data
+                const inventoryDetails = Object.entries(classificationQuantities)
+                    .filter(([_, quantity]) => quantity > 0)
+                    .map(([classificationId, quantity]) => ({
+                        classification_attribute_relationship_id: parseInt(classificationId),
+                        quantity_stock: quantity,
+                        quantity_sold: 0
+                    }));
+
+                const updateDto: UpdateInventoryDto = {
+                    quantity_stock: totalQuantity,
+                    inventory_details: inventoryDetails
+                };
+
+                await updateInventory(editingId!, updateDto);
+                toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
+                await fetchDropdownData();
+            }
+
+            handleCancelEdit();
+            fetchData();
+        } catch (error) {
+            toast.error("Lỗi khi chia hàng theo phân loại!");
         }
     };
 
@@ -306,9 +393,7 @@ export default function InventoryPage() {
                     <InventoryForm
                         form={form}
                         editingId={editingId}
-                        isAdding={isAdding}
                         errors={errors}
-                         categories={categories}
                         products={products}
                         stores={stores}
                         allProducts={allProducts}
@@ -316,7 +401,9 @@ export default function InventoryPage() {
                         handleValueChange={handleValueChange}
                         handleNumberChange={handleNumberChange}
                         handleSubmit={handleSubmit}
+                        handleSubmitWithClassifications={handleSubmitWithClassifications}
                         handleCancelEdit={handleCancelEdit}
+                        editClassificationData={editClassificationData}
                     />
                 )}
 
@@ -417,11 +504,11 @@ export default function InventoryPage() {
                     }}
                 />
             </div>
-           {isDeleteDialogOpen && (
+            {isDeleteDialogOpen && (
                 <ConfirmDialog
-                    message={`Bạn có chắc chắn muốn xóa Tồn kho ID: ${itemToDeleteId} này không? Hành động này không thể hoàn tác.`} 
+                    message={`Bạn có chắc chắn muốn xóa Tồn kho ID: ${itemToDeleteId} này không? Hành động này không thể hoàn tác.`}
                     onConfirm={performDelete}
-                    onCancel={handleCancelDelete} 
+                    onCancel={handleCancelDelete}
                     title="Xác nhận Xóa Tồn kho"
                     confirmText="Xóa"
                     cancelText="Hủy"
