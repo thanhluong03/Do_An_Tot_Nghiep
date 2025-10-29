@@ -41,22 +41,22 @@ const DashboardSummary: React.FC<DashboardSummaryProps> = ({
 }) => {
   const cards = [
     {
-      title: "Tổng doanh thu",
+      title: "Tổng doanh thu bán hàng",
       value: revenue.toLocaleString() + " ₫",
       icon: <DollarSign className="text-green-500 w-6 h-6" />,
     },
     {
-      title: "Tổng đơn hàng",
+      title: "Tổng đơn hàng đã giao",
       value: ordersLabel,
       icon: <ShoppingCart className="text-blue-500 w-6 h-6" />,
     },
     {
-      title: "Tổng khách hàng",
+      title: "Tổng tk khách hàng hoạt động",
       value: customersLabel,
       icon: <Users className="text-purple-500 w-6 h-6" />,
     },
     {
-      title: "Sản phẩm",
+      title: "Sản phẩm còn trong kho",
       value: productsLabel,
       icon: <Package className="text-orange-500 w-6 h-6" />,
       subtitle: bestSeller,

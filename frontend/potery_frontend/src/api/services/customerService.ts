@@ -14,7 +14,7 @@ export interface Customer {
   avatar_image?: string; // base64
 }
 
-export const getCustomers = async () => {
+export const getCustomers = async (p0: {}) => {
   const res = await axios.get(`${API_URL}/listcustomers`);
   return res.data.customers;
 };

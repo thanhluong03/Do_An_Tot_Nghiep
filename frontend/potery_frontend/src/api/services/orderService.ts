@@ -113,7 +113,30 @@ export async function listOrders(params: ListOrderParams): Promise<ListOrdersRes
     // Trả về object có cấu trúc phân trang
     return { data: orders, total: total }; 
 }
+export async function listOrderAll(params: ListOrderParams): Promise<ListOrdersResponse> {
+    const queryParams = { 
+        ...params,
+        // 🚨 SỬA LỖI PHÂN TRANG: Yêu cầu kích thước lớn (ví dụ 1000)
+        // để đảm bảo lấy hết dữ liệu cho dashboard.
+        // Nếu API backend hỗ trợ, bạn có thể bỏ qua `size` để lấy hết.
+        size: params.size || 1000 
+    };
+    
+    // Loại bỏ store_id nếu nó là rỗng
+    if (queryParams.store_id === "") queryParams.store_id = undefined;
 
+    const res = await axios.get(`${API_URL}/listorders`, { params: queryParams });
+    const responseData = res.data.data;
+
+    if (!responseData || typeof responseData.total === 'undefined') {
+        throw new Error("Invalid response format from server for listOrders");
+    }
+
+    const orders: Order[] = responseData.data || []; 
+    const total: number = responseData.total;      
+
+    return { data: orders, total: total }; 
+}
 export async function getOrderDetail(id: number): Promise<Order> {
     const res = await axios.get(`${API_URL}/orderdetail/${id}`);
     return res.data.data;
