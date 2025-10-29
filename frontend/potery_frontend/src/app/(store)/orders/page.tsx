@@ -89,6 +89,28 @@ export default function MyOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [productMap, setProductMap] = useState<Record<number, any>>({});
   const { clear: clearCart } = useCart();
+
+  const handleCancelOrder = async (orderId: any) => {
+    if (window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
+      try {
+        await orderApi.updateOrder(Number(orderId), {
+          status: 'CANCELLED',
+          actorType: 'CUSTOMER',
+        });
+        setOrders(prevOrders =>
+          prevOrders.map(order =>
+            (order.id ?? order._id) == orderId
+              ? { ...order, status: 'CANCELLED' }
+              : order
+          )
+        );
+        toast.success('Đã hủy đơn hàng thành công.');
+      } catch (error) {
+        console.error('Lỗi hủy đơn hàng:', error);
+        toast.error('Không thể hủy đơn hàng. Vui lòng thử lại.');
+      }
+    }
+  };
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
@@ -207,7 +229,7 @@ export default function MyOrdersPage() {
                 const info = order.current_order || order;
                 const items = info.items || [];
                 const total = info.total_amount ?? info.total ?? order.total_amount ?? 0;
-
+                console.log(`Order ID: ${id}, Status: ${order.status}`);
                 return (
                   <div
                     key={id}
@@ -292,7 +314,15 @@ export default function MyOrdersPage() {
                       </div>
 
                     </div>
-                    <div className="flex justify-end p-5 bg-white border-t border-[#E5E2D8]">
+                    <div className="flex justify-end items-center p-5 bg-white border-t border-[#E5E2D8] gap-4">
+                      {['CREATED', 'PENDING', 'CONFIRMED','SHIPPING'].includes(order.status?.toUpperCase()) && (
+                        <button
+                          onClick={() => handleCancelOrder(id)}
+                          className="px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md"
+                        >
+                          Hủy đơn hàng
+                        </button>
+                      )}
                       <Link
                         href={`/orders/${id}`}
                         className="px-6 py-2 text-sm font-semibold border border-[#C4975A] rounded-full

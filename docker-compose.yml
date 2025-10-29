@@ -1,0 +1,51 @@
+services:
+  # Dịch vụ Backend
+  backend:
+    build:
+      context: ./backend/pottery
+      dockerfile: Dockerfile
+    container_name: pottery-backend
+    ports:
+      - "3000:3000" # Ánh xạ port 3000 của container ra port 3000 trên máy thật
+    volumes:
+      - ./backend/pottery:/usr/src/app/backend/pottery # Đồng bộ code vào thư mục con
+      - /usr/src/app/backend/pottery/node_modules # Không đồng bộ node_modules
+    env_file:
+      - ./backend/pottery/.env # Tải biến môi trường từ file .env
+    restart: unless-stopped
+
+  # Dịch vụ Frontend
+  frontend:
+    build:
+      context: ./frontend/potery_frontend
+      dockerfile: Dockerfile
+    container_name: pottery-frontend
+    ports:
+      - "3001:3001" # Ánh xạ port 3001 của container ra port 3001 trên máy thật
+    volumes:
+      - ./frontend/potery_frontend:/usr/src/app/frontend/potery_frontend # Đồng bộ code vào thư mục con
+      - /usr/src/app/frontend/potery_frontend/node_modules # Không đồng bộ node_modules
+    environment:
+      # Ví dụ: trỏ API đến backend service.
+      # 'backend' là tên service trong docker-compose, Docker sẽ tự phân giải IP.
+      NEXT_PUBLIC_API_URL: http://backend:3000 # Backend vẫn chạy nội bộ trên port 3000
+      NEXT_PUBLIC_RAG_API_URL: http://rag_chatbot:8000 # Trỏ đến service rag_chatbot
+    depends_on:
+      - backend # Đảm bảo backend khởi động trước frontend
+      - rag_chatbot # Đảm bảo chatbot khởi động trước frontend
+    restart: unless-stopped
+
+  # Dịch vụ RAG Chatbot (Python)
+  rag_chatbot:
+    build:
+      context: ./rag_chatbot
+      dockerfile: Dockerfile
+    container_name: pottery-rag-chatbot
+    ports:
+      - "8000:8000" # Ánh xạ port 8000 của container ra port 8000 trên máy thật
+    volumes:
+      - ./rag_chatbot:/app/rag_chatbot # Đồng bộ code để dev tiện hơn
+      - ./chroma_db:/app/rag_chatbot/chroma_db # Mount thư mục ChromaDB để lưu trữ dữ liệu
+    env_file:
+      - ./rag_chatbot/.env # Tải biến môi trường cho chatbot (nếu có)
+    restart: unless-stopped
