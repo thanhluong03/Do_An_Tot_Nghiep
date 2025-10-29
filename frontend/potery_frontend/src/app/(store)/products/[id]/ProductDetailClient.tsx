@@ -63,7 +63,10 @@ export function ProductDetailClient({ product }: { product: any }) {
   const [mainImage, setMainImage] = useState(product.images?.[0] || '/placeholder-product.jpg');
 
   const [quantity, setQuantity] = useState<number>(1);
-
+  const ACCENT_COLOR = '#A67C52'; // Nâu Vàng Trầm (cho nút và giá tiền)
+  const DARK_TEXT = 'text-gray-900';
+  const LIGHT_TEXT = 'text-gray-500';
+  const BG_COLOR = 'bg-gray-50'; // Nền trang nhẹ
   // Get attribute name from relationships
   const getAttributeName = (attributeId: number, type: 'attribute1' | 'attribute2') => {
     if (product.relationships && Array.isArray(product.relationships)) {
@@ -278,6 +281,20 @@ export function ProductDetailClient({ product }: { product: any }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const { user, isAuthenticated } = useAuth();
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Lấy 4 sản phẩm gợi ý
+        const { products: fetchedProducts } = await productApi.getProducts({ limit: 5 });
+        // Loại bỏ sản phẩm hiện tại khỏi danh sách gợi ý và chỉ lấy 4 sản phẩm
+        setRelatedProducts(fetchedProducts.filter(p => p.id !== product.id).slice(0, 4));
+      } catch (err) {
+        console.error('Không thể tải sản phẩm gợi ý:', err);
+      }
+    })();
+  }, [product.id]);
   return (
 
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -364,46 +381,6 @@ export function ProductDetailClient({ product }: { product: any }) {
               )}
             </div>
             
-            {/* Kích thước */}
-            <div className="space-y-2">
-              <span className="font-medium text-gray-800">Kích thước:</span>
-              <div className="flex flex-wrap gap-2">
-                {sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-4 py-1.5 border rounded-lg text-sm font-medium transition-colors ${
-                      selectedSize === size
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 text-gray-700 hover:border-gray-500'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Màu sắc */}
-            <div className="space-y-2">
-              <span className="font-medium text-gray-800">Màu sắc:</span>
-              <div className="flex flex-wrap gap-2">
-                {colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`px-4 py-1.5 border rounded-lg text-sm font-medium transition-colors ${
-                      selectedColor === color
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 text-gray-700 hover:border-gray-500'
-                    }`}
-                  >
-                    {color}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Product Classifications - Only show if current store has classifications */}
             {currentStore && storeClassifications.length > 0 && (
               <div className="space-y-4 border-t pt-4">
