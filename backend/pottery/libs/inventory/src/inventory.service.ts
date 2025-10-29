@@ -136,58 +136,100 @@ export class InventoryService {
             throw new NotFoundException('Inventory not found');
         }
 
-        // Lấy các inventory details cũ để hoàn trả quantity
+        // Lấy các inventory details cũ
         const oldDetails = await this.inventoryDetailRepository.findByInventoryId(id);
-
-        // Hoàn trả quantity cho classification cũ
-        for (const oldDetail of oldDetails) {
-            const classification = await this.classificationAttributeRelationshipRepository.findById(
-                oldDetail.classification_attribute_relationship_id
-            );
-            if (classification) {
-                const restoredQuantity = Number(classification.quantity || 0) + oldDetail.quantity_stock;
-                await this.classificationAttributeRelationshipRepository.update(
-                    oldDetail.classification_attribute_relationship_id,
-                    { quantity: restoredQuantity }
-                );
-            }
-        }
-
-        // Xóa inventory details cũ
-        await this.inventoryDetailRepository.deleteByInventoryId(id);
 
         // Cập nhật inventory với data mới
         if (data.inventory_details && data.inventory_details.length > 0) {
-            // Tạo inventory details mới và trừ quantity từ classification
-            for (const detail of data.inventory_details) {
-                const classification = await this.classificationAttributeRelationshipRepository.findById(
-                    detail.classification_attribute_relationship_id
-                );
-                if (classification) {
-                    const newQuantity = Number(classification.quantity || 0) - detail.quantity_stock;
-                    if (newQuantity < 0) {
-                        throw new NotFoundException(`Số lượng phân loại không đủ. Còn lại: ${classification.quantity}, yêu cầu: ${detail.quantity_stock}`);
-                    }
-                    await this.classificationAttributeRelationshipRepository.update(
-                        detail.classification_attribute_relationship_id,
-                        { quantity: newQuantity }
-                    );
-                }
+            // Tạo map của các detail hiện tại theo classification_id
+            const existingDetailsMap = new Map();
+            oldDetails.forEach(detail => {
+                existingDetailsMap.set(detail.classification_attribute_relationship_id, detail);
+            });
 
-                await this.inventoryDetailRepository.create({
-                    inventory_id: id,
-                    classification_attribute_relationship_id: detail.classification_attribute_relationship_id,
-                    quantity_stock: detail.quantity_stock,
-                    quantity_sold: detail.quantity_sold || 0
-                });
+            // Tạo set của các classification_id được cập nhật
+            const updatedClassificationIds = new Set(
+                data.inventory_details.map(d => d.classification_attribute_relationship_id)
+            );
+
+            // Xử lý các detail mới hoặc cập nhật
+            for (const detail of data.inventory_details) {
+                const existingDetail = existingDetailsMap.get(detail.classification_attribute_relationship_id);
+
+                if (existingDetail) {
+                    // Cập nhật detail hiện có
+                    const quantityDiff = detail.quantity_stock - existingDetail.quantity_stock;
+
+                    // Cập nhật classification_attribute_relationship
+                    const classification = await this.classificationAttributeRelationshipRepository.findById(
+                        detail.classification_attribute_relationship_id
+                    );
+                    if (classification) {
+                        const newQuantity = Number(classification.quantity || 0) - quantityDiff;
+                        if (newQuantity < 0) {
+                            throw new NotFoundException(`Số lượng phân loại không đủ. Còn lại: ${classification.quantity}, yêu cầu thêm: ${quantityDiff}`);
+                        }
+                        await this.classificationAttributeRelationshipRepository.update(
+                            detail.classification_attribute_relationship_id,
+                            { quantity: newQuantity }
+                        );
+                    }
+
+                    // Cập nhật inventory detail
+                    await this.inventoryDetailRepository.update(existingDetail.id, {
+                        quantity_stock: detail.quantity_stock,
+                        quantity_sold: detail.quantity_sold !== undefined ? detail.quantity_sold : existingDetail.quantity_sold
+                    });
+                } else {
+                    // Tạo detail mới
+                    const classification = await this.classificationAttributeRelationshipRepository.findById(
+                        detail.classification_attribute_relationship_id
+                    );
+                    if (classification) {
+                        const newQuantity = Number(classification.quantity || 0) - detail.quantity_stock;
+                        if (newQuantity < 0) {
+                            throw new NotFoundException(`Số lượng phân loại không đủ. Còn lại: ${classification.quantity}, yêu cầu: ${detail.quantity_stock}`);
+                        }
+                        await this.classificationAttributeRelationshipRepository.update(
+                            detail.classification_attribute_relationship_id,
+                            { quantity: newQuantity }
+                        );
+                    }
+
+                    await this.inventoryDetailRepository.create({
+                        inventory_id: id,
+                        classification_attribute_relationship_id: detail.classification_attribute_relationship_id,
+                        quantity_stock: detail.quantity_stock,
+                        quantity_sold: detail.quantity_sold || 0
+                    });
+                }
+            }
+
+            // Xóa các detail không còn sử dụng và hoàn trả quantity
+            for (const oldDetail of oldDetails) {
+                if (!updatedClassificationIds.has(oldDetail.classification_attribute_relationship_id)) {
+                    // Hoàn trả quantity cho classification
+                    const classification = await this.classificationAttributeRelationshipRepository.findById(
+                        oldDetail.classification_attribute_relationship_id
+                    );
+                    if (classification) {
+                        const restoredQuantity = Number(classification.quantity || 0) + oldDetail.quantity_stock;
+                        await this.classificationAttributeRelationshipRepository.update(
+                            oldDetail.classification_attribute_relationship_id,
+                            { quantity: restoredQuantity }
+                        );
+                    }
+
+                    // Xóa detail
+                    await this.inventoryDetailRepository.softDelete(oldDetail.id);
+                }
             }
         }
 
         // Cập nhật product total_quantity_divided
+        const currentDetails = await this.inventoryDetailRepository.findByInventoryId(id);
         const oldTotalUsed = oldDetails.reduce((sum, detail) => sum + detail.quantity_stock, 0);
-        const newTotalUsed = data.inventory_details
-            ? data.inventory_details.reduce((sum, detail) => sum + detail.quantity_stock, 0)
-            : 0; // Nếu không có details mới, tổng sử dụng = 0
+        const newTotalUsed = currentDetails.reduce((sum, detail) => sum + detail.quantity_stock, 0);
 
         const product = await this.productRepository.findById(inventory.product_id);
         if (product) {
