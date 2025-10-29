@@ -3,16 +3,33 @@
 import React, { createContext, useContext, useMemo, useState, ReactNode, useEffect } from 'react';
 import { Product } from '../types';
 import Cookies from 'js-cookie';
+
+export interface CartClassification {
+  attribute1_id: number | null;
+  attribute2_id: number | null;
+  attribute1_name: string;
+  attribute2_name: string;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
+  storeId?: string;
+  classifications?: CartClassification;
+  price?: number; // Actual price with classification
+  classificationId?: number; // For backend cart
 }
 
 interface CartContextValue {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: Product, quantity?: number, options?: {
+    storeId?: string;
+    classifications?: CartClassification;
+    price?: number;
+    classificationId?: number;
+  }) => void;
+  removeItem: (productId: string, classificationKey?: string) => void;
+  updateQuantity: (productId: string, quantity: number, classificationKey?: string) => void;
   clear: () => void;
   subtotal: number;
 }
@@ -55,36 +72,85 @@ export function CartProvider({ children }: { children: ReactNode }) {
       Cookies.set('cart_session', JSON.stringify(items), { expires: 7 });
     } catch { }
   }, [items]);
-  const addItem = (product: Product, quantity: number = 1) => {
+  // Helper function to generate unique key for cart items with classifications
+  const getCartItemKey = (productId: string, classifications?: CartClassification) => {
+    if (!classifications || (!classifications.attribute1_id && !classifications.attribute2_id)) {
+      return String(productId);
+    }
+    return `${productId}-${classifications.attribute1_id || 'null'}-${classifications.attribute2_id || 'null'}`;
+  };
+
+  const addItem = (product: Product, quantity: number = 1, options?: {
+    storeId?: string;
+    classifications?: CartClassification;
+    price?: number;
+    classificationId?: number;
+  }) => {
     setItems((prev) => {
-      // Compare ids as strings to avoid duplicates when id types differ (number vs string)
-      const idx = prev.findIndex((i) => String(i.product.id) === String(product.id));
+      const itemKey = getCartItemKey(String(product.id), options?.classifications);
+
+      // Find existing item with same product and classification combination
+      const idx = prev.findIndex((i) => {
+        const existingKey = getCartItemKey(String(i.product.id), i.classifications);
+        return existingKey === itemKey;
+      });
+
       let next: CartItem[];
       if (idx >= 0) {
+        // Update existing item quantity
         next = [...prev];
         next[idx] = { ...next[idx], quantity: next[idx].quantity + quantity };
       } else {
-        next = [...prev, { product, quantity }];
+        // Add new item with classification info
+        const newItem: CartItem = {
+          product,
+          quantity,
+          storeId: options?.storeId,
+          classifications: options?.classifications,
+          price: options?.price || product.price,
+          classificationId: options?.classificationId
+        };
+        next = [...prev, newItem];
       }
-      // Persist immediately for guest checkout flows (session first, then cookie)
+
+      // Persist immediately for guest checkout flows
       try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
       try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
       return next;
     });
   };
 
-  const removeItem = (productId: string) => {
+  const removeItem = (productId: string, classificationKey?: string) => {
     setItems((prev) => {
-      const next = prev.filter((i) => String(i.product.id) !== String(productId));
+      let next: CartItem[];
+      if (classificationKey) {
+        // Remove specific classification variant
+        next = prev.filter((i) => {
+          const itemKey = getCartItemKey(String(i.product.id), i.classifications);
+          return itemKey !== classificationKey;
+        });
+      } else {
+        // Remove all variants of this product
+        next = prev.filter((i) => String(i.product.id) !== String(productId));
+      }
+
       try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
       try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
       return next;
     });
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number, classificationKey?: string) => {
     setItems((prev) => {
-      const next = prev.map((i) => String(i.product.id) === String(productId) ? { ...i, quantity } : i);
+      const next = prev.map((i) => {
+        if (classificationKey) {
+          const itemKey = getCartItemKey(String(i.product.id), i.classifications);
+          return itemKey === classificationKey ? { ...i, quantity } : i;
+        } else {
+          return String(i.product.id) === String(productId) ? { ...i, quantity } : i;
+        }
+      });
+
       try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
       try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
       return next;
@@ -98,7 +164,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const subtotal = useMemo(() => {
-    return items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+    return items.reduce((sum, i) => {
+      const itemPrice = i.price || i.product.price;
+      return sum + itemPrice * i.quantity;
+    }, 0);
   }, [items]);
 
   const value: CartContextValue = {

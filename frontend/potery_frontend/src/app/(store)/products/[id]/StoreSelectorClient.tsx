@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 
 interface StoreInventory {
-  store_id: number; // ✅ kiểu số
+  store_id: string; // ✅ Changed to string to match API
   store_name: string;
   store_address: string;
   quantity_stock: number;
@@ -11,8 +11,8 @@ interface StoreInventory {
 
 interface StoreSelectorProps {
   stores: StoreInventory[];
-  initialStoreId?: number | null;
-  onStoreChange?: (storeId: number) => void; // ✅ callback truyền số
+  initialStoreId?: string | null; // ✅ Changed to string
+  onStoreChange?: (storeId: string) => void; // ✅ Changed to string
 }
 
 export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({
@@ -24,18 +24,18 @@ export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({
   const availableStores = stores.filter((s) => s.quantity_stock > 0);
 
   // Cửa hàng được chọn mặc định
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(
     initialStoreId || (availableStores.length > 0 ? availableStores[0].store_id : null)
   );
 
   // Khi người dùng chọn cửa hàng khác
   const handleStoreChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newStoreId = Number(event.target.value);
+      const newStoreId = event.target.value; // Keep as string
       setSelectedStoreId(newStoreId);
       console.log(`✅ ID Cửa hàng được chọn: ${newStoreId}`);
 
-      if (onStoreChange) onStoreChange(newStoreId); // Gọi callback để báo cho cha (ProductDetailClient)
+      if (onStoreChange) onStoreChange(newStoreId); // Pass string
     },
     [onStoreChange]
   );
@@ -53,16 +53,16 @@ export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({
             >
               <label className="flex items-center cursor-pointer">
                 <input
-                    type="radio"
-                    name="store"
-                    value={store.store_id} // hoặc store.id nếu API dùng vậy
-                    checked={selectedStoreId === Number(store.store_id)} // ✅ ép kiểu về number
-                    onChange={(e) => {
-                        const newId = Number(e.target.value);
-                        setSelectedStoreId(newId);
-                        if (onStoreChange) onStoreChange(newId);
-                    }}
-                    />
+                  type="radio"
+                  name="store"
+                  value={store.store_id} // Keep as string
+                  checked={selectedStoreId === store.store_id} // String comparison
+                  onChange={(e) => {
+                    const newId = e.target.value; // Keep as string
+                    setSelectedStoreId(newId);
+                    if (onStoreChange) onStoreChange(newId);
+                  }}
+                />
                 <div className="ml-3 text-sm">
                   <strong className="text-gray-900">{store.store_name}</strong>
                   <p className="text-gray-600 line-clamp-1">{store.store_address}</p>
@@ -74,7 +74,7 @@ export const StoreSelectorClient: React.FC<StoreSelectorProps> = ({
             </div>
           ))}
 
-          
+
         </div>
       ) : (
         <p className="text-red-600 font-medium">

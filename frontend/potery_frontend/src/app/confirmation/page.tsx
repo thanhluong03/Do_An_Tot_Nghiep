@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { BaseLayout } from '../../layouts';
 // Giả sử các imports này đã được định nghĩa đúng trong '@/api/services/orderService'
-import { getOrderDetail, Order, OrderItem } from '@/api/services/orderService'; 
+import { getOrderDetail, Order, OrderItem } from '@/api/services/orderService';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -33,7 +33,7 @@ export default function ConfirmationPage() {
 
         // Chuẩn hóa và gán items
         const items: OrderItem[] = data.items || data.current_order?.items || [];
-        
+
         // Chuẩn hóa tên khách hàng
         const customerName = data.customer_name || data.customer_full_name || 'Khách vãng lai';
 
@@ -96,36 +96,37 @@ export default function ConfirmationPage() {
   const customerName = order.customer_full_name || order.customer_name || 'Khách vãng lai';
   const orderDate = order.order_date
     ? new Date(order.order_date).toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
     : '—';
   const paymentMethodText =
     order.payment_method === 'ONSITE'
       ? 'COD (Thanh toán khi nhận hàng)'
       : order.payment_method === 'CARD'
-      ? 'Thẻ Tín dụng/Ghi nợ'
-      : 'Chuyển khoản Ngân hàng';
+        ? 'Thẻ Tín dụng/Ghi nợ'
+        : 'Chuyển khoản Ngân hàng';
   const paymentStatusText =
     order.payment_status === 'PAID'
       ? 'Đã thanh toán'
       : order.payment_status === 'UNPAID'
-      ? 'Chưa thanh toán'
-      : 'Đang xử lý';
+        ? 'Chưa thanh toán'
+        : 'Đang xử lý';
   const paymentStatusColor = order.payment_status === 'PAID' ? 'text-green-600' : 'text-red-600';
   const totalAmount = Number(order.total_amount) || 0;
   const originalAmount = Number(order.current_order?.original_amount) || totalAmount;
   const discountAmount = Number(order.current_order?.discount_amount) || 0;
+  const shippingFee = Number((order as any).shipping_fee || (order.current_order as any)?.shipping_fee) || 0;
 
 
   return (
     <BaseLayout>
       <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6 lg:px-8 min-h-screen">
         <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-[#EBE8E0]">
-          
+
           {/* --- Header (Sang trọng hơn) --- */}
           <div className="text-center p-5 bg-[#EFE9DC] border-b border-[#D4C3A3]">
             <CheckCircle className="w-10 h-10 mx-auto text-[#3D6647] mb-4" />
@@ -135,11 +136,11 @@ export default function ConfirmationPage() {
             <p className="text-lg text-[#5A5547]">
               Cảm ơn bạn, đơn hàng của bạn đã được đặt thành công!
             </p>
-        
+
           </div>
 
           <div className="p-10 lg:p-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
-            
+
             {/* --- Cột 1: Thông tin giao hàng --- */}
             <div className="lg:col-span-1 p-6 border border-[#EBE8E0] rounded-xl bg-[#FFFCF7]">
               <h2 className="text-lg font-semibold mb-4 text-[#A38D64] flex items-center gap-2">
@@ -147,16 +148,16 @@ export default function ConfirmationPage() {
               </h2>
               <div className="space-y-3 text-sm text-[#2C2A24]">
                 <p>
-                  <strong className="text-[#7C7768]">Ngày đặt:</strong> <br/>
+                  <strong className="text-[#7C7768]">Ngày đặt:</strong> <br />
                   <span className="font-medium">{orderDate}</span>
                 </p>
                 <p>
-                  <strong className="text-[#7C7768]">Địa chỉ:</strong> <br/>
+                  <strong className="text-[#7C7768]">Địa chỉ:</strong> <br />
                   <span className="font-medium">{shippingAddress}</span>
                 </p>
                 <p className='mt-4'>
-                   <strong className="text-[#7C7768]">Trạng thái Đơn hàng:</strong> <br/>
-                   <span className={`font-bold ${order.status === 'CREATED' ? 'text-blue-500' : 'text-yellow-600'}`}>{order.status}</span>
+                  <strong className="text-[#7C7768]">Trạng thái Đơn hàng:</strong> <br />
+                  <span className={`font-bold ${order.status === 'CREATED' ? 'text-blue-500' : 'text-yellow-600'}`}>{order.status}</span>
                 </p>
               </div>
             </div>
@@ -179,9 +180,9 @@ export default function ConfirmationPage() {
                 )}
                 <div className="flex justify-between text-green-700 font-medium">
                   <span>Phí Vận chuyển</span>
-                  <span>Miễn phí</span>
+                  <span>{shippingFee > 0 ? formatPrice(shippingFee) : 'Miễn phí'}</span>
                 </div>
-                
+
                 <div className="flex justify-between border-t border-gray-300 pt-4">
                   <span className="text-xl font-bold text-[#2C2A24]">TỔNG THANH TOÁN</span>
                   <span className="text-2xl font-extrabold text-[#A38D64]">
@@ -189,7 +190,7 @@ export default function ConfirmationPage() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="mt-6 pt-4 border-t border-dashed border-gray-300 space-y-2 text-sm">
                 <p className="flex justify-between">
                   <span className="font-medium text-[#7C7768]">Phương thức:</span>
@@ -201,7 +202,7 @@ export default function ConfirmationPage() {
                 </p>
               </div>
             </div>
-            
+
             {/* --- Cột 3: Sản phẩm (Mở rộng toàn bộ hàng dưới) --- */}
             <div className="lg:col-span-3 p-6 border border-[#EBE8E0] rounded-xl bg-[#FFF]">
               <h2 className="text-xl font-semibold mb-4 text-[#A38D64] flex items-center gap-2">

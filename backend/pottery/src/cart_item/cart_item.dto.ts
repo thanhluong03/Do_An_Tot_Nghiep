@@ -35,6 +35,12 @@ export class CreateCartItemDto {
     @IsNumber()
     @IsPositive()
     total_amount?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    @IsPositive()
+    classification_attribute_relationship_id?: number;
 }
 
 export class UpdateCartItemDto {
@@ -87,6 +93,36 @@ export class CartItemResponseDto {
     @IsNumber()
     @IsPositive()
     total_amount?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    classification_attribute_relationship_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    attribute1_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    attribute2_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    attribute1_name?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    attribute2_name?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    classificationPrice?: number;
 
     @Expose()
     created_at: Date;
