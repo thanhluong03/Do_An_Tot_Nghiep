@@ -42,8 +42,8 @@ export default function NewsDetailPage() {
             n?.image_data
               ? `data:image/jpeg;base64,${n.image_data}`
               : n?.image
-              ? n.image
-              : '/pott.jpg';
+                ? n.image
+                : '/pott.jpg';
 
           return {
             id: String(n?.id ?? n?._id ?? ''),
@@ -99,74 +99,74 @@ export default function NewsDetailPage() {
 
   return (
     <BaseLayout>
-    {/* === Popup Layer === */}
-                {isAuthenticated && user?.id && (
-                  <>
-                    {/* Voucher Modal */}
-                    {isVoucherModalOpen && (
-                      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
-                        <VoucherModal
-                          customerId={user.id}
-                          isOpen={isVoucherModalOpen}
-                          onClose={() => setIsVoucherModalOpen(false)}
-                        />
-                      </div>
-                    )}
-          
-                    {/* Chat Modal */}
-                    {isChatOpen && (
-                      <ChatModal
-                        isOpen={isChatOpen}
-                        onClose={() => setIsChatOpen(false)}
-                        userId={Number(user.id)}
-                        storeId={0}
-                        conversationId={conversationId} // ✅ truyền id xuống
-                      />
-                    )}
-          
-                    {/* Floating Buttons */}
-                    <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
-                      {/* Voucher Button */}
-                      <button
-                        onClick={() => setIsVoucherModalOpen(true)}
-                        className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
-                        title="Nhận Voucher Giảm Giá!"
-                      >
-                        🎁
-                      </button>
-          
-                      {/* Chat Button */}
-                      <button
-                        onClick={async () => {
-                          if (!isAuthenticated || !user?.id) return;
-                          try {
-                            console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
-                            const created = await conversationApi.createConversation({
-                              sender_id: Number(user.id),
-                              sender_type: 'USER',
-                              content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                              user_id: Number(user.id),
-                              store_id: 1,
-                            });
-          
-                            const conv = created?.conversation || created?.data || created;
-                            console.log('%c✅ Conversation created:', 'color:limegreen', conv);
-                            setConversationId(conv?.id || null);
-                            setIsChatOpen(true);
-                          } catch (err) {
-                            console.error('❌ Lỗi tạo conversation:', err);
-                          }
-                        }}
-                        className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                        title="Chat với Admin"
-                      >
-                        💬
-                      </button>
-                    </div>
-                  </>
-                )}
-          
-                <ScrollToTopButton />
+      {/* === Popup Layer === */}
+      {isAuthenticated && user?.id && (
+        <>
+          {/* Voucher Modal */}
+          {isVoucherModalOpen && (
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+              <VoucherModal
+                customerId={user.id}
+                isOpen={isVoucherModalOpen}
+                onClose={() => setIsVoucherModalOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* Chat Modal */}
+          {isChatOpen && (
+            <ChatModal
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              userId={Number(user.id)}
+              storeId={0}
+              conversationId={conversationId} // ✅ truyền id xuống
+            />
+          )}
+
+          {/* Floating Buttons */}
+          <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+            {/* Voucher Button */}
+            <button
+              onClick={() => setIsVoucherModalOpen(true)}
+              className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              title="Nhận Voucher Giảm Giá!"
+            >
+              🎁
+            </button>
+
+            {/* Chat Button */}
+            <button
+              onClick={async () => {
+                if (!isAuthenticated || !user?.id) return;
+                try {
+                  console.log('%c💬 Tạo conversation trước khi mở chat...', 'color:deepskyblue');
+                  const created = await conversationApi.createConversation({
+                    sender_id: Number(user.id),
+                    sender_type: 'USER',
+                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                    user_id: Number(user.id),
+                    store_id: 1,
+                  });
+
+                  const conv = created?.conversation || created?.data || created;
+                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
+                  setConversationId(conv?.id || null);
+                  setIsChatOpen(true);
+                } catch (err) {
+                  console.error('❌ Lỗi tạo conversation:', err);
+                }
+              }}
+              className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+              title="Chat với Admin"
+            >
+              💬
+            </button>
+          </div>
+        </>
+      )}
+
+      <ScrollToTopButton />
       <section className="bg-[#FAFAF9] py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Nút quay lại */}
@@ -200,7 +200,10 @@ export default function NewsDetailPage() {
             )}
 
             <div className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed break-words whitespace-normal">
-              <p className="whitespace-pre-line">{news.content}</p>
+              <div
+                className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed break-words whitespace-normal quill-content"
+                dangerouslySetInnerHTML={{ __html: news.content }}
+              />
             </div>
 
             {/* --- BÀI VIẾT LIÊN QUAN (HIỂN THỊ NGAY DƯỚI NỘI DUNG) --- */}
@@ -231,10 +234,6 @@ export default function NewsDetailPage() {
                         <div className="text-xs text-gray-400 mb-2">
                           {new Date(r.published_at).toLocaleDateString('vi-VN')}
                         </div>
-                        <div
-                          className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed break-words whitespace-normal"
-                          dangerouslySetInnerHTML={{ __html: news.content }}
-                        />
                       </div>
                     </Link>
                   ))}
