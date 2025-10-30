@@ -13,15 +13,16 @@ export default function NewsPage() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const limit = 6; // mỗi trang 6 bài
+  const limit = 6;
   const totalPages = Math.ceil(total / limit);
   const [loading, setLoading] = useState(true);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const { user, isAuthenticated } = useAuth();
-    const [isAIChatOpen, setIsAIChatOpen] = useState(false);
-      const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
+
   const fetchData = async (pageNum: number) => {
     setLoading(true);
     const { items, total } = await newsApi.list(pageNum, limit);
@@ -40,9 +41,8 @@ export default function NewsPage() {
 
   return (
     <BaseLayout>
-    {isAuthenticated && user?.id && (
+      {isAuthenticated && user?.id && (
         <>
-          {/* Voucher Modal */}
           {isVoucherModalOpen && (
             <div className="fixed inset-0 z-[90] flex items-center justify-center bg-white/10">
               <VoucherModal
@@ -53,160 +53,147 @@ export default function NewsPage() {
             </div>
           )}
 
-          {/* Chat Modal */}
           {isChatOpen && (
             <ChatModal
               isOpen={isChatOpen}
               onClose={() => setIsChatOpen(false)}
               userId={Number(user.id)}
               storeId={0}
-              conversationId={conversationId} // ✅ truyền id xuống
+              conversationId={conversationId}
             />
           )}
 
-          {/* AI Chat Modal */}
-          <AIChatModal
-            isOpen={isAIChatOpen}
-            onClose={() => setIsAIChatOpen(false)}
-          />
+          <AIChatModal isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
 
           {/* Floating Buttons */}
           <div
-            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
-              isChatDropdownOpen ? 'right-1' : 'right-1'
-            }`}
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] right-1 transition-all duration-300`}
           >
-            {/* Voucher Button */}
             <button
               onClick={() => setIsVoucherModalOpen(true)}
-              className="bg-yellow-400 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              className="bg-[#D0A878] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-md hover:scale-110 transition-transform"
               title="Nhận Voucher Giảm Giá!"
             >
               <Gift className="w-6 h-6" />
             </button>
 
-            {/* Chat Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsChatDropdownOpen(prev => !prev)}
-                className="bg-[#8B7D6B] text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                className="bg-[#8B7D6B] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-md hover:scale-110 transition-transform"
                 title="Bắt đầu trò chuyện"
               >
-                <MessageSquare className="w-6 h-6" />
+                <MessageSquare className="w-5 h-5" />
               </button>
 
               {isChatDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 flex flex-col gap-3 transition-all duration-300 ease-out transform origin-top-right">
-                  {/* Nút Chat với Admin */}
-                  <div className="relative group">
-                    <button
-                      onClick={async () => {
-                        if (!isAuthenticated || !user?.id) return;
-                        try {
-                          const created = await conversationApi.createConversation({
-                            sender_id: Number(user.id),
-                            sender_type: 'USER',
-                            content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                            user_id: Number(user.id),
-                            store_id: 1,
-                          });
-                          const conv = created?.conversation || created?.data || created;
-                          setConversationId(conv?.id || null);
-                          setIsChatOpen(true);
-                          setIsChatDropdownOpen(false);
-                        } catch (err) {
-                          console.error('❌ Lỗi tạo conversation:', err);
-                        }
-                      }}
-                      className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                      title="Chat với Admin"
-                    >
-                      <User className="w-5 h-5" />
-                    </button>
-                  </div>
-                  {/* Nút Chat với AI */}
-                  <div className="relative group">
-                    <button
-                      onClick={() => {
-                        setIsAIChatOpen(true); // 2. Mở popup AI chat
+                <div className="absolute top-full right-0 mt-3 flex flex-col gap-3">
+                  <button
+                    onClick={async () => {
+                      if (!isAuthenticated || !user?.id) return;
+                      try {
+                        const created = await conversationApi.createConversation({
+                          sender_id: Number(user.id),
+                          sender_type: 'USER',
+                          content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                          user_id: Number(user.id),
+                          store_id: 1,
+                        });
+                        const conv = created?.conversation || created?.data || created;
+                        setConversationId(conv?.id || null);
+                        setIsChatOpen(true);
                         setIsChatDropdownOpen(false);
-                      }}
-                      className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                      title="Chat với AI"
-                    >
-                      <Bot className="w-6 h-6" />
-                    </button>
-                  </div>
+                      } catch (err) {
+                        console.error('❌ Lỗi tạo conversation:', err);
+                      }
+                    }}
+                    className="bg-[#A67C52] text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:scale-105"
+                    title="Chat với Admin"
+                  >
+                    <User className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsAIChatOpen(true);
+                      setIsChatDropdownOpen(false);
+                    }}
+                    className="bg-[#B39F8D] text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:scale-105"
+                    title="Chat với AI"
+                  >
+                    <Bot className="w-5 h-5" />
+                  </button>
                 </div>
               )}
             </div>
           </div>
         </>
       )}
-          
-                <ScrollToTopButton />
-      {/* Banner giống ảnh */}
+
+      <ScrollToTopButton />
+
+      {/* ===== Banner ===== */}
       <section className="relative w-screen left-1/2 right-1/2 -mx-[50vw] -mt-[100px] md:-mt-[120px]">
         <img
-          src="/bg-new.jpg"
+          src="/image132.png"
           alt="Tin tức và Câu chuyện"
           className="w-full h-[450px] md:h-[550px] object-cover"
         />
-        <div className="absolute inset-0 bg-white/60 flex flex-col justify-center items-center text-center">
-          <h1 className="text-4xl md:text-5xl font-serif text-[#2C2A24] mb-3">
-            Tin tức và <span className="font-semibold">Câu chuyện</span>
+        <div className="absolute inset-0 bg-black/30 flex flex-col justify-center items-center text-center">
+          <h1 className="text-4xl md:text-5xl font-serif text-white drop-shadow-lg font-semibold">
+            Tin tức và Câu chuyện
           </h1>
         </div>
       </section>
 
-      {/* Tiêu đề + mô tả */}
-      <div className="bg-[#FAF9F7] py-14 text-center">
-        <span className="inline-block bg-[#EDE8E0] text-[#5B5031] px-4 py-1 rounded-full text-sm mb-4">
+      {/* ===== Intro ===== */}
+      <section className="bg-[#FAF9F7] py-14 text-center">
+        <span className="inline-block bg-[#EDE8E0] text-[#5B5031] px-5 py-1.5 rounded-full text-sm mb-5 font-medium tracking-wide">
           Nhật Ký Gốm Sứ
         </span>
-        <h2 className="text-3xl md:text-4xl font-serif text-[#2C2A24] mb-3">
+        <h2 className="text-3xl md:text-4xl font-serif text-[#2C2A24] mb-4">
           Câu Chuyện & <span className="text-[#A67C52]">Cảm Hứng</span>
         </h2>
-        <p className="max-w-2xl mx-auto text-[#65604E] text-base md:text-lg">
-          Khám phá những câu chuyện thú vị về nghệ thuật gốm sứ, kỹ thuật chế tác và xu hướng thiết kế
+        <p className="max-w-2xl mx-auto text-[#5A5545] text-base md:text-lg leading-relaxed">
+          Khám phá những câu chuyện thú vị về nghệ thuật gốm sứ, kỹ thuật chế tác và xu hướng thiết kế.
         </p>
-      </div>
+      </section>
 
-      {/* Danh sách tin */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      {/* ===== List ===== */}
+      <section className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
         {loading ? (
-          <div className="text-center text-gray-600">Đang tải…</div>
+          <div className="text-center text-gray-500 italic">Đang tải…</div>
         ) : items.length === 0 ? (
           <div className="text-gray-600 text-center">Chưa có bài viết.</div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {items.map((n) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {items.map(n => (
                 <article
                   key={n.id}
-                  className="bg-white rounded-2xl shadow hover:shadow-lg transition p-5 flex flex-col"
+                  className="bg-white border border-[#E9E4DC] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
                 >
                   <img
                     src={n.image || '/pott.jpg'}
                     alt={n.title}
-                    className="w-full h-52 object-cover rounded-xl mb-4"
+                    className="w-full h-56 object-cover"
                   />
-                  <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <span className="mr-3">
-                      {new Date(n.published_at).toLocaleDateString('vi-VN')}
-                    </span>
-                    <span>• 5 phút đọc</span>
-                  </div>
-                  <h2 className="text-xl font-semibold text-[#2C2A24] mb-2 line-clamp-2">
-                    {n.title}
-                  </h2>
-                  <p className="text-[#65604E] mb-4 line-clamp-3 flex-grow">
-                    {n.content}
-                  </p>
-                  <div className="mt-auto">
+                  <div className="p-6 flex flex-col">
+                    <div className="flex items-center text-sm text-[#8C8674] mb-2">
+                      <span className="mr-3">
+                        {new Date(n.published_at).toLocaleDateString('vi-VN')}
+                      </span>
+                      <span>• 5 phút đọc</span>
+                    </div>
+                    <h3 className="text-lg font-serif font-semibold text-[#2C2A24] mb-2 line-clamp-2">
+                      {n.title}
+                    </h3>
+                    <p className="text-[#6B6658] text-sm mb-4 line-clamp-3 flex-grow">
+                      {n.content}
+                    </p>
                     <Link
                       href={`/news/${n.id}`}
-                      className="inline-block mt-2 text-[#A67C52] font-medium hover:underline"
+                      className="mt-auto text-[#A67C52] text-sm font-medium hover:underline"
                     >
                       Đọc Tiếp →
                     </Link>
@@ -215,20 +202,20 @@ export default function NewsPage() {
               ))}
             </div>
 
-            {/* Nút Xem tất cả bài viết */}
-            <div className="flex justify-center mt-14">
-              <button className="bg-[#A18C6F] text-white font-medium px-10 py-3 rounded-full hover:opacity-90 transition flex items-center gap-2">
+            {/* Xem tất cả */}
+            <div className="flex justify-center mt-16">
+              <button className="bg-[#A18C6F] text-white font-medium px-10 py-3 rounded-full hover:bg-[#8F7B62] transition-all duration-200 shadow-sm">
                 Xem Tất Cả Bài Viết →
               </button>
             </div>
 
             {/* Phân trang */}
-            <div className="flex justify-center items-center gap-3 mt-8">
-              <p className="text-sm text-gray-700">Tổng: {total}</p>
+            <div className="flex justify-center items-center gap-3 mt-10">
+              <p className="text-sm text-[#7C7465]">Tổng: {total}</p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(page - 1)}
-                  className="px-2 text-gray-600 hover:text-black"
+                  className="px-3 text-[#8C7B68] hover:text-[#2C2A24]"
                 >
                   ‹
                 </button>
@@ -236,10 +223,10 @@ export default function NewsPage() {
                   <button
                     key={i}
                     onClick={() => handlePageChange(i + 1)}
-                    className={`w-8 h-8 rounded-md text-sm ${
+                    className={`w-8 h-8 rounded-md text-sm font-medium transition-all ${
                       i + 1 === page
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                        ? 'bg-[#A67C52] text-white shadow-sm'
+                        : 'bg-white border border-[#E0D9CF] text-[#5B5031] hover:bg-[#F3EFEA]'
                     }`}
                   >
                     {i + 1}
@@ -247,7 +234,7 @@ export default function NewsPage() {
                 ))}
                 <button
                   onClick={() => handlePageChange(page + 1)}
-                  className="px-2 text-gray-600 hover:text-black"
+                  className="px-3 text-[#8C7B68] hover:text-[#2C2A24]"
                 >
                   ›
                 </button>
@@ -255,7 +242,7 @@ export default function NewsPage() {
             </div>
           </>
         )}
-      </div>
+      </section>
     </BaseLayout>
   );
 }
