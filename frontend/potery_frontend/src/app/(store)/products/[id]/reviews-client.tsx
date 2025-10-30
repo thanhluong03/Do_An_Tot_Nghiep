@@ -26,23 +26,36 @@ export function ReviewsClient({
 
   // 🔹 Lấy danh sách đánh giá
   useEffect(() => {
-    let mounted = true;
+  let mounted = true;
 
-    (async () => {
-      try {
-        const data = await reviewsApi.list(productId);
-        if (mounted) setReviews(data);
-      } catch {
-        if (mounted) setError('Không thể tải đánh giá');
-      } finally {
-        if (mounted) setLoading(false);
+  (async () => {
+    try {
+      const data = await reviewsApi.listByProduct(productId);
+
+      if (mounted) {
+        // Chuẩn hóa dữ liệu để dễ render
+        const formatted = data.map((item: any) => ({
+          id: item.review.id,
+          rating: item.review.rating,
+          comment: item.review.comment,
+          customer_name: item.customer?.name || "Khách hàng",
+          created_at: new Date().toISOString(),
+        }));
+
+        setReviews(formatted);
       }
-    })();
+    } catch {
+      if (mounted) setError('Không thể tải đánh giá');
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  })();
 
-    return () => {
-      mounted = false;
-    };
-  }, [productId]);
+  return () => {
+    mounted = false;
+  };
+}, [productId]);
+
 
   // 🔹 Gửi đánh giá
   const handleSubmit = async () => {
@@ -201,7 +214,7 @@ export function ReviewsClient({
               <div key={r.id} className="p-6 rounded-2xl bg-white shadow">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold text-gray-900">
-                    {r.customer_id === user?.id ? 'Bạn' : 'Khách hàng'}
+                    {r.customer_name || (r.customer_id === user?.id ? 'Bạn' : 'Khách hàng')}
                   </div>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
