@@ -119,7 +119,7 @@ export default function ConfirmationPage() {
   const totalAmount = Number(order.total_amount) || 0;
   const originalAmount = Number(order.current_order?.original_amount) || totalAmount;
   const discountAmount = Number(order.current_order?.discount_amount) || 0;
-  const shippingFee = Number((order as any).shipping_fee || (order.current_order as any)?.shipping_fee) || 0;
+  const shippingFee = 30000; // ✅ Phí vận chuyển cố định, không lưu trong DB
 
 
   return (
@@ -170,7 +170,7 @@ export default function ConfirmationPage() {
               <div className="space-y-3 text-base text-[#5A5547]">
                 <div className="flex justify-between">
                   <span>Tổng tiền sản phẩm</span>
-                  <span className="font-medium">{formatPrice(originalAmount)}</span>
+                  <span className="font-medium">{formatPrice(totalAmount)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-red-500">
@@ -179,14 +179,14 @@ export default function ConfirmationPage() {
                   </div>
                 )}
                 <div className="flex justify-between text-green-700 font-medium">
-                  <span>Phí Vận chuyển</span>
-                  <span>{shippingFee > 0 ? formatPrice(shippingFee) : 'Miễn phí'}</span>
+                  <span>Phí vận chuyển</span>
+                  <span>{formatPrice(shippingFee)}</span>
                 </div>
 
                 <div className="flex justify-between border-t border-gray-300 pt-4">
                   <span className="text-xl font-bold text-[#2C2A24]">TỔNG THANH TOÁN</span>
                   <span className="text-2xl font-extrabold text-[#A38D64]">
-                    {formatPrice(totalAmount)}
+                    {formatPrice(totalAmount + shippingFee)}
                   </span>
                 </div>
               </div>

@@ -596,27 +596,19 @@ export default function CheckoutPage() {
         };
       });
 
-      // Phân bổ phí vận chuyển vào tất cả items để backend tính đúng total_amount
-      const totalItemsValue = payloadItems.reduce((sum, item) => sum + (item.price_at_order * item.quantity), 0);
-      const shippingPerItem = totalItemsValue > 0 ? SHIPPING_FEE / payloadItems.length : 0;
-
-      const itemsWithShipping = payloadItems.map(item => ({
-        ...item,
-        price_at_order: Math.round(item.price_at_order + (shippingPerItem / item.quantity))
-      }));
-
+      // ✅ Không phân bổ phí vận chuyển vào items - giữ nguyên giá sản phẩm
       const payload = {
         customer_id: customerId,
         shipping_address: `${address.trim()}, ${city.trim()}`,
         voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
         payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-        items: itemsWithShipping, // Items đã bao gồm phí vận chuyển phân bổ
+        items: payloadItems, // Items với giá gốc, không bao gồm phí vận chuyển
       };
 
-      console.log('📦 Gửi đơn hàng với payload bao gồm phí vận chuyển:', payload);
-      console.log('💰 Items gửi backend:', itemsWithShipping);
-      console.log('📋 Backend sẽ tự tính total =', itemsWithShipping.reduce((sum: number, item: any) => sum + (item.price_at_order * item.quantity), 0));
-      console.log('🚚 Phí vận chuyển đã được phân bổ:', shippingPerItem, '/ item');
+      console.log('📦 Gửi đơn hàng với payload giá gốc:', payload);
+      console.log('💰 Items gửi backend (giá gốc):', payloadItems);
+      console.log('📋 Backend sẽ tự tính total_amount từ giá sản phẩm =', payloadItems.reduce((sum: number, item: any) => sum + (item.price_at_order * item.quantity), 0));
+      console.log('🚚 Phí vận chuyển sẽ hiển thị riêng biệt trên frontend:', SHIPPING_FEE);
 
       const res = await orderApi.createOrder(payload);
       const createdId = Number(res?.data?.id ?? res?.id);

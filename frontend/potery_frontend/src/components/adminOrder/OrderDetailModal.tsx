@@ -85,10 +85,10 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 value={
                   <span
                     className={`font-bold uppercase text-xs px-2 py-1 rounded-full ${order.status === "DELIVERED"
-                        ? "bg-green-100 text-green-700"
-                        : order.status === "CANCELED"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
+                      ? "bg-green-100 text-green-700"
+                      : order.status === "CANCELED"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-yellow-100 text-yellow-700"
                       }`}
                   >
                     {order.status}
@@ -106,11 +106,11 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 Tóm tắt Thanh toán
               </h3>
               <InfoRow label="Tổng tiền sản phẩm" value={formatCurrency(displayTotalAmount)} />
-              <InfoRow label="Phí vận chuyển" value={<span className="text-green-600 font-semibold">Miễn phí</span>} />
+              <InfoRow label="Phí vận chuyển" value={formatCurrency(30000)} />
               <div className="pt-4 mt-4 border-t-2 border-indigo-300">
                 <InfoRow
                   label="Tổng thanh toán"
-                  value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount)}</span>}
+                  value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount + 30000)}</span>}
                 />
                 <InfoRow label="Phương thức" value={order.payment_method.replace("_", " ")} />
                 <InfoRow
@@ -118,8 +118,8 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   value={
                     <span
                       className={`font-bold uppercase text-xs px-2 py-1 rounded-full ${order.payment_status === "PAID"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
                         }`}
                     >
                       {order.payment_status}

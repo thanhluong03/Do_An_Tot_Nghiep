@@ -54,7 +54,7 @@ const getStatusColor = (status: string) => {
     case 'CREATED':
     case 'PENDING':
     case 'CONFIRMED':
-      return 'text-[#856D4D] bg-[#FFF8E1] border-[#F2E5C9]'; 
+      return 'text-[#856D4D] bg-[#FFF8E1] border-[#F2E5C9]';
     case 'PROCESSING':
     case 'SHIPPED':
       return 'text-[#4A856D] bg-[#E8F5E9] border-[#DCEADF]';
@@ -300,22 +300,21 @@ export default function MyOrdersPage() {
                           Thanh toán: <span className="font-semibold text-[#2C2A24]">{translatePaymentMethod(info.payment_method)}</span>
                         </div>
                         <div className="text-xs text-gray-600">
-                          Phí vận chuyển: <span className="font-semibold text-[#2C2A24]">Miễn phí</span>
+                          Phí vận chuyển: <span className="font-semibold text-[#2C2A24]">{formatPrice(30000)}</span>
                         </div>
                       </div>
 
                       <div className="text-right flex items-center gap-4">
                         <div>
-                          <div className="text-sm text-[#65604E]">TỔNG CỘNG:</div>
-                          <div className="text-xl font-bold text-[#C4975A]">
-                            {formatPrice(total)}
-                          </div>
+                          <div className="text-xs text-gray-600">Tổng tiền hàng</div>
+                          <div className="text-sm font-bold text-[#2C2A24]">{formatPrice(info.total_amount)}</div>
+                          <div className="text-xs text-gray-600">Tổng thanh toán: <span className="font-bold text-[#A38D64]">{formatPrice(info.total_amount + 30000)}</span></div>
                         </div>
                       </div>
 
                     </div>
                     <div className="flex justify-end items-center p-5 bg-white border-t border-[#E5E2D8] gap-4">
-                      {['CREATED', 'PENDING', 'CONFIRMED','SHIPPING'].includes(order.status?.toUpperCase()) && (
+                      {['CREATED', 'PENDING', 'CONFIRMED', 'SHIPPING'].includes(order.status?.toUpperCase()) && (
                         <button
                           onClick={() => handleCancelOrder(id)}
                           className="px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md"
