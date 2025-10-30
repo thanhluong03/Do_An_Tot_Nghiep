@@ -200,9 +200,6 @@ export default function NewsPage() {
                   <h2 className="text-xl font-semibold text-[#2C2A24] mb-2 line-clamp-2">
                     {n.title}
                   </h2>
-                  <p className="text-[#65604E] mb-4 line-clamp-3 flex-grow">
-                    {n.content}
-                  </p>
                   <div className="mt-auto">
                     <Link
                       href={`/news/${n.id}`}
