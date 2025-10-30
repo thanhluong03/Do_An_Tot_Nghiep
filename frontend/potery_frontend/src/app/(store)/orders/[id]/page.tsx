@@ -176,26 +176,26 @@ function OrderDetailClient({ id }: { id: string }) {
 
   // ---------------- resolveOrderItemId ----------------
   function resolveOrderItemId(it: any) {
-  // nếu có sẵn id thì dùng luôn
-  if (it.orderitem_id || it.order_item_id || it.id)
-    return it.orderitem_id ?? it.order_item_id ?? it.id;
+    // nếu có sẵn id thì dùng luôn
+    if (it.orderitem_id || it.order_item_id || it.id)
+      return it.orderitem_id ?? it.order_item_id ?? it.id;
 
-  // thử lấy trong current_order.items vì backend không có order_items riêng
-  const allItems = order?.current_order?.items ?? [];
+    // thử lấy trong current_order.items vì backend không có order_items riêng
+    const allItems = order?.current_order?.items ?? [];
 
-  const found = allItems.find(
-    (oi: any) =>
-      String(oi.product_id) === String(it.product_id) &&
-      Number(oi.store_id) === Number(it.store_id)
-  );
+    const found = allItems.find(
+      (oi: any) =>
+        String(oi.product_id) === String(it.product_id) &&
+        Number(oi.store_id) === Number(it.store_id)
+    );
 
-  if (found) {
-    return found.id ?? found.orderitem_id ?? found.order_item_id ?? null;
+    if (found) {
+      return found.id ?? found.orderitem_id ?? found.order_item_id ?? null;
+    }
+
+    console.warn('❌ Không tìm thấy orderitem_id cho sản phẩm:', it);
+    return null;
   }
-
-  console.warn('❌ Không tìm thấy orderitem_id cho sản phẩm:', it);
-  return null;
-}
 
   // ---------------- UI render ----------------
   if (loading)
@@ -258,7 +258,7 @@ function OrderDetailClient({ id }: { id: string }) {
             )}
           </div>
           <div className="text-gray-700">{order.shipping_address || 'Chưa có địa chỉ'}</div>
-          
+
           {/* Tracking Map */}
           {showMap && trackingData && (
             <div className="mt-4">
@@ -285,16 +285,17 @@ function OrderDetailClient({ id }: { id: string }) {
         </div>
 
         {/* payment */}
+        {/* payment */}
         <div className="bg-white rounded-xl border p-4 shadow-sm">
           <h2 className="text-lg font-semibold mb-2">Thanh toán</h2>
-          <div className="text-gray-700">
+          <div className="text-gray-700 space-y-1">
             <div>Phương thức: {order.payment_method}</div>
             <div>Trạng thái: {order.payment_status}</div>
-            <div>Tổng tiền: {formatPrice(order.total_amount)}</div>
+            <div>Tổng tiền hàng: {formatPrice(order.total_amount)}</div>
+            <div>Phí vận chuyển: {formatPrice(30000)}</div>
+            <div className="font-bold">Tổng thanh toán: {formatPrice(order.total_amount + 30000)}</div>
           </div>
-        </div>
-
-        {/* items */}
+        </div>        {/* items */}
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <h2 className="text-lg font-semibold mb-4">Sản phẩm</h2>
           <div className="divide-y">
@@ -307,8 +308,8 @@ function OrderDetailClient({ id }: { id: string }) {
                         it?.product_images?.[0]?.image_data
                           ? `data:image/avif;base64,${it.product_images[0].image_data}`
                           : it?.image
-                          ? it.image
-                          : '/no-image.png'
+                            ? it.image
+                            : '/no-image.png'
                       }
                       alt={it.product_name || 'Sản phẩm'}
                       width={96}
@@ -341,9 +342,8 @@ function OrderDetailClient({ id }: { id: string }) {
                             <Star
                               key={star}
                               onClick={() => setRating(star)}
-                              className={`w-5 h-5 cursor-pointer ${
-                                star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
-                              }`}
+                              className={`w-5 h-5 cursor-pointer ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
+                                }`}
                             />
                           ))}
                         </div>
