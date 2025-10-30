@@ -140,9 +140,45 @@ export function AddToCartClient({
       if (!stored) {
         try { Cookies.set('buy_now', JSON.stringify(payload)); } catch { }
       }
-      // Chuyển hướng với đúng param
+
+      // Build URL with classification info like ProductCard
+      const queryParams = new URLSearchParams({
+        productId: payload.product_id,
+        quantity: String(payload.quantity),
+        price: String(currentPrice || product.price)
+      });
+
+      // Add store ID if available
+      if (payload.store_id) {
+        queryParams.append('storeId', String(payload.store_id));
+      }
+
+      // Add classification info if available
+      if (selectedClassifications && selectedClassifications.attribute1_id && selectedClassifications.attribute2_id) {
+        queryParams.append('attribute1_id', String(selectedClassifications.attribute1_id));
+        queryParams.append('attribute2_id', String(selectedClassifications.attribute2_id));
+        queryParams.append('attribute1_name', encodeURIComponent(selectedClassifications.attribute1_name || ''));
+        queryParams.append('attribute2_name', encodeURIComponent(selectedClassifications.attribute2_name || ''));
+
+        // Find classification ID from product data
+        if (product.stores && payload.store_id) {
+          const selectedStore = product.stores.find((store: any) => store.store_id === String(payload.store_id));
+          if (selectedStore && selectedStore.classifications) {
+            const classificationId = selectedStore.classifications.find((c: any) =>
+              c.attribute1_id === selectedClassifications.attribute1_id &&
+              c.attribute2_id === selectedClassifications.attribute2_id
+            )?.id;
+
+            if (classificationId) {
+              queryParams.append('classificationId', String(classificationId));
+            }
+          }
+        }
+      }
+
+      // Redirect with full query params
       setTimeout(() => {
-        window.location.href = `/checkout?productId=${payload.product_id}&storeId=${payload.store_id}&quantity=${payload.quantity}`;
+        window.location.href = `/checkout?${queryParams.toString()}`;
       }, 10);
     } finally {
       setNavigating(false);
