@@ -292,19 +292,23 @@ export default function CheckoutPage() {
                     if (fallback) storeId = Number(fallback);
                   } catch { }
                 }
+                let classificationId = null;
+                if (i.classificationId) classificationId = i.classificationId;
+                else if (i.classifications && i.classifications.attribute1_id && i.classifications.attribute2_id) {
+                  classificationId = i.classifications.classificationId || null;
+                }
                 return {
                   id: `guest-${idx}`,
                   product_id: pid,
                   quantity: Number(i.quantity ?? 1),
                   store_id: storeId || 1,
-                  // Preserve guest cart classification information
                   classifications: i.classifications ? {
                     attribute1_id: i.classifications.attribute1_id,
                     attribute2_id: i.classifications.attribute2_id,
                     attribute1_name: i.classifications.attribute1_name || '',
                     attribute2_name: i.classifications.attribute2_name || ''
                   } : undefined,
-                  classificationId: i.classificationId,
+                  classificationId,
                   price: i.price, // Keep the classification price from guest cart
                 };
               })
@@ -533,9 +537,7 @@ export default function CheckoutPage() {
       });
 
       const payloadItems = cartItems.map(ci => {
-        // Type guard to determine if this is a server item or guest item
         const isServerItem = 'product_id' in ci;
-
         const pid = isServerItem ? Number(ci.product_id) : Number(ci.product?.id ?? 0);
         const quantity = ci.quantity;
         const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
@@ -543,11 +545,9 @@ export default function CheckoutPage() {
         // Get actual price - prioritize classification price, then product price
         let actualPrice: number;
         if (isServerItem) {
-          // Server cart item
           const serverItem = ci as typeof serverItems[0];
           actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
         } else {
-          // Guest cart item
           const guestItem = ci as CartItem;
           actualPrice = guestItem.price || guestItem.product.price;
         }
@@ -556,7 +556,7 @@ export default function CheckoutPage() {
         const share = totalBeforeDiscount > 0 ? (actualPrice * quantity) / totalBeforeDiscount : 0;
         const discountedPrice = actualPrice - (share * discount) / quantity;
 
-        // Get classification information
+        // Sửa: Lấy đúng classification_attribute_relationship_id cho cả guest và user
         let classificationId = null;
         let attribute1Name = '';
         let attribute2Name = '';
