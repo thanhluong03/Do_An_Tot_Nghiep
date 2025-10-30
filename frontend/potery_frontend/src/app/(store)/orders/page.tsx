@@ -20,7 +20,7 @@ const translateStatus = (status: string | undefined): string => {
       return 'Đã xác nhận';
     case 'PROCESSING':
       return 'Đang đóng gói';
-    case 'SHIPPED':
+    case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
     case 'COMPLETED':
@@ -281,6 +281,17 @@ export default function MyOrdersPage() {
                             <div className="font-medium text-sm text-[#2C2A24] leading-snug truncate">
                               {item.product_name}
                             </div>
+                            {(item.attribute1_name || item.attribute2_name) && (
+                              <div className="text-xs text-[#A38D64] font-semibold mt-0.5">
+                                Phân loại:
+                                {item.attribute1_name && (
+                                  <span> {item.attribute1_name}</span>
+                                )}
+                                {item.attribute2_name && (
+                                  <span>{item.attribute1_name ? ' - ' : ''}{item.attribute2_name}</span>
+                                )}
+                              </div>
+                            )}
                             <div className="text-xs text-gray-500 mt-0.5">
                               Số lượng: <span className="font-medium text-[#2C2A24]">{item.quantity}</span>
                             </div>
