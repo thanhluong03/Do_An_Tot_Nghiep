@@ -28,6 +28,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+
   // Default stores from list, will be replaced by detail if loaded
   const stores: StoreInventory[] = detail?.stores && detail.stores.length > 0
     ? detail.stores
@@ -35,9 +36,190 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
       store_id: product.store?.id || '',
       store_name: product.store?.name || 'Cửa hàng mặc định',
       store_address: product.store?.address || '',
-      quantity_stock: product.stock ?? 10
+      quantity_stock: product.stock ?? 10,
+      classifications: []
     }];
-  const [selectedStoreId, setSelectedStoreId] = useState(stores[0]?.store_id || null);
+
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+
+  // Classification state for popup
+  const [selectedClassifications, setSelectedClassifications] = useState<{
+    attribute1_id: number | null;
+    attribute2_id: number | null;
+    attribute1_name: string;
+    attribute2_name: string;
+  }>({
+    attribute1_id: null,
+    attribute2_id: null,
+    attribute1_name: '',
+    attribute2_name: ''
+  });
+
+  // Get current store data
+  const getCurrentStore = () => {
+    return stores.find(s => s.store_id === selectedStoreId);
+  };
+
+  // Get unique attributes and classification names from detail
+  const getUniqueAttributesAndNames = () => {
+    let attribute1: Array<{ id: number; name: string }> = [];
+    let attribute2: Array<{ id: number; name: string }> = [];
+    let attribute1Name = 'Phân loại 1';
+    let attribute2Name = 'Phân loại 2';
+
+    if (detail?.classifications && Array.isArray(detail.classifications)) {
+      if (detail.classifications[0]) {
+        attribute1Name = detail.classifications[0].name;
+        attribute1 = detail.classifications[0].attributes || [];
+      }
+      if (detail.classifications[1]) {
+        attribute2Name = detail.classifications[1].name;
+        attribute2 = detail.classifications[1].attributes || [];
+      }
+    }
+    return { attribute1, attribute2, attribute1Name, attribute2Name };
+  };
+
+  // Find selected classification and its price
+  const getSelectedClassificationData = () => {
+    const currentStore = getCurrentStore();
+    if (!currentStore || !selectedClassifications.attribute1_id || !selectedClassifications.attribute2_id) {
+      return { price: product.price, quantity_stock: 0, originalPrice: product.price };
+    }
+
+    const selectedClassification = currentStore.classifications.find(c =>
+      c.attribute1_id === selectedClassifications.attribute1_id &&
+      c.attribute2_id === selectedClassifications.attribute2_id
+    );
+
+    if (selectedClassification) {
+      const originalPrice = selectedClassification.price;
+      let finalPrice = selectedClassification.price;
+
+      // Apply promotion discount if exists
+      if (detail?.promotion && detail.promotion.discount_type && detail.promotion.discount_value) {
+        const discountValue = Number(detail.promotion.discount_value);
+        if (detail.promotion.discount_type === 'PERCENTAGE') {
+          finalPrice = originalPrice * (1 - discountValue / 100);
+        } else if (detail.promotion.discount_type === 'FIXED_AMOUNT') {
+          finalPrice = Math.max(0, originalPrice - discountValue);
+        }
+      }
+
+      return {
+        price: finalPrice,
+        originalPrice: originalPrice,
+        quantity_stock: selectedClassification.quantity_stock
+      };
+    }
+
+    return { price: product.price, originalPrice: product.price, quantity_stock: 0 };
+  };
+
+  // Check if a specific attribute combination is available in current store
+  const isAttributeAvailable = (attributeId: number, type: 'attribute1' | 'attribute2') => {
+    const currentStore = getCurrentStore();
+    if (!currentStore) return false;
+
+    // For attribute1, check if there's any classification with this attribute1_id and any attribute2_id in current store
+    if (type === 'attribute1') {
+      return currentStore.classifications.some(c =>
+        c.attribute1_id === attributeId && c.quantity_stock > 0
+      );
+    }
+
+    // For attribute2, check if there's any classification with this attribute2_id and any attribute1_id in current store
+    if (type === 'attribute2') {
+      return currentStore.classifications.some(c =>
+        c.attribute2_id === attributeId && c.quantity_stock > 0
+      );
+    }
+
+    return false;
+  };
+
+  // Handle classification selection
+  const handleClassificationChange = (type: 'attribute1' | 'attribute2', attributeId: number, attributeName: string) => {
+    // Check if this selection is available
+    if (!isAttributeAvailable(attributeId, type)) {
+      return; // Don't allow selection of unavailable attributes
+    }
+
+    const newClassifications = {
+      ...selectedClassifications,
+      [`${type}_id`]: attributeId,
+      [`${type}_name`]: attributeName
+    };
+
+    // If both attributes are selected, get names from relationships
+    if (newClassifications.attribute1_id && newClassifications.attribute2_id) {
+      const { attribute1_name, attribute2_name } = getAttributeNames(
+        newClassifications.attribute1_id,
+        newClassifications.attribute2_id
+      );
+      newClassifications.attribute1_name = attribute1_name;
+      newClassifications.attribute2_name = attribute2_name;
+    }
+
+    setSelectedClassifications(newClassifications);
+  };
+
+  // Helper function to get attribute names from relationships
+  const getAttributeNames = (attribute1_id: number | null, attribute2_id: number | null) => {
+    if (!detail?.relationships || !attribute1_id || !attribute2_id) {
+      return { attribute1_name: '', attribute2_name: '' };
+    }
+
+    const relationship = detail.relationships.find(r =>
+      r.product_attribute_id_1 === attribute1_id && r.product_attribute_id_2 === attribute2_id
+    );
+
+    return {
+      attribute1_name: relationship?.attribute1_name || '',
+      attribute2_name: relationship?.attribute2_name || ''
+    };
+  };
+
+  // Handle store change in popup
+  const handleStoreChangeInPopup = (storeId: string) => {
+    setSelectedStoreId(storeId);
+
+    // Find the new store
+    const newStore = stores.find(s => s.store_id === storeId);
+    if (!newStore) return;
+
+    // Find the cheapest available combination in the new store
+    const availableClassifications = newStore.classifications?.filter(c => c.quantity_stock > 0) || [];
+
+    if (availableClassifications.length > 0) {
+      // Sort by price to find cheapest
+      const cheapestClassification = availableClassifications.reduce((cheapest, current) =>
+        current.price < cheapest.price ? current : cheapest
+      );
+
+      // Get names from relationships
+      const { attribute1_name, attribute2_name } = getAttributeNames(
+        cheapestClassification.attribute1_id,
+        cheapestClassification.attribute2_id
+      );
+
+      // Auto-select the cheapest combination
+      setSelectedClassifications({
+        attribute1_id: cheapestClassification.attribute1_id,
+        attribute2_id: cheapestClassification.attribute2_id,
+        attribute1_name,
+        attribute2_name
+      });
+    } else {
+      // Reset classifications if no available combinations
+      setSelectedClassifications({
+        attribute1_id: null,
+        attribute2_id: null,
+        attribute1_name: '',
+        attribute2_name: ''
+      });
+    }
+  };
   // Fetch product detail when opening popup
   const fetchDetailForPopup = async () => {
     if (!detail && product.id) {
@@ -46,9 +228,43 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
       try {
         const fetched = await productApi.getProductById(String(product.id));
         setDetail(fetched);
-        // If stores exist, set default selected store
-        if (fetched.stores && fetched.stores.length > 0) {
-          setSelectedStoreId(fetched.stores[0].store_id);
+
+        // Initialize with cheapest store and classification
+        const defaultStore = fetched.cheapestStore || fetched.stores?.find(s => s.quantity_stock > 0) || fetched.stores?.[0];
+        if (defaultStore) {
+          setSelectedStoreId(defaultStore.store_id);
+
+          // Initialize with cheapest classification if available
+          if (fetched.cheapestClassification) {
+            const { attribute1_name, attribute2_name } = getAttributeNames(
+              fetched.cheapestClassification.attribute1_id,
+              fetched.cheapestClassification.attribute2_id
+            );
+            setSelectedClassifications({
+              attribute1_id: fetched.cheapestClassification.attribute1_id || null,
+              attribute2_id: fetched.cheapestClassification.attribute2_id || null,
+              attribute1_name,
+              attribute2_name
+            });
+          } else if (defaultStore.classifications && defaultStore.classifications.length > 0) {
+            // Find cheapest classification in default store
+            const availableClassifications = defaultStore.classifications.filter(c => c.quantity_stock > 0);
+            if (availableClassifications.length > 0) {
+              const cheapest = availableClassifications.reduce((prev, current) =>
+                current.price < prev.price ? current : prev
+              );
+              const { attribute1_name, attribute2_name } = getAttributeNames(
+                cheapest.attribute1_id,
+                cheapest.attribute2_id
+              );
+              setSelectedClassifications({
+                attribute1_id: cheapest.attribute1_id,
+                attribute2_id: cheapest.attribute2_id,
+                attribute1_name,
+                attribute2_name
+              });
+            }
+          }
         }
       } catch {
         setDetailError('Không thể tải chi tiết sản phẩm.');
@@ -69,29 +285,124 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   };
 
   const handleOrderNowConfirm = () => {
-    // Find selected store's stock
-    const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
-    const stock = selectedStore?.quantity_stock ?? 0;
-    if (quantity > stock) {
+    // Check stock based on whether we have classifications
+    let stockToCheck = 0;
+    const currentStore = getCurrentStore();
+    const classificationData = getSelectedClassificationData();
+    const currentStock = classificationData.quantity_stock;
+    const storeClassifications = currentStore?.classifications || [];
+
+    // If there are classifications, check specific combo stock
+    if (currentStore && storeClassifications.length > 0 && selectedClassifications.attribute1_id && selectedClassifications.attribute2_id) {
+      stockToCheck = currentStock;
+    } else {
+      // Otherwise check general store stock
+      const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
+      stockToCheck = selectedStore?.quantity_stock ?? 0;
+    }
+
+    if (quantity > stockToCheck) {
       toast.error('Số lượng không đủ trong cửa hàng.');
       return;
     }
-    // Redirect to checkout with product id, store id, quantity as query param
-    router.push(`/checkout?productId=${product.id}&storeId=${selectedStoreId}&quantity=${quantity}`);
+
+    // Build query params with classification info
+    const queryParams = new URLSearchParams({
+      productId: String(product.id),
+      storeId: selectedStoreId || '',
+      quantity: String(quantity),
+      price: String(classificationData.price) // Add combo price
+    });
+
+    // Add classification info if available
+    if (selectedClassifications.attribute1_id && selectedClassifications.attribute2_id) {
+      // Get names from relationships instead of using selectedClassifications names
+      const { attribute1_name, attribute2_name } = getAttributeNames(
+        selectedClassifications.attribute1_id,
+        selectedClassifications.attribute2_id
+      );
+
+      queryParams.append('attribute1_id', String(selectedClassifications.attribute1_id));
+      queryParams.append('attribute2_id', String(selectedClassifications.attribute2_id));
+      queryParams.append('attribute1_name', encodeURIComponent(attribute1_name));
+      queryParams.append('attribute2_name', encodeURIComponent(attribute2_name));
+
+      // Find classification ID
+      const classificationId = storeClassifications.find(c =>
+        c.attribute1_id === selectedClassifications.attribute1_id &&
+        c.attribute2_id === selectedClassifications.attribute2_id
+      )?.id;
+
+      if (classificationId) {
+        queryParams.append('classificationId', String(classificationId));
+      }
+
+      console.log('🏷️ Adding classification to URL:', {
+        attribute1_id: selectedClassifications.attribute1_id,
+        attribute2_id: selectedClassifications.attribute2_id,
+        attribute1_name,
+        attribute2_name,
+        classificationId
+      });
+    } else {
+      console.log('⚠️ No valid classifications selected:', selectedClassifications);
+    }    // Redirect to checkout with all necessary info
+    router.push(`/checkout?${queryParams.toString()}`);
   };
 
   const handleAddCartConfirm = async () => {
     // Find selected store's stock
-    const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
-    const stock = selectedStore?.quantity_stock ?? 0;
-    if (quantity > stock) {
+    let stockToCheck = 0;
+    const currentStore = getCurrentStore();
+    const classificationData = getSelectedClassificationData();
+    const currentStock = classificationData.quantity_stock;
+    const storeClassifications = currentStore?.classifications || [];
+
+    // If there are classifications, check specific combo stock
+    if (currentStore && storeClassifications.length > 0 && selectedClassifications.attribute1_id && selectedClassifications.attribute2_id) {
+      stockToCheck = currentStock;
+    } else {
+      // Otherwise check general store stock
+      const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
+      stockToCheck = selectedStore?.quantity_stock ?? 0;
+    }
+
+    if (quantity > stockToCheck) {
       toast.error('Số lượng không đủ trong cửa hàng.');
       return;
     }
     setLoading(true);
     try {
       if (!isAuthenticated || !user?.id) {
-        addItem(product, quantity);
+        // Create product with updated price for guest cart
+        const productWithComboPrice = {
+          ...product,
+          price: classificationData.price, // Use combo price instead of original product price
+          originalPrice: classificationData.originalPrice
+        };
+
+        // Pass classification info to cart only if there are valid classifications
+        const hasValidClassifications = selectedClassifications.attribute1_id && selectedClassifications.attribute2_id;
+
+        const classificationOptions = hasValidClassifications ? {
+          storeId: selectedStoreId || undefined,
+          classifications: {
+            attribute1_id: selectedClassifications.attribute1_id,
+            attribute2_id: selectedClassifications.attribute2_id,
+            attribute1_name: selectedClassifications.attribute1_name,
+            attribute2_name: selectedClassifications.attribute2_name
+          },
+          price: classificationData.price,
+          classificationId: storeClassifications.find(c =>
+            c.attribute1_id === selectedClassifications.attribute1_id &&
+            c.attribute2_id === selectedClassifications.attribute2_id
+          )?.id
+        } : {
+          storeId: selectedStoreId || undefined,
+          price: classificationData.price
+        };
+
+        addItem(productWithComboPrice, quantity, classificationOptions);
         toast.success('Đã thêm vào giỏ hàng!');
       } else {
         await cartApi.add({
@@ -99,6 +410,11 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           product_id: product.id,
           store_id: selectedStoreId || '',
           quantity,
+          // Find the classification relationship ID for backend
+          classification_attribute_relationship_id: storeClassifications.find(c =>
+            c.attribute1_id === selectedClassifications.attribute1_id &&
+            c.attribute2_id === selectedClassifications.attribute2_id
+          )?.id || null,
         });
         toast.success('Đã thêm vào giỏ hàng!');
       }
@@ -110,52 +426,29 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
     }
   };
 
-  const handleAdd = async () => {
-    // Guest: save to cookie via context, do NOT require store id
-    if (!isAuthenticated || !user?.id) {
-      setLoading(true);
-      try {
-        addItem(product, 1);
-        toast.success('Đã thêm vào giỏ hàng!');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // Logged-in: need store id for backend cart API
-    // Resolve store id: prefer from list item, fallback to product detail's first store
-    let storeId = product.store?.id;
-    if (!storeId) {
-      try {
-        const detail = await productApi.getProductById(String(product.id));
-        const fallback = detail?.stores?.[0]?.store_id;
-        if (fallback) {
-          storeId = fallback;
-        }
-      } catch { }
-    }
-    if (!storeId) return toast.error('Cửa hàng không hợp lệ');
-
-    setLoading(true);
-    try {
-      await cartApi.add({
-        customer_id: user.id,
-        product_id: product.id,
-        store_id: storeId,
-        quantity: 1,
-      });
-      toast.success('Đã thêm vào giỏ hàng!');
-    } catch {
-      toast.error('Không thể thêm sản phẩm.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
   // Use detail if available, else fallback to product
   const displayProduct = detail || product;
+
+  // Get current classification data for price display
+  const classificationData = getSelectedClassificationData();
+  const currentPrice = classificationData.price;
+  const comboOriginalPrice = classificationData.originalPrice;
+  const currentStock = classificationData.quantity_stock;
+
+  // Get unique attributes
+  const { attribute1, attribute2, attribute1Name, attribute2Name } = getUniqueAttributesAndNames();
+
+  // Get current store
+  const currentStore = getCurrentStore();
+  const storeClassifications = currentStore?.classifications || [];
+
+  // Calculate discount percentage for real promotions
+  const getDiscountPercentage = () => {
+    if ((detail?.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice) {
+      return Math.round(((comboOriginalPrice - currentPrice) / comboOriginalPrice) * 100);
+    }
+    return 0;
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-all">
@@ -174,11 +467,11 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         {/* Đã xóa nút checkmark/trái tim ở góc trên bên phải để khớp với ảnh */}
       </div>
 
-      <div className="p-4 text-left"> 
-        
+      <div className="p-4 text-left">
+
         {/* 1. Category */}
-        <p className="text-sm text-gray-500 mb-1">{product.category_name|| 'Ly, Cốc'}</p>
-        
+        <p className="text-sm text-gray-500 mb-1">{product.category_name || 'Ly, Cốc'}</p>
+
         {/* 2. Product Name */}
         <h3 className="font-bold text-lg text-gray-900 mb-2 truncate">
           {product.name}
@@ -190,14 +483,14 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           <span className="text-xl font-bold text-red-600">
             {formatPrice(product.price)}
           </span>
-          
+
           {/* Original Price */}
           {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-sm text-gray-400 line-through">
               {formatPrice(product.originalPrice)}
             </span>
           )}
-          
+
           {/* === THAY THẾ PILL GIẢM GIÁ === */}
           {product.originalPrice && product.originalPrice > product.price && product.discount && (
             <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
@@ -210,7 +503,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         {/* 4. Rating/Sales Line (MỚI) */}
         <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
           <div className="flex items-center gap-1">
-            <span className="text-yellow-400">★</span> 
+            <span className="text-yellow-400">★</span>
             <span className="font-medium text-gray-800">{product.rating || '5.0'}</span>
           </div>
           <span>Đã bán {product.total_quantity_sold ?? 0}</span>
@@ -226,7 +519,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           >
             <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
           </button>
-          
+
           {/* === NÚT MUA NGAY (ĐÃ SỬA) === */}
           <button
             onClick={handleOrderNow}
@@ -264,14 +557,93 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                     </div>
                     <h3 className="text-xl font-bold text-[#2C2A24] mb-2">{displayProduct.name}</h3>
                     <div className="flex items-center gap-3 mb-4">
-                      {displayProduct.originalPrice && displayProduct.originalPrice > displayProduct.price && (
-                        <div className="text-sm text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</div>
+                      {/* Only show original price and discount for real promotions */}
+                      {detail?.promotion && comboOriginalPrice && comboOriginalPrice > currentPrice && (
+                        <div className="text-sm text-gray-400 line-through font-semibold">{formatPrice(comboOriginalPrice)}</div>
                       )}
-                      <div className="text-lg font-extrabold text-[#2C2A24]">{formatPrice(displayProduct.price)}</div>
-                      {displayProduct.discount && (
-                        <div className="text-sm text-[#a3764a]">Giảm {Math.round(displayProduct.discount * 100)}%</div>
+                      <div className={`text-lg font-extrabold ${detail?.promotion && comboOriginalPrice && comboOriginalPrice > currentPrice ? 'text-red-600' : 'text-[#2C2A24]'}`}>
+                        {formatPrice(currentPrice)}
+                      </div>
+                      {getDiscountPercentage() > 0 && (
+                        <div className="text-sm text-red-600 bg-red-100 px-2 py-0.5 rounded-full font-semibold">
+                          -{getDiscountPercentage()}%
+                        </div>
                       )}
                     </div>
+
+                    {/* Product Classifications - Only show if current store has classifications */}
+                    {currentStore && storeClassifications.length > 0 && (
+                      <div className="space-y-4 border-t pt-4 mb-4">
+                        {/* Phân loại 1 */}
+                        {attribute1.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">
+                              {attribute1Name}
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {attribute1.map((attr) => {
+                                const isAvailable = isAttributeAvailable(attr.id, 'attribute1');
+                                const isSelected = selectedClassifications.attribute1_id === attr.id;
+
+                                return (
+                                  <button
+                                    key={attr.id}
+                                    onClick={() => handleClassificationChange('attribute1', attr.id, attr.name)}
+                                    disabled={!isAvailable}
+                                    className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
+                                      ? 'border-[#c4975a] bg-[#fdf7ee] text-[#c4975a]'
+                                      : isAvailable
+                                        ? 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                        : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                      }`}
+                                  >
+                                    {attr.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Phân loại 2 */}
+                        {attribute2.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">
+                              {attribute2Name}
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {attribute2.map((attr) => {
+                                const isAvailable = isAttributeAvailable(attr.id, 'attribute2');
+                                const isSelected = selectedClassifications.attribute2_id === attr.id;
+
+                                return (
+                                  <button
+                                    key={attr.id}
+                                    onClick={() => handleClassificationChange('attribute2', attr.id, attr.name)}
+                                    disabled={!isAvailable}
+                                    className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
+                                      ? 'border-[#c4975a] bg-[#fdf7ee] text-[#c4975a]'
+                                      : isAvailable
+                                        ? 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                        : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                      }`}
+                                  >
+                                    {attr.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show stock for selected combination */}
+                        {selectedClassifications.attribute1_id && selectedClassifications.attribute2_id && (
+                          <div className="text-sm text-gray-600">
+                            Còn lại: <span className="font-medium text-gray-900">{currentStock}</span> sản phẩm
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mb-4">
                       <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng</div>
@@ -282,7 +654,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                               type="radio"
                               name="store"
                               checked={selectedStoreId === store.store_id}
-                              onChange={() => setSelectedStoreId(store.store_id)}
+                              onChange={() => handleStoreChangeInPopup(store.store_id)}
                               className="accent-[#c4975a]"
                             />
                             <div className="flex-1">
@@ -315,7 +687,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                   <div className="flex items-center justify-between mt-4">
                     <div>
                       <div className="text-sm text-gray-500">Tổng</div>
-                      <div className="text-lg font-extrabold">{formatPrice((displayProduct.price || 0) * quantity)}</div>
+                      <div className="text-lg font-extrabold">{formatPrice(currentPrice * quantity)}</div>
                     </div>
                     <div className="flex gap-3">
                       <button
@@ -325,11 +697,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                         Hủy
                       </button>
                       <button
-                        onClick={() => {
-                          const sel = stores.find((s) => s.store_id === selectedStoreId);
-                          if (!sel || (sel.quantity_stock ?? 0) < quantity) return toast.error('Hết hàng trong cửa hàng đã chọn.');
-                          handleOrderNowConfirm();
-                        }}
+                        onClick={handleOrderNowConfirm}
                         className="px-6 py-2 bg-[#c4975a] hover:bg-[#a3764a] text-white rounded-lg font-bold"
                       >
                         Đặt hàng ngay
@@ -369,14 +737,93 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                     </div>
                     <h3 className="text-xl font-bold text-[#2C2A24] mb-2">{displayProduct.name}</h3>
                     <div className="flex items-center gap-3 mb-4">
-                      {displayProduct.originalPrice && displayProduct.originalPrice > displayProduct.price && (
-                        <div className="text-sm text-gray-400 line-through font-semibold">{formatPrice(displayProduct.originalPrice)}</div>
+                      {/* Only show original price and discount for real promotions */}
+                      {detail?.promotion && comboOriginalPrice && comboOriginalPrice > currentPrice && (
+                        <div className="text-sm text-gray-400 line-through font-semibold">{formatPrice(comboOriginalPrice)}</div>
                       )}
-                      <div className="text-lg font-extrabold text-[#2C2A24]">{formatPrice(displayProduct.price)}</div>
-                      {displayProduct.discount && (
-                        <div className="text-sm text-[#a3764a]">Giảm {Math.round(displayProduct.discount * 100)}%</div>
+                      <div className={`text-lg font-extrabold ${detail?.promotion && comboOriginalPrice && comboOriginalPrice > currentPrice ? 'text-red-600' : 'text-[#2C2A24]'}`}>
+                        {formatPrice(currentPrice)}
+                      </div>
+                      {getDiscountPercentage() > 0 && (
+                        <div className="text-sm text-red-600 bg-red-100 px-2 py-0.5 rounded-full font-semibold">
+                          -{getDiscountPercentage()}%
+                        </div>
                       )}
                     </div>
+
+                    {/* Product Classifications - Only show if current store has classifications */}
+                    {currentStore && storeClassifications.length > 0 && (
+                      <div className="space-y-4 border-t pt-4 mb-4">
+                        {/* Phân loại 1 */}
+                        {attribute1.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">
+                              {attribute1Name}
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {attribute1.map((attr) => {
+                                const isAvailable = isAttributeAvailable(attr.id, 'attribute1');
+                                const isSelected = selectedClassifications.attribute1_id === attr.id;
+
+                                return (
+                                  <button
+                                    key={attr.id}
+                                    onClick={() => handleClassificationChange('attribute1', attr.id, attr.name)}
+                                    disabled={!isAvailable}
+                                    className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
+                                      ? 'border-[#c4975a] bg-[#fdf7ee] text-[#c4975a]'
+                                      : isAvailable
+                                        ? 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                        : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                      }`}
+                                  >
+                                    {attr.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Phân loại 2 */}
+                        {attribute2.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">
+                              {attribute2Name}
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {attribute2.map((attr) => {
+                                const isAvailable = isAttributeAvailable(attr.id, 'attribute2');
+                                const isSelected = selectedClassifications.attribute2_id === attr.id;
+
+                                return (
+                                  <button
+                                    key={attr.id}
+                                    onClick={() => handleClassificationChange('attribute2', attr.id, attr.name)}
+                                    disabled={!isAvailable}
+                                    className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
+                                      ? 'border-[#c4975a] bg-[#fdf7ee] text-[#c4975a]'
+                                      : isAvailable
+                                        ? 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                        : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                      }`}
+                                  >
+                                    {attr.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show stock for selected combination */}
+                        {selectedClassifications.attribute1_id && selectedClassifications.attribute2_id && (
+                          <div className="text-sm text-gray-600">
+                            Còn lại: <span className="font-medium text-gray-900">{currentStock}</span> sản phẩm
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mb-4">
                       <div className="font-semibold mb-2 text-base text-[#a3764a]">Chọn cửa hàng</div>
@@ -387,7 +834,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                               type="radio"
                               name="store"
                               checked={selectedStoreId === store.store_id}
-                              onChange={() => setSelectedStoreId(store.store_id)}
+                              onChange={() => handleStoreChangeInPopup(store.store_id)}
                               className="accent-[#c4975a]"
                             />
                             <div className="flex-1">
@@ -420,7 +867,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
                   <div className="flex items-center justify-between mt-4">
                     <div>
                       <div className="text-sm text-gray-500">Tổng</div>
-                      <div className="text-lg font-extrabold">{formatPrice((displayProduct.price || 0) * quantity)}</div>
+                      <div className="text-lg font-extrabold">{formatPrice(currentPrice * quantity)}</div>
                     </div>
                     <div className="flex gap-3">
                       <button
