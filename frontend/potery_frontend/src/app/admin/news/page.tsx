@@ -10,18 +10,22 @@ import {
     CreateNewsDto,
     UpdateNewsDto,
     ListNewsDto,
-} from "@/api/services/newService"; 
+} from "@/api/services/newService";
 import { Pencil, Trash2, ImagePlus, Search } from "lucide-react";
-import ConfirmDialog from "@/components/common/ConfirmDialog"; 
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { listUsers, User } from "@/api/services/userService";
 
+import dynamic from "next/dynamic";
+import "react-quill-new/dist/quill.snow.css";
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 const initialFormState: CreateNewsDto = {
     title: "",
     content: "",
     is_published: false,
     user_id: 1,
-    image_data: null, 
+    image_data: null,
 };
 
 const formatDate = (dateString?: Date | string) =>
@@ -29,7 +33,7 @@ const formatDate = (dateString?: Date | string) =>
 
 export default function NewsPage() {
 
-    
+
 
     const [newsList, setNewsList] = useState<News[]>([]);
     const [form, setForm] = useState<CreateNewsDto>(initialFormState);
@@ -37,13 +41,13 @@ export default function NewsPage() {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [showForm, setShowForm] = useState(false);
-    
-    const [totalItems, setTotalItems] = useState(0); 
+
+    const [totalItems, setTotalItems] = useState(0);
     const [liveSearchKey, setLiveSearchKey] = useState("");
-    const [searchKey, setSearchKey] = useState(""); 
-    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest'); 
-    const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null); 
-    
+    const [searchKey, setSearchKey] = useState("");
+    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+    const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+
     const [users, setUsers] = useState<User[]>([]);
 
     // STATES MỚI CHO CONFIRM DIALOG
@@ -55,10 +59,10 @@ export default function NewsPage() {
 
     useEffect(() => {
         if (typeof window !== "undefined") {
-        const id = Number(localStorage.getItem("adminID")) || 0;
-        const name = localStorage.getItem("adminName") || "Admin";
-        setAdminID(id);
-        setAdminName(name);
+            const id = Number(localStorage.getItem("adminID")) || 0;
+            const name = localStorage.getItem("adminName") || "Admin";
+            setAdminID(id);
+            setAdminName(name);
         }
     }, []);
 
@@ -70,7 +74,7 @@ export default function NewsPage() {
                 sort: sortOrder,
             };
             const result = await getNews(query);
-            
+
             setNewsList(result.news);
             setTotalItems(result.total);
         } catch (error) {
@@ -80,14 +84,14 @@ export default function NewsPage() {
         }
     }, [searchKey, sortOrder]);
     const fetchUsers = useCallback(async () => {
-    try {
-        const result = await listUsers();
-        setUsers(result);
-    } catch {
-        toast.error("Không thể tải danh sách người dùng!");
-    }
-}, []);
-    
+        try {
+            const result = await listUsers();
+            setUsers(result);
+        } catch {
+            toast.error("Không thể tải danh sách người dùng!");
+        }
+    }, []);
+
     useEffect(() => {
         fetchNews();
         fetchUsers();
@@ -97,9 +101,9 @@ export default function NewsPage() {
         setSearchKey(liveSearchKey);
     }
     const getAuthorName = (userId?: number) => {
-    const user = users.find(u => u.id === userId);
-    return user?.full_name || "Không rõ";
-};
+        const user = users.find(u => u.id === userId);
+        return user?.full_name || "Không rõ";
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type, checked } = e.target as HTMLInputElement;
@@ -111,9 +115,9 @@ export default function NewsPage() {
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
-        
+
         setForm((prev) => ({ ...prev, image_data: file }));
-        
+
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -152,9 +156,9 @@ export default function NewsPage() {
                 content: form.content,
                 is_published: form.is_published,
                 user_id: adminID,
-                image_data: form.image_data, 
+                image_data: form.image_data,
             };
-            
+
             if (editingId) {
                 const updatePayload: UpdateNewsDto = payload as unknown as UpdateNewsDto;
                 await updateNews(editingId, updatePayload);
@@ -163,7 +167,7 @@ export default function NewsPage() {
                 await addNews(payload);
                 toast.success("Thêm bài viết thành công!");
             }
-            
+
             setForm(initialFormState);
             setShowForm(false);
             setEditingId(null);
@@ -181,14 +185,14 @@ export default function NewsPage() {
             title: news.title,
             content: news.content,
             is_published: news.is_published,
-            image_data: null, 
-        } as CreateNewsDto); 
+            image_data: null,
+        } as CreateNewsDto);
         setCurrentImageUrl(news.image_data ? `data:image/jpeg;base64,${news.image_data}` : null);
         setEditingId(news.id);
         setShowForm(true);
-        setErrors({}); 
+        setErrors({});
     };
-    
+
     const handleCancel = () => {
         setShowForm(false);
         setEditingId(null);
@@ -202,12 +206,12 @@ export default function NewsPage() {
         setNewsToDeleteId(id);
         setShowConfirm(true);
     };
-    
+
     // HÀM XỬ LÝ XÓA SAU KHI CONFIRM
     const handleConfirmDelete = async () => {
         setShowConfirm(false);
         if (newsToDeleteId === null) return;
-        
+
         try {
             await deleteNews(newsToDeleteId);
             toast.success("Đã xoá bài viết!");
@@ -218,7 +222,7 @@ export default function NewsPage() {
             setNewsToDeleteId(null);
         }
     };
-    
+
     // HÀM HỦY XÓA
     const handleCancelDelete = () => {
         setShowConfirm(false);
@@ -239,7 +243,7 @@ export default function NewsPage() {
                         <h3 className="text-xl font-semibold mb-5 text-gray-700">
                             {editingId ? "Sửa bài viết" : "Thêm bài viết mới"}
                         </h3>
-                        <div className="grid grid-cols-1 gap-y-4"> 
+                        <div className="grid grid-cols-1 gap-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
                                 <input
@@ -251,23 +255,39 @@ export default function NewsPage() {
                                 />
                                 {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
                             </div>
-                            
+
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung</label>
-                                <textarea
-                                    name="content"
-                                    placeholder="Nhập nội dung chi tiết"
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung bài viết</label>
+                                <ReactQuill
+                                    theme="snow"
                                     value={form.content || ""}
-                                    onChange={handleChange}
-                                    rows={18}
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-orange-500 focus:border-orange-500 resize-none transition"
+                                    onChange={(value) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            content: value,
+                                        }))
+                                    }
+                                    placeholder="Nhập nội dung chi tiết..."
+                                    modules={{
+                                        toolbar: [
+                                            [{ header: [1, 2, 3, 4, false] }],
+                                            ["bold", "italic", "underline", "strike"],
+                                            [{ list: "ordered" }, { list: "bullet" }],
+                                            [{ 'size': ['small', false, 'large', 'huge'] }],
+                                            [{ 'color': [] }, { 'background': [] }],
+                                            ["link", "image", "video"],
+                                            ["clean"],
+                                        ],
+                                    }}
+
+                                    className="bg-white border border-gray-300 rounded-lg min-h-[500px]"
                                 />
                                 {errors.content && <p className="text-red-500 text-xs mt-1">{errors.content}</p>}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                                    <ImagePlus size={16}/> Ảnh Đại diện
+                                    <ImagePlus size={16} /> Ảnh tiêu đề bài viết
                                 </label>
                                 <input
                                     title="xap"
@@ -276,27 +296,27 @@ export default function NewsPage() {
                                     accept="image/*"
                                     onChange={handleImageChange}
                                     key={editingId === null ? 'add' : editingId}
-                                    className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
+                                    className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-800 hover:file:bg-orange-100 cursor-pointer"
                                 />
-                                
+
                                 {(currentImageUrl || form.image_data) && (
                                     <div className="mt-3 p-2 border border-gray-200 rounded-lg inline-block">
                                         <p className="text-xs text-gray-500 mb-1 font-medium">Ảnh {form.image_data instanceof File ? "mới" : "hiện tại"}:</p>
-                                        <img 
-                                            src={currentImageUrl || undefined} 
-                                            alt="Ảnh đại diện" 
-                                            className="w-24 h-24 object-cover rounded-md"
+                                        <img
+                                            src={currentImageUrl || undefined}
+                                            alt="Ảnh tiêu đề"
+                                            className="w-40 h-40 object-cover rounded-md"
                                         />
                                     </div>
                                 )}
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                                 <input
                                     title="ís"
                                     type="checkbox"
                                     name="is_published"
-                                    checked={!!form.is_published} 
+                                    checked={!!form.is_published}
                                     onChange={handleChange}
                                     className="h-4 w-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                                 />
@@ -327,9 +347,14 @@ export default function NewsPage() {
                                     type="text"
                                     placeholder="Tìm kiếm theo tiêu đề..."
                                     value={liveSearchKey}
-                                    onChange={(e) => setLiveSearchKey(e.target.value)}
-                                    onKeyUp={(e) => { 
-                                        if (e.key === 'Enter') handleSearch(); 
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setLiveSearchKey(val);
+                                        setSearchKey(val);
+                                    }}
+
+                                    onKeyUp={(e) => {
+                                        if (e.key === 'Enter') handleSearch();
                                     }}
                                     className="pl-4 pr-10 py-2 border border-gray-300 rounded-l-lg focus:ring-orange-500 focus:border-orange-500"
                                 />
@@ -341,7 +366,7 @@ export default function NewsPage() {
                                     <Search size={20} />
                                 </button>
                             </div>
-                            
+
                             <select
                                 title="xap"
                                 value={sortOrder}
@@ -369,7 +394,7 @@ export default function NewsPage() {
                         </button>
                     </div>
                 )}
-                
+
                 {loading ? (
                     <div className="text-center py-10 text-lg text-orange-500">Đang tải dữ liệu...</div>
                 ) : (
@@ -389,8 +414,8 @@ export default function NewsPage() {
                                 </thead>
                                 <tbody className="text-gray-600 text-sm font-light">
                                     {newsList.map((n, index) => (
-                                        <tr 
-                                            key={n.id} 
+                                        <tr
+                                            key={n.id}
                                             className="bg-white hover:bg-gray-50 transition duration-150 ease-in-out border border-gray-100 rounded-lg shadow-sm"
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap rounded-l-lg font-bold text-gray-500">
@@ -421,10 +446,9 @@ export default function NewsPage() {
 
                                             <td className="px-6 py-4 text-center">
                                                 <span
-                                                    className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                                            n.is_published
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-yellow-100 text-yellow-700"
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${n.is_published
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-yellow-100 text-yellow-700"
                                                         }`}
                                                 >
                                                     {n.is_published ? "Đã xuất bản" : "Nháp"}
@@ -441,7 +465,7 @@ export default function NewsPage() {
                                                         <Pencil size={16} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(n.id)} 
+                                                        onClick={() => handleDelete(n.id)}
                                                         title="Xóa"
                                                         className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full transition duration-150"
                                                     >
@@ -469,7 +493,7 @@ export default function NewsPage() {
                     </>
                 )}
             </div>
-            
+
             {/* RENDER CONFIRM DIALOG */}
             {showConfirm && (
                 <ConfirmDialog
