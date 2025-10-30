@@ -166,7 +166,7 @@ export default function PermissionsPage() {
                 onToggle={onTogglePermission}
                 loading={loading}
                 onSelectAll={onSelectAll}
-                isRoleSelected={!!selectedRoleId}
+                isRoleSelected={!!selectedRoleId}
             />
 
             <div className="mt-6 flex justify-end gap-3">

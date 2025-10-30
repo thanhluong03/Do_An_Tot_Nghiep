@@ -75,7 +75,7 @@ export default function AdminOrderPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
   useEffect(() => {
-    getCustomers()
+    getCustomers({})
       .then(setCustomers)
       .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
     listDropdownStores()
