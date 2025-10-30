@@ -190,18 +190,46 @@ export default function CheckoutPage() {
         const productId = params.get('productId');
         const storeId = params.get('storeId');
         const quantity = params.get('quantity');
+        const price = params.get('price');
+        const attribute1_id = params.get('attribute1_id');
+        const attribute2_id = params.get('attribute2_id');
+        const attribute1_name = decodeURIComponent(params.get('attribute1_name') || '');
+        const attribute2_name = decodeURIComponent(params.get('attribute2_name') || '');
+        const classificationId = params.get('classificationId');
+
+        console.log('🔍 URL Params:', {
+          productId, storeId, quantity, price,
+          attribute1_id, attribute2_id, attribute1_name, attribute2_name, classificationId
+        });
 
         // Nếu có đủ 3 param → ưu tiên hiển thị đơn hàng mua ngay
         if (productId && storeId && quantity) {
           const detail = await productApi.getProductById(productId);
-          setServerItems([
-            {
-              id: 'buy-now',
-              product_id: Number(productId),
-              quantity: Number(quantity),
-              store_id: Number(storeId),
-            },
-          ]);
+
+          // Build server item with classification info if available
+          const serverItem: any = {
+            id: 'buy-now',
+            product_id: Number(productId),
+            quantity: Number(quantity),
+            store_id: Number(storeId),
+            price: price ? Number(price) : Number(detail.price), // Use combo price if available
+          };
+
+          // Add classification info if available
+          if (attribute1_id && attribute2_id) {
+            serverItem.classificationId = classificationId ? Number(classificationId) : undefined;
+            serverItem.classifications = {
+              attribute1_id: Number(attribute1_id),
+              attribute2_id: Number(attribute2_id),
+              attribute1_name: attribute1_name || '',
+              attribute2_name: attribute2_name || '',
+            };
+            console.log('🏷️ Classifications added to serverItem:', serverItem.classifications);
+          } else {
+            console.log('⚠️ No classification data found in URL params');
+          }
+
+          setServerItems([serverItem]);
           setServerProducts({
             [Number(productId)]: {
               id: Number(detail.id),
@@ -720,8 +748,8 @@ export default function CheckoutPage() {
                             <div className="font-medium text-sm text-[#2C2A24]">{p.name}</div>
                             <div className="text-xs text-[#7C7768]">SL: {ci.quantity}</div>
 
-                            {/* Show classification info if available */}
-                            {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
+                            {/* Show classification info if available - Updated condition */}
+                            {ci.classifications && (
                               <div className="flex gap-1 mt-1">
                                 {ci.classifications.attribute1_name && (
                                   <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
