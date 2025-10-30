@@ -1,72 +1,122 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
 
-export class AddClassificationToCartOrder1757434387103
-    implements MigrationInterface {
+export class AddClassificationToCartOrder1757434387103 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Add classification_attribute_relationship_id to cart_items
-        await queryRunner.query(`
-            ALTER TABLE "cart_items" 
-            ADD COLUMN "classification_attribute_relationship_id" integer;
-        `);
+        // 🛒 Update "cart_items" table
+        const cartItemsTable = await queryRunner.getTable('cart_items');
+        if (cartItemsTable) {
+            const classificationColumn = cartItemsTable.findColumnByName('classification_attribute_relationship_id');
+            if (!classificationColumn) {
+                await queryRunner.addColumn(
+                    'cart_items',
+                    new TableColumn({
+                        name: 'classification_attribute_relationship_id',
+                        type: 'int',
+                        isNullable: true,
+                    }),
+                );
+            }
 
-        // Add classification_attribute_relationship_id to order_items
-        await queryRunner.query(`
-            ALTER TABLE "order_items" 
-            ADD COLUMN "classification_attribute_relationship_id" integer;
-        `);
+            const hasFK = cartItemsTable.foreignKeys.find(
+                fk => fk.columnNames.includes('classification_attribute_relationship_id'),
+            );
+            if (!hasFK) {
+                await queryRunner.createForeignKey(
+                    'cart_items',
+                    new TableForeignKey({
+                        columnNames: ['classification_attribute_relationship_id'],
+                        referencedTableName: 'classification_attribute_relationships',
+                        referencedColumnNames: ['id'],
+                        onDelete: 'CASCADE',
+                    }),
+                );
+            }
+        } else {
+            console.log('⚠️  Table "cart_items" does not exist — skipping.');
+        }
 
-        // Add store_id to order_items if not exists (for consistency)
-        await queryRunner.query(`
-            DO $$ 
-            BEGIN 
-                IF NOT EXISTS (
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name = 'order_items' AND column_name = 'store_id'
-                ) THEN
-                    ALTER TABLE "order_items" ADD COLUMN "store_id" integer;
-                END IF;
-            END $$;
-        `);
+        // 📦 Update "order_items" table
+        const orderItemsTable = await queryRunner.getTable('order_items');
+        if (orderItemsTable) {
+            const classificationColumn = orderItemsTable.findColumnByName('classification_attribute_relationship_id');
+            if (!classificationColumn) {
+                await queryRunner.addColumn(
+                    'order_items',
+                    new TableColumn({
+                        name: 'classification_attribute_relationship_id',
+                        type: 'int',
+                        isNullable: true,
+                    }),
+                );
+            }
 
-        // Add foreign key constraints
-        await queryRunner.query(`
-            ALTER TABLE "cart_items" 
-            ADD CONSTRAINT "FK_cart_items_classification_relationship" 
-            FOREIGN KEY ("classification_attribute_relationship_id") 
-            REFERENCES "classification_attribute_relationships"("id") 
-            ON DELETE CASCADE;
-        `);
+            // store_id — ensure exists
+            const storeIdColumn = orderItemsTable.findColumnByName('store_id');
+            if (!storeIdColumn) {
+                await queryRunner.addColumn(
+                    'order_items',
+                    new TableColumn({
+                        name: 'store_id',
+                        type: 'int',
+                        isNullable: true,
+                    }),
+                );
+            }
 
-        await queryRunner.query(`
-            ALTER TABLE "order_items" 
-            ADD CONSTRAINT "FK_order_items_classification_relationship" 
-            FOREIGN KEY ("classification_attribute_relationship_id") 
-            REFERENCES "classification_attribute_relationships"("id") 
-            ON DELETE CASCADE;
-        `);
+            const hasFK = orderItemsTable.foreignKeys.find(
+                fk => fk.columnNames.includes('classification_attribute_relationship_id'),
+            );
+            if (!hasFK) {
+                await queryRunner.createForeignKey(
+                    'order_items',
+                    new TableForeignKey({
+                        columnNames: ['classification_attribute_relationship_id'],
+                        referencedTableName: 'classification_attribute_relationships',
+                        referencedColumnNames: ['id'],
+                        onDelete: 'CASCADE',
+                    }),
+                );
+            }
+        } else {
+            console.log('⚠️  Table "order_items" does not exist — skipping.');
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        // Remove foreign key constraints
-        await queryRunner.query(`
-            ALTER TABLE "cart_items" 
-            DROP CONSTRAINT IF EXISTS "FK_cart_items_classification_relationship";
-        `);
+        // 🧹 Remove FK and column from "cart_items"
+        const cartItemsTable = await queryRunner.getTable('cart_items');
+        if (cartItemsTable) {
+            const fk = cartItemsTable.foreignKeys.find(fk =>
+                fk.columnNames.includes('classification_attribute_relationship_id'),
+            );
+            if (fk) {
+                await queryRunner.dropForeignKey('cart_items', fk);
+            }
 
-        await queryRunner.query(`
-            ALTER TABLE "order_items" 
-            DROP CONSTRAINT IF EXISTS "FK_order_items_classification_relationship";
-        `);
+            const col = cartItemsTable.findColumnByName('classification_attribute_relationship_id');
+            if (col) {
+                await queryRunner.dropColumn('cart_items', 'classification_attribute_relationship_id');
+            }
+        } else {
+            console.log('⚠️  Table "cart_items" does not exist — skipping drop.');
+        }
 
-        // Remove columns
-        await queryRunner.query(`
-            ALTER TABLE "cart_items" 
-            DROP COLUMN IF EXISTS "classification_attribute_relationship_id";
-        `);
+        // 🧹 Remove FK and column from "order_items"
+        const orderItemsTable = await queryRunner.getTable('order_items');
+        if (orderItemsTable) {
+            const fk = orderItemsTable.foreignKeys.find(fk =>
+                fk.columnNames.includes('classification_attribute_relationship_id'),
+            );
+            if (fk) {
+                await queryRunner.dropForeignKey('order_items', fk);
+            }
 
-        await queryRunner.query(`
-            ALTER TABLE "order_items" 
-            DROP COLUMN IF EXISTS "classification_attribute_relationship_id";
-        `);
+            const col = orderItemsTable.findColumnByName('classification_attribute_relationship_id');
+            if (col) {
+                await queryRunner.dropColumn('order_items', 'classification_attribute_relationship_id');
+            }
+        } else {
+            console.log('⚠️  Table "order_items" does not exist — skipping drop.');
+        }
     }
 }
