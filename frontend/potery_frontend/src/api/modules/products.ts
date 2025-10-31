@@ -124,29 +124,33 @@ const mapProduct = (p: any): Product => {
       .filter(Boolean)
     : [];
 
-  // Find minimum price from classifications if available
+  // Tìm giá thấp nhất của combo phân loại có tồn kho > 0 ở tất cả các cửa hàng
   let minPrice = Number(p.price ?? 0);
   let maxPrice = Number(p.price ?? 0);
-
-  // Check if this product has stores with classifications
+  let foundMin = false;
   if (Array.isArray(p.stores)) {
     p.stores.forEach((store: any) => {
       if (Array.isArray(store.classifications)) {
         store.classifications.forEach((classification: any) => {
           const classPrice = Number(classification.price || 0);
-          if (classPrice > 0) {
-            minPrice = Math.min(minPrice, classPrice);
+          const classStock = Number(classification.quantity_stock ?? 0);
+          if (classPrice > 0 && classStock > 0) {
+            if (!foundMin || classPrice < minPrice) {
+              minPrice = classPrice;
+              foundMin = true;
+            }
             maxPrice = Math.max(maxPrice, classPrice);
           }
         });
       }
     });
   }
-
-  // Use minimum price as the display price
+  // Nếu không tìm thấy combo có tồn kho, lấy giá gốc
+  if (!foundMin) {
+    minPrice = Number(p.price ?? 0);
+  }
   let currentPrice = minPrice > 0 ? minPrice : Number(p.price ?? 0);
   let discount: number | undefined = undefined;
-
   if (p.promotion && p.promotion.discount_type && p.promotion.discount_value) {
     const discountValue = Number(p.promotion.discount_value);
     if (p.promotion.discount_type === 'PERCENTAGE') {
