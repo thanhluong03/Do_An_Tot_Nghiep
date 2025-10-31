@@ -72,6 +72,13 @@ export default function CheckoutPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [formErrors, setFormErrors] = useState({
+    guestName: '',
+    guestPhone: '',
+    guestEmail: '',
+    address: '',
+    city: '',
+  });
   // Build a fallback product map from context items for guest rendering
   const contextProducts = useMemo(() => {
     const map: Record<number, { id: number; name: string; price: number; images: string[] }> = {};
@@ -458,6 +465,41 @@ export default function CheckoutPage() {
     }
   };
 
+  const validateForm = useCallback(() => {
+    const errors = { guestName: '', guestPhone: '', guestEmail: '', address: '', city: '' };
+    let isValid = true;
+
+    if (!isAuthenticated) {
+      if (!guestName.trim()) {
+        errors.guestName = 'Vui lòng nhập họ và tên.';
+        isValid = false;
+      }
+      if (!guestPhone.trim()) {
+        errors.guestPhone = 'Vui lòng nhập số điện thoại.';
+        isValid = false;
+      } else if (!/^(0[3|5|7|8|9])+([0-9]{8})\b/.test(guestPhone)) {
+        errors.guestPhone = 'Số điện thoại không hợp lệ.';
+        isValid = false;
+      }
+      if (guestEmail.trim() && !/\S+@\S+\.\S+/.test(guestEmail)) {
+        errors.guestEmail = 'Địa chỉ email không hợp lệ.';
+        isValid = false;
+      }
+    }
+
+    if (!address.trim()) {
+      errors.address = 'Vui lòng nhập địa chỉ giao hàng.';
+      isValid = false;
+    }
+
+    if (!city.trim()) {
+      errors.city = 'Vui lòng nhập tỉnh/thành phố.';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  }, [isAuthenticated, guestName, guestPhone, guestEmail, address, city]);
   /** ===================== TẠO ĐƠN HÀNG ===================== */
   const handleCreate = async () => {
     if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
@@ -467,8 +509,10 @@ export default function CheckoutPage() {
     console.log('🔧 Guest items length:', items.length);
 
     if (!cartItems.length) return setError('❌ Giỏ hàng trống');
-    if (!address.trim()) return setError('❌ Vui lòng nhập địa chỉ giao hàng');
-    if (!city.trim()) return setError('❌ Vui lòng nhập Tỉnh/Thành phố');
+
+    if (!validateForm()) {
+      return;
+    }
 
     setCreating(true);
     setError(null);
@@ -668,6 +712,14 @@ export default function CheckoutPage() {
       }
     })();
   }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (guestName) setFormErrors(prev => ({ ...prev, guestName: '' }));
+    if (guestPhone) setFormErrors(prev => ({ ...prev, guestPhone: '' }));
+    if (guestEmail) setFormErrors(prev => ({ ...prev, guestEmail: '' }));
+    if (address) setFormErrors(prev => ({ ...prev, address: '' }));
+    if (city) setFormErrors(prev => ({ ...prev, city: '' }));
+  }, [guestName, guestPhone, guestEmail, address, city]);
   return (
     <BaseLayout>
       {/* Container chính: Thu hẹp tối đa (max-w-3xl) và màu nền tinh tế */}
@@ -867,6 +919,7 @@ export default function CheckoutPage() {
                       onChange={e => setGuestName(e.target.value)}
                       placeholder="Nguyễn Văn A"
                     />
+                    {formErrors.guestName && <p className="text-red-500 text-xs mt-1">{formErrors.guestName}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -879,6 +932,7 @@ export default function CheckoutPage() {
                         onChange={e => setGuestPhone(e.target.value)}
                         placeholder="090xxxxxxx"
                       />
+                      {formErrors.guestPhone && <p className="text-red-500 text-xs mt-1">{formErrors.guestPhone}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -890,6 +944,7 @@ export default function CheckoutPage() {
                         onChange={e => setGuestEmail(e.target.value)}
                         placeholder="example@email.com"
                       />
+                      {formErrors.guestEmail && <p className="text-red-500 text-xs mt-1">{formErrors.guestEmail}</p>}
                     </div>
                   </div>
                 </>
@@ -907,6 +962,7 @@ export default function CheckoutPage() {
                   onChange={e => setAddress(e.target.value)}
                   placeholder="Số nhà, đường, phường, quận"
                 />
+                {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
               </div>
 
               {/* City */}
@@ -920,6 +976,7 @@ export default function CheckoutPage() {
                   onChange={e => setCity(e.target.value)}
                   placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
                 />
+                {formErrors.city && <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>}
               </div>
 
               {/* Payment Method */}

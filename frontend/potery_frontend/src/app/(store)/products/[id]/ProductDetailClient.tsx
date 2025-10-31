@@ -1,10 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { formatPrice } from '../../../../utils/format';
-import { AddToCartClient } from '../[id]/add-to-cart-client';
-import { productApi } from '../../../../api/modules/products'; // Import productApi
+import { AddToCartClient } from './add-to-cart-client';
+import { productApi } from '../../../../api/modules/products';
+import { cartApi } from '../../../../api/modules/cart';
 // import { StoreSelectorClient } from './StoreSelectorClient'; // Đã thay thế bằng UI radio
-import { ReviewsClient } from '../[id]/reviews-client';
+import { ReviewsClient } from './reviews-client';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, ScrollToTopButton } from '@/components/feature';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,8 +16,10 @@ import {
   Truck,
   ShieldCheck,
   RefreshCw,
-  Archive
+  Archive,
+  Minus, Plus
 } from 'lucide-react'; // 👈 THÊM 1: Thêm các icon cam kết
+import { useCart } from '@/contexts/CartContext';
 
 interface Attribute {
   id: number;
@@ -61,8 +65,12 @@ export function ProductDetailClient({ product }: { product: any }) {
 
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(defaultStore?.store_id || null);
   const [mainImage, setMainImage] = useState(product.images?.[0] || '/placeholder-product.jpg');
-
+  
   const [quantity, setQuantity] = useState<number>(1);
+  const [loading, setLoading] = useState(false);
+
+  const { addItem } = useCart();
+
   const ACCENT_COLOR = '#A67C52'; // Nâu Vàng Trầm (cho nút và giá tiền)
   const DARK_TEXT = 'text-gray-900';
   const LIGHT_TEXT = 'text-gray-500';
@@ -84,7 +92,6 @@ export function ProductDetailClient({ product }: { product: any }) {
     }
     return '';
   };
-
   // Auto-select cheapest classification if available
   const getInitialClassifications = () => {
     const defaultClassification = product.cheapestClassification;
@@ -295,6 +302,85 @@ export function ProductDetailClient({ product }: { product: any }) {
       }
     })();
   }, [product.id]);
+
+  const handleAdd = async () => {
+    const disabled = !isAvailable || (storeClassifications.length > 0 && currentStock === 0);
+    if (disabled) return;
+
+    // Guest: save to cookie via context (no store requirement)
+    if (!isAuthenticated || !user?.id) {
+      setLoading(true);
+      try {
+        // Pass classification data to guest cart
+        addItem(product, quantity, {
+          storeId: selectedStoreId ?? undefined,
+          classifications: selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id) ? {
+            attribute1_id: selectedClassifications.attribute1_id,
+            attribute2_id: selectedClassifications.attribute2_id,
+            attribute1_name: selectedClassifications.attribute1_name,
+            attribute2_name: selectedClassifications.attribute2_name
+          } : undefined,
+          price: currentPrice || product.price
+        });
+
+        const classificationText = selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id)
+          ? ` (${selectedClassifications.attribute1_name || ''} ${selectedClassifications.attribute2_name || ''})`
+          : '';
+        toast.success(`Đã thêm ${quantity} sản phẩm${classificationText} vào giỏ hàng`);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Logged-in: yêu cầu chọn cửa hàng
+    if (!selectedStoreId) {
+      toast.error('Vui lòng chọn cửa hàng trước khi thêm vào giỏ hàng');
+      return;
+    }
+
+    setLoading(true);
+    postMessage(null);
+
+    try {
+      // Find classification_attribute_relationship_id based on selected classifications
+      let classificationId = null;
+      if (selectedClassifications && product.stores) {
+        const selectedStore = product.stores.find((store: ProductStore) => store.store_id === selectedStoreId);
+        if (selectedStore && selectedStore.classifications) {
+          const matchingClassification = selectedStore.classifications.find(
+            (classification: StoreClassification) =>
+              classification.attribute1_id === selectedClassifications.attribute1_id &&
+              classification.attribute2_id === selectedClassifications.attribute2_id
+          );
+          if (matchingClassification) {
+            // @ts-ignore
+            classificationId = matchingClassification.id || null;
+          }
+        }
+      }
+
+      await cartApi.add({
+        customer_id: user.id,
+        product_id: product.id,
+        store_id: Number(selectedStoreId),
+        quantity,
+        classification_attribute_relationship_id: classificationId,
+      });
+
+      const classificationText = selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id)
+        ? ` (${selectedClassifications.attribute1_name || ''} ${selectedClassifications.attribute2_name || ''})`
+        : '';
+      toast.success(`Đã thêm ${quantity} sản phẩm${classificationText} vào giỏ hàng`);
+    } catch (e) {
+      console.error(e);
+      const error = e as Error;
+      toast.error(error.message || 'Không thể thêm vào giỏ hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
 
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -487,13 +573,13 @@ export function ProductDetailClient({ product }: { product: any }) {
                 <button
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   className="px-3 py-1 text-lg"
-                >
-                  −
+                > 
+                  <Minus className="w-4 h-4" />
                 </button>
                 <input
                   type="number"
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
                   className="w-14 text-center border-x outline-none"
                   min={1}
                 />
@@ -501,7 +587,7 @@ export function ProductDetailClient({ product }: { product: any }) {
                   onClick={() => setQuantity((q) => q + 1)}
                   className="px-3 py-1 text-lg"
                 >
-                  +
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -511,7 +597,7 @@ export function ProductDetailClient({ product }: { product: any }) {
               {/* Bạn cần style lại nút bên trong AddToCartClient để nó có màu nâu (#8B5E3C) */}
               <div className="w-full sm:flex-grow">
                 <AddToCartClient
-                  product={product}
+                  product={product as any}
                   storeId={selectedStoreId ?? undefined}
                   quantity={quantity}
                   selectedClassifications={{
@@ -524,13 +610,13 @@ export function ProductDetailClient({ product }: { product: any }) {
                   disabled={!isAvailable || (storeClassifications.length > 0 && currentStock === 0)}
                 />
               </div>
-
               <button
-                className="w-full sm:w-auto flex-none px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700 flex items-center justify-center"
-                onClick={() => alert('Đã thêm vào giỏ hàng (logic demo)')}
+                onClick={handleAdd}
+                disabled={!isAvailable || (storeClassifications.length > 0 && currentStock === 0) || loading}
+                className="w-full sm:w-auto flex-none px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Thêm vào giỏ hàng"
               >
-                <ShoppingCart className="w-5 h-5" />
+                  <ShoppingCart className="w-5 h-5" />
               </button>
             </div>
           </div>

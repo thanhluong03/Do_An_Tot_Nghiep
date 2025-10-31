@@ -585,7 +585,7 @@ export default function CartPage() {
                     </p>
                     {/* Nút Thêm vào giỏ: Outline, màu accent, hover lấp đầy */}
                     <button
-                      className={`w-full border border-[${ACCENT_COLOR}] text-[${ACCENT_COLOR}] py-2 rounded-lg text-sm font-medium hover:bg-[${ACCENT_COLOR}] hover:text-white transition`}
+                      className="w-full border border-[#A67C52] text-[#A67C52] py-2 rounded-lg text-sm font-medium hover:bg-[#A67C52] hover:text-white transition"
                       onClick={() => {
                         // Tạm thời dùng alert, cần thay bằng logic thêm vào giỏ hàng
                         alert(`Thêm sản phẩm ${p.name} vào giỏ hàng.`);

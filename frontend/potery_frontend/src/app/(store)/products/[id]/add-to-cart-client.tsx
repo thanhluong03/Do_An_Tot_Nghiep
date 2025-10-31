@@ -188,13 +188,6 @@ export function AddToCartClient({
   return (
     <div className="flex flex-col gap-2">
       <button
-        onClick={handleAdd}
-        className="px-6 py-3 bg-[#65604E] text-white rounded-lg hover:bg-[#3D3A2F] disabled:opacity-50"
-        disabled={disabled || loading}
-      >
-        {loading ? 'Đang thêm…' : 'Thêm vào giỏ'}
-      </button>
-      <button
         onClick={handleBuyNow}
         className="px-6 py-3 bg-[#c4975a] text-white rounded-lg hover:bg-[#a3764a] disabled:opacity-50"
         disabled={disabled || loading || navigating}
