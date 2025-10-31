@@ -211,7 +211,7 @@ export default function ProductsPage() {
       {/* Banner (Giữ nguyên) */}
       <div className="relative w-full overflow-x-hidden">
         <img
-          src="/bg-product.jpg"
+          src="/ggg 1.png"
           alt="Bộ sưu tập sản phẩm"
           className="w-full h-[260px] md:h-[340px] object-cover"
         />
