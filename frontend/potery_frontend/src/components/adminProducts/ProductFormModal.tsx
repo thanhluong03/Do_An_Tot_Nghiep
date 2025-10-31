@@ -8,6 +8,10 @@ import {
   ClassificationAttributeRelationship
 } from "@/types/product";
 import { X, Upload, Plus, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
+import "react-quill-new/dist/quill.snow.css";
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 // Định nghĩa interface cho lỗi validation (được truyền từ ProductsPage)
 export interface ProductFormErrors {
@@ -479,10 +483,11 @@ export default function ProductFormModal({
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-10 pb-5">
-          <h2 className="text-3xl font-extrabold text-orange-600 tracking-tight">
+          <h2 className="text-3xl font-extrabold text-[#B95D26] tracking-tight">
             {editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
           </h2>
           <button
+            title="close"
             onClick={() => setIsModalOpen(false)}
             className="text-gray-400 hover:text-gray-600 transition"
           >
@@ -494,9 +499,6 @@ export default function ProductFormModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
           {/* Tên sản phẩm */}
           <div className="col-span-2">
-            <label className="block text-2xl font-bold text-gray-800 mb-4">
-              Thông tin cơ bản
-            </label>
             <label className="block text-base font-semibold text-gray-800 mb-2">
               Tên sản phẩm
             </label>
@@ -535,6 +537,7 @@ export default function ProductFormModal({
               Danh mục
             </label>
             <select
+              title="Danh mục"
               value={formData.category_id ?? 0}
               onChange={(e) => handleChange(e, 'category_id')}
               className={getInputClassName('category_id')}
@@ -552,11 +555,12 @@ export default function ProductFormModal({
           </div>
 
           {/* Nhà cung cấp */}
-          <div>
+          <div className="col-span-2">
             <label className="block text-base font-semibold text-gray-800 mb-2">
               Nhà cung cấp
             </label>
             <select
+              title="Nhà cung cấp"
               value={formData.supplier_id ?? 0}
               onChange={(e) => handleChange(e, 'supplier_id')}
               className={getInputClassName('supplier_id')}
@@ -574,17 +578,30 @@ export default function ProductFormModal({
           </div>
 
           {/* Mô tả */}
-          <div className="col-span-2">
-            <label className="block text-base font-semibold text-gray-800 mb-2">
-              Mô tả
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => handleChange(e, 'description')}
-              rows={5}
-              className={getInputClassName('description')}
-              placeholder="Nhập mô tả sản phẩm..."
-            />
+          <div className="col-span-2 mb-4">
+            <label className="block text-base font-semibold text-gray-800 mb-2"
+              htmlFor="product-description">Mô tả</label>
+            <div className={`transition ${validationErrors.description ? 'border-red-500 focus-within:ring-red-500' : 'focus-within:ring-orange-500'} focus-within:ring-2 rounded-xl`}>
+              <ReactQuill
+                value={formData.description || ""} // Sử dụng giá trị từ formData
+                onChange={(content) => {
+                  // Cập nhật formData.description và xóa lỗi
+                  setFormData((prev) => ({ ...prev, description: content }));
+                  if (validationErrors.description) {
+                    setValidationErrors((prev) => {
+                      const newErrors = { ...prev };
+                      delete newErrors.description;
+                      return newErrors;
+                    });
+                  }
+                }}
+                theme="snow"
+                placeholder="Nhập mô tả chi tiết sản phẩm..."
+                className="w-full"
+                // Set height cho editor
+                style={{ height: '300px' }}
+              />
+            </div>
             {validationErrors.description && (
               <p className="text-red-500 text-sm mt-1">{validationErrors.description}</p>
             )}
