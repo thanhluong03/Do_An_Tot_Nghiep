@@ -55,7 +55,7 @@ export default function UserTable({
                   <td className="px-4 py-3">
                     {hasAvatar ? (
                       <img
-                        src={avatarSrc}
+                        src={`data:image/jpeg;base64,${avatarSrc}`}
                         alt="avatar"
                         className="h-10 w-10 rounded-full object-cover border border-gray-200"
                       />

@@ -27,7 +27,8 @@ import {
     faTruckArrowRight,
     faClipboardList,
     faUserCheck,
-    faMessage, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
+    faMessage,
+    faRobot, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -81,6 +82,7 @@ const contentResourcesItems: MenuItem[] = [
 
 // 💡 SỬA ĐỔI: Gộp Vai trò và Quyền hạn vào mục con "Phân quyền"
 const systemItems: MenuItem[] = [
+    { name: "Quản lý AI chat", icon: faRobot, href: "/admin/ai" },
     { name: "Tài khoản", icon: faUserCheck, href: "/admin/users" },
     {
         name: "Phân quyền", // Tên mục cha mới
@@ -222,7 +224,7 @@ export default function AdminSidebar() {
                 {renderMenuSection("Sản phẩm", salesOperationsItems)}
                 {renderMenuSection("Người dùng", usersItems)}
                 {renderMenuSection("Marketing", contentResourcesItems)}
-                {renderMenuSection("Phân quyền", systemItems)}
+                {renderMenuSection("Hệ thống", systemItems)}
             </nav>
         </div>
     );

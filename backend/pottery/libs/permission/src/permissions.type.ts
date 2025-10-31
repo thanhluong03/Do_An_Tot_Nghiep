@@ -49,4 +49,10 @@ export const AVAILABLE_PERMISSIONS = {
     'admin/conversation': [
         { key: 'admin/conversation', name: 'Quản lý hội thoại' },
     ],
+    'admin/profileAdmin': [
+        { key: 'admin/profileAdmin', name: 'Quản lý thông tin cá nhân admin' },
+    ],
+    'admin/ai': [
+        { key: 'admin/ai', name: 'Quản lý AI' },
+    ],
 };

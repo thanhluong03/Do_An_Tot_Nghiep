@@ -262,8 +262,10 @@ export default function UserFormModal({
                         />
                         {avatarPreview && (
                              <div className="mt-3 relative h-20 w-20">
+                                
+                          
                             <Image
-                                src={avatarPreview}
+                               src={`data:image/jpeg;base64,${avatarPreview}`}
                                 alt="avatar preview"
                                 fill  
                                 className="rounded-full object-cover border-2 border-indigo-200 shadow-md"
