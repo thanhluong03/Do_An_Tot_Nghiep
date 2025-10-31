@@ -2,6 +2,8 @@ export interface OrderMailProduct {
   name: string;
   quantity: number;
   price: number;
+  attribute1_name?: string;
+  attribute2_name?: string;
 }
 
 export interface OrderMail {

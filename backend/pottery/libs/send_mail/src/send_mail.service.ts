@@ -43,6 +43,8 @@ export class SendMailService {
           name: item.product_name || 'Sản phẩm',
           quantity: item.quantity || 0,
           price: item.price_at_order || 0,
+          attribute1_name: item.attribute1_name || '',
+          attribute2_name: item.attribute2_name || '',
         })) || [],
       totalAmount: orderDetail.total_amount || 0,
       paymentMethod: this.getPaymentMethodText(orderDetail.payment_method),
@@ -77,14 +79,20 @@ export class SendMailService {
 
   private async sendEmailWithOrderData(order: OrderMail) {
     const productRows = order.products
-      .map(
-        (p) => `
-                    <tr style="border-bottom:1px solid #f0f0f0;">
-                      <td style="padding:15px 12px;color:#333;font-weight:500;">${p.name}</td>
-                      <td style="padding:15px 12px;text-align:center;color:#666;font-weight:600;">${p.quantity}</td>
-                      <td style="padding:15px 12px;text-align:right;color:#b48a78;font-weight:700;font-size:1.05rem;">${p.price.toLocaleString()}₫</td>
-                    </tr>`
-      )
+      .map((p) => {
+        const phanLoai =
+          p.attribute1_name || p.attribute2_name
+            ? `<div style='color:#8b6f47;font-size:0.92rem;margin-top:2px;'>Phân loại: ${[p.attribute1_name, p.attribute2_name].filter(Boolean).join(' - ')}</div>`
+            : '';
+        return `<tr style="border-bottom:1px solid #f0f0f0;">
+          <td style="padding:15px 12px;color:#333;font-weight:500;vertical-align:top;font-size:1rem;">
+            <div>${p.name}</div>
+            ${phanLoai}
+          </td>
+          <td style="padding:15px 12px;text-align:center;color:#666;font-weight:600;vertical-align:middle;">${p.quantity}</td>
+          <td style="padding:15px 12px;text-align:right;color:#b48a78;font-weight:700;font-size:1.05rem;vertical-align:middle;">${p.price.toLocaleString()}₫</td>
+        </tr>`;
+      })
       .join('');
 
     const mailOptions = {
@@ -145,7 +153,9 @@ export class SendMailService {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:25px;">
                   <div style="background:#fff;padding:15px;border-radius:6px;border-left:4px solid #b48a78;">
                     <p style="margin:0;color:#666;font-size:0.9rem;">Tổng tiền</p>
-                    <p style="margin:5px 0 0 0;font-size:1.3rem;font-weight:bold;color:#b48a78;">${order.totalAmount.toLocaleString()}₫</p>
+                    <p style="margin:5px 0 0 0;font-size:1.3rem;font-weight:bold;color:#b48a78;">
+                      ${(Number(order.totalAmount) + 30000).toLocaleString('vi-VN')}₫
+                    </p>
                   </div>
                   <div style="background:#fff;padding:15px;border-radius:6px;border-left:4px solid #8b6f47;">
                     <p style="margin:0;color:#666;font-size:0.9rem;">Phương thức thanh toán</p>
@@ -219,5 +229,15 @@ export class SendMailService {
     };
     const info = await this.transporter.sendMail(mailOptions);
     return info;
+  }
+
+  async sendSimpleMail(to: string, subject: string, text: string) {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to,
+      subject,
+      text,
+    };
+    return await this.transporter.sendMail(mailOptions);
   }
 }

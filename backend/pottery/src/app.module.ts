@@ -48,6 +48,8 @@ import { DriverLocationModule } from '@app/driver_location';
 import { MailController } from './mail/mail.controller';
 import { SendMailModule } from '@app/send_mail';
 import { TrackingModule } from './tracking/tracking.module';
+import { AuthModule } from '@app/auth';
+import { AuthController } from './auth/auth.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -77,6 +79,7 @@ import { TrackingModule } from './tracking/tracking.module';
     SendMailModule,
     DriverLocationModule,
     TrackingModule,
+    AuthModule,
   ],
   controllers: [
     AppController,
@@ -102,6 +105,7 @@ import { TrackingModule } from './tracking/tracking.module';
     DriverLocationController,
     AdminLoginController,
     MailController,
+    AuthController,
   ],
   providers: [AppService],
 })
