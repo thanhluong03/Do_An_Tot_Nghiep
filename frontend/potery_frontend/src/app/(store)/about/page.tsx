@@ -5,7 +5,7 @@ import { BaseLayout } from '../../../layouts';
 import Image from 'next/image';
 import Link from 'next/link';
 import { conversationApi } from '@/api/modules/conversation';
-import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal } from '@/components/feature';
+import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal, AboutSection, ValuePropositionSection } from '@/components/feature';
 import { useAuth } from '@/contexts/AuthContext';
 import { Bot, Gift, MessageSquare, User } from 'lucide-react';
 export default function NewsPage() {
@@ -151,7 +151,19 @@ export default function NewsPage() {
       )}
       
             <ScrollToTopButton />
-      {/* --- BANNER --- */}
+            <AboutSection />
+            <ValuePropositionSection />
+      
+            <div className="max-w-8xl mx-auto text-center mt-20 mb-30">
+                <h3 className="text-4xl md:text-5xl font-serif font-bold text-[#2C2A24] mb-4 mt-2">Hãy ghé Nhà Gạo</h3>
+                <p className="text-xl text-[#65604E] font-light mb-6">
+                  Đến Tiệm Gốm Nhà Gạo để xem những sản phẩm gốm sứ đẹp và chất lượng nhất nhé!
+                </p>
+                <button className="bg-[#8D806F] text-white font-semibold px-10 py-3 rounded-2xl shadow-md hover:bg-[#6F6558] transition duration-300">
+                  <a href='/products'>Khám Phá Sản Phẩm →</a>
+                </button>
+              </div>
+        {/* --- BANNER --- 
       <section className="relative w-full -mt-[100px] md:-mt-[120px]">
         <img
           src="/bg-about.jpg"
@@ -168,7 +180,7 @@ export default function NewsPage() {
         </div>
       </section>
 
-      {/* --- PHẦN GIỚI THIỆU BLOG --- */}
+      
       <section className="bg-[#FDF9F6] py-16 px-4 text-center">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-serif font-semibold mb-4 text-[#2C2A24]">
@@ -183,7 +195,7 @@ export default function NewsPage() {
         </div>
       </section>
 
-      {/* --- DANH SÁCH BÀI VIẾT --- */}
+    
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-3xl font-serif font-semibold text-center mb-10 text-[#2C2A24]">
           Bài viết mới nhất
@@ -219,7 +231,7 @@ export default function NewsPage() {
         </div>
       </section>
 
-      {/* --- GÓC CẢM HỨNG / HÌNH ẢNH --- */}
+    
       <section className="bg-[#F3EEE9] py-20">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center px-6">
           <div className="relative h-[350px] md:h-[420px] rounded-2xl overflow-hidden shadow-md">
@@ -250,7 +262,7 @@ export default function NewsPage() {
         </div>
       </section>
 
-      {/* --- THEO DÕI NHÀ GẠO / SOCIAL --- */}
+      
       <section className="bg-[#2C2A24] text-white py-16 text-center">
         <h2 className="text-3xl font-serif font-semibold mb-4">Theo dõi Nhà Gạo</h2>
         <p className="text-[#D8D3CA] mb-8 text-lg">
@@ -282,6 +294,7 @@ export default function NewsPage() {
           </button>
         </form>
       </section>
+      */}
     </BaseLayout>
   );
 }
