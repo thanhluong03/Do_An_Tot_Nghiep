@@ -111,8 +111,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <Button onClick={handleGoogleLogin} className="w-full bg-white text-[#2C2A24] border hover:bg-gray-50 py-3">
-        <span className="mr-2">🔑</span> Đăng nhập với Google
+      <Button
+        onClick={handleGoogleLogin}
+        className="w-full bg-white text-[#2C2A24] border hover:bg-gray-50 py-3 flex items-center justify-center"
+      >
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google logo" className="w-5 h-5 mr-3" />
+        Đăng nhập với Google
       </Button>
 
       <div className="text-center">
