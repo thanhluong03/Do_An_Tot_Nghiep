@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
 
         } catch (error) {
           console.error("Failed to fetch admin detail for avatar:", error);
-          localStorage.setItem("adminAvatar", "/images/avaa.jpg");
+          localStorage.setItem("adminAvatar", "/images/noAva.png");
         }
       }
       if (data.adminName) localStorage.setItem("adminName", data.adminName);

@@ -31,7 +31,7 @@ const bufferToBase64 = (buffer: { data: number[] }): string | null => {
 };
 
 export const getUserAvatarUrl = (user: User): string => {
-    const defaultImage = "/no-image.jpg"; 
+    const defaultImage = "http://localhost:3001/noAva.png"; 
     const avatarData = user.avatar_image;
 
     if (!avatarData) {
