@@ -14,6 +14,7 @@ import { getCategories, Category } from "@/api/services/categoryService";
 import ProductFormModal from "@/components/adminProducts/ProductFormModal";
 import ProductsTable from "@/components/adminProducts/ProductsTable";
 import { getSuppliers, Supplier } from "@/api/services/supplierService";
+
 export interface ProductFormErrors {
   name?: string;
   price?: string;
@@ -329,7 +330,7 @@ export default function ProductsPage() {
 
           <button
             onClick={openAddModal}
-            className="px-4 py-2 bg-[#F54900] hover:bg-orange-600 text-white rounded-lg shadow-md transition"
+            className="px-4 py-2 bg-[#B95D26] hover:bg-[#A65D26] text-white rounded-lg shadow-md transition"
           >
             + Thêm sản phẩm
           </button>
