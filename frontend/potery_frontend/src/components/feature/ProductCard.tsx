@@ -479,25 +479,21 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
 
         {/* 3. Price Line */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
-          {/* Current Price */}
           <span className="text-xl font-bold text-red-600">
             {formatPrice(product.price)}
           </span>
-
-          {/* Original Price */}
-          {product.originalPrice && product.originalPrice > product.price && (
+          {/* Giá gốc thực tế: nếu có discount thì tính ngược lại từ giá khuyến mãi */}
+          {product.discount && product.discount > 0 ?
             <span className="text-sm text-gray-400 line-through">
-              {formatPrice(product.originalPrice)}
+              {formatPrice(Math.round(product.price / (1 - product.discount)))}
             </span>
-          )}
-
-          {/* === THAY THẾ PILL GIẢM GIÁ === */}
-          {product.originalPrice && product.originalPrice > product.price && product.discount && (
+            : null}
+          {/* Badge phần trăm giảm giá nếu có khuyến mãi dạng phần trăm */}
+          {product.discount && product.discount > 0 && (
             <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
-              Giảm {Math.round(product.discount * 100)}%
+              -{Math.round(product.discount * 100)}%
             </span>
           )}
-          {/* === KẾT THÚC THAY THẾ === */}
         </div>
 
         {/* 4. Rating/Sales Line (MỚI) */}

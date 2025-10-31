@@ -9,12 +9,12 @@ import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, ScrollToTopButton } from '@/components/feature';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link'; // Import Link từ 'next/link'
-import { 
-  ShoppingCart, 
-  Truck, 
-  ShieldCheck, 
-  RefreshCw, 
-  Archive 
+import {
+  ShoppingCart,
+  Truck,
+  ShieldCheck,
+  RefreshCw,
+  Archive
 } from 'lucide-react'; // 👈 THÊM 1: Thêm các icon cam kết
 
 interface Attribute {
@@ -374,13 +374,8 @@ export function ProductDetailClient({ product }: { product: any }) {
                   -{getDiscountPercentage()}%
                 </span>
               )}
-              {product.isFlashSale && (
-                <span className="text-sm font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
-                  - {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
-                </span>
-              )}
             </div>
-            
+
             {/* Product Classifications - Only show if current store has classifications */}
             {currentStore && storeClassifications.length > 0 && (
               <div className="space-y-4 border-t pt-4">
@@ -462,9 +457,8 @@ export function ProductDetailClient({ product }: { product: any }) {
                   <div
                     key={store.store_id}
                     onClick={() => handleStoreChange(store.store_id)}
-                    className={`border p-3 rounded-lg cursor-pointer transition-all ${
-                      selectedStoreId === store.store_id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
+                    className={`border p-3 rounded-lg cursor-pointer transition-all ${selectedStoreId === store.store_id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      }`}
                   >
                     <div className="flex items-center">
                       <input
@@ -540,7 +534,7 @@ export function ProductDetailClient({ product }: { product: any }) {
               </button>
             </div>
           </div>
-          
+
           {/* 👇 SỬA 2: Di chuyển "4 Ô CAM KẾT" vào đây 
             Và thay đổi style để khớp với ảnh
           */}
@@ -586,7 +580,7 @@ export function ProductDetailClient({ product }: { product: any }) {
               </div>
             </div>
           </div>
-          
+
         </div> {/* <-- Kết thúc của <div className="space-y-6"> */}
       </div> {/* <-- Kết thúc của <div className="grid grid-cols-1 lg:grid-cols-2"> */}
 
@@ -620,76 +614,76 @@ export function ProductDetailClient({ product }: { product: any }) {
       {/* === Popup Layer (Giữ nguyên) === */}
       {isAuthenticated && user?.id && (
         <>
-           {/* (Code Modal và Nút bấm giữ nguyên) ... */}
-           {isVoucherModalOpen && (
-             <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
-               <VoucherModal
-                 customerId={user.id}
-                 isOpen={isVoucherModalOpen}
-                 onClose={() => setIsVoucherModalOpen(false)}
-               />
-             </div>
-           )}
- 
-           {isChatOpen && (
-             <ChatModal
-               isOpen={isChatOpen}
-               onClose={() => setIsChatOpen(false)}
-               userId={Number(user.id)}
-               storeId={0}
-               conversationId={conversationId}
-             />
-           )}
- 
-           <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
-             <button
-               onClick={() => setIsVoucherModalOpen(true)}
-               className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
-               title="Nhận Voucher Giảm Giá!"
-             >
-               🎁
-             </button>
- 
-             <button
-               onClick={async () => {
-                 if (!isAuthenticated || !user?.id) return;
-                 try {
-                   console.log('%c💬 Tạo conversation...', 'color:deepskyblue');
-                   const created = await conversationApi.createConversation({
-                     sender_id: Number(user.id),
-                     sender_type: 'USER',
-                     content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                     user_id: Number(user.id),
-                     store_id: 1,
-                   });
-                   const conv = created?.conversation || created?.data || created;
-                   console.log('%c✅ Conversation created:', 'color:limegreen', conv);
-                   setConversationId(conv?.id || null);
-                   setIsChatOpen(true);
-                 } catch (err) {
-                   console.error('❌ Lỗi tạo conversation:', err);
-                 }
-               }}
-               className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-               title="Chat với Admin"
-             >
-               💬
-             </button>
-           </div>
+          {/* (Code Modal và Nút bấm giữ nguyên) ... */}
+          {isVoucherModalOpen && (
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+              <VoucherModal
+                customerId={user.id}
+                isOpen={isVoucherModalOpen}
+                onClose={() => setIsVoucherModalOpen(false)}
+              />
+            </div>
+          )}
+
+          {isChatOpen && (
+            <ChatModal
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              userId={Number(user.id)}
+              storeId={0}
+              conversationId={conversationId}
+            />
+          )}
+
+          <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+            <button
+              onClick={() => setIsVoucherModalOpen(true)}
+              className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              title="Nhận Voucher Giảm Giá!"
+            >
+              🎁
+            </button>
+
+            <button
+              onClick={async () => {
+                if (!isAuthenticated || !user?.id) return;
+                try {
+                  console.log('%c💬 Tạo conversation...', 'color:deepskyblue');
+                  const created = await conversationApi.createConversation({
+                    sender_id: Number(user.id),
+                    sender_type: 'USER',
+                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                    user_id: Number(user.id),
+                    store_id: 1,
+                  });
+                  const conv = created?.conversation || created?.data || created;
+                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
+                  setConversationId(conv?.id || null);
+                  setIsChatOpen(true);
+                } catch (err) {
+                  console.error('❌ Lỗi tạo conversation:', err);
+                }
+              }}
+              className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+              title="Chat với Admin"
+            >
+              💬
+            </button>
+          </div>
         </>
       )}
 
       {/* Khối Sản phẩm liên quan (Giữ nguyên) */}
       {relatedProducts.length > 0 && (
         <div className="max-w-7xl mx-auto mt-20 px-4 md:px-6 lg:px-8 bg-white rounded-2xl shadow-2xl shadow-gray-300/50 p-6 md:p-10">
-          
+
           <h2 className={`text-2xl font-serif font-light mb-10 ${DARK_TEXT}`}>
             Sản phẩm liên quan
             <p className={`mt-3 text-sm text-gray-600`}>
               Khám phá thêm những sản phẩm gốm khác
             </p>
           </h2>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {relatedProducts.map((p) => (
               <RelatedProductCard key={p.id} p={p} ACCENT_COLOR={ACCENT_COLOR} DARK_TEXT={DARK_TEXT} />

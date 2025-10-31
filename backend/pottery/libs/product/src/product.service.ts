@@ -176,7 +176,7 @@ export class ProductService {
           categoryName = category ? category.name : null;
         }
 
-        // Lấy danh sách phân loại (classifications)
+        // Lấy danh sách phân loại (classifications) giống chi tiết sản phẩm
         const classifications = await this.productClassificationRepository.findByProductId(product.id);
         const processedClassifications = await Promise.all(
           classifications.map(async (classification) => {
@@ -656,6 +656,32 @@ export class ProductService {
           const category = await this.categoryRepository.findById(product.category_id);
           categoryName = category ? category.name : null;
         }
+        // Lấy danh sách phân loại (classifications) giống chi tiết sản phẩm
+        const classifications = await this.productClassificationRepository.findByProductId(product.id);
+        const processedClassifications = await Promise.all(
+          classifications.map(async (classification) => {
+            const attributes = await this.productAttributeRepository.findByClassificationId(classification.id);
+            return {
+              id: classification.id,
+              name: classification.name,
+              attributes: attributes.map((attr) => ({
+                id: attr.id,
+                name: attr.name,
+              })),
+            };
+          })
+        );
+        // Lấy relationships (combo: giá, số lượng, thuộc tính) giống chi tiết sản phẩm
+        const relationships = await this.classificationAttributeRelationshipRepository.findByProductId(product.id);
+        const processedRelationships = relationships.map((rel) => ({
+          id: rel.id,
+          product_attribute_id_1: rel.product_attribute_id_1,
+          product_attribute_id_2: rel.product_attribute_id_2,
+          price: rel.price,
+          quantity: rel.quantity,
+          attribute1_name: rel.attribute1?.name || '',
+          attribute2_name: rel.attribute2?.name || '',
+        }));
         return {
           ...product,
           images: processedImages,
@@ -667,6 +693,8 @@ export class ProductService {
           store_address: inv.store?.address,
           promotion,
           category_name: categoryName,
+          classifications: processedClassifications,
+          relationships: processedRelationships,
         };
       })
     );
@@ -700,39 +728,108 @@ export class ProductService {
             priority: image.priority,
           }));
           let promotion: PromotionEntity | null = null;
-          const productPromotion =
-            await this.productPromotionRepository.findActiveByProductId(productId);
+          const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
           if (productPromotion && productPromotion.promotion_id) {
-            promotion = await this.promotionRepository.findById(
-              productPromotion.promotion_id,
-            );
+            promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
           }
           let categoryName: string | null = null;
           if (product && product.category_id) {
-            const category = await this.categoryRepository.findById(
-              product.category_id,
-            );
+            const category = await this.categoryRepository.findById(product.category_id);
             categoryName = category ? category.name : null;
           }
-          const stores = invList.map((inv: InventoryEntity) => ({
-            store_id: inv.store_id,
-            store_name:
-              inv.store && inv.store.store_name ? inv.store.store_name : null,
-            store_address:
-              inv.store && inv.store.address ? inv.store.address : null,
-            quantity_stock: inv.quantity_stock,
-            quantity_sold: inv.quantity_sold,
+          // Lấy danh sách phân loại (classifications) giống chi tiết sản phẩm
+          const classifications = await this.productClassificationRepository.findByProductId(productId);
+          const processedClassifications = await Promise.all(
+            classifications.map(async (classification) => {
+              const attributes = await this.productAttributeRepository.findByClassificationId(classification.id);
+              return {
+                id: classification.id,
+                name: classification.name,
+                attributes: attributes.map((attr) => ({
+                  id: attr.id,
+                  name: attr.name,
+                })),
+              };
+            })
+          );
+          // Lấy relationships (combo: giá, số lượng, thuộc tính) giống chi tiết sản phẩm
+          const relationships = await this.classificationAttributeRelationshipRepository.findByProductId(productId);
+          const processedRelationships = relationships.map((rel) => ({
+            id: rel.id,
+            product_attribute_id_1: rel.product_attribute_id_1,
+            product_attribute_id_2: rel.product_attribute_id_2,
+            price: rel.price,
+            quantity: rel.quantity,
+            attribute1_name: rel.attribute1?.name || '',
+            attribute2_name: rel.attribute2?.name || '',
+          }));
+
+          // Thêm chi tiết classifications cho từng store giống như findInventoryDetailByProductId
+          const stores = await Promise.all(invList.map(async (inv: InventoryEntity) => {
+            const inventoryDetails = await this.inventoryDetailRepository.findByInventoryId(inv.id);
+            const storeClassifications = await Promise.all(inventoryDetails.map(async detail => {
+              const relationship = detail.classification_attribute_relationship;
+              let classification1_name = '';
+              let classification2_name = '';
+              if (relationship?.product_attribute_id_1) {
+                for (const cls of processedClassifications) {
+                  if (cls.attributes.some(attr => attr.id === relationship.product_attribute_id_1)) {
+                    classification1_name = cls.name;
+                    break;
+                  }
+                }
+              }
+              if (relationship?.product_attribute_id_2) {
+                for (const cls of processedClassifications) {
+                  if (cls.attributes.some(attr => attr.id === relationship.product_attribute_id_2)) {
+                    classification2_name = cls.name;
+                    break;
+                  }
+                }
+              }
+              let attribute1_name = relationship?.attribute1?.name || '';
+              let attribute2_name = relationship?.attribute2?.name || '';
+              if (!attribute1_name && relationship?.product_attribute_id_1) {
+                const attr1 = await this.productAttributeRepository.findById(relationship.product_attribute_id_1);
+                attribute1_name = attr1?.name || '';
+              }
+              if (!attribute2_name && relationship?.product_attribute_id_2) {
+                const attr2 = await this.productAttributeRepository.findById(relationship.product_attribute_id_2);
+                attribute2_name = attr2?.name || '';
+              }
+              return {
+                id: relationship?.id,
+                attribute1_id: relationship?.product_attribute_id_1,
+                attribute2_id: relationship?.product_attribute_id_2,
+                attribute1_name,
+                attribute2_name,
+                classification1_name,
+                classification2_name,
+                price: relationship?.price || 0,
+                quantity_stock: detail.quantity_stock,
+                quantity_sold: detail.quantity_sold,
+              };
+            }));
+            return {
+              store_id: inv.store_id,
+              store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
+              store_address: inv.store && inv.store.address ? inv.store.address : null,
+              quantity_stock: inv.quantity_stock,
+              quantity_sold: inv.quantity_sold,
+              classifications: storeClassifications,
+            };
           }));
           const total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
           return {
             ...product,
             images: processedImages,
-            main_image:
-              processedImages.find((img) => img.is_main_image) || null,
+            main_image: processedImages.find((img) => img.is_main_image) || null,
             stores,
             total_quantity_sold,
             promotion,
             category_name: categoryName,
+            classifications: processedClassifications,
+            relationships: processedRelationships,
           };
         },
       )
@@ -775,12 +872,87 @@ export class ProductService {
           const category = await this.categoryRepository.findById(product.category_id);
           categoryName = category ? category.name : null;
         }
-        const stores = invList.map((inv: InventoryEntity) => ({
-          store_id: inv.store_id,
-          store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
-          store_address: inv.store && inv.store.address ? inv.store.address : null,
-          quantity_stock: inv.quantity_stock,
-          quantity_sold: inv.quantity_sold,
+        // Lấy danh sách phân loại (classifications) giống chi tiết sản phẩm
+        const classifications = await this.productClassificationRepository.findByProductId(productId);
+        const processedClassifications = await Promise.all(
+          classifications.map(async (classification) => {
+            const attributes = await this.productAttributeRepository.findByClassificationId(classification.id);
+            return {
+              id: classification.id,
+              name: classification.name,
+              attributes: attributes.map((attr) => ({
+                id: attr.id,
+                name: attr.name,
+              })),
+            };
+          })
+        );
+        // Lấy relationships (combo: giá, số lượng, thuộc tính) giống chi tiết sản phẩm
+        const relationships = await this.classificationAttributeRelationshipRepository.findByProductId(productId);
+        const processedRelationships = relationships.map((rel) => ({
+          id: rel.id,
+          product_attribute_id_1: rel.product_attribute_id_1,
+          product_attribute_id_2: rel.product_attribute_id_2,
+          price: rel.price,
+          quantity: rel.quantity,
+          attribute1_name: rel.attribute1?.name || '',
+          attribute2_name: rel.attribute2?.name || '',
+        }));
+
+        // Thêm chi tiết classifications cho từng store giống như findInventoryDetailByProductId
+        const stores = await Promise.all(invList.map(async (inv: InventoryEntity) => {
+          const inventoryDetails = await this.inventoryDetailRepository.findByInventoryId(inv.id);
+          const storeClassifications = await Promise.all(inventoryDetails.map(async detail => {
+            const relationship = detail.classification_attribute_relationship;
+            let classification1_name = '';
+            let classification2_name = '';
+            if (relationship?.product_attribute_id_1) {
+              for (const cls of processedClassifications) {
+                if (cls.attributes.some(attr => attr.id === relationship.product_attribute_id_1)) {
+                  classification1_name = cls.name;
+                  break;
+                }
+              }
+            }
+            if (relationship?.product_attribute_id_2) {
+              for (const cls of processedClassifications) {
+                if (cls.attributes.some(attr => attr.id === relationship.product_attribute_id_2)) {
+                  classification2_name = cls.name;
+                  break;
+                }
+              }
+            }
+            let attribute1_name = relationship?.attribute1?.name || '';
+            let attribute2_name = relationship?.attribute2?.name || '';
+            if (!attribute1_name && relationship?.product_attribute_id_1) {
+              const attr1 = await this.productAttributeRepository.findById(relationship.product_attribute_id_1);
+              attribute1_name = attr1?.name || '';
+            }
+            if (!attribute2_name && relationship?.product_attribute_id_2) {
+              const attr2 = await this.productAttributeRepository.findById(relationship.product_attribute_id_2);
+              attribute2_name = attr2?.name || '';
+            }
+            return {
+              id: relationship?.id,
+              attribute1_id: relationship?.product_attribute_id_1,
+              attribute2_id: relationship?.product_attribute_id_2,
+              attribute1_name,
+              attribute2_name,
+              classification1_name,
+              classification2_name,
+              price: relationship?.price || 0,
+              quantity_stock: detail.quantity_stock,
+              quantity_sold: detail.quantity_sold,
+            };
+          }));
+          return {
+            store_id: inv.store_id,
+            store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
+            store_address: inv.store && inv.store.address ? inv.store.address : null,
+            quantity_stock: inv.quantity_stock,
+            quantity_sold: inv.quantity_sold,
+            classifications: storeClassifications,
+          };
         }));
         const total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
         return {
@@ -791,6 +963,8 @@ export class ProductService {
           total_quantity_sold,
           promotion,
           category_name: categoryName,
+          classifications: processedClassifications,
+          relationships: processedRelationships,
         };
       }),
     );
@@ -851,19 +1025,51 @@ export class ProductService {
       // Get inventory details for this store (with classifications)
       const inventoryDetails = await this.inventoryDetailRepository.findByInventoryId(inv.id);
 
-      const classifications = inventoryDetails.map(detail => {
+      const classifications = await Promise.all(inventoryDetails.map(async detail => {
         const relationship = detail.classification_attribute_relationship;
+        // Find classification names for attribute1 and attribute2 using processedClassifications
+        let classification1_name = '';
+        let classification2_name = '';
+        if (relationship?.product_attribute_id_1) {
+          for (const cls of processedClassifications) {
+            if (cls.attributes.some(attr => attr.id === relationship.product_attribute_id_1)) {
+              classification1_name = cls.name;
+              break;
+            }
+          }
+        }
+        if (relationship?.product_attribute_id_2) {
+          for (const cls of processedClassifications) {
+            if (cls.attributes.some(attr => attr.id === relationship.product_attribute_id_2)) {
+              classification2_name = cls.name;
+              break;
+            }
+          }
+        }
+        // Ensure attribute names are filled
+        let attribute1_name = relationship?.attribute1?.name || '';
+        let attribute2_name = relationship?.attribute2?.name || '';
+        if (!attribute1_name && relationship?.product_attribute_id_1) {
+          const attr1 = await this.productAttributeRepository.findById(relationship.product_attribute_id_1);
+          attribute1_name = attr1?.name || '';
+        }
+        if (!attribute2_name && relationship?.product_attribute_id_2) {
+          const attr2 = await this.productAttributeRepository.findById(relationship.product_attribute_id_2);
+          attribute2_name = attr2?.name || '';
+        }
         return {
           id: relationship?.id,
           attribute1_id: relationship?.product_attribute_id_1,
           attribute2_id: relationship?.product_attribute_id_2,
-          attribute1_name: relationship?.attribute1?.name || '',
-          attribute2_name: relationship?.attribute2?.name || '',
+          attribute1_name,
+          attribute2_name,
+          classification1_name,
+          classification2_name,
           price: relationship?.price || 0,
           quantity_stock: detail.quantity_stock,
           quantity_sold: detail.quantity_sold,
         };
-      });
+      }));
 
       return {
         store_id: inv.store_id,
