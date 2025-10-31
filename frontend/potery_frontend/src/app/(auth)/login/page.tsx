@@ -86,9 +86,9 @@ export default function LoginPage() {
             <input type="checkbox" className="rounded border-[#F5F1EB] text-[#65604E] focus:ring-[#65604E]" />
             <span className="ml-2 text-sm text-[#65604E]">Ghi nhớ đăng nhập</span>
           </label>
-          <a href="#" className="text-sm text-[#65604E] hover:text-[#2C2A24]">
+          <Link href="/auth/forgot-password" className="text-sm text-[#65604E] hover:text-[#2C2A24]">
             Quên mật khẩu?
-          </a>
+          </Link>
         </div>
 
         {error && <div className="text-red-600 text-sm">{error}</div>}

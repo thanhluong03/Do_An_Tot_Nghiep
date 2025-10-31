@@ -168,6 +168,12 @@
       ],
       "@app/voucher/*": [
         "libs/voucher/src/*"
+      ],
+      "@app/auth": [
+        "libs/auth/src"
+      ],
+      "@app/auth/*": [
+        "libs/auth/src/*"
       ]
     }
   }
