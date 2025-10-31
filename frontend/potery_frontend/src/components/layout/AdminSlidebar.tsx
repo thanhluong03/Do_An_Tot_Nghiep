@@ -55,7 +55,7 @@ const salesOperationsItems: MenuItem[] = [
         ],
     },
     { name: "Sản phẩm", icon: faBox, href: "/admin/products", color: "bg-blue-100 text-blue-600" },
-   
+
     { name: "Danh mục", icon: faList, href: "/admin/categories", color: "bg-green-100 text-green-600" },
     { name: "Cửa hàng", icon: faStore, href: "/admin/stores", color: "bg-green-100 text-green-600" },
 ];
@@ -105,14 +105,14 @@ const SidebarItem = ({
     const isChildActive = item.children?.some(
         (child) => child.href && currentPath.startsWith(child.href)
     );
-    
+
     // 💡 Tự động mở nếu có mục con đang active
-    const [open, setOpen] = useState(!!isChildActive); 
-    
+    const [open, setOpen] = useState(!!isChildActive);
+
     const isActive = item.href
         ? currentPath === item.href ||
-          (currentPath.startsWith(item.href + "/") &&
-              item.href !== "/admin/dashboard")
+        (currentPath.startsWith(item.href + "/") &&
+            item.href !== "/admin/dashboard")
         : false;
 
     const activeClass = isActive
@@ -122,7 +122,7 @@ const SidebarItem = ({
     if (item.children && item.children.length > 0) {
         // Sử dụng isChildActive để xác định màu nền cho mục cha
         const parentActiveClass = isChildActive ? "text-[#B95D26] font-semibold bg-orange-50" : "text-gray-600 hover:bg-gray-100";
-        
+
         return (
             <div>
                 <button
@@ -144,14 +144,13 @@ const SidebarItem = ({
                             <Link
                                 key={child.name}
                                 href={child.href!}
-                                className={`flex items-center justify-between px-0 py-2 rounded-md text-sm transition-colors ${
-                                    currentPath === child.href
+                                className={`flex items-center justify-between px-0 py-2 rounded-md text-sm transition-colors ${currentPath === child.href
                                         ? "text-[#B95D26] font-semibold bg-orange-50"
                                         : "text-gray-600 hover:bg-gray-100"
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center space-x-2">
-                                
+
                                     <FontAwesomeIcon
                                         icon={child.icon}
                                         className="w-4 h-4"
@@ -204,19 +203,15 @@ export default function AdminSidebar() {
 
     return (
         <div className="w-64 bg-white flex flex-col h-screen sticky top-0 overflow-y-auto border-r border-gray-200 shadow-md">
-            <div className="p-4 flex flex-col border-b border-gray-100">
-                <div className="flex items-center mb-1">
-                    <div className="w-9 h-9 bg-[#B95D26] flex items-center justify-center rounded-md mr-3 shadow-sm">
-                        <FontAwesomeIcon
-                            icon={faHome}
-                            className="w-5 h-5 text-white"
-                        />
-                    </div>
-                    <div className="text-base font-bold text-gray-800">
-                        Tiệm Gốm Nhà Gạo
-                    </div>
-                </div>
-                <p className="text-xs text-gray-500 ml-12">Admin Dashboard</p>
+
+            <div className="p-4 flex flex-col items-center justify-center border-b border-gray-100 mb-4">
+                <Link href="/admin/dashboard" passHref>
+                    <img
+                        src="/logoADmin.jpg"
+                        alt="Tiệm Gốm Nhà Gạo Admin Logo"
+                        className="w-40 h-auto object-contain cursor-pointer hover:scale-[1.02]"
+                    />
+                </Link>
             </div>
             <nav className="p-4 flex-1 space-y-4">
                 {renderMenuSection("Tổng Quan", dashboardItems)}

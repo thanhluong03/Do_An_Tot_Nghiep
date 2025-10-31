@@ -224,3 +224,6 @@ html {
   margin-bottom: 0.25rem;
 }
 
+.logo-font {
+  font-family: 'Allura', cursive; /* Tên font bạn chọn và font dự phòng */
+}
