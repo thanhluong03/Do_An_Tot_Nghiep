@@ -27,11 +27,19 @@ const initialFormState: CreateNewsDto = {
     user_id: 1,
     image_data: null,
 };
-
-const formatDate = (dateString?: Date | string) =>
-    dateString ? new Date(dateString).toISOString().split("T")[0] : "";
-
-
+const formatDate = (dateString?: Date | string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+    });
+};
 export default function NewsPage() {
 
 
@@ -438,7 +446,7 @@ export default function NewsPage() {
                                                 )}
                                             </td>
 
-                                            <td className="px-6 py-4 font-medium text-gray-800 max-w-xs truncate">
+                                            <td className="px-6 py-4 font-medium text-gray-800 max-w-xs">
                                                 {n.title}
                                             </td>
                                             <td className="px-6 py-4">{getAuthorName(n.user_id)}</td>
