@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../contexts/CartContext";
@@ -19,9 +19,12 @@ export const metadata: Metadata = {
   description: "Khám phá thế giới gốm sứ nghệ thuật với những tác phẩm độc đáo được chế tác thủ công bởi các nghệ nhân tài hoa",
   keywords: "gốm sứ, nghệ thuật, thủ công, đồ gốm, bình hoa, chén dĩa",
   authors: [{ name: "Pottery Store Team" }],
-  viewport: "width=device-width, initial-scale=1",
 };
-
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Thêm các thuộc tính khác (nếu cần)
+};
 export default function RootLayout({
   children,
 }: Readonly<{
