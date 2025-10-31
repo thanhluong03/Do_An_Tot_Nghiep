@@ -6,10 +6,7 @@ import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import OrderStatusChart from "@/components/dashboard/OrderStatusChart";
 import BestSellerChart from "@/components/dashboard/BestSellerChart";
-import CustomerDemographicsChart from "@/components/dashboard/CustomerDemographicsChart";
-import CustomerFeedbackGauge from "@/components/dashboard/CustomerFeedbackGauge";
 import { listInventories, Inventory } from "@/api/services/inventoryService";
-
 import { useRouter } from "next/navigation";
 
 interface RevenueData {
@@ -117,10 +114,10 @@ const DashboardPage = () => {
 
 
   return (
-    <div className="bg-[#f7f8fa] min-h-screen p-6">
+    <div className="bg-[#F3F4F6] min-h-screen p-1">
       {/* Banner chào mừng */}
       <div
-        className="rounded-xl p-8 md:p-12 text-white shadow-xl"
+        className="rounded-xl p-8 md:p-12 text-white shadow-xl mb-3 "
         style={{ background: "linear-gradient(135deg, #f97316, #e47e3f)" }}
       >
         <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight">
@@ -144,12 +141,12 @@ const DashboardPage = () => {
       </div>
 
       {/* Bộ lọc */}
-      <div className="bg-white rounded-2xl shadow flex flex-wrap items-center gap-4 p-6 mb-6 border border-gray-100">
+      <div className="bg-white rounded-2xl flex flex-wrap items-center gap-2 p-2 mb-4">
         <DashboardFilter onFilterChange={handleFilterChange} />
       </div>
 
       {/* Tổng hợp thống kê */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
         <DashboardSummary
           revenue={totalRevenue}
           ordersLabel={`${deliveredOrders}/${totalOrders}`}
@@ -160,21 +157,21 @@ const DashboardPage = () => {
       </div>
 
       {/* Biểu đồ doanh thu + trạng thái đơn hàng */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl shadow p-3 border border-gray-100 md:col-span-2">
-          <div className="font-semibold text-lg mb-2">Doanh số bán hàng</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white rounded-2xl shadow p-3 md:col-span-2">
+          <div className="font-semibold text-lg mb-2 ml-4">Doanh số bán hàng</div>
           <RevenueChart data={revenueChartData} />
         </div>
         <div className="bg-white rounded-2xl shadow p-3 border border-gray-100">
-          <div className="font-semibold text-lg mb-2">Trạng thái đơn hàng</div>
+          <div className="font-semibold text-lg mb-2 ml-4">Trạng thái đơn hàng</div>
           <OrderStatusChart data={orderStatusData} />
         </div>
       </div>
 
       {/* Biểu đồ sản phẩm bán chạy */}
-      <div className="bg-white rounded-2xl shadow p-3 mb-6 border border-gray-100">
+      <div className="bg-white rounded-2xl shadow p-3 mb-6">
         <div className="flex justify-between items-center mb-2">
-          <div className="font-semibold text-lg">Sản phẩm bán chạy</div>
+          <div className="font-semibold text-lg ml-4">Sản phẩm bán chạy</div>
           <div className="text-xs text-gray-400">Top 10</div>
         </div>
         <BestSellerChart data={bestSellerData} />
