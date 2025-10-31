@@ -70,20 +70,35 @@ export default function NewsPage() {
     const fetchNews = useCallback(async () => {
         setLoading(true);
         try {
-            const query: ListNewsDto = {
-                key: searchKey.trim() || undefined,
-                sort: sortOrder,
-            };
-            const result = await getNews(query);
+            const result = await getNews({});
+            let filtered = result.news || [];
 
-            setNewsList(result.news);
-            setTotalItems(result.total);
+            // 🔍 Lọc theo từ khóa tìm kiếm
+            if (searchKey.trim()) {
+                const lowerKey = searchKey.toLowerCase();
+                filtered = filtered.filter(
+                    (item) =>
+                        item.title?.toLowerCase().includes(lowerKey) ||
+                        item.content?.toLowerCase().includes(lowerKey) ||
+                        item.author?.toLowerCase().includes(lowerKey)
+                );
+            }
+
+            // 🧭 Sắp xếp frontend theo ngày
+            filtered.sort((a, b) => {
+                const dateA = new Date(a.published_at || a.created_at || 0).getTime();
+                const dateB = new Date(b.published_at || b.created_at || 0).getTime();
+                return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+            });
+
+            setNewsList(filtered);
         } catch (error) {
-            toast.error("Không thể tải tin tức!");
+            toast.error("Không thể tải danh sách tin tức!");
         } finally {
             setLoading(false);
         }
     }, [searchKey, sortOrder]);
+
     const fetchUsers = useCallback(async () => {
         try {
             const result = await listUsers();
@@ -343,40 +358,28 @@ export default function NewsPage() {
                 ) : (
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex space-x-3">
-                            <div className="relative flex items-center">
+                            <div className="relative w-full sm:w-2/3">
                                 <input
                                     type="text"
-                                    placeholder="Tìm kiếm theo tiêu đề..."
-                                    value={liveSearchKey}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setLiveSearchKey(val);
-                                        setSearchKey(val);
-                                    }}
-
-                                    onKeyUp={(e) => {
-                                        if (e.key === 'Enter') handleSearch();
-                                    }}
-                                    className="pl-4 pr-10 py-2 border border-gray-300 rounded-l-lg focus:ring-orange-500 focus:border-orange-500"
+                                    placeholder="Tìm kiếm bài viết..."
+                                    value={searchKey}
+                                    onChange={(e) => setSearchKey(e.target.value)}
+                                    className="w-full px-4 py-2 pl-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:outline-none"
                                 />
-                                <button
-                                    onClick={handleSearch}
-                                    className="bg-gray-200 text-gray-600 p-2 border border-gray-300 rounded-r-lg hover:bg-gray-300 transition"
-                                    title="Tìm kiếm"
-                                >
-                                    <Search size={20} />
-                                </button>
+                                <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
                             </div>
+
 
                             <select
                                 title="xap"
                                 value={sortOrder}
                                 onChange={(e) => {
                                     setSortOrder(e.target.value as 'newest' | 'oldest');
+                                    fetchNews(); // load lại dữ liệu đã sắp
                                 }}
                                 className="py-2 px-4 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
                             >
-                                <option value="newest">Sắp xếp: Mới nhất</option>
+                                <option className="border border-gray-50" value="newest">Sắp xếp: Mới nhất</option>
                                 <option value="oldest">Sắp xếp: Cũ nhất</option>
                             </select>
                         </div>

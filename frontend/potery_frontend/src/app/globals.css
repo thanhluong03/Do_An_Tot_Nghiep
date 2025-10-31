@@ -227,3 +227,15 @@ html {
 .logo-font {
   font-family: 'Allura', cursive; /* Tên font bạn chọn và font dự phòng */
 }
+select option {
+    background: white; /* Màu nền của mỗi option */
+    color: #1f2937; /* text-gray-800 */
+    padding: 4px 8px; /* Tùy chọn padding */
+    border-radius: 20px; /* Bo góc cho option */
+    border: none;
+}
+
+select option:checked {
+    background-color: white; 
+    color: black;
+}
