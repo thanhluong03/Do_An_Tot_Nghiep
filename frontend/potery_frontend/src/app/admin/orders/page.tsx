@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import * as XLSX from "xlsx";
 import {
   getOrderDetail,
   listOrders,
@@ -75,7 +74,7 @@ export default function AdminOrderPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
   useEffect(() => {
-    getCustomers()
+    getCustomers({})
       .then(setCustomers)
       .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
     listDropdownStores()
@@ -89,6 +88,7 @@ export default function AdminOrderPage() {
   async function fetchAllOrders() {
     try {
       // ⭐️ CẬP NHẬT: Thay đổi cách nhận dữ liệu từ listOrders
+      
       const response = await listOrders({ size: 10000, page: 1 }); // Lấy số lượng lớn để đếm cho tabs
       const data = response.data;
 
@@ -112,7 +112,7 @@ export default function AdminOrderPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = {
+      const rawParams = {
         page: pagination.page,
         size: pagination.size,
         key: "",
@@ -120,10 +120,13 @@ export default function AdminOrderPage() {
         status: orderStatusFilter || undefined,
         payment_status: paymentStatusFilter || undefined,
       };
+      const params = { ...rawParams };
 
       // ⭐️ CẬP NHẬT: Nhận đối tượng response có data và total
+      // Lỗi "read-only" xảy ra do Axios cố gắng sửa đổi `params`
+      // Hãy đảm bảo `listOrders` KHÔNG cố gắng sửa đổi đối tượng `params` này.
       const response = await listOrders(params);
-
+      
       const ordersWithNames = response.data.map((order) => ({
         // ... (logic mapping)
         ...order,

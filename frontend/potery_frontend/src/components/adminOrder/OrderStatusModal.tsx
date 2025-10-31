@@ -67,12 +67,12 @@ export default function OrderStatusModal({
               onChange={(e) => setStatus(e.target.value as OrderStatus)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              <option value="CREATED">CREATED - Mới tạo</option>
+              {/* <option value="CREATED">CREATED - Mới tạo</option> */}
               <option value="CONFIRMED">CONFIRMED - Đã xác nhận</option>
-              <option value="SHIPPING">SHIPPING - Đang giao</option>
-              <option value="DELIVERED">DELIVERED - Đã giao</option>
+              {/* <option value="SHIPPING">SHIPPING - Đang giao</option>
+              <option value="DELIVERED">DELIVERED - Đã giao</option> */}
               <option value="REJECTED">REJECTED - Từ chối</option>
-              <option value="CANCELED">CANCELED - Đã hủy</option>
+              {/* <option value="CANCELLED">CANCELED - Đã hủy</option> */}
             </select>
           </div>
 
@@ -99,9 +99,9 @@ export default function OrderStatusModal({
               onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              <option value="ONSITE">ONSITE - Tại chỗ</option>
+              <option value="COD">COD - Thanh toán khi nhận hàng</option>
               <option value="BANK_TRANSFER">BANK TRANSFER - Chuyển khoản</option>
-              <option value="CARD">CARD - Thẻ</option>
+              <option value="CARD">CARD - Thẻ ngân hàng</option>
             </select>
           </div>
         </div>

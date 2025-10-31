@@ -21,11 +21,14 @@ export interface OrderItem {
     store_name?: string;
     store_address?: string;
     product_images?: ProductImage[];
+    attribute1_name?: string;
+    attribute2_name?: string;
+    
 }
 
-export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELED' | 'REJECTED';
+export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REJECTED';
 export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED';
-export type PaymentMethod = 'ONSITE' | 'BANK_TRANSFER' | 'CARD';
+export type PaymentMethod = 'COD' | 'VNPAY';
 
 export interface CurrentOrderDetails {
     customer_id: number;
@@ -97,7 +100,7 @@ export interface ListOrdersResponse {
 }
 export async function listOrders(params: ListOrderParams): Promise<ListOrdersResponse> {
     // Create a mutable copy of params to avoid "read-only" errors.
-    const queryParams = { ...params };
+   const queryParams = { ...params }; // <-- Đã có sao chép nông ở đây!
     if (queryParams.store_id === "") queryParams.store_id = undefined;
 
     const res = await axios.get(`${API_URL}/listorders`, { params: queryParams });
