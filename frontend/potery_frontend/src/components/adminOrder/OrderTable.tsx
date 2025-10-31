@@ -30,7 +30,7 @@ const getStatusColor = (status: OrderStatus | PaymentStatus) => {
       return "bg-yellow-100 text-yellow-700";
     case "DELIVERED":
       return "bg-green-100 text-green-700";
-    case "CANCELED":
+    case "CANCELLED":
       return "bg-red-100 text-red-700";
     case "REJECTED":
       return "bg-gray-200 text-gray-700";
@@ -55,7 +55,7 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
     SHIPPING: "Đang giao",
     DELIVERED: "Đã giao",
     REJECTED: "Bị từ chối",
-    CANCELED: "Đã hủy",
+    CANCELLED: "Đã hủy",
 
     // Trạng thái thanh toán
     UNPAID: "Chưa thanh toán",

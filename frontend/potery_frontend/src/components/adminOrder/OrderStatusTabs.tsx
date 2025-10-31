@@ -17,7 +17,7 @@ const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
   { value: "SHIPPING", label: "Chờ giao hàng" },
   { value: "DELIVERED", label: "Hoàn thành" },
    { value: "REJECTED", label: "Từ chối" },
-  { value: "CANCELED", label: "Đã hủy" },
+  { value: "CANCELLED", label: "Đã hủy" },
  
 ];
 
@@ -27,6 +27,7 @@ const PAYMENT_OPTIONS: { value: PaymentStatus | ""; label: string }[] = [
   { value: "PENDING", label: "Đang xử lý" },
   { value: "PAID", label: "Đã thanh toán" },
   { value: "REFUNDED", label: "Hoàn tiền" },
+
 ];
 
 export default function OrderStatusTabs({

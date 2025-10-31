@@ -36,13 +36,13 @@ const bufferToDataURL = (bufferData: { data: number[] } | undefined, mimeType: s
 export default function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
 
   if (!order) return null;
-
+  const paymentMethod = String(order.payment_method);
   const displayTotalAmount =
     typeof order.total_amount === "string" ? parseFloat(order.total_amount) : order.total_amount;
 
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
         <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center">
           <h2 className="text-2xl font-semibold text-gray-900">
             Chi tiết Đơn hàng{" "}
@@ -86,7 +86,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   <span
                     className={`font-bold uppercase text-xs px-2 py-1 rounded-full ${order.status === "DELIVERED"
                       ? "bg-green-100 text-green-700"
-                      : order.status === "CANCELED"
+                      : order.status === "CANCELLED"
                         ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
                       }`}
@@ -112,9 +112,21 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   label="Tổng thanh toán"
                   value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount + 30000)}</span>}
                 />
-                <InfoRow label="Phương thức" value={order.payment_method.replace("_", " ")} />
                 <InfoRow
-                  label="Trạng thái TT"
+                  label="Phương thức"
+                  value={
+                    paymentMethod === "ONSITE"
+                      ? "Thanh toán khi nhận hàng"
+                      : paymentMethod === "CARD"
+                        ? "Thanh toán qua thẻ"
+                        : paymentMethod === "BANK_TRANSFER"
+                          ? "Chuyển khoản"
+                          : "Không xác định"
+                  }
+                />
+
+                <InfoRow
+                  label="Trạng thái thanh toán"
                   value={
                     <span
                       className={`font-bold uppercase text-xs px-2 py-1 rounded-full ${order.payment_status === "PAID"
@@ -122,7 +134,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                         : "bg-red-100 text-red-700"
                         }`}
                     >
-                      {order.payment_status}
+                      {order.payment_status === "PAID" ? "Đã thanh toán" : "Chưa thanh toán"}
                     </span>
                   }
                 />
@@ -163,6 +175,13 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                       <p className="font-semibold text-gray-900 text-sm">
                         {item.product_name || `Sản phẩm ID: ${item.product_id}`}
                       </p>
+                      {(item.attribute1_name || item.attribute2_name) && (
+                        <p className="text-xs text-gray-500">
+                          {`${item.attribute1_name}    `}
+                          {item.attribute2_name}
+                        </p>
+                      )}
+
                       <p className="text-xs text-gray-500 italic">
                         @{item.store_name || `Cửa hàng ${item.store_id}`}
                       </p>
