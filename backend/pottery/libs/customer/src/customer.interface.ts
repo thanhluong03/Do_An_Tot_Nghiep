@@ -22,4 +22,6 @@ export interface IListCustomer {
     page?: number
     size?: number
     key?: string
+    start_date?: string
+    end_date?: string
 }

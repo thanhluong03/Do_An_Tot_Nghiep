@@ -26,8 +26,11 @@ export class DriverLocationController {
     ) { }
 
     @Get('admin/orders')
-    async getOrdersForAdmin() {
-        return await this.orderService.getOrdersForAdmin();
+    async getOrdersForAdmin(
+        @Query('start_date') start_date?: string,
+        @Query('end_date') end_date?: string
+    ) {
+        return await this.orderService.getOrdersForAdmin(start_date, end_date);
     }
 
     @Post('admin/assign-driver')

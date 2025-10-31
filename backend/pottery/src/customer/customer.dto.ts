@@ -95,4 +95,14 @@ export class ListCustomerRequestDto {
     @IsOptional()
     @IsString()
     key?: string;
+
+    @Expose({ name: 'start_date' })
+    @IsOptional()
+    @IsString()
+    start_date?: string;
+
+    @Expose({ name: 'end_date' })
+    @IsOptional()
+    @IsString()
+    end_date?: string;
 }

@@ -33,6 +33,8 @@ export interface IListProduct {
   page?: number
   size?: number
   key?: string
+  start_date?: string
+  end_date?: string
 }
 
 export interface IProductAttribute {

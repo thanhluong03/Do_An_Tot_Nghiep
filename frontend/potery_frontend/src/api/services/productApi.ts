@@ -37,8 +37,8 @@ type ProductPayload = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'catego
 
 
 // Lấy danh sách sản phẩm
-export const getProducts = async (): Promise<Product[]> => {
-    const res = await axios.get(`${API_URL}/listproduct`);
+export const getProducts = async (params?: { start_date?: string; end_date?: string }): Promise<Product[]> => {
+    const res = await axios.get(`${API_URL}/listproduct`, { params });
     return res.data;
 };
 

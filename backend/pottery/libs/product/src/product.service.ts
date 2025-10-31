@@ -156,9 +156,11 @@ export class ProductService {
 
   async findAll(params: IListProduct) {
     const products = await this.productRepository.findAll({
-      ...params,
       size: params.size || DEFAULT_PAGE_SIZE,
       page: params.page || DEFAULT_PAGE,
+      key: params.key,
+      start_date: params.start_date,
+      end_date: params.end_date,
     });
 
     const productsWithDetails = await Promise.all(

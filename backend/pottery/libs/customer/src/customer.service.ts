@@ -13,6 +13,8 @@ export class CustomerService {
             page: params.page || 1,
             size: params.size || 10,
             key: params.key,
+            start_date: params.start_date,
+            end_date: params.end_date,
         });
         const customersWithAvatar = customers.map((customer) => {
             let avatarBase64: string | null = null;

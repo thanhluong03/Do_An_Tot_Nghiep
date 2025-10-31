@@ -20,11 +20,31 @@ export class ProductRepository {
     })
   }
 
-  async findAll(p0: { size: number; page: number; key?: string }): Promise<ProductEntity[]> {
-    return this.repository.find({
-      where: { deleted_at: IsNull() },
-      order: { created_at: 'DESC' },
-    })
+  async findAll(params: { size: number; page: number; key?: string; start_date?: string; end_date?: string }): Promise<ProductEntity[]> {
+    const query = this.repository.createQueryBuilder('product');
+    query.where('product.deleted_at IS NULL');
+
+    if (params.start_date) {
+      query.andWhere('product.created_at >= :start_date', { start_date: params.start_date });
+    }
+
+    if (params.end_date) {
+      const endDatePlusOne = new Date(params.end_date);
+      endDatePlusOne.setDate(endDatePlusOne.getDate() + 1);
+      query.andWhere('product.created_at < :end_date', {
+        end_date: endDatePlusOne.toISOString().split('T')[0]
+      });
+    }
+
+    if (params.key) {
+      query.andWhere(
+        '(product.name LIKE :key OR product.description LIKE :key)',
+        { key: `%${params.key}%` }
+      );
+    }
+
+    query.orderBy('product.created_at', 'DESC');
+    return query.getMany();
   }
 
   async update(id: number, data: Partial<ProductEntity>): Promise<void> {

@@ -356,11 +356,11 @@ export class OrderService {
     res.end();
   }
 
-  async getOrdersForAdmin() {
+  async getOrdersForAdmin(start_date?: string, end_date?: string) {
     try {
       const orders = await this.orderRepository.findOrdersForAdmin([
         OrderStatus.CONFIRMED,
-      ]);
+      ], start_date, end_date);
 
       const formattedOrders = await Promise.all(orders.map(async (order) => {
         let customerName = '';
