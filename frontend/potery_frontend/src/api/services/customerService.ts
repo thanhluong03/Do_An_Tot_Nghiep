@@ -11,8 +11,9 @@ export interface Customer {
   phone_number?: string;
   address?: string;
   is_active?: boolean;
-  avatar_image?: string; // base64
+  avatar_image?: string;
 }
+
 
 export const getCustomers = async (p0: {}) => {
   const res = await axios.get(`${API_URL}/listcustomers`);

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
+import { getUserAvatarUrl, getUserDetail } from "@/api/services/userService";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -29,8 +30,25 @@ export default function AdminLoginPage() {
       localStorage.removeItem("adminRoleId");
       localStorage.removeItem("adminRole");
       localStorage.removeItem("adminName");
+      localStorage.removeItem("adminAvatar");
 
       if (data.adminID) localStorage.setItem("adminID", data.adminID.toString());
+
+      if (data.adminID) {
+        const adminID = data.adminID;
+        localStorage.setItem("adminID", adminID.toString());
+        try {
+          const adminDetail = await getUserDetail(adminID);
+          if (adminDetail) {
+            const avatarUrl = getUserAvatarUrl(adminDetail);
+            localStorage.setItem("adminAvatar", avatarUrl);
+          }
+
+        } catch (error) {
+          console.error("Failed to fetch admin detail for avatar:", error);
+          localStorage.setItem("adminAvatar", "/images/avaa.jpg");
+        }
+      }
       if (data.adminName) localStorage.setItem("adminName", data.adminName);
       if (data.roleName) localStorage.setItem("adminRole", data.roleName);
       if (data.roleId) {

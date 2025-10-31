@@ -19,7 +19,7 @@ export default function CustomerPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const data = await getCustomers();
+      const data = await getCustomers({});
       setCustomers(data);
     } catch (err) {
       toast.error("Không thể tải danh sách khách hàng!");

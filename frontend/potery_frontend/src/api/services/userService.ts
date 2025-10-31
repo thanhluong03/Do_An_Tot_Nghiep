@@ -67,6 +67,7 @@ export async function listUsers(params?: { page?: number; size?: number; key?: s
     return res.data.users || [];
 }
 
+
 export async function getUserDetail(id: number) {
     const res = await axios.get(`${API_URL}/userdetail/${id}`);
     return res.data;

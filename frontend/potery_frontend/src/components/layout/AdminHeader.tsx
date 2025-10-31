@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 interface HeaderInfo {
   title: string;
@@ -52,22 +52,22 @@ export default function AdminHeader() {
   const pathname = usePathname() || "/admin/dashboard";
   const pathname1 = usePathname() ?? "";
   const { title, breadcrumb } = getTitleAndBreadcrumb(pathname);
-    
+
   const [adminName, setAdminName] = useState("Chưa đăng nhập");
   const [adminRole, setAdminRole] = useState("Guest");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [adminAvatar, setAdminAvatar] = useState("/images/avaa.jpg")
+  const avatar = localStorage.getItem("adminAvatar") || "/images/avaa.jpg";
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 🧠 Lấy tên admin từ localStorage
   useEffect(() => {
     const role = localStorage.getItem("adminRole");
     const name = localStorage.getItem("adminName") || "Chưa đăng nhập";
-    setAdminName(name )
+    setAdminName(name)
     setAdminRole(role || "Guest");
   }, [pathname1]);
 
-  // 🧩 Đóng dropdown khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -77,27 +77,38 @@ export default function AdminHeader() {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
+  useEffect(() => {
+    const storedAvatar = localStorage.getItem("adminAvatar");
+    if (storedAvatar) {
+      setAdminAvatar(storedAvatar);
+    }
+  }, []);
+
 
   const handleLogout = async () => {
-  try {
-    // 🔥 Gọi API backend để xoá cookie HttpOnly
-    await fetch("http://localhost:3000/admin/logout", {
-      method: "POST",
-      credentials: "include", // bắt buộc gửi cookie
-    });
-  } catch (err) {
-    console.error("Logout error:", err);
-  }
+    try {
 
-  // 🧹 Xoá thông tin còn lại ở localStorage
-  localStorage.removeItem("adminRole");
-  localStorage.removeItem("adminPermissions");
-  localStorage.removeItem("adminName");
-  localStorage.removeItem("adminID");
-  // 🔁 Chuyển hướng về trang login
-  router.push("/admin/login");
-};
+      await fetch("http://localhost:3000/admin/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
 
+    localStorage.removeItem("adminRole");
+    localStorage.removeItem("adminPermissions");
+    localStorage.removeItem("adminName");
+    localStorage.removeItem("adminID");
+    localStorage.removeItem("adminAvatar");
+
+    router.push("/admin/login");
+
+
+  };
+  const handleProfile = () => {
+    router.push("/admin/profileAdmin");
+  };
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
@@ -124,47 +135,57 @@ export default function AdminHeader() {
         </nav>
       </div>
 
-     <div className="relative flex items-center space-x-3" ref={dropdownRef}>
-          <div
-            className="flex items-center space-x-3 cursor-pointer select-none transition hover:bg-gray-50 rounded-2xl px-3 py-2"
-            onClick={() => setShowDropdown((prev) => !prev)}
-          >
-            <div className="flex flex-col text-right leading-tight">
-              <p className="text-sm font-semibold text-gray-800">{adminName}</p>
-              <p className="text-xs text-gray-500">{adminRole}</p>
-            </div>
+      <div className="relative flex items-center space-x-3" ref={dropdownRef}>
+        <div
+          className="flex items-center space-x-3 cursor-pointer select-none transition hover:bg-gray-50 rounded-2xl px-3 py-2"
+          onClick={() => setShowDropdown((prev) => !prev)}
+        >
+          <div className="flex flex-col text-right leading-tight">
+            <p className="text-sm font-semibold text-gray-800">{adminName}</p>
+            <p className="text-xs text-gray-500">{adminRole}</p>
+          </div>
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-orange-100">
             <Image
-              src="/images/avaa.jpg"
+              src={adminAvatar}
               alt="User Avatar"
-              width={42}
-              height={42}
-              className="rounded-full object-cover border-2 border-orange-100"
+              width={40}
+              height={40}
+              className="object-cover w-full h-full"
             />
-            <svg
-              className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-                showDropdown ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
           </div>
 
-          {showDropdown && (
-            <div className="absolute right-0 top-[60px] w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-fade-in">
-              <button
-                onClick={handleLogout}
-                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-              >
-                <LogOut className="w-4 h-4 mr-2 text-gray-500" />
-                Đăng xuất
-              </button>
-            </div>
-          )}
+
+          <svg
+            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showDropdown ? "rotate-180" : ""
+              }`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
+
+        {showDropdown && (
+          <div className="absolute right-0 top-[60px] w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-fade-in">
+            <button
+              onClick={handleProfile}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+            >
+              <User className="w-4 h-4 mr-2 text-gray-500" />
+              Trang cá nhân
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+            >
+              <LogOut className="w-4 h-4 mr-2 text-gray-500" />
+              Đăng xuất
+            </button>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
