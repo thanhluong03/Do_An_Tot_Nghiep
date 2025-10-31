@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { User } from "@/api/services/userService";
 import toast from "react-hot-toast";
-import Image from "next/image"; 
+import Image from "next/image";
 import { getRoles, Role } from "@/api/services/roleService";
 
 interface UserFormModalProps {
@@ -10,6 +10,7 @@ interface UserFormModalProps {
     onClose: () => void;
     onCreate: (formData: FormData) => void;
     onUpdate: (id: number, formData: FormData) => void;
+    existingUsers?: User[];
 }
 
 export default function UserFormModal({
@@ -17,6 +18,7 @@ export default function UserFormModal({
     onClose,
     onCreate,
     onUpdate,
+    existingUsers,
 }: UserFormModalProps) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -29,6 +31,7 @@ export default function UserFormModal({
     const [isActive, setIsActive] = useState(true);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string>("");
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         async function fetchRoles() {
@@ -52,11 +55,19 @@ export default function UserFormModal({
             setAddress(user.address || "");
             setRoleId(user.role_id);
             setIsActive(user.is_active ?? true);
-            setAvatarPreview(
-                typeof user.avatar_image === "string"
-                    ? user.avatar_image
-                    : ""
-            );
+            let preview = "";
+            if (typeof user.avatar_image === "string" && user.avatar_image.length > 50) {
+                // Giả định nếu là chuỗi dài và không bắt đầu bằng 'http', nó là Base64
+                if (user.avatar_image.startsWith("http")) {
+                    preview = user.avatar_image; // Nếu là URL HTTP/S
+                } else {
+                    // Cần tiền tố để Next.js Image component nhận dạng Base64 hợp lệ
+                    preview = `data:image/jpeg;base64,${user.avatar_image}`; 
+                }
+            }
+
+            setAvatarPreview(preview);
+            
             setPassword("");
         } else {
             setUsername("");
@@ -79,9 +90,43 @@ export default function UserFormModal({
         }
     };
 
+    // ---------------- VALIDATE FORM ----------------
+    const validateForm = () => {
+        const newErrors: { [key: string]: string } = {};
+
+        if (!username.trim()) newErrors.username = "Tên đăng nhập là bắt buộc.";
+        else if (username.trim().length < 3)
+            newErrors.username = "Tên đăng nhập phải ít nhất 3 ký tự.";
+        else if (
+            !user && // chỉ check khi tạo mới
+            existingUsers?.some(
+                (u) => u.username.toLowerCase() === username.trim().toLowerCase()
+            )
+        ) {
+            newErrors.username = "Tên đăng nhập đã tồn tại, vui lòng chọn tên khác.";
+        }
+
+        if (!user && !password.trim())
+            newErrors.password = "Mật khẩu là bắt buộc khi tạo mới.";
+        else if (password && password.length < 6)
+            newErrors.password = "Mật khẩu phải ít nhất 6 ký tự.";
+
+        if (email && !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email))
+            newErrors.email = "Email không hợp lệ.";
+
+        if (phoneNumber && !/^[0-9]{8,15}$/.test(phoneNumber))
+            newErrors.phoneNumber = "Số điện thoại không hợp lệ.";
+
+        if (!fullName.trim()) newErrors.fullName = "Họ và tên là bắt buộc.";
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // ---------------- SUBMIT ----------------
     const handleSubmit = () => {
-        if (!username || (!user && !password)) {
-            toast.error("Tên đăng nhập và Mật khẩu là bắt buộc!");
+        if (!validateForm()) {
+            toast.error("Vui lòng kiểm tra và điền đầy đủ lại thông tin nhập.");
             return;
         }
 
@@ -96,21 +141,25 @@ export default function UserFormModal({
         formData.append("is_active", String(isActive));
         if (avatarFile) formData.append("avatar_image", avatarFile);
 
-        if (user && user.id) {
-            onUpdate(user.id, formData);
-        } else {
-            onCreate(formData);
-        }
+        if (user && user.id) onUpdate(user.id, formData);
+        else onCreate(formData);
+
         onClose();
     };
+
 
     const inputClasses =
         "mt-1 w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150";
 
+    const errorText = (field: string) =>
+        errors[field] && (
+            <p className="text-red-500 text-sm mt-1">{errors[field]}</p>
+        );
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-            <div className="relative bg-white rounded-xl w-full max-w-lg p-6 shadow-2xl animate-fade-in">
+            <div className="relative bg-white rounded-xl w-full max-w-2xl p-6 shadow-2xl animate-fade-in">
                 <h2 className="text-xl font-bold mb-5 text-gray-800">
                     {user ? "Chỉnh sửa Người dùng" : "Thêm Người dùng Mới"}
                 </h2>
@@ -122,43 +171,32 @@ export default function UserFormModal({
                             Tên đăng nhập *
                         </label>
                         <input
-                            title="ten-dang-nhap"
+                            title="username"
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className={inputClasses}
                             disabled={!!user}
                         />
+                        {errorText("username")}
                     </div>
 
                     {/* Password */}
-                    {!user ? (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Mật khẩu *
-                            </label>
-                            <input
-                                title="mat-khau"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className={inputClasses}
-                            />
-                        </div>
-                    ) : (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Mật khẩu (Mới)
-                            </label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className={inputClasses}
-                                placeholder="Để trống nếu không muốn thay đổi"
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            {user ? "Mật khẩu (Mới)" : "Mật khẩu *"}
+                        </label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className={inputClasses}
+                            placeholder={
+                                user ? "Để trống nếu không muốn thay đổi" : "Nhập mật khẩu"
+                            }
+                        />
+                        {errorText("password")}
+                    </div>
 
                     {/* Email */}
                     <div>
@@ -172,6 +210,7 @@ export default function UserFormModal({
                             onChange={(e) => setEmail(e.target.value)}
                             className={inputClasses}
                         />
+                        {errorText("email")}
                     </div>
 
                     {/* Full name */}
@@ -180,7 +219,7 @@ export default function UserFormModal({
                             Họ và Tên
                         </label>
                         <input
-                            title="ho-ten"
+                            title="fullName"
                             type="text"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
@@ -188,37 +227,42 @@ export default function UserFormModal({
                         />
                     </div>
 
+                    {/* Phone */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
                             Số điện thoại
                         </label>
                         <input
-                            title="so-dien-thoai"
+                            title="phoneNumber"
                             type="text"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
                             className={inputClasses}
                         />
+                        {errorText("phoneNumber")}
                     </div>
 
+                    {/* Address */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
                             Địa chỉ
                         </label>
                         <input
-                            title="e"
+                            title="address"
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
                             className={inputClasses}
                         />
                     </div>
+
+                    {/* Role */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
                             Vai trò (Role)
                         </label>
                         <select
-                            title="vai-tro"
+                            title="slect"
                             value={roleId}
                             onChange={(e) => setRoleId(Number(e.target.value))}
                             className={`${inputClasses} bg-white`}
@@ -235,9 +279,10 @@ export default function UserFormModal({
                         </select>
                     </div>
 
+                    {/* Active */}
                     <div className="flex items-center space-x-3 pt-2">
                         <input
-                            title="kich-hoat"
+                            title="isActive"
                             type="checkbox"
                             checked={isActive}
                             onChange={() => setIsActive(!isActive)}
@@ -248,30 +293,29 @@ export default function UserFormModal({
                         </label>
                     </div>
 
+                    {/* Avatar */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
                             Ảnh đại diện
                         </label>
                         <input
-                            title="anh"
+                            title="avatar"
                             type="file"
                             accept="image/*"
                             onChange={handleAvatarChange}
                             className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full 
-                            file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                         />
                         {avatarPreview && (
-                             <div className="mt-3 relative h-20 w-20">
-                                
-                          
-                            <Image
-                               src={`data:image/jpeg;base64,${avatarPreview}`}
-                                alt="avatar preview"
-                                fill  
-                                className="rounded-full object-cover border-2 border-indigo-200 shadow-md"
-                                sizes="80px"  
-                            />
-                        </div>
+                            <div className="mt-3 relative h-20 w-20">
+                                <Image
+                                    src={avatarPreview.startsWith("http") ? avatarPreview : avatarPreview}
+                                    alt="avatar preview"
+                                    fill
+                                    className="rounded-full object-cover border-2 border-indigo-200 shadow-md"
+                                    sizes="80px"
+                                />
+                            </div>
                         )}
                     </div>
                 </div>

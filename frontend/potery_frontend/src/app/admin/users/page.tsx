@@ -129,6 +129,7 @@ export default function UserPage() {
           onClose={() => setModalOpen(false)}
           onCreate={handleCreate}
           onUpdate={handleUpdate}
+          existingUsers={users}
         />
       )}
 
