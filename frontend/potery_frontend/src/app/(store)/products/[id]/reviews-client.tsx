@@ -81,13 +81,13 @@ export function ReviewsClient({
 
     try {
       const payload = [
-      {
-        orderitem_id: Number(productId), // hoặc ID thật từ order item
-        customer_id: Number(user.id),
-        rating,
-        comment: comment.trim(),
-      },
-    ];
+        {
+          orderitem_id: Number(productId), // hoặc ID thật từ order item
+          customer_id: Number(user.id),
+          rating,
+          comment: comment.trim(),
+        },
+      ];
 
       console.log('📦 Gửi review:', payload);
       const res = await reviewsApi.create(payload);
@@ -210,8 +210,11 @@ export function ReviewsClient({
 
           {!loading &&
             !error &&
-            reviews.map((r) => (
-              <div key={r.id} className="p-6 rounded-2xl bg-white shadow">
+            reviews.map((r, index) => (
+              <div
+                key={r.id ? `${r.id}-${index}` : `review-${index}`}
+                className="p-6 rounded-2xl bg-white shadow"
+              >
                 <div className="flex items-center justify-between">
                   <div className="font-semibold text-gray-900">
                     {r.customer_name || (r.customer_id === user?.id ? 'Bạn' : 'Khách hàng')}
