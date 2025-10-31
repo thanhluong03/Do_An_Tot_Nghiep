@@ -64,21 +64,25 @@ export class OrderController {
         @Query('key') key?: string,
         @Query('store_id') store_id?: number,
         @Query('status') status?: string,
-        @Query('payment_status') payment_status?: string
+        @Query('payment_status') payment_status?: string,
+        @Query('start_date') start_date?: string,
+        @Query('end_date') end_date?: string
     ) {
         try {
             const { orders, total } = await this.orderService.getOrders({
-            page: Number(page),
-            size: Number(size),
-            key,
-            store_id: store_id ? Number(store_id) : undefined,
-            status: status as OrderStatus,
-            payment_status: payment_status as PaymentStatus,
-        });
-           return new SuccessResponseDto('Orders fetched successfully', {
-            data: Array.isArray(orders) ? orders : [],
-            total: total, 
-        });
+                page: Number(page),
+                size: Number(size),
+                key,
+                store_id: store_id ? Number(store_id) : undefined,
+                status: status as OrderStatus,
+                payment_status: payment_status as PaymentStatus,
+                start_date,
+                end_date,
+            });
+            return new SuccessResponseDto('Orders fetched successfully', {
+                data: Array.isArray(orders) ? orders : [],
+                total: total,
+            });
         } catch (error: any) {
             return new ErrorResponseDto(
                 'Failed to fetch orders',
@@ -90,18 +94,18 @@ export class OrderController {
     }
     @Get('customer/:customer_id')
     async getOrdersByCustomer(@Param('customer_id') customer_id: number, @Query('page') page = 1, @Query('size') size = 10) {
-       try {
-       const { orders, total } = await this.orderService.getOrders({ 
-            page: Number(page), 
-            size: Number(size), 
-            customer_id: Number(customer_id) 
-        });
-        
-        return new SuccessResponseDto('Orders fetched successfully', {
-            data: Array.isArray(orders) ? orders : [],
-            total: total,
-        });
-    } catch (error: any) {
+        try {
+            const { orders, total } = await this.orderService.getOrders({
+                page: Number(page),
+                size: Number(size),
+                customer_id: Number(customer_id)
+            });
+
+            return new SuccessResponseDto('Orders fetched successfully', {
+                data: Array.isArray(orders) ? orders : [],
+                total: total,
+            });
+        } catch (error: any) {
             return new ErrorResponseDto(
                 'Failed to fetch orders',
                 error && typeof error === 'object' && 'message' in error

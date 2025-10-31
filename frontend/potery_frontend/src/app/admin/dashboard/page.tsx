@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { getRevenueData } from "@/api/services/orderService";
 import DashboardFilter from "@/components/dashboard/DashboardFilter";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
@@ -15,7 +15,21 @@ interface RevenueData {
 }
 
 // Minimal interfaces
-interface Order { status?: string }
+interface Order {
+  status?: string;
+  current_order?: {
+    items?: Array<{
+      product_name?: string;
+      product_id?: number;
+      quantity?: number;
+    }>;
+  };
+  items?: Array<{
+    product_name?: string;
+    product_id?: number;
+    quantity?: number;
+  }>;
+}
 interface Customer { is_active?: boolean; active?: boolean; age?: number }
 interface Product { id?: number; stock?: number; quantity?: number; name?: string }
 
@@ -33,30 +47,82 @@ const DashboardPage = () => {
   const INVENTORY_ROUTE = "/admin/inventory";
 
   const [selectedStore, setSelectedStore] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
+    startDate: "",
+    endDate: ""
+  });
+  const [isFiltering, setIsFiltering] = useState(false);
 
-  const handleFilterChange = (filters: { storeId: string }) => {
+  const handleFilterChange = useCallback(async (filters: { storeId: string; startDate: string; endDate: string }) => {
     setSelectedStore(filters.storeId);
-    console.log("Cửa hàng được chọn:", filters.storeId);
+    setDateFilter({ startDate: filters.startDate, endDate: filters.endDate });
+    console.log("Bộ lọc:", filters);
+
+    // Load order, customer và product với filter
+    setIsFiltering(true);
+    try {
+      const [orderList, customerList, productList] = await Promise.all([
+        (await import("@/api/services/orderService")).listOrderAll({
+          start_date: filters.startDate,
+          end_date: filters.endDate,
+          store_id: filters.storeId ? Number(filters.storeId) : undefined
+        }),
+        (await import("@/api/services/customerService")).getCustomers({
+          start_date: filters.startDate,
+          end_date: filters.endDate
+        }),
+        (await import("@/api/services/productApi")).getProducts({
+          start_date: filters.startDate,
+          end_date: filters.endDate
+        })
+      ]);
+      setOrders(orderList.data);
+      setCustomers(customerList);
+      setProducts(productList);
+    } catch (err) {
+      console.error("Lỗi khi lọc dữ liệu:", err);
+    } finally {
+      setIsFiltering(false);
+    }
+  }, []);
+
+  const loadData = async (filters?: { storeId: string; startDate: string; endDate: string }) => {
+    try {
+      const currentFilter = filters || { storeId: selectedStore, ...dateFilter };
+      const [revenue, orderList, customerList, productList, inventoryList] = await Promise.all([
+        getRevenueData(),
+        (await import("@/api/services/orderService")).listOrderAll({
+          start_date: currentFilter.startDate,
+          end_date: currentFilter.endDate,
+          store_id: currentFilter.storeId ? Number(currentFilter.storeId) : undefined
+        }),
+        (await import("@/api/services/customerService")).getCustomers({
+          start_date: currentFilter.startDate,
+          end_date: currentFilter.endDate
+        }),
+        (await import("@/api/services/productApi")).getProducts({
+          start_date: currentFilter.startDate,
+          end_date: currentFilter.endDate
+        }),
+        listInventories({}),
+      ]);
+
+      setRevenueData(revenue);
+      setOrders(orderList.data);
+      setCustomers(customerList);
+      setProducts(productList);
+      setInventories(inventoryList.data || []);
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu dashboard:", err);
+    }
   };
 
   // Fetch dữ liệu
   useEffect(() => {
     (async () => {
       try {
-        const [revenue, orderList, customerList, productList, inventoryList] = await Promise.all([
-          getRevenueData(),
-          (await import("@/api/services/orderService")).listOrderAll({}),
-          (await import("@/api/services/customerService")).getCustomers({}),
-          (await import("@/api/services/productApi")).getProducts(),
-          listInventories({}),
-        ]);
-
-        setRevenueData(revenue);
-        setOrders(orderList.data);
-        setCustomers(customerList);
-        setProducts(productList);
-        setInventories(inventoryList.data || []);
-
+        setLoading(true);
+        await loadData();
         // const allReviews = await (await import("@/api/modules/reviews")).reviewsApi.list("");
         // setReviews(allReviews);
       } catch (err) {
@@ -64,9 +130,9 @@ const DashboardPage = () => {
       } finally {
         setLoading(false);
       }
-      
+
     })();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="text-center text-gray-500 mt-10">Đang tải dữ liệu dashboard...</div>;
@@ -80,9 +146,30 @@ const DashboardPage = () => {
   const activeCustomers = customers.filter(u => u.is_active || u.active).length;
   const totalProducts = products.length;
   const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
-  const bestSeller = products.length
-    ? products.reduce((max, p) => ((p.quantity || 0) > ((max.quantity as number) || 0) ? p : max), products[0])
-    : null;
+
+  // 🏆 Tính sản phẩm bán chạy từ orders trong khoảng ngày
+  const bestSeller = (() => {
+    const productSales: Record<string, { name: string; totalSold: number }> = {};
+
+    orders.forEach(order => {
+      // Kiểm tra current_order.items hoặc items trực tiếp
+      const items = order.current_order?.items || order.items || [];
+      items.forEach((item) => {
+        const productName = item.product_name || `Sản phẩm ${item.product_id}`;
+        if (!productSales[productName]) {
+          productSales[productName] = { name: productName, totalSold: 0 };
+        }
+        productSales[productName].totalSold += item.quantity || 0;
+      });
+    });
+
+    const topProduct = Object.values(productSales).reduce((max, product) =>
+      product.totalSold > max.totalSold ? product : max,
+      { name: "Không có dữ liệu", totalSold: 0 }
+    );
+
+    return topProduct.totalSold > 0 ? topProduct : null;
+  })();
 
   // 📈 Biểu đồ doanh thu
   const revenueChartData = revenueData.map(d => ({ name: d.month, revenue: d.revenue }));
@@ -98,19 +185,25 @@ const DashboardPage = () => {
     count: Number(count),
   }));
 
-  // 🏆 Sản phẩm bán chạy theo quantity_sold trong inventory
-  const productSalesMap = inventories.reduce((acc, inv) => {
-    acc[inv.product_id] = (acc[inv.product_id] || 0) + (inv.quantity_sold || 0);
-    return acc;
-  }, {} as Record<number, number>);
+  // 🏆 Sản phẩm bán chạy từ orders trong khoảng ngày đã chọn
+  const bestSellerData = (() => {
+    const productSales: Record<string, { name: string; value: number }> = {};
 
-  const bestSellerData = products
-    .map(p => ({
-      name: p.name || "",
-      value: productSalesMap[p.id || 0] || 0,
-    }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10);
+    orders.forEach(order => {
+      const items = order.current_order?.items || order.items || [];
+      items.forEach((item) => {
+        const productName = item.product_name || `Sản phẩm ${item.product_id}`;
+        if (!productSales[productName]) {
+          productSales[productName] = { name: productName, value: 0 };
+        }
+        productSales[productName].value += item.quantity || 0;
+      });
+    });
+
+    return Object.values(productSales)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  })();
 
 
   return (
@@ -143,6 +236,11 @@ const DashboardPage = () => {
       {/* Bộ lọc */}
       <div className="bg-white rounded-2xl flex flex-wrap items-center gap-2 p-2 mb-4">
         <DashboardFilter onFilterChange={handleFilterChange} />
+        {isFiltering && (
+          <div className="ml-2 text-sm text-blue-600">
+            🔄 Đang lọc dữ liệu...
+          </div>
+        )}
       </div>
 
       {/* Tổng hợp thống kê */}

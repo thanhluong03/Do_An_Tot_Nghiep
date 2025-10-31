@@ -48,4 +48,6 @@ export interface IListOrder {
     store_id?: number;
     status?: OrderStatus;
     payment_status?: PaymentStatus;
+    start_date?: string;
+    end_date?: string;
 }

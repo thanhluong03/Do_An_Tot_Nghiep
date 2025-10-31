@@ -15,8 +15,8 @@ export interface Customer {
 }
 
 
-export const getCustomers = async (p0: {}) => {
-  const res = await axios.get(`${API_URL}/listcustomers`);
+export const getCustomers = async (params: { start_date?: string; end_date?: string }) => {
+  const res = await axios.get(`${API_URL}/listcustomers`, { params });
   return res.data.customers;
 };
 
