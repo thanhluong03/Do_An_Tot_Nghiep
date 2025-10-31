@@ -140,10 +140,6 @@ export default function AdminHeader() {
           className="flex items-center space-x-3 cursor-pointer select-none transition hover:bg-gray-50 rounded-2xl px-3 py-2"
           onClick={() => setShowDropdown((prev) => !prev)}
         >
-          <div className="flex flex-col text-right leading-tight">
-            <p className="text-sm font-semibold text-gray-800">{adminName}</p>
-            <p className="text-xs text-gray-500">{adminRole}</p>
-          </div>
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-orange-100">
             <Image
               src={adminAvatar}
@@ -153,6 +149,11 @@ export default function AdminHeader() {
               className="object-cover w-full h-full"
             />
           </div>
+          <div className="flex flex-col text-left leading-tight">
+            <p className="text-sm font-semibold text-gray-800">{adminName}</p>
+            <p className="text-xs text-gray-500">{adminRole}</p>
+          </div>
+          
 
 
           <svg

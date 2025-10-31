@@ -87,15 +87,28 @@ export default function AdminLoginPage() {
       <Toaster position="top-center" />
       <form
         onSubmit={handleAdminLogin}
-        className="bg-white/80 backdrop-blur-sm p-10 shadow-2xl rounded-3xl w-[380px] border border-gray-100
+        className="bg-white/80 backdrop-blur-sm p-10 shadow-2xl rounded-3xl w-[680px] border border-gray-100
                    hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
       >
-        <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
-            Admin Portal
+        <div className="text-center mb-2">
+          <div className="flex flex-col justify-center mb-6">
+            {/* Logo Image */}
+            <img
+              src="/logoLoginAdmin.jpg" // Cần đặt file logo.png hoặc .jpg này trong thư mục /public
+              alt="Tiệm Gốm Nhà Gạo Logo"
+              className="h-[100px] w-auto mx-auto"
+            />
+            <p className="italic text-sm font-medium text-orange-400 mt-2">
+              Dành cho quản trị hệ thống
+            </p>
+
+          </div>
+
+          <h2 className="text-3xl font-bold text-gray-800 tracking-tight mb-1">
+            Đăng nhập
           </h2>
-          <p className="text-gray-500 mt-2 text-sm">
-            Vui lòng đăng nhập để tiếp tục
+          <p className="text-gray-600 text-[12px] mb-5">
+            Đăng nhập để sử dụng hệ thống, tuyệt đối không chia sẻ tài khoản cho bất cứ ai ngoài hệ thống.
           </p>
         </div>
 
