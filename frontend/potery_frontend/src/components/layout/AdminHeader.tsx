@@ -56,8 +56,8 @@ export default function AdminHeader() {
   const [adminName, setAdminName] = useState("Chưa đăng nhập");
   const [adminRole, setAdminRole] = useState("Guest");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [adminAvatar, setAdminAvatar] = useState("/images/avaa.jpg")
-  const avatar = localStorage.getItem("adminAvatar") || "/images/avaa.jpg";
+  const [adminAvatar, setAdminAvatar] = useState("/noAva.png")
+
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -96,10 +96,11 @@ export default function AdminHeader() {
       console.error("Logout error:", err);
     }
 
-    localStorage.removeItem("adminRole");
-    localStorage.removeItem("adminPermissions");
-    localStorage.removeItem("adminName");
     localStorage.removeItem("adminID");
+    localStorage.removeItem("adminPermissions");
+    localStorage.removeItem("adminRoleId");
+    localStorage.removeItem("adminRole");
+    localStorage.removeItem("adminName");
     localStorage.removeItem("adminAvatar");
 
     router.push("/admin/login");
