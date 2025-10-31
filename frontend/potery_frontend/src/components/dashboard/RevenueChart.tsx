@@ -6,8 +6,8 @@ interface RevenueChartProps {
 }
 
 const RevenueChart: React.FC<RevenueChartProps> = ({ data }) => (
-    <div className="bg-white rounded-xl shadow-sm p-4 h-72">
-        <div className="font-semibold mb-2">Doanh số bán hàng</div>
+    <div className="bg-white rounded-xl p-4 h-72">
+        
         <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={data}>
                 <defs>

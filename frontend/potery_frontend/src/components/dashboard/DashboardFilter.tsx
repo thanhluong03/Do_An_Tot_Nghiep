@@ -20,7 +20,7 @@ const DashboardFilter: React.FC = () => {
       </div>
 
       {/* Bộ lọc ngày */}
-      <div className="flex items-center border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-gray-50 hover:bg-white transition">
+      <div className="flex items-center px-3 py-2.5 text-sm text-gray-700  hover:bg-white transition">
         <span>01/12/2025</span>
         <span className="mx-2 text-gray-400">→</span>
         <span>18/12/2025</span>

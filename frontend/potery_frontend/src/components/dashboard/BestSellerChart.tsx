@@ -5,8 +5,7 @@ interface BestSellerChartProps {
 }
 
 const BestSellerChart: React.FC<BestSellerChartProps> = ({ data }) => (
-    <div className="bg-white rounded-xl shadow-sm p-4 h-80">
-        <div className="font-semibold mb-2">Sản phẩm bán chạy</div>
+    <div className="bg-white rounded-xl p-4 h-80">
         <ResponsiveContainer width="100%" height={280}>
             <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
                 <defs>
