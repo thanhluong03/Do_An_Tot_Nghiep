@@ -207,7 +207,7 @@ export default function ContactPage() {
             Đến Tiệm Gốm Nhà Gạo để xem những sản phẩm gốm sứ đẹp và chất lượng nhất nhé!
           </p>
           <button className="bg-[#8D806F] text-white font-semibold px-10 py-3 rounded-2xl shadow-md hover:bg-[#6F6558] transition duration-300">
-            Khám Phá Sản Phẩm →
+            <a href='/products'>Khám Phá Sản Phẩm →</a>
           </button>
         </div>
       </section>
