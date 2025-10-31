@@ -26,22 +26,23 @@ export default function UserTable({
     <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-lg">
       <table className="min-w-full bg-white text-sm">
         <thead className="bg-indigo-50 border-b border-indigo-200 text-left font-semibold text-indigo-800"><tr>
-            <th className="px-4 py-3 text-center w-12">STT</th>
-            <th className="px-4 py-3">Ảnh đại diện</th>
-            <th className="px-4 py-3">Tên đăng nhập</th>
-            <th className="px-4 py-3">Họ và Tên</th>
-            <th className="px-4 py-3">Email</th>
-            <th className="px-4 py-3">Điện thoại</th>
-            <th className="px-4 py-3">Vai trò</th>
-            <th className="px-4 py-3 text-center">Trạng thái</th>
-            <th className="px-4 py-3 text-center">Thao tác</th>
-          </tr>
+          <th className="px-4 py-3 text-center w-12">STT</th>
+          <th className="px-4 py-3">Ảnh đại diện</th>
+          <th className="px-4 py-3">Tên đăng nhập</th>
+          <th className="px-4 py-3">Họ và Tên</th>
+          <th className="px-4 py-3">Email</th>
+          <th className="px-4 py-3">Điện thoại</th>
+          <th className="px-4 py-3">Vai trò</th>
+          <th className="px-4 py-3 text-center">Trạng thái</th>
+          <th className="px-4 py-3 text-center">Thao tác</th>
+        </tr>
         </thead>
         <tbody>
           {users.length > 0 ? (
             users.map((u, index) => {
               const avatarSrc = getUserAvatarUrl(u);
-              const hasAvatar = avatarSrc !== "/no-image.jpg";
+
+              const isBase64Image = avatarSrc && avatarSrc !== "/noAva.png" && avatarSrc.length > 50;
 
               return (
                 <tr
@@ -53,15 +54,17 @@ export default function UserTable({
                   </td>
 
                   <td className="px-4 py-3">
-                    {hasAvatar ? (
+                    {isBase64Image ? ( // Dùng biến kiểm tra mới
                       <img
+                        // Đảm bảo Base64 có tiền tố
                         src={`data:image/jpeg;base64,${avatarSrc}`}
                         alt="avatar"
                         className="h-10 w-10 rounded-full object-cover border border-gray-200"
                       />
                     ) : (
-                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-500">
-                        A
+                      // HIỂN THỊ DIV CHỮ A KHI KHÔNG CÓ BASE64 HỢP LỆ
+                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-500">
+                        { 'A'}
                       </div>
                     )}
                   </td>
@@ -76,11 +79,10 @@ export default function UserTable({
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
-                        u.is_active
+                      className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${u.is_active
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
-                      }`}
+                        }`}
                     >
                       {u.is_active ? "Active" : "Bị khóa"}
                     </span>
