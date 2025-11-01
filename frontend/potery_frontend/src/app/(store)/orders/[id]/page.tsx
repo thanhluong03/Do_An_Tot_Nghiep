@@ -94,6 +94,30 @@ function OrderDetailClient({ id }: { id: string }) {
   const [showReviewInput, setShowReviewInput] = useState<number | null>(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const Star = ({ filled, size = 20 }: { filled: boolean; size?: number }) => {
+    const fillColor = filled ? '#ffdc7bff' : 'transparent';
+    const strokeColor = '#ffdc7bff';
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+        style={{ display: 'inline-block', verticalAlign: 'middle', cursor: 'pointer' }}
+      >
+        <path
+          d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+          fill={fillColor}
+          stroke={strokeColor}
+          strokeWidth={1.25}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  };
 
   // tracking state
   const [trackingData, setTrackingData] = useState<any | null>(null);
@@ -319,11 +343,9 @@ function OrderDetailClient({ id }: { id: string }) {
                           <div className="mt-2 space-y-2">
                             <div className="flex items-center gap-1">
                               {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  onClick={() => setRating(star)}
-                                  className={`w-5 h-5 cursor-pointer ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
-                                />
+                                <span key={star} onClick={() => setRating(star)}>
+                                  <Star filled={star <= rating} size={20} />
+                                </span>
                               ))}
                             </div>
                             <textarea
