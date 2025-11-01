@@ -295,7 +295,7 @@ export default function PromotionPage() {
             <div className="w-full mx-auto bg-white p-8">
 
                 <div className="flex justify-around items-center mb-8">
-                    <h2 className="text-3xl font-extrabold text-[#B95D26] flex-1 pr-12">
+                    <h2 className="text-2xl font-extrabold text-[#B95D26] flex-1 pr-12">
                         Quản lý chương trình Khuyến mãi
                     </h2>
                     <button

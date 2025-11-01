@@ -62,8 +62,8 @@ export default function CategoryPage() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
             <thead>
-              <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
-                <th className="px-4 py-3 text-left">ID</th>
+              <tr className="bg-gray-100 text-gray-700 text-sm uppercase">
+                <th className="px-4 py-3 text-left">STT</th>
                 <th className="px-4 py-3 text-left">Tên danh mục</th>
                 <th className="px-4 py-3 text-left">Mô tả</th>
                 <th className="px-4 py-3 text-center">Hành động</th>
@@ -75,7 +75,7 @@ export default function CategoryPage() {
                   key={cat.id}
                   className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50`}
                 >
-                  <td className="px-4 py-3">{cat.id}</td>
+                  <td className="px-4 py-3">{idx + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-800">{cat.name}</td>
                   <td className="px-4 py-3 text-gray-600">{cat.description || "N/A"}</td>
                   <td className="px-4 py-3 flex gap-2 justify-center">

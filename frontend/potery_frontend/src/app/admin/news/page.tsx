@@ -472,14 +472,14 @@ export default function NewsPage() {
                                                     <button
                                                         onClick={() => handleEdit(n)}
                                                         title="Chỉnh sửa"
-                                                        className="p-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-600 rounded-full transition duration-150"
+                                                        className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition duration-150"
                                                     >
                                                         <Pencil size={16} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(n.id)}
                                                         title="Xóa"
-                                                        className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full transition duration-150"
+                                                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition duration-150"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>

@@ -65,7 +65,7 @@ export default function CategoryModal({ open, onClose, editingCategory, onSucces
 
   return (
     <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-lg w-96 p-6">
+      <div className="bg-white rounded-2xl shadow-lg w-150 p-6">
         <h3 className="text-xl font-semibold mb-4 text-gray-800 text-center">
           {editingCategory ? "Sửa danh mục" : "Thêm danh mục mới"}
         </h3>
@@ -90,6 +90,7 @@ export default function CategoryModal({ open, onClose, editingCategory, onSucces
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
             placeholder="Nhập mô tả (Không bắt buộc)"
+            rows={6}
           />
         </div>
 

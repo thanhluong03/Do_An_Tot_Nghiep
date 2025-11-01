@@ -24,41 +24,39 @@ const DashboardFilter: React.FC<DashboardFilterProps> = ({ onFilterChange }) => 
   }, [handleFilterChange]);
 
   return (
-    <div className="w-full flex items-center gap-3 bg-white rounded-xl px-4 py-2">
-      {/* Select cửa hàng */}
-      <div className="relative flex-1">
-        <select
-          title="select"
-          value={storeId}
-          onChange={(e) => setStoreId(e.target.value)}
-          className="appearance-none w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 pr-8"
-        >
-          <option value="">Chọn hoặc nhập tên cửa hàng</option>
-          <option value="1">Cửa hàng A</option>
-          <option value="2">Cửa hàng B</option>
-        </select>
-        <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-500 pointer-events-none" />
-      </div>
-
-      {/* Bộ lọc ngày */}
-      <div className="flex items-center gap-2">
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-        />
-        <span className="text-gray-400">→</span>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-        />
-        <Calendar className="w-4 h-4 text-gray-500" />
-      </div>
+   <div className="w-full flex items-center bg-white p-4 gap-6">
+    
+    {/* Label cho bộ lọc */}
+    <div className="flex items-center text-sm font-semibold text-gray-500 whitespace-nowrap">
+        <span className="mr-2"></span> Lọc theo khoảng thời gian:
     </div>
+
+    {/* Bộ lọc ngày */}
+    <div className="flex items-center gap-2">
+        {/* Input Ngày Bắt Đầu */}
+        <input
+            title="Ngày bắt đầu"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            // Tinh chỉnh CSS cho input
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-orange-500 transition duration-150 cursor-pointer"
+        />
+        
+        {/* Dấu phân cách */}
+        <span className="text-gray-500 font-bold mx-1">→</span>
+        
+        {/* Input Ngày Kết Thúc */}
+        <input
+            title="Ngày kết thúc"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            // Tinh chỉnh CSS cho input
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-orange-500 transition duration-150 cursor-pointer"
+        />
+    </div>
+</div>
   );
 };
 

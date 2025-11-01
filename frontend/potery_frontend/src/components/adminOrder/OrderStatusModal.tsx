@@ -67,7 +67,7 @@ export default function OrderStatusModal({
               onChange={(e) => setStatus(e.target.value as OrderStatus)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              {/* <option value="CREATED">CREATED - Mới tạo</option> */}
+              <option value="CREATED">CREATED - Chờ xác nhận</option>
               <option value="CONFIRMED">CONFIRMED - Đã xác nhận</option>
               {/* <option value="SHIPPING">SHIPPING - Đang giao</option>
               <option value="DELIVERED">DELIVERED - Đã giao</option> */}

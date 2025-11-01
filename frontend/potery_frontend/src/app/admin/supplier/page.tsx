@@ -145,8 +145,8 @@ export default function SupplierPage() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
             <thead>
-              <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
-                <th className="px-4 py-3 text-left">ID</th>
+              <tr className="bg-gray-100 text-gray-700 text-sm uppercase">
+                <th className="px-4 py-3 text-left">STT</th>
                 <th className="px-4 py-3 text-left">Tên</th>
                 <th className="px-4 py-3 text-left">Địa chỉ</th>
                 <th className="px-4 py-3 text-left">Điện thoại</th>
@@ -160,23 +160,23 @@ export default function SupplierPage() {
                   key={s.id}
                   className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
                 >
-                  <td className="px-4 py-3">{s.id}</td>
-                  <td className="px-4 py-3">{s.name}</td>
-                  <td className="px-4 py-3">{s.address}</td>
-                  <td className="px-4 py-3">{s.phone}</td>
-                  <td className="px-4 py-3">{s.email}</td>
+                  <td className="px-4 py-3 text-gray-500 text-sm">{idx + 1}</td>
+                  <td className="px-4 py-3 text-gray-600 text-sm">{s.name}</td>
+                  <td className="px-4 py-3 text-gray-600 text-sm">{s.address}</td>
+                  <td className="px-4 py-3 text-gray-600 text-sm">{s.phone}</td>
+                  <td className="px-4 py-3 text-gray-600 text-sm">{s.email}</td>
                   <td className="px-4 py-3 flex gap-2 justify-center">
                     <button
                       title="sua"
                       onClick={() => handleEdit(s)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 transition duration-150 shadow-sm"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition duration-150 shadow-sm"
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       title="xoa"
                       onClick={() => handleDelete(s.id!)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition duration-150 shadow-sm"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition duration-150 shadow-sm"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -225,7 +225,7 @@ export default function SupplierPage() {
       {/* Modal thêm/sửa */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-white/40 z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xl w-full max-w-3xl shadow-lg h-auto">
             <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center">
               {editingId ? "Sửa Nhà cung cấp" : "Thêm Nhà cung cấp"}
             </h3>
@@ -271,7 +271,7 @@ export default function SupplierPage() {
                 onClick={handleSubmit}
                 className={`px-5 py-2 rounded-lg font-semibold shadow-md transition ${editingId
                     ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                    : "bg-blue-500 hover:bg-blue-600 text-white"
+                    : "bg-orange-500 hover:bg-orange-600 text-white"
                   }`}
               >
                 {editingId ? "Cập nhật" : "Thêm mới"}
