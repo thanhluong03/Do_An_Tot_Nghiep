@@ -29,7 +29,7 @@ export default function ProductsPage() {
   const { user, isAuthenticated } = useAuth();
   const [search, setSearch] = useState('');
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
-    const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
+  const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
   useEffect(() => {
     const categoryFromQuery = searchParams.get('category');
     setFilters((prevFilters) => {
@@ -103,7 +103,7 @@ export default function ProductsPage() {
   return (
     <BaseLayout>
       {/* === Popup Layer === (Giữ nguyên) */}
- {isAuthenticated && user?.id && (
+      {isAuthenticated && user?.id && (
         <>
           {/* Voucher Modal */}
           {isVoucherModalOpen && (
@@ -135,9 +135,8 @@ export default function ProductsPage() {
 
           {/* Floating Buttons */}
           <div
-            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
-              isChatDropdownOpen ? 'right-1' : 'right-1'
-            }`}
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${isChatDropdownOpen ? 'right-1' : 'right-1'
+              }`}
           >
             {/* Voucher Button */}
             <button
@@ -224,9 +223,9 @@ export default function ProductsPage() {
       </div>
 
       {/* Layout chính (Giữ nguyên) */}
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-10 flex flex-col lg:flex-row gap-8 overflow-x-hidden">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-10 flex flex-col lg:flex-row gap-4 overflow-x-hidden">
         {/* === Sidebar trái (Giữ nguyên logic Danh mục) === */}
-        <div className="w-full lg:w-1/5 lg:min-w-[240px]">
+        <div className="w-full lg:w-1/5 lg:min-w-[240px] bg-white p-6 rounded-lg shadow-md h-fit">
           <h3 className="text-xl font-bold mb-4">Danh mục</h3>
           <ul className="space-y-2 mb-6">
             <li
@@ -256,73 +255,72 @@ export default function ProductsPage() {
         </div>
 
         {/* === Nội dung phải (Đã cập nhật) === */}
-        <div className="flex-1 lg:w-4/5 min-w-0">
+        <div className="flex-1 lg:w-4/5 min-w-0 bg-white p-6 rounded-lg shadow-md">
           {/* === Thanh Filter & Tìm kiếm mới === */}
-         <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-3">
-  {/* Cụm Sắp xếp (Thêm w-full md:w-auto) */}
-  <div className="w-full md:w-auto flex items-center gap-3 flex-wrap">
-    <span className="text-sm font-medium text-gray-700">
-      Sắp xếp theo
-    </span>
-    <button
-      onClick={handleBestSellingClick}
-      className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-        activeSortType === 'banchay'
-          ? 'bg-orange-600 text-white shadow-sm'
-          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-      }`}
-    >
-      Bán chạy
-    </button>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-3">
+            {/* Cụm Sắp xếp (Thêm w-full md:w-auto) */}
+            <div className="w-full md:w-auto flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-gray-700">
+                Sắp xếp theo
+              </span>
+              <button
+                onClick={handleBestSellingClick}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeSortType === 'banchay'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+              >
+                Bán chạy
+              </button>
 
-    {/* Giữ nguyên logic <select> cho Sắp xếp giá, nhưng style lại */}
-    <div className="relative">
-      <select
-        title='sort'
-        value={filters.sortOrder || ''}
-        onChange={handlePriceSortChange}
-        className={`appearance-none px-4 py-2 pr-8 rounded-md text-sm font-medium transition cursor-pointer ${
-          activeSortType === 'gia'
-            ? 'bg-orange-600 text-white shadow-sm'
-            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-        }`}
-      >
-        {/* Đổi "Thứ tự mặc định" thành "Giá" cho giống ảnh */}
-        <option value="">Giá</option>
-        <option value="asc">Giá tăng dần</option>
-        <option value="desc">Giá giảm dần</option>
-      </select>
-      {/* Icon dropdown tùy chỉnh */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
-        <svg
-          className={`w-4 h-4 ${activeSortType === 'gia' ? 'text-white' : 'text-gray-600'}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
-  </div>
+              {/* Giữ nguyên logic <select> cho Sắp xếp giá, nhưng style lại */}
+              <div className="relative">
+                <select
+                  title='sort'
+                  value={filters.sortOrder || ''}
+                  onChange={handlePriceSortChange}
+                  className={`appearance-none px-4 py-2 pr-8 rounded-md text-sm font-medium focus:outline-none cursor-pointer ${activeSortType === 'gia'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
+                >
+                  {/* Đổi "Thứ tự mặc định" thành "Giá" cho giống ảnh */}
+                  <option value="">Giá</option>
+                  <option value="asc">Giá tăng dần</option>
+                  <option value="desc">Giá giảm dần</option>
+                </select>
+                {/* Icon dropdown tùy chỉnh */}
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                  <svg
+                    className={`w-4 h-4 ${activeSortType === 'gia' ? 'text-white' : 'text-gray-600'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
 
-  {/* Thanh Tìm kiếm (Thay w-full bằng w-full md:flex-1) */}
-  <div className="relative w-full md:flex-1">
-    <input
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      placeholder="Tìm kiếm sản phẩm..."
-      className="w-full border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-    />
-    <img
-      src="/MagnifyingGlass.png" // Sử dụng icon cũ
-      alt="Tìm kiếm"
-      className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
-    />
-  </div>
-</div>
+            {/* Thanh Tìm kiếm (Thay w-full bằng w-full md:flex-1) */}
+            <div className="relative w-full md:flex-1">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm kiếm sản phẩm..."
+                className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-orange-100 outline-none"
+              />
+              <img
+                src="/MagnifyingGlass.png" // Sử dụng icon cũ
+                alt="Tìm kiếm"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
+              />
+            </div>
+          </div>
           {/* === Hết Thanh Filter & Tìm kiếm === */}
+          <span></span>
 
 
           {/* Kết quả hiển thị (Giữ nguyên) */}

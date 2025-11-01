@@ -9,10 +9,12 @@ import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react'; // Import icons
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft } from 'lucide-react'; // Import icons
+import { useRouter } from 'next/dist/client/components/navigation';
 
 export default function CartPage() {
   // Constants for styling
+  const router = useRouter();
   const ACCENT_COLOR = '#A67C52'; // Nâu Vàng Trầm (cho nút và giá tiền)
   const DARK_TEXT = 'text-gray-900';
   const LIGHT_TEXT = 'text-gray-500';
@@ -225,6 +227,13 @@ export default function CartPage() {
     <BaseLayout>
       {/* DIV bao ngoài cùng (Nền trang) */}
       <div className={`${BG_COLOR} min-h-screen py-16`}>
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 ml-10 p-4  rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="">Trang trước đó</span>
+        </button>
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
 
           {/* KHỐI NỘI DUNG CHÍNH: Nền trắng, bóng mờ sang trọng */}
@@ -550,7 +559,7 @@ export default function CartPage() {
         {/* KHỐI GỢI Ý SẢN PHẨM - ĐÃ TINH CHỈNH CSS */}
         {/* ======================================================= */}
         {relatedProducts.length > 0 && (
-          <div className="max-w-7xl mx-auto mt-20 px-4 md:px-6 lg:px-8 bg-white rounded-2xl shadow-2xl shadow-gray-300/50 p-6 md:p-10">
+          <div className="max-w-7xl mx-auto mt-8 px-4 md:px-6 lg:px-8 bg-white rounded-2xl shadow-2xl shadow-gray-300/50 p-6 md:p-10">
 
             {/* Tiêu đề Khối Gợi ý: Font serif, nhẹ nhàng, có đường phân cách */}
             <h2 className={`text-3xl font-serif font-light text-center mb-10 ${DARK_TEXT} border-b border-gray-200 pb-4`}>

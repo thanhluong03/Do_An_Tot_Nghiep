@@ -234,11 +234,11 @@ const DashboardPage = () => {
       </div>
 
       {/* Bộ lọc */}
-      <div className="bg-white rounded-2xl flex flex-wrap items-center gap-2 p-2 mb-4">
+      <div className="bg-white rounded-2xl flex flex-wrap justify-center gap-2 p-2 mb-4">
         <DashboardFilter onFilterChange={handleFilterChange} />
         {isFiltering && (
           <div className="ml-2 text-sm text-blue-600">
-            🔄 Đang lọc dữ liệu...
+            Đang lọc dữ liệu...
           </div>
         )}
       </div>

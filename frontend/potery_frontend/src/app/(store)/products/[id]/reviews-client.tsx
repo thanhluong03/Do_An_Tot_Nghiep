@@ -117,7 +117,7 @@ export function ReviewsClient({
   // 🔽 PHẦN JSX (HTML/CSS) ĐÃ ĐƯỢC THAY ĐỔI ĐỂ GIỐNG ẢNH 🔽
   // 🔽 LOGIC TÍNH TOÁN TỔNG QUAN ĐƯỢC GIỮ NGUYÊN THEO YÊU CẦU 🔽
   return (
-    <section className="mt-14 p-6 rounded-2xl bg-white shadow ">
+    <section className="my-5 p-6 rounded-2xl bg-white shadow ">
       {/* TIÊU ĐỀ - Đã sửa lại style từ code gốc */}
       <h2 className="text-xl font-bold text-gray-900 mb-4">
         Đánh giá sản phẩm

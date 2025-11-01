@@ -463,7 +463,7 @@ export default function ProductFormModal({
   };
 
   const getInputClassName = (field: ValidatableFields): string => {
-    const baseClass = "w-full border rounded-xl px-5 py-3.5 text-lg focus:ring-2 focus:outline-none transition";
+    const baseClass = "w-full border rounded-xl px-2 py-2 text-sm focus:outline-none mb-2 transition";
     const errorClass = "border-red-500 focus:ring-red-500";
     const normalClass = "border-gray-300 focus:ring-orange-500";
     return `${baseClass} ${validationErrors[field] ? errorClass : normalClass}`;
@@ -599,7 +599,7 @@ export default function ProductFormModal({
                 placeholder="Nhập mô tả chi tiết sản phẩm..."
                 className="w-full"
                 // Set height cho editor
-                style={{ height: '250px' }}
+                style={{ height: '200px' }}
               />
             </div>
             {validationErrors.description && (
@@ -616,7 +616,7 @@ export default function ProductFormModal({
               className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 cursor-pointer hover:bg-orange-50 transition ${validationErrors.main_image ? 'border-red-500' : 'border-orange-300'
                 }`}
             >
-              <Upload className="text-orange-500 mb-3" size={36} />
+              <Upload className="text-orange-500 mb-3" size={30} />
               <span className="text-base text-gray-600 font-medium">
                 Chọn hoặc kéo ảnh vào đây
               </span>
@@ -699,9 +699,9 @@ export default function ProductFormModal({
         </div>
 
         {/* Phân loại sản phẩm */}
-        <div className="mt-8 border-t pt-8">
-          <div className="flex items-center justify-between mb-4">
-            <label className="block text-2xl font-bold text-gray-800 mb-4">
+        <div className="mt-8 pt-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xl font-bold text-gray-800 mb-4">
               Thông tin bán hàng
             </label>
           </div>
@@ -721,7 +721,7 @@ export default function ProductFormModal({
                           onChange={(e) => updateClassificationName(classIndex, e.target.value)}
                           data-classification={classIndex}
                           disabled={hasErrors && !classificationErrors[`classification_${classIndex}`]}
-                          className={`w-full border rounded-xl px-4 py-3 text-lg focus:ring-2 focus:outline-none ${classificationErrors[`classification_${classIndex}`]
+                          className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none ${classificationErrors[`classification_${classIndex}`]
                             ? 'border-red-500 focus:ring-red-500'
                             : hasErrors && !classificationErrors[`classification_${classIndex}`]
                               ? 'border-gray-200 bg-gray-100 cursor-not-allowed'
@@ -764,7 +764,7 @@ export default function ProductFormModal({
                                 onChange={(e) => updateAttributeName(classIndex, attrIndex, e.target.value)}
                                 data-attribute={`${classIndex}-${attrIndex}`}
                                 disabled={hasErrors && !attributeErrors[`attribute_${classIndex}_${attrIndex}`]}
-                                className={`w-full border rounded-xl px-4 py-3 text-lg focus:ring-2 focus:outline-none ${attributeErrors[`attribute_${classIndex}_${attrIndex}`]
+                                className={`w-full border rounded-xl px-4 py-3 text-sm  focus:outline-none ${attributeErrors[`attribute_${classIndex}_${attrIndex}`]
                                   ? 'border-red-500 focus:ring-red-500'
                                   : hasErrors && !attributeErrors[`attribute_${classIndex}_${attrIndex}`]
                                     ? 'border-gray-200 bg-gray-100 cursor-not-allowed'
@@ -787,7 +787,7 @@ export default function ProductFormModal({
                                 className="flex items-center justify-center ml-3"
                                 aria-label="Xóa tùy chọn"
                               >
-                                <span className="block h-px w-6 bg-red-500 rounded" />
+                                <span className="block h-[4px] w-4 bg-red-500 rounded" />
                               </button>
                             )}
                           </div>
@@ -839,7 +839,7 @@ export default function ProductFormModal({
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse border border-gray-200 rounded-lg">
                         <thead>
-                          <tr className="bg-gray-50">
+                          <tr className="bg-gray-100">
                             <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
                               {classifications[0].name}
                             </th>
@@ -857,7 +857,7 @@ export default function ProductFormModal({
                               <tr key={`${index1}-${index2}`} className="hover:bg-gray-50">
                                 {index2 === 0 && (
                                   <td
-                                    className="border border-gray-200 px-4 py-3 text-gray-700 font-medium align-top bg-gray-50"
+                                    className="border border-gray-200 px-4 py-3 text-gray-700 font-medium align-top"
                                     rowSpan={classifications[1].attributes.length}
                                   >
                                     {attr1.name}
@@ -888,7 +888,7 @@ export default function ProductFormModal({
         </div>
 
         {/* Nút hành động */}
-        <div className="flex justify-end gap-4 mt-10 border-t pt-6">
+        <div className="flex justify-end gap-4 mt-10 pt-6">
           <button
             onClick={() => setIsModalOpen(false)}
             className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition shadow-sm"

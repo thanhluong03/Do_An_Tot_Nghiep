@@ -8,18 +8,21 @@ import { cartApi } from '../../../../api/modules/cart';
 // import { StoreSelectorClient } from './StoreSelectorClient'; // Đã thay thế bằng UI radio
 import { ReviewsClient } from './reviews-client';
 import { conversationApi } from '@/api/modules/conversation';
-import { VoucherModal, ChatModal, ScrollToTopButton } from '@/components/feature';
+import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal } from '@/components/feature';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link'; // Import Link từ 'next/link'
+import { Bot, Gift, MessageSquare, User } from 'lucide-react';
 import {
   ShoppingCart,
   Truck,
   ShieldCheck,
   RefreshCw,
   Archive,
-  Minus, Plus
+  Minus, Plus,
+  ArrowLeft
 } from 'lucide-react'; // 👈 THÊM 1: Thêm các icon cam kết
 import { useCart } from '@/contexts/CartContext';
+import { useRouter } from 'next/dist/client/components/navigation';
 
 interface Attribute {
   id: number;
@@ -58,17 +61,18 @@ export function ProductDetailClient({ product }: { product: any }) {
   console.log('🏪 Product stores:', product.stores);
   console.log('💰 Cheapest store:', product.cheapestStore);
   console.log('🏷️ Cheapest classification:', product.cheapestClassification);
-
+  const router = useRouter();
   // Auto-select the cheapest store and classification from API
   const defaultStore = product.cheapestStore || product.stores?.find((s: ProductStore) => s.quantity_stock > 0);
   console.log('🎯 Default store:', defaultStore);
 
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(defaultStore?.store_id || null);
   const [mainImage, setMainImage] = useState(product.images?.[0] || '/placeholder-product.jpg');
-  
+
   const [quantity, setQuantity] = useState<number>(1);
   const [loading, setLoading] = useState(false);
-
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
   const { addItem } = useCart();
 
   const ACCENT_COLOR = '#A67C52'; // Nâu Vàng Trầm (cho nút và giá tiền)
@@ -383,8 +387,15 @@ export function ProductDetailClient({ product }: { product: any }) {
 
   return (
 
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+       <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 p-4  rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="">Trang trước đó</span>
+        </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* --- Gallery --- */}
         <div className="flex flex-col items-center">
           <div className="aspect-square bg-white rounded-2xl shadow overflow-hidden w-full">
@@ -418,7 +429,7 @@ export function ProductDetailClient({ product }: { product: any }) {
         </div>
 
         {/* --- Info --- */}
-        <div className="space-y-6">
+        <div className="space-y-6 bg-white p-6 rounded-2xl shadow">
           {/* Breadcrumbs, Tên, Rating */}
           <div>
             <div className="text-sm text-gray-500 mb-1">{product.category || 'Chén, bát'}</div>
@@ -443,7 +454,7 @@ export function ProductDetailClient({ product }: { product: any }) {
           </div>
 
           {/* --- Box chứa Price, Variants, Store, Quantity, Buttons --- */}
-          <div className="p-5 rounded-2xl bg-white shadow space-y-5">
+          <div className="p-5 rounded-2xl bg-white space-y-5">
             {/* Price */}
             <div className="flex items-baseline gap-3">
               {/* Only show original price and discount for real promotions */}
@@ -537,60 +548,90 @@ export function ProductDetailClient({ product }: { product: any }) {
             )}
 
             {hasStores && (
-              <div className="space-y-3">
-                <label className="font-medium text-gray-800">Chọn cửa hàng còn hàng:</label>
+              <div className="space-y-4">
+                <label className="font-semibold text-gray-800 text-base tracking-wide">
+                  Chọn cửa hàng còn hàng:
+                </label>
+
                 {product.stores.map((store: any) => (
                   <div
                     key={store.store_id}
                     onClick={() => handleStoreChange(store.store_id)}
-                    className={`border p-3 rounded-lg cursor-pointer transition-all ${selectedStoreId === store.store_id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
+                    className={`
+        border rounded-xl p-4 cursor-pointer transition-all duration-200
+        flex items-start gap-3 shadow-sm
+        ${selectedStoreId === store.store_id
+                        ? 'border-orange-400 bg-orange-50 ring-1 ring-orange-200'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'}
+      `}
                   >
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        name="store"
-                        value={store.store_id}
-                        checked={selectedStoreId === store.store_id}
-                        onChange={() => handleStoreChange(store.store_id)}
-                        className="mr-3 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      <div>
-                        <div className="font-semibold text-gray-800">{store.store_name}</div>
-                        <div className="text-sm text-gray-600">{store.address}</div>
-                        <div className="text-sm text-green-600">{store.quantity_stock} sản phẩm có sẵn</div>
+                    {/* Radio Button */}
+                    <input
+                      title='store'
+                      type="radio"
+                      name="store"
+                      value={store.store_id}
+                      checked={selectedStoreId === store.store_id}
+                      onChange={() => handleStoreChange(store.store_id)}
+                      className="mt-1 h-4 w-4 text-orange-500 border-gray-300 focus:ring-orange-400"
+                    />
+
+                    {/* Nội dung cửa hàng */}
+                    <div>
+                      <div className="font-medium text-gray-900 text-lg sm:text-base">
+                        {store.store_name}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-0.5">{store.address}</div>
+                      <div
+                        className={`text-sm font-medium mt-1 ${store.quantity_stock > 0 ? 'text-green-600' : 'text-red-500'
+                          }`}
+                      >
+                        {store.quantity_stock > 0
+                          ? `${store.quantity_stock} sản phẩm có sẵn`
+                          : 'Hết hàng'}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+
             )}
 
             {/* Số lượng */}
-            <div className="flex items-center gap-4 mt-4">
-              <span className="font-medium text-[#2C2A24]">Số lượng:</span>
-              <div className="flex items-center border rounded-lg">
+            <div className="flex items-center gap-5 mt-5">
+              <span className="font-semibold text-gray-800 text-base tracking-wide">Số lượng:</span>
+
+              <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden shadow-sm bg-white transition-all duration-200 hover:shadow-md">
+                {/* Nút giảm */}
                 <button
+                  title='minus'
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="px-3 py-1 text-lg"
-                > 
+                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
+                >
                   <Minus className="w-4 h-4" />
                 </button>
+
+                {/* Ô nhập số */}
                 <input
+                  title='numer'
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-14 text-center border-x outline-none"
+                  className="w-16 text-center text-gray-800 font-medium border-x border-gray-200 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
                   min={1}
                 />
+
+                {/* Nút tăng */}
                 <button
+                  title='plus'
                   onClick={() => setQuantity((q) => q + 1)}
-                  className="px-3 py-1 text-lg"
+                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
 
             {/* Nút Mua Ngay và Giỏ hàng */}
             <div className="flex flex-col sm:flex-row gap-3 pt-3 min-h-[60px] sm:items-start">
@@ -616,7 +657,7 @@ export function ProductDetailClient({ product }: { product: any }) {
                 className="w-full sm:w-auto flex-none px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Thêm vào giỏ hàng"
               >
-                  <ShoppingCart className="w-5 h-5" />
+                <ShoppingCart className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -624,7 +665,7 @@ export function ProductDetailClient({ product }: { product: any }) {
           {/* 👇 SỬA 2: Di chuyển "4 Ô CAM KẾT" vào đây 
             Và thay đổi style để khớp với ảnh
           */}
-          <div className="grid grid-cols-2 gap-4 mt-6">
+          <div className="grid grid-cols-2 gap-4 mt-3 bg-white p-4 rounded-2xl">
             {/* Item 1 */}
             <div className="flex items-center p-2">
               <div className="flex-shrink-0 bg-gray-100 rounded-full p-2 mr-3">
@@ -675,7 +716,7 @@ export function ProductDetailClient({ product }: { product: any }) {
       */}
 
       {/* === MÔ TẢ SẢN PHẨM === */}
-      <div className="bg-white rounded-2xl shadow p-6 md:p-8 my-10">
+      <div className="bg-white rounded-2xl shadow p-6 md:p-8 mt-5">
         <h2 className="text-2xl font-semibold text-[#2C2A24] mb-4">
           Mô tả sản phẩm
         </h2>
@@ -701,8 +742,9 @@ export function ProductDetailClient({ product }: { product: any }) {
       {isAuthenticated && user?.id && (
         <>
           {/* (Code Modal và Nút bấm giữ nguyên) ... */}
+          {/* Voucher Modal */}
           {isVoucherModalOpen && (
-            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black bg-opacity-30">
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-white/10">
               <VoucherModal
                 customerId={user.id}
                 isOpen={isVoucherModalOpen}
@@ -711,50 +753,92 @@ export function ProductDetailClient({ product }: { product: any }) {
             </div>
           )}
 
+          {/* Chat Modal */}
           {isChatOpen && (
             <ChatModal
               isOpen={isChatOpen}
               onClose={() => setIsChatOpen(false)}
               userId={Number(user.id)}
               storeId={0}
-              conversationId={conversationId}
+              conversationId={conversationId} // ✅ truyền id xuống
             />
           )}
 
-          <div className="fixed top-1/2 right-6 -translate-y-1/2 flex flex-col items-end gap-4 z-[100]">
+          {/* AI Chat Modal */}
+          <AIChatModal
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+          />
+
+          {/* Floating Buttons */}
+          <div
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${isChatDropdownOpen ? 'right-1' : 'right-1'
+              }`}
+          >
+            {/* Voucher Button */}
             <button
               onClick={() => setIsVoucherModalOpen(true)}
-              className="bg-yellow-400 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              className="bg-yellow-400 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
               title="Nhận Voucher Giảm Giá!"
             >
-              🎁
+              <Gift className="w-6 h-6" />
             </button>
 
-            <button
-              onClick={async () => {
-                if (!isAuthenticated || !user?.id) return;
-                try {
-                  console.log('%c💬 Tạo conversation...', 'color:deepskyblue');
-                  const created = await conversationApi.createConversation({
-                    sender_id: Number(user.id),
-                    sender_type: 'USER',
-                    content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
-                    user_id: Number(user.id),
-                    store_id: 1,
-                  });
-                  const conv = created?.conversation || created?.data || created;
-                  console.log('%c✅ Conversation created:', 'color:limegreen', conv);
-                  setConversationId(conv?.id || null);
-                  setIsChatOpen(true);
-                } catch (err) {
-                  console.error('❌ Lỗi tạo conversation:', err);
-                }
-              }}
-              className="bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-              title="Chat với Admin"
-            >
-              💬
-            </button>
+            {/* Chat Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsChatDropdownOpen(prev => !prev)}
+                className="bg-[#8B7D6B] text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                title="Bắt đầu trò chuyện"
+              >
+                <MessageSquare className="w-6 h-6" />
+              </button>
+
+              {isChatDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 flex flex-col gap-3 transition-all duration-300 ease-out transform origin-top-right">
+                  {/* Nút Chat với Admin */}
+                  <div className="relative group">
+                    <button
+                      onClick={async () => {
+                        if (!isAuthenticated || !user?.id) return;
+                        try {
+                          const created = await conversationApi.createConversation({
+                            sender_id: Number(user.id),
+                            sender_type: 'USER',
+                            content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                            user_id: Number(user.id),
+                            store_id: 1,
+                          });
+                          const conv = created?.conversation || created?.data || created;
+                          setConversationId(conv?.id || null);
+                          setIsChatOpen(true);
+                          setIsChatDropdownOpen(false);
+                        } catch (err) {
+                          console.error('❌ Lỗi tạo conversation:', err);
+                        }
+                      }}
+                      className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                      title="Chat với Admin"
+                    >
+                      <User className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {/* Nút Chat với AI */}
+                  <div className="relative group">
+                    <button
+                      onClick={() => {
+                        setIsAIChatOpen(true); // 2. Mở popup AI chat
+                        setIsChatDropdownOpen(false);
+                      }}
+                      className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                      title="Chat với AI"
+                    >
+                      <Bot className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

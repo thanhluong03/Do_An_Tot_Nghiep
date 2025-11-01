@@ -369,9 +369,9 @@ export default function InventoryPage() {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-2">
+        <div className="min-h-screen">
             <Toaster position="top-center" />
-            <div className="w-full mx-auto bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-gray-200">
+            <div className="w-full mx-auto bg-white/90 rounded-2xl shadow-2xl p-8 border border-gray-200">
                 <h2 className="text-3xl font-extrabold text-center text-[#B95D26] mb-8 tracking-wide">
                     Quản lý Tồn kho trong cửa hàng
                 </h2>
@@ -408,11 +408,7 @@ export default function InventoryPage() {
                 )}
 
                 {/* --- BỘ LỌC & TÌM KIẾM --- */}
-                <div className="mt-10 bg-gray-50 p-6 rounded-xl shadow-inner border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                        Bộ lọc danh sách tồn kho
-                    </h3>
-
+                <div className="mt-10 bg-white p-6 rounded-xl border border-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

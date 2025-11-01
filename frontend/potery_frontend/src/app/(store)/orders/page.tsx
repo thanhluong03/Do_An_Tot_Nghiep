@@ -9,6 +9,9 @@ import Link from 'next/link';
 import { productApi } from '../../../api/modules/products';
 import { useCart } from '@/contexts/CartContext';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/dist/client/components/navigation';
+import { ArrowLeft } from 'lucide-react';
+
 const translateStatus = (status: string | undefined): string => {
   if (!status) return 'Không rõ';
   const s = status.toUpperCase();
@@ -83,6 +86,7 @@ const translatePaymentMethod = (method: string | undefined): string => {
   }
 };
 export default function MyOrdersPage() {
+    const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -201,6 +205,13 @@ export default function MyOrdersPage() {
   return (
     <BaseLayout>
       {/* 1. Thu hẹp max-w container và sử dụng màu nền ấm */}
+      <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 p-4 ml-10 rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="">Trang trước đó</span>
+        </button>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-[#F5F1EB] min-h-[80vh]">
 
         {/* Tiêu đề: Tinh tế, font serif */}

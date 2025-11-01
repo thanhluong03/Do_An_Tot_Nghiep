@@ -476,7 +476,7 @@ export default function ImportProductPage() {
     }, [allProductsForForm]);
 
     return (
-        <div className="min-h-screen bg-gray-100 sm:p-2">
+        <div className="min-h-screen">
             <Toaster position="top-center" />
 
             <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-8">
@@ -531,7 +531,11 @@ export default function ImportProductPage() {
                             className="text-orange-600 hover:text-orange-700 p-2 transition duration-150"
                             title={showTable ? "Ẩn danh sách" : "Hiển thị danh sách"}
                         >
-                            <RotateCw size={24} className={showTable ? "animate-spin-slow" : ""} />
+                            <div className="flex">
+                                <span className="font-semibold mr-2 ">Xem lịch sử nhập</span>
+
+                                <RotateCw size={30} className={showTable ? "animate-spin-slow" : ""} />
+                            </div>
                         </button>
                     </div>
 
