@@ -192,11 +192,14 @@ export default function NewsDetailPage() {
             </div>
 
             {news.image && (
-              <img
-                src={news.image}
-                alt={news.title}
-                className="w-full rounded-xl mb-8 object-cover shadow-md"
-              />
+              <div className="flex justify-center mb-8">
+                <img
+                  src={news.image}
+                  alt={news.title}
+                  className="max-w-[80%] max-h-[400px] rounded-xl object-cover shadow-md"
+                />
+              </div>
+
             )}
 
             <div className="prose prose-lg max-w-none text-[#3D3D3D] leading-relaxed break-words whitespace-normal">

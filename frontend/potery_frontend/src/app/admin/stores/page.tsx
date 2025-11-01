@@ -171,7 +171,7 @@ const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
                     <table className="w-full border-collapse bg-white rounded-xl shadow-lg text-sm text-gray-800">
                         <thead>
                             <tr className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 uppercase text-xs font-bold border-b border-gray-200">
-                                <th className="px-5 py-3 text-center w-[60px] rounded-tl-xl">ID</th>
+                                <th className="px-5 py-3 text-center w-[60px] rounded-tl-xl">STT</th>
                                 <th className="px-5 py-3 text-left min-w-[150px]">Tên cửa hàng</th>
                                 <th className="px-5 py-3 text-left min-w-[200px]">Địa chỉ</th>
                                 <th className="px-5 py-3 text-center w-[120px]">Điện thoại</th>
@@ -181,22 +181,22 @@ const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
                             </tr>
                         </thead>
                         <tbody>
-                            {currentStores.map((store) => (
+                            {currentStores.map((store, index) => (
                                 <tr
                                     key={store.id}
                                     className={`border-b border-gray-100 last:border-b-0 ${
                                         editingId === store.id ? "bg-yellow-50/50" : "hover:bg-blue-50/30"
                                     } transition-colors duration-150`}
                                 >
-                                    <td className="px-5 py-3 font-medium text-gray-600 text-center">{store.id}</td>
-                                    <td className="px-5 py-3 font-semibold text-gray-800 truncate" title={store.store_name}>{store.store_name}</td>
-                                    <td className="px-5 py-3 text-gray-600 truncate" title={store.address}>{store.address}</td>
-                                    <td className="px-5 py-3 text-center text-gray-700 font-mono">{store.phone}</td>
+                                    <td className="px-5 py-3 text-xs text-gray-600 text-center">{index + 1}</td>
+                                    <td className="px-5 py-3 font-semibold text-gray-700 truncate" title={store.store_name}>{store.store_name}</td>
+                                    <td className="px-5 py-3 text-gray-700 text-xs truncate" title={store.address}>{store.address}</td>
+                                    <td className="px-5 py-3 text-center text-xs text-gray-700">{store.phone}</td>
                                     
-                                    <td className="px-5 py-3 text-center text-xs text-gray-500">
+                                    <td className="px-5 py-3 text-center text-xs text-gray-700">
                                         {formatDateTime(store.created_at)}
                                     </td>
-                                    <td className="px-5 py-3 text-center text-xs text-gray-500">
+                                    <td className="px-5 py-3 text-center text-xs text-gray-700">
                                         {formatDateTime(store.updated_at)}
                                     </td>
                                     
@@ -204,14 +204,14 @@ const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
                                         <button
                                             title='Sửa'
                                             onClick={() => handleEdit(store)}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 transition duration-150 shadow-sm"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition duration-150 shadow-sm"
                                         >
                                             <Pencil size={15} />
                                         </button>
                                         <button
                                             title='Xoá'
                                             onClick={() => store.id && handleDelete(store.id)}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition duration-150 shadow-sm"
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition duration-150 shadow-sm"
                                         >
                                             <Trash2 size={15} />
                                         </button>

@@ -101,7 +101,7 @@ const StoreForm: React.FC<StoreFormProps> = ({
                     className={`px-5 py-2 rounded-lg font-semibold shadow-md transition flex items-center gap-1 ${
                         editingId
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                            : "bg-blue-500 hover:bg-blue-600 text-white"
+                            : "bg-orange-500 hover:bg-orange-600 text-white"
                     }`}
                 >
                     <Save size={18} /> {editingId ? "Cập nhật" : "Thêm"}

@@ -188,9 +188,6 @@ export default function NewsPage() {
                     <h3 className="text-lg font-serif font-semibold text-[#2C2A24] mb-2 line-clamp-2">
                       {n.title}
                     </h3>
-                    <p className="text-[#6B6658] text-sm mb-4 line-clamp-3 flex-grow">
-                      {n.content}
-                    </p>
                     <Link
                       href={`/news/${n.id}`}
                       className="mt-auto text-[#A67C52] text-sm font-medium hover:underline"

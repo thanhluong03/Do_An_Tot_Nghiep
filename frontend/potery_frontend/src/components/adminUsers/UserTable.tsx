@@ -49,7 +49,7 @@ export default function UserTable({
                   key={u.id}
                   className="border-t border-gray-100 hover:bg-indigo-50 transition duration-100"
                 >
-                  <td className="px-4 py-3 text-center font-semibold text-gray-700">
+                  <td className="px-4 py-3 text-center font-semibold text-gray-500">
                     {index + 1}
                   </td>
 
@@ -68,7 +68,7 @@ export default function UserTable({
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-gray-800">
+                  <td className="px-4 py-3 font-semibold text-gray-500">
                     {u.username}
                   </td>
                   <td className="px-4 py-3">{u.full_name || "-"}</td>
@@ -91,14 +91,14 @@ export default function UserTable({
                     <button
                       title="edit"
                       onClick={() => onEdit(u)}
-                      className="p-2 rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200 transition duration-150"
+                      className="p-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg transition duration-150"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       title="delete"
                       onClick={() => u.id && onDelete(u.id)}
-                      className="p-2 rounded-md text-red-600 bg-red-100 hover:bg-red-200 transition duration-150"
+                      className="p-2 rounded-lg text-red-600 bg-red-100 hover:bg-red-200 transition duration-150"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

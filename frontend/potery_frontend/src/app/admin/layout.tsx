@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex flex-col flex-1 overflow-y-auto">
           <AdminHeader />
           {/* Nội dung chính */}
-          <main className="flex-1 sm:p-6 md:p-4">
+          <main className="flex-1 sm:p-2 md:p-4">
             {children}
           </main>
           <AdminFooter />

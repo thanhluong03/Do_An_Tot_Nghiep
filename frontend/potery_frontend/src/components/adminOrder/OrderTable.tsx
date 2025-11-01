@@ -50,7 +50,7 @@ const getStatusColor = (status: OrderStatus | PaymentStatus) => {
 const translateStatus = (status: OrderStatus | PaymentStatus): string => {
   const translations: Record<string, string> = {
     // Trạng thái đơn hàng
-    CREATED: "Đã tạo",
+    CREATED: "CHờ xác nhận",
     CONFIRMED: "Đã xác nhận",
     SHIPPING: "Đang giao",
     DELIVERED: "Đã giao",
@@ -103,7 +103,7 @@ export default function OrderTable({
               </td>
               <td className="px-4 py-3 text-center">
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusColor(
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                     order.status
                   )}`}
                 >
@@ -112,7 +112,7 @@ export default function OrderTable({
               </td>
               <td className="px-4 py-3 text-center">
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusColor(
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                     order.payment_status
                   )}`}
                 >

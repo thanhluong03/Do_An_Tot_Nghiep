@@ -72,8 +72,8 @@ export default function CustomerPage() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
             <thead>
-              <tr className="bg-gray-200 text-gray-700 text-sm uppercase">
-                <th className="px-4 py-3 text-left">ID</th>
+              <tr className="bg-gray-100 text-gray-700 text-sm uppercase">
+                <th className="px-4 py-3 text-left">STT</th>
                 <th className="px-4 py-3 text-left">Ảnh</th>
                 <th className="px-4 py-3 text-left">Tên đăng nhập</th>
                 <th className="px-4 py-3 text-left">Họ tên</th>
@@ -102,7 +102,7 @@ export default function CustomerPage() {
                     key={c.id}
                     className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
                   >
-                    <td className="px-4 py-3">{c.id}</td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">{idx + 1}</td>
                     <td className="px-4 py-3">
                       {c.avatar_image ? (
                         <img
@@ -116,11 +116,11 @@ export default function CustomerPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3">{c.username}</td>
-                    <td className="px-4 py-3">{c.full_name || "-"}</td>
-                    <td className="px-4 py-3">{c.email || "-"}</td>
-                    <td className="px-4 py-3">{c.phone_number || "-"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-gray-500 text-sm">{c.username}</td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">{c.full_name || "-"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">{c.email || "-"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">{c.phone_number || "-"}</td>
+                    <td className="px-4 py-3 ">
                       {c.is_active ? (
                         <span className="text-green-600 font-semibold">Hoạt động</span>
                       ) : (
@@ -131,7 +131,7 @@ export default function CustomerPage() {
                       <button
                         title="Xóa"
                         onClick={() => handleDelete(c.id)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition duration-150 shadow-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition duration-150 shadow-sm"
                       >
                         <Trash2 size={15} />
                       </button>

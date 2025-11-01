@@ -478,8 +478,8 @@ export default function ProductFormModal({
 
       {/* --- MAIN MODAL --- */}
       <div
-        className="relative z-10 w-full max-w-5xl bg-white rounded-3xl shadow-2xl border border-gray-200 
-        p-10 animate-[fadeIn_0.2s_ease-in-out] overflow-y-auto max-h-[92vh]"
+        className="relative z-10 w-full max-w-[1500px] bg-white rounded-3xl shadow-2xl border border-gray-200 
+        p-10 animate-[fadeIn_0.2s_ease-in-out] overflow-y-auto max-h-[95vh]"
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-10 pb-5">
@@ -496,10 +496,10 @@ export default function ProductFormModal({
         </div>
 
         {/* Form nội dung */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2 gap-y-2">
           {/* Tên sản phẩm */}
-          <div className="col-span-2">
-            <label className="block text-base font-semibold text-gray-800 mb-2">
+          <div className="">
+            <label className="block text-base font-semibold text-gray-800 mb-1">
               Tên sản phẩm
             </label>
             <input
@@ -516,7 +516,7 @@ export default function ProductFormModal({
 
           {/* Giá */}
           <div>
-            <label className="block text-base font-semibold text-gray-800 mb-2">
+            <label className="block text-base font-semibold text-gray-800 mb-1">
               Giá (VNĐ)
             </label>
             <input
@@ -533,7 +533,7 @@ export default function ProductFormModal({
 
           {/* Danh mục */}
           <div>
-            <label className="block text-base font-semibold text-gray-800 mb-2">
+            <label className="block text-base font-semibold text-gray-800 mb-1">
               Danh mục
             </label>
             <select
@@ -555,8 +555,8 @@ export default function ProductFormModal({
           </div>
 
           {/* Nhà cung cấp */}
-          <div className="col-span-2">
-            <label className="block text-base font-semibold text-gray-800 mb-2">
+          <div className="">
+            <label className="block text-base font-semibold text-gray-800 mb-1">
               Nhà cung cấp
             </label>
             <select
@@ -578,8 +578,8 @@ export default function ProductFormModal({
           </div>
 
           {/* Mô tả */}
-          <div className="col-span-2 mb-4">
-            <label className="block text-base font-semibold text-gray-800 mb-2"
+          <div className="col-span-2">
+            <label className="block text-base font-semibold text-gray-800 mb-1"
               htmlFor="product-description">Mô tả</label>
             <div className={`transition ${validationErrors.description ? 'border-red-500 focus-within:ring-red-500' : 'focus-within:ring-orange-500'} focus-within:ring-2 rounded-xl`}>
               <ReactQuill
@@ -599,7 +599,7 @@ export default function ProductFormModal({
                 placeholder="Nhập mô tả chi tiết sản phẩm..."
                 className="w-full"
                 // Set height cho editor
-                style={{ height: '300px' }}
+                style={{ height: '250px' }}
               />
             </div>
             {validationErrors.description && (
@@ -608,8 +608,8 @@ export default function ProductFormModal({
           </div>
 
           {/* Upload hình ảnh */}
-          <div className="col-span-2">
-            <label className="block text-base font-semibold text-gray-800 mb-3">
+          <div className="col-span-2 mt-12">
+            <label className="block text-base font-semibold text-gray-800 mb-1">
               Ảnh sản phẩm
             </label>
             <label
