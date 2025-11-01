@@ -39,7 +39,8 @@ export class ReviewRepository {
                 'product.name AS product_name',
                 'review.id AS review_id',
                 'review.rating AS review_rating',
-                'review.comment AS review_comment'
+                'review.comment AS review_comment',
+                'review.created_at AS review_created_at'
             ])
             .orderBy('review.created_at', 'DESC')
             .getRawMany();
@@ -65,7 +66,8 @@ export class ReviewRepository {
                 order_id: item.order_id,
                 id: item.review_id,
                 rating: item.review_rating,
-                comment: item.review_comment
+                comment: item.review_comment,
+                created_at: item.review_created_at
             });
         });
         return Object.values(grouped);
@@ -86,8 +88,10 @@ export class ReviewRepository {
                 'product.name AS product_name',
                 'review.id AS review_id',
                 'review.rating AS review_rating',
-                'review.comment AS review_comment'
+                'review.comment AS review_comment',
+                'review.created_at AS review_created_at'
             ])
+            .orderBy('review.created_at', 'ASC')
             .getRawMany();
 
         return raw.map(item => ({
@@ -104,7 +108,8 @@ export class ReviewRepository {
             review: {
                 id: item.review_id,
                 rating: item.review_rating,
-                comment: item.review_comment
+                comment: item.review_comment,
+                created_at: item.review_created_at
             }
         }));
     }

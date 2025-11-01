@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { reviewsApi, ReviewItem } from '../../../../api/modules/reviews';
 import { useAuth } from '../../../../contexts/AuthContext';
 
@@ -8,10 +9,12 @@ export function ReviewsClient({
   productId,
   productRating, // Prop này sẽ không được dùng nữa, theo yêu cầu của bạn
   productReviewCount, // Prop này sẽ không được dùng nữa, theo yêu cầu của bạn
+  onStatsChange,
 }: {
   productId: string;
   productRating: number;
   productReviewCount: number;
+  onStatsChange?: (average: number, count: number) => void;
 }) {
   const { user, isAuthenticated } = useAuth();
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -23,6 +26,74 @@ export function ReviewsClient({
   const [rating, setRating] = useState<number>(5);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const Star = ({ filled, size = 20 }: { filled: boolean; size?: number }) => {
+    const fillColor = filled ? '#ffdc7bff' : 'transparent';
+    const strokeColor = filled ? '#ffdc7bff' : '#fbe3a2ff';
+    const dropShadow = filled ? 'filter: drop-shadow(0 1px 0 rgba(0,0,0,0.06))' : undefined;
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+        style={{ display: 'inline-block', verticalAlign: 'middle', ...(dropShadow ? { filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.06))' } : {}) }}
+      >
+        <path
+          d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+          fill={fillColor}
+          stroke={strokeColor}
+          strokeWidth={1.25}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  };
+
+  // State cho từng review: mở rộng comment hay không
+  const [expandedComments, setExpandedComments] = useState<{ [id: string]: boolean }>({});
+  // State cho số lượng review hiển thị
+  const [visibleCount, setVisibleCount] = useState(5);
+  // State để xác định vừa ẩn bớt
+  const [justCollapsed, setJustCollapsed] = useState(false);
+
+  const reviewRefs = React.useRef<{ [id: string]: HTMLDivElement | null }>({});
+  const handleToggleComment = (id: string, hide?: boolean) => {
+    setExpandedComments((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (hide && reviewRefs.current[id]) {
+      const el = reviewRefs.current[id];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        window.scrollTo({
+          top: rect.top + scrollTop - 70,
+          behavior: 'smooth',
+        });
+      }
+    }
+  };
+
+  // Khi vừa ẩn bớt, cuộn lên review cuối cùng đang hiển thị
+  useEffect(() => {
+    if (justCollapsed) {
+      // Tìm review cuối cùng đang hiển thị
+      const lastReview = reviews[visibleCount - 1];
+      if (lastReview && lastReview.id && reviewRefs.current[lastReview.id]) {
+        const el = reviewRefs.current[lastReview.id];
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          window.scrollTo({
+            top: rect.top + scrollTop - 70,
+            behavior: 'smooth',
+          });
+        }
+      }
+      setJustCollapsed(false);
+    }
+  }, [visibleCount, justCollapsed, reviews]);
 
   // 🔹 Lấy danh sách đánh giá (LOGIC GIỮ NGUYÊN)
   useEffect(() => {
@@ -34,7 +105,7 @@ export function ReviewsClient({
 
         if (mounted) {
           // Chuẩn hóa dữ liệu để dễ render
-          const formatted = data.map((item: any) => ({
+          const formatted = data.map((item: { review: ReviewItem; customer?: { name?: string } }) => ({
             id: item.review.id,
             rating: item.review.rating,
             comment: item.review.comment,
@@ -44,6 +115,9 @@ export function ReviewsClient({
           }));
 
           setReviews(formatted);
+          const totalReviews = formatted.length;
+          const averageRating = totalReviews > 0 ? formatted.reduce((sum: number, r: { rating?: number }) => sum + (r.rating || 0), 0) / totalReviews : 0;
+          if (onStatsChange) onStatsChange(averageRating, totalReviews);
         }
       } catch {
         if (mounted) setError('Không thể tải đánh giá');
@@ -55,7 +129,7 @@ export function ReviewsClient({
     return () => {
       mounted = false;
     };
-  }, [productId]);
+  }, [productId, onStatsChange]);
 
   // 🔹 Gửi đánh giá (LOGIC GIỮ NGUYÊN)
   const handleSubmit = async () => {
@@ -137,7 +211,7 @@ export function ReviewsClient({
             const averageRating =
               totalReviews > 0
                 ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) /
-                  totalReviews
+                totalReviews
                 : 0;
 
             return (
@@ -149,16 +223,7 @@ export function ReviewsClient({
                 <div>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
-                      <img
-                        key={i}
-                        src={
-                          i < Math.round(averageRating)
-                            ? '/star.png'
-                            : '/star-empti.png'
-                        }
-                        alt="star"
-                        className="w-5 h-5"
-                      />
+                      <Star key={i} filled={i < Math.round(averageRating)} size={20} />
                     ))}
                   </div>
                   <div className="text-sm text-gray-600 mt-1">
@@ -187,88 +252,131 @@ export function ReviewsClient({
         )}
 
         {!loading && error && (
-          // Bỏ 'p-6 rounded-2xl bg-white shadow'
           <div className="text-red-600">{error}</div>
         )}
 
         {/* DANH SÁCH REVIEW ITEMS */}
-        {!loading &&
-          !error &&
-          reviews.map((r) => (
-            // Mỗi item không còn 'bg-white shadow'
-            <div key={r.id}>
-              {/* Phần thông tin user (flex-row) */}
-              <div className="flex items-start space-x-4">
-                <img
-                  // Placeholder cho avatar
-                  src="https://i.imgur.com/4Ym9kQj.png"
-                  alt={r.customer_name}
-                  className="w-10 h-10 rounded-full bg-gray-200 object-cover"
-                />
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-900">
-                    {r.customer_name ||
-                      (r.customer_id === user?.id ? 'Bạn' : 'Khách hàng')}
+        {!loading && !error && (
+          <>
+            {reviews.slice(0, visibleCount).map((r) => {
+              // Xử lý comment: cắt 3 dòng đầu nếu chưa mở rộng
+              const commentLines = r.comment ? r.comment.split(/\r?\n/) : [];
+              const isLong = commentLines.length > 3;
+              const expanded = r.id ? expandedComments[r.id] : false;
+              let displayComment: string;
+              if (!expanded && isLong) {
+                displayComment = commentLines.slice(0, 3).join('\n');
+              } else {
+                displayComment = r.comment || '';
+              }
+              return (
+                <div key={r.id ?? String(Math.random())} ref={el => { if (r.id) reviewRefs.current[r.id] = el; }}>
+                  {/* Phần thông tin user (flex-row) */}
+                  <div className="flex items-start space-x-4">
+                    <Image
+                      src="https://i.imgur.com/4Ym9kQj.png"
+                      alt={r.customer_name}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full bg-gray-200 object-cover"
+                    />
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900">
+                        {r.customer_name || (r.customer_id === user?.id ? 'Bạn' : 'Khách hàng')}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} filled={i < Math.floor(r.rating)} size={16} />
+                        ))}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {r.created_at
+                          ? new Date(r.created_at)
+                            .toLocaleString('sv-SE', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                            .replace(',', '')
+                          : ''}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <img
-                        key={i}
-                        src={
-                          i < Math.floor(r.rating)
-                            ? '/star.png'
-                            : '/star-empti.png'
-                        }
-                        alt="star"
-                        className="w-4 h-4"
-                      />
-                    ))}
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {/* Format ngày tháng giống ảnh: YYYY-MM-DD HH:MM */}
-                    {r.created_at
-                      ? new Date(r.created_at)
-                          .toLocaleString('sv-SE', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                          .replace(',', '')
-                      : ''}
+                  <p className="mt-3 text-gray-700 pl-14" dangerouslySetInnerHTML={{ __html: displayComment ? displayComment.replace(/\n/g, '<br />') : '—' }} />
+                  {isLong && r.id && (
+                    <div className="pl-14 mt-1 flex justify-end">
+                      {!expanded ? (
+                        <button
+                          className="text-gray-500 hover:text-gray-700 hover:underline text-xs font-medium transition-colors duration-150"
+                          onClick={() => r.id && handleToggleComment(r.id)}
+                        >
+                          Xem thêm
+                        </button>
+                      ) : (
+                        <button
+                          className="text-gray-500 hover:text-gray-700 hover:underline text-xs font-medium transition-colors duration-150"
+                          onClick={() => r.id && handleToggleComment(r.id, true)}
+                        >
+                          Ẩn bớt
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Ảnh đính kèm (thụt lề bằng padding-left) */}
+                  <div className="mt-3 flex space-x-3 pl-14">
+                    <Image
+                      src="https://i.imgur.com/gA5g9Zz.png"
+                      alt="review image 1"
+                      width={96}
+                      height={96}
+                      className="w-24 h-24 rounded-lg object-cover"
+                    />
+                    <Image
+                      src="https://i.imgur.com/v8tq9fA.png"
+                      alt="review image 2"
+                      width={96}
+                      height={96}
+                      className="w-24 h-24 rounded-lg object-cover"
+                    />
                   </div>
                 </div>
+              );
+            })}
+
+            {/* Nút Xem thêm/Ẩn bớt */}
+            {reviews.length > visibleCount && (
+              <div className="flex justify-center mt-4">
+                <button
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                  onClick={() => setVisibleCount((prev) => prev + 20)}
+                >
+                  Xem thêm
+                </button>
               </div>
-
-              {/* Nội dung comment (thụt lề bằng padding-left) */}
-              <p className="mt-3 text-gray-700 pl-14">{r.comment || '—'}</p>
-
-              {/* Ảnh đính kèm (thụt lề bằng padding-left) */}
-              <div className="mt-3 flex space-x-3 pl-14">
-                {/* PHẦN NÀY CẦN LOGIC TỪ BẠN ĐỂ LẤY ẢNH REVIEW
-                  Dưới đây là 2 ảnh placeholder để demo layout giống hệt ảnh mẫu:
-                */}
-                <img
-                  src="https://i.imgur.com/gA5g9Zz.png" // Placeholder
-                  alt="review image 1"
-                  className="w-24 h-24 rounded-lg object-cover"
-                />
-                <img
-                  src="https://i.imgur.com/v8tq9fA.png" // Placeholder
-                  alt="review image 2"
-                  className="w-24 h-24 rounded-lg object-cover"
-                />
+            )}
+            {visibleCount > 5 && (
+              <div className="flex justify-center mt-2">
+                <button
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                  onClick={() => {
+                    setVisibleCount((prev) => Math.max(5, prev - 20));
+                    setJustCollapsed(true);
+                  }}
+                >
+                  Ẩn bớt
+                </button>
               </div>
-            </div>
-          ))}
-
-        {/* TRƯỜNG HỢP KHÔNG CÓ REVIEW */}
-        {!loading && !error && reviews.length === 0 && (
-          // Bỏ 'p-6 rounded-2xl bg-white shadow'
-          <div className="text-gray-600">
-            Chưa có đánh giá nào cho sản phẩm này.
-          </div>
+            )}
+            {/* Trường hợp không có review */}
+            {reviews.length === 0 && (
+              <div className="text-gray-600">
+                Chưa có đánh giá nào cho sản phẩm này.
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

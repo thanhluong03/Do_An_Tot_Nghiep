@@ -384,6 +384,35 @@ export function ProductDetailClient({ product }: { product: any }) {
       setLoading(false);
     }
   };
+  const [reviewStats, setReviewStats] = useState<{ average: number; count: number }>({ average: product.rating, count: product.reviewCount });
+  const handleReviewStatsUpdate = (average: number, count: number) => {
+    setReviewStats({ average, count });
+  };
+  const Star = ({ filled, size = 16 }: { filled: boolean; size?: number }) => {
+    const fillColor = filled ? '#ffdc7bff' : 'transparent';
+    const strokeColor = filled ? '#ffdc7bff' : '#ffdc7bff';
+
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+        style={{ display: 'inline-block', verticalAlign: 'middle' }}
+      >
+        <path
+          d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+          fill={fillColor}
+          stroke={strokeColor}
+          strokeWidth={1.25}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  };
 
   return (
 
@@ -438,18 +467,13 @@ export function ProductDetailClient({ product }: { product: any }) {
             </h1>
 
             <div className="mt-2 flex items-center gap-3 text-sm text-gray-600">
-              <span className="font-medium text-gray-800">{product.rating.toFixed(1)}</span>
+              <span className="font-medium text-gray-800">{reviewStats.average.toFixed(1)}</span>
               <div className="flex items-center">
                 {[...Array(5)].map((_, i) => (
-                  <img
-                    key={i}
-                    src={i < Math.floor(product.rating) ? '/star.png' : '/star-empti.png'}
-                    alt="star"
-                    className="w-4 h-4"
-                  />
+                  <Star key={i} filled={i < Math.round(reviewStats.average)} size={16} />
                 ))}
               </div>
-              <span className="border-l pl-3">Đã bán {product.soldCount || 25}</span>
+              <span className="border-l pl-3">Đã bán: {product.total_quantity_sold || 25}</span>
             </div>
           </div>
 
@@ -736,6 +760,7 @@ export function ProductDetailClient({ product }: { product: any }) {
         productId={product.id}
         productRating={product.rating}
         productReviewCount={product.reviewCount}
+        onStatsChange={handleReviewStatsUpdate}
       />
 
       {/* === Popup Layer (Giữ nguyên) === */}
