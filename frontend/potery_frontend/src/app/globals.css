@@ -239,3 +239,11 @@ select option:checked {
     background-color: white; 
     color: black;
 }
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE và Edge */
+  scrollbar-width: none;     /* Firefox */
+}
