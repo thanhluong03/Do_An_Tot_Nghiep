@@ -57,10 +57,11 @@ interface ProductRelationship {
 }
 
 export function ProductDetailClient({ product }: { product: any }) {
-  console.log('🔍 Product data:', product);
-  console.log('🏪 Product stores:', product.stores);
-  console.log('💰 Cheapest store:', product.cheapestStore);
-  console.log('🏷️ Cheapest classification:', product.cheapestClassification);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const DESCRIPTION_MAX_LENGTH = 500;
+  const descriptionText = product.description || '';
+  const isLongDescription = descriptionText.length > DESCRIPTION_MAX_LENGTH;
+  const descriptionRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
   // Auto-select the cheapest store and classification from API
   const defaultStore = product.cheapestStore || product.stores?.find((s: ProductStore) => s.quantity_stock > 0);
@@ -388,43 +389,91 @@ export function ProductDetailClient({ product }: { product: any }) {
   const handleReviewStatsUpdate = (average: number, count: number) => {
     setReviewStats({ average, count });
   };
-  const Star = ({ filled, size = 16 }: { filled: boolean; size?: number }) => {
-    const fillColor = filled ? '#ffdc7bff' : 'transparent';
-    const strokeColor = filled ? '#ffdc7bff' : '#ffdc7bff';
-
+  const renderStars = (averageRating: number, size = 16) => {
     return (
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
-        style={{ display: 'inline-block', verticalAlign: 'middle' }}
-      >
-        <path
-          d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
-          fill={fillColor}
-          stroke={strokeColor}
-          strokeWidth={1.25}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-      </svg>
+      <div className="flex">
+        {[...Array(5)].map((_, i) => {
+          let starType: 'full' | 'half' | 'quarter' | 'empty' = 'empty';
+          const fullStars = Math.floor(averageRating);
+          const decimal = averageRating - fullStars;
+          if (i < fullStars) {
+            starType = 'full';
+          } else if (i === fullStars) {
+            if (decimal >= 0.8) starType = 'full';
+            else if (decimal >= 0.5) starType = 'half';
+            else if (decimal >= 0.1) starType = 'quarter';
+            else starType = 'empty';
+          } else {
+            starType = 'empty';
+          }
+          if (starType === 'half') {
+            return (
+              <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                <defs>
+                  <linearGradient id={`half-star-${i}`} x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop offset="50%" stopColor="#ffdc7bff" />
+                    <stop offset="50%" stopColor="transparent" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                  fill={`url(#half-star-${i})`}
+                  stroke="#ffdc7bff"
+                  strokeWidth={1.25}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </svg>
+            );
+          }
+          if (starType === 'quarter') {
+            return (
+              <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                <defs>
+                  <linearGradient id={`quarter-star-${i}`} x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop offset="25%" stopColor="#ffdc7bff" />
+                    <stop offset="25%" stopColor="transparent" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                  fill={`url(#quarter-star-${i})`}
+                  stroke="#ffdc7bff"
+                  strokeWidth={1.25}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </svg>
+            );
+          }
+          // Full or empty star
+          return (
+            <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+              <path
+                d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                fill={starType === 'full' ? '#ffdc7bff' : 'transparent'}
+                stroke="#ffdc7bff"
+                strokeWidth={1.25}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </svg>
+          );
+        })}
+      </div>
     );
   };
 
   return (
-
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-       <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 p-4  rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="">Trang trước đó</span>
-        </button>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="product-detail-page relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+      <button
+        onClick={() => router.back()}
+        aria-label="Quay lại"
+        className="absolute top-3 sm:top-4 -left-5 sm:-left-8 z-20 w-12 h-12 flex items-center justify-center rounded-full border border-[#F0D9BF] bg-white text-[#D67F2A] shadow-sm hover:shadow-md active:scale-95 transition-all duration-150"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* --- Gallery --- */}
         <div className="flex flex-col items-center">
           <div className="aspect-square bg-white rounded-2xl shadow overflow-hidden w-full">
@@ -436,20 +485,20 @@ export function ProductDetailClient({ product }: { product: any }) {
           </div>
 
           {product.images.length > 1 && (
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-4 grid grid-cols-4 gap-3 w-full">
               {product.images.slice(0, 4).map((img: string, idx: number) => (
                 <div
                   key={idx}
                   onClick={() => setMainImage(img)}
-                  className={`border-2 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${mainImage === img
-                    ? 'border-[#D4A017] scale-105 shadow-md'
-                    : 'border-transparent hover:border-gray-300'
+                  className={`overflow-hidden cursor-pointer transition-all duration-200 rounded-lg ${mainImage === img
+                    ? 'border-2 border-[#D4A017] scale-105 shadow-md'
+                    : 'border border-transparent hover:border-gray-200'
                     }`}
                 >
                   <img
                     src={img}
                     alt={`${product.name}-${idx}`}
-                    className="w-full h-20 object-cover"
+                    className="w-full h-full object-cover rounded-md"
                   />
                 </div>
               ))}
@@ -458,40 +507,40 @@ export function ProductDetailClient({ product }: { product: any }) {
         </div>
 
         {/* --- Info --- */}
-        <div className="space-y-6 bg-white p-6 rounded-2xl shadow">
+        <div className="space-y-4 bg-white pt-2 pb-4 px-4 rounded-2xl shadow">
           {/* Breadcrumbs, Tên, Rating */}
           <div>
-            <div className="text-sm text-gray-500 mb-1">{product.category || 'Chén, bát'}</div>
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#2C2A24]">
+            <div className="text-sm text-gray-500 mb-1">
+              <span className="inline-block bg-[#F3F5EF] text-[#7E735E] px-3 py-1 rounded-full text-sm font-medium">{product.category_name || 'Chén, bát'}</span>
+            </div>
+            <h1 className="text-base md:text-2xl font-semibold text-[#2C2A24] leading-tight">
               {product.name}
             </h1>
 
             <div className="mt-2 flex items-center gap-3 text-sm text-gray-600">
-              <span className="font-medium text-gray-800">{reviewStats.average.toFixed(1)}</span>
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} filled={i < Math.round(reviewStats.average)} size={16} />
-                ))}
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-gray-800">{reviewStats.average.toFixed(1)}</span>
+                {renderStars(reviewStats.average, 16)}
               </div>
-              <span className="border-l pl-3">Đã bán: {product.total_quantity_sold || 25}</span>
+              <span className="h-5 w-px bg-gray-300 mx-2 inline-block" />
+              <div className="text-sm text-gray-600">Đã bán: <span className="font-medium text-gray-800">{product.total_quantity_sold || 25}</span></div>
             </div>
           </div>
 
           {/* --- Box chứa Price, Variants, Store, Quantity, Buttons --- */}
-          <div className="p-5 rounded-2xl bg-white space-y-5">
+          <div className="rounded-2xl bg-white space-y-3">
             {/* Price */}
             <div className="flex items-baseline gap-3">
-              {/* Only show original price and discount for real promotions */}
+              <span className={`text-2xl font-bold ${(product.isFlashSale || product.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice ? 'text-[#ff2d2d]' : 'text-[#2C2A24]'}`}>
+                {formatPrice(currentPrice)}
+              </span>
               {(product.isFlashSale || product.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice && (
-                <span className="text-lg text-gray-500 line-through">
+                <span className="text-1xl text-gray-400 line-through ml-2">
                   {formatPrice(comboOriginalPrice)}
                 </span>
               )}
-              <span className={`text-3xl font-bold ${(product.isFlashSale || product.promotion) && comboOriginalPrice && comboOriginalPrice > currentPrice ? 'text-red-600' : 'text-[#2C2A24]'}`}>
-                {formatPrice(currentPrice)}
-              </span>
               {getDiscountPercentage() > 0 && (
-                <span className="text-sm font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-medium text-[#FB2C36] bg-[#FEF2F2] px-3 py-1 rounded-[8px] border border-[#ffdce0] ml-3">
                   -{getDiscountPercentage()}%
                 </span>
               )}
@@ -499,7 +548,7 @@ export function ProductDetailClient({ product }: { product: any }) {
 
             {/* Product Classifications - Only show if current store has classifications */}
             {currentStore && storeClassifications.length > 0 && (
-              <div className="space-y-4 border-t pt-4">
+              <div className="space-y-2">
                 {/* Phân loại 1 */}
                 {attribute1.length > 0 && (
                   <div>
@@ -516,12 +565,13 @@ export function ProductDetailClient({ product }: { product: any }) {
                             key={attr.id}
                             onClick={() => handleClassificationChange('attribute1', attr.id, attr.name)}
                             disabled={!isAvailable}
-                            className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
-                              ? 'border-orange-500 bg-orange-50 text-orange-600'
+                            className={`px-10 py-2 text-sm rounded-[10px] transition-all border ${isSelected
+                              ? 'border-[#968A71] bg-[#fff8ec] text-[#8B5E3C] shadow-sm'
                               : isAvailable
-                                ? 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                ? 'border-[#E9E0D3] text-[#8B7D6B] bg-white hover:shadow-sm hover:border-[#D9CDBA]'
+                                : 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
                               }`}
+                            style={{ boxShadow: isSelected ? '0 2px 6px rgba(212,160,23,0.12)' : undefined }}
                           >
                             {attr.name}
                           </button>
@@ -547,12 +597,13 @@ export function ProductDetailClient({ product }: { product: any }) {
                             key={attr.id}
                             onClick={() => handleClassificationChange('attribute2', attr.id, attr.name)}
                             disabled={!isAvailable}
-                            className={`px-3 py-2 text-sm border rounded-md transition-colors ${isSelected
-                              ? 'border-orange-500 bg-orange-50 text-orange-600'
+                            className={`px-10 py-2 text-sm rounded-[10px] transition-all border ${isSelected
+                              ? 'border-[#968A71] bg-[#fff8ec] text-[#8B5E3C] shadow-sm'
                               : isAvailable
-                                ? 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                                ? 'border-[#E9E0D3] text-[#8B7D6B] bg-white hover:shadow-sm hover:border-[#D9CDBA]'
+                                : 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
                               }`}
+                            style={{ boxShadow: isSelected ? '0 2px 6px rgba(212,160,23,0.12)' : undefined }}
                           >
                             {attr.name}
                           </button>
@@ -572,51 +623,52 @@ export function ProductDetailClient({ product }: { product: any }) {
             )}
 
             {hasStores && (
-              <div className="space-y-4">
-                <label className="font-semibold text-gray-800 text-base tracking-wide">
-                  Chọn cửa hàng còn hàng:
+              <div className="space-y-2">
+                <label className="font-semibold text-gray-800 text-base tracking-wide mb-3">
+                  Chọn cửa hàng còn hàng
                 </label>
 
-                {product.stores.map((store: any) => (
-                  <div
-                    key={store.store_id}
-                    onClick={() => handleStoreChange(store.store_id)}
-                    className={`
-        border rounded-xl p-4 cursor-pointer transition-all duration-200
-        flex items-start gap-3 shadow-sm
-        ${selectedStoreId === store.store_id
-                        ? 'border-orange-400 bg-orange-50 ring-1 ring-orange-200'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'}
-      `}
-                  >
-                    {/* Radio Button */}
-                    <input
-                      title='store'
-                      type="radio"
-                      name="store"
-                      value={store.store_id}
-                      checked={selectedStoreId === store.store_id}
-                      onChange={() => handleStoreChange(store.store_id)}
-                      className="mt-1 h-4 w-4 text-orange-500 border-gray-300 focus:ring-orange-400"
-                    />
+                <div className="mt-2 space-y-2">
+                  {product.stores.map((store: any) => (
+                    <div
+                      key={store.store_id}
+                      onClick={() => handleStoreChange(store.store_id)}
+                      className={`rounded-xl pt-2 pl-4 pr-4 pb-2 cursor-pointer transition-all duration-200 flex items-center gap-3 shadow-sm border ${selectedStoreId === store.store_id ? 'border-[#D4A017] bg-white ring-1 ring-[#FFF3E0]' : 'border-gray-200 bg-white hover:shadow-md'}`}
+                    >
+                      {/* Radio Button (custom UI) */}
+                      <input
+                        title='store'
+                        type="radio"
+                        name="store"
+                        value={store.store_id}
+                        checked={selectedStoreId === store.store_id}
+                        onChange={() => handleStoreChange(store.store_id)}
+                        className="sr-only"
+                      />
+                      <span className="flex-shrink-0 flex items-center">
+                        <span className={`flex items-center justify-center w-4 h-4 rounded-full border ${selectedStoreId === store.store_id ? 'border-blue-500' : 'border-gray-300'}`}>
+                          {selectedStoreId === store.store_id ? <span className="w-2 h-2 bg-blue-500 rounded-full" /> : null}
+                        </span>
+                      </span>
 
-                    {/* Nội dung cửa hàng */}
-                    <div>
-                      <div className="font-medium text-gray-900 text-lg sm:text-base">
-                        {store.store_name}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-0.5">{store.address}</div>
-                      <div
-                        className={`text-sm font-medium mt-1 ${store.quantity_stock > 0 ? 'text-green-600' : 'text-red-500'
-                          }`}
-                      >
-                        {store.quantity_stock > 0
-                          ? `${store.quantity_stock} sản phẩm có sẵn`
-                          : 'Hết hàng'}
+                      {/* Nội dung cửa hàng */}
+                      <div>
+                        <div className={`font-medium text-lg sm:text-base ${selectedStoreId === store.store_id ? 'text-[#D67F2A]' : 'text-gray-900'}`}>
+                          {store.store_name}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-0.5">{store.address || store.store_address}</div>
+                        <div
+                          className={`text-sm font-medium mt-1 ${store.quantity_stock > 0 ? 'text-green-600' : 'text-red-500'
+                            }`}
+                        >
+                          {store.quantity_stock > 0
+                            ? `${store.quantity_stock} sản phẩm có sẵn`
+                            : 'Hết hàng'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
             )}
@@ -630,9 +682,9 @@ export function ProductDetailClient({ product }: { product: any }) {
                 <button
                   title='minus'
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
+                  className="px-4 py-3 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-5 h-5" />
                 </button>
 
                 {/* Ô nhập số */}
@@ -640,8 +692,18 @@ export function ProductDetailClient({ product }: { product: any }) {
                   title='numer'
                   type="number"
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-16 text-center text-gray-800 font-medium border-x border-gray-200 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^[0-9]+$/.test(val)) {
+                      setQuantity(val === '' ? '' : Number(val));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    let val = Number(e.target.value);
+                    if (isNaN(val) || val < 1) val = 1;
+                    setQuantity(val);
+                  }}
+                  className="w-20 text-center text-gray-800 font-medium border-x border-gray-200 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
                   min={1}
                 />
 
@@ -649,18 +711,35 @@ export function ProductDetailClient({ product }: { product: any }) {
                 <button
                   title='plus'
                   onClick={() => setQuantity((q) => q + 1)}
-                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
+                  className="px-4 py-3 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                 </button>
               </div>
+
+              <div className="flex-1 text-right">
+                {storeClassifications.length > 0 && quantity > currentStock ? (
+                  <div className="text-sm text-red-600">Số lượng sản phẩm của cửa hàng không đủ</div>
+                ) : null}
+              </div>
+
+              {/* Disable buttons if not enough stock */}
+              {storeClassifications.length > 0 && quantity > currentStock && (
+                <style>{`
+                .product-detail-page .disable-on-stock {
+                  pointer-events: none;
+                  opacity: 0.5;
+                  cursor: not-allowed;
+                }
+              `}</style>
+              )}
             </div>
 
 
             {/* Nút Mua Ngay và Giỏ hàng */}
             <div className="flex flex-col sm:flex-row gap-3 pt-3 min-h-[60px] sm:items-start">
               {/* Bạn cần style lại nút bên trong AddToCartClient để nó có màu nâu (#8B5E3C) */}
-              <div className="w-full sm:flex-grow">
+              <div className={`w-full sm:flex-grow ${(storeClassifications.length > 0 && quantity > currentStock) ? 'disable-on-stock' : ''}`}>
                 <AddToCartClient
                   product={product as any}
                   storeId={selectedStoreId ?? undefined}
@@ -672,13 +751,13 @@ export function ProductDetailClient({ product }: { product: any }) {
                     attribute2_name: selectedClassifications.attribute2_name
                   }}
                   currentPrice={currentPrice}
-                  disabled={!isAvailable || (storeClassifications.length > 0 && currentStock === 0)}
+                  disabled={!isAvailable || (storeClassifications.length > 0 && currentStock === 0) || (storeClassifications.length > 0 && quantity > currentStock)}
                 />
               </div>
               <button
                 onClick={handleAdd}
-                disabled={!isAvailable || (storeClassifications.length > 0 && currentStock === 0) || loading}
-                className="w-full sm:w-auto flex-none px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!isAvailable || (storeClassifications.length > 0 && currentStock === 0) || loading || (storeClassifications.length > 0 && quantity > currentStock)}
+                className={`w-12 h-12 sm:w-12 sm:h-12 flex-none px-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 flex items-center justify-center ${(storeClassifications.length > 0 && quantity > currentStock) ? 'disable-on-stock' : ''}`}
                 title="Thêm vào giỏ hàng"
               >
                 <ShoppingCart className="w-5 h-5" />
@@ -692,8 +771,8 @@ export function ProductDetailClient({ product }: { product: any }) {
           <div className="grid grid-cols-2 gap-4 mt-3 bg-white p-4 rounded-2xl">
             {/* Item 1 */}
             <div className="flex items-center p-2">
-              <div className="flex-shrink-0 bg-gray-100 rounded-full p-2 mr-3">
-                <Truck className="w-5 h-5 text-gray-600" />
+              <div className="flex-shrink-0 bg-[#fff8ec] rounded-full p-2 mr-3 border border-[#F0E3C9]">
+                <Truck className="w-5 h-5 text-[#9a7a44]" />
               </div>
               <div>
                 <div className="font-semibold text-sm text-gray-800">Miễn phí vận chuyển</div>
@@ -702,8 +781,8 @@ export function ProductDetailClient({ product }: { product: any }) {
             </div>
             {/* Item 2 */}
             <div className="flex items-center p-2">
-              <div className="flex-shrink-0 bg-gray-100 rounded-full p-2 mr-3">
-                <ShieldCheck className="w-5 h-5 text-gray-600" />
+              <div className="flex-shrink-0 bg-[#eef7f0] rounded-full p-2 mr-3 border border-[#e6f2e6]">
+                <ShieldCheck className="w-5 h-5 text-[#2f8a49]" />
               </div>
               <div>
                 <div className="font-semibold text-sm text-gray-800">Cam kết chất lượng</div>
@@ -712,8 +791,8 @@ export function ProductDetailClient({ product }: { product: any }) {
             </div>
             {/* Item 3 */}
             <div className="flex items-center p-2">
-              <div className="flex-shrink-0 bg-gray-100 rounded-full p-2 mr-3">
-                <RefreshCw className="w-5 h-5 text-gray-600" />
+              <div className="flex-shrink-0 bg-[#fff4f6] rounded-full p-2 mr-3 border border-[#fde8ef]">
+                <RefreshCw className="w-5 h-5 text-[#c85b6a]" />
               </div>
               <div>
                 <div className="font-semibold text-sm text-gray-800">Đổi trả 7 ngày</div>
@@ -722,8 +801,8 @@ export function ProductDetailClient({ product }: { product: any }) {
             </div>
             {/* Item 4 */}
             <div className="flex items-center p-2">
-              <div className="flex-shrink-0 bg-gray-100 rounded-full p-2 mr-3">
-                <Archive className="w-5 h-5 text-gray-600" />
+              <div className="flex-shrink-0 bg-[#f0f7ff] rounded-full p-2 mr-3 border border-[#e6f0ff]">
+                <Archive className="w-5 h-5 text-[#336fae]" />
               </div>
               <div>
                 <div className="font-semibold text-sm text-gray-800">Kiểm tra nhận hàng</div>
@@ -740,15 +819,36 @@ export function ProductDetailClient({ product }: { product: any }) {
       */}
 
       {/* === MÔ TẢ SẢN PHẨM === */}
-      <div className="bg-white rounded-2xl shadow p-6 md:p-8 mt-5">
+      <div className="bg-white rounded-2xl shadow md:p-5" ref={descriptionRef}>
         <h2 className="text-2xl font-semibold text-[#2C2A24] mb-4">
           Mô tả sản phẩm
         </h2>
-        <div
-          className="prose prose-sm sm:prose-base max-w-none text-gray-700 space-y-3"
-        >
-          {product.description ? (
-            <div dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, '<br />') }} />
+        <div className="prose prose-sm sm:prose-base max-w-none text-gray-700 space-y-3 relative">
+          {descriptionText ? (
+            <>
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: showFullDescription || !isLongDescription
+                    ? descriptionText.replace(/\n/g, '<br />')
+                    : descriptionText.slice(0, DESCRIPTION_MAX_LENGTH).replace(/\n/g, '<br />') + '...'
+                }}
+              />
+              {isLongDescription && (
+                <div className="flex justify-end">
+                  <button
+                    className="mt-3 px-4 py-2 bg-[#F3F5EF] text-[#7E735E] rounded-lg text-sm font-medium hover:bg-[#e6e3d6] transition"
+                    onClick={() => {
+                      if (showFullDescription && descriptionRef.current) {
+                        descriptionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                      setShowFullDescription((prev) => !prev);
+                    }}
+                  >
+                    {showFullDescription ? 'Ẩn bớt' : 'Xem thêm'}
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <p>Sản phẩm này hiện chưa có mô tả.</p>
           )}

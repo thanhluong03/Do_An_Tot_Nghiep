@@ -222,9 +222,62 @@ export function ReviewsClient({
                 </div>
                 <div>
                   <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} filled={i < Math.round(averageRating)} size={20} />
-                    ))}
+                    {[...Array(5)].map((_, i) => {
+                      let starType: 'full' | 'half' | 'quarter' | 'empty' = 'empty';
+                      const fullStars = Math.floor(averageRating);
+                      const decimal = averageRating - fullStars;
+                      if (i < fullStars) {
+                        starType = 'full';
+                      } else if (i === fullStars) {
+                        if (decimal >= 0.8) starType = 'full';
+                        else if (decimal >= 0.5) starType = 'half';
+                        else if (decimal >= 0.1) starType = 'quarter';
+                        else starType = 'empty';
+                      } else {
+                        starType = 'empty';
+                      }
+                      if (starType === 'half') {
+                        return (
+                          <svg key={i} width={20} height={20} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                            <defs>
+                              <linearGradient id={`half-star-${i}`} x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop offset="50%" stopColor="#ffdc7bff" />
+                                <stop offset="50%" stopColor="transparent" />
+                              </linearGradient>
+                            </defs>
+                            <path
+                              d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                              fill={`url(#half-star-${i})`}
+                              stroke="#ffdc7bff"
+                              strokeWidth={1.25}
+                              strokeLinejoin="round"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        );
+                      }
+                      if (starType === 'quarter') {
+                        return (
+                          <svg key={i} width={20} height={20} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                            <defs>
+                              <linearGradient id={`quarter-star-${i}`} x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop offset="25%" stopColor="#ffdc7bff" />
+                                <stop offset="25%" stopColor="transparent" />
+                              </linearGradient>
+                            </defs>
+                            <path
+                              d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                              fill={`url(#quarter-star-${i})`}
+                              stroke="#ffdc7bff"
+                              strokeWidth={1.25}
+                              strokeLinejoin="round"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        );
+                      }
+                      return <Star key={i} filled={starType === 'full'} size={20} />;
+                    })}
                   </div>
                   <div className="text-sm text-gray-600 mt-1">
                     {totalReviews} đánh giá
@@ -275,7 +328,7 @@ export function ReviewsClient({
                   <div className="flex items-start space-x-4">
                     <Image
                       src="https://i.imgur.com/4Ym9kQj.png"
-                      alt={r.customer_name}
+                      alt={r.customer_name || ''}
                       width={40}
                       height={40}
                       className="w-10 h-10 rounded-full bg-gray-200 object-cover"

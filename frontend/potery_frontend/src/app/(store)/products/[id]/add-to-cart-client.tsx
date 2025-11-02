@@ -189,10 +189,10 @@ export function AddToCartClient({
     <div className="flex flex-col gap-2">
       <button
         onClick={handleBuyNow}
-        className="px-6 py-3 bg-[#c4975a] text-white rounded-lg hover:bg-[#a3764a] disabled:opacity-50"
+        className="w-full flex items-center justify-center px-6 py-3 bg-[#8B5E3C] text-white rounded-xl hover:bg-[#7a4f34] disabled:opacity-50 transition-colors duration-150 font-semibold shadow-sm"
         disabled={disabled || loading || navigating}
       >
-        {navigating ? 'Đang chuyển…' : 'Mua ngay'}
+        {navigating ? 'Đang chuyển…' : 'Mua Ngay'}
       </button>
       {message && (
         <span className="text-sm text-gray-600 transition-all">{message}</span>
