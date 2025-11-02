@@ -62,7 +62,7 @@ export default function CheckoutPage() {
     };
     classificationId?: number;
   }>>([]);
-  const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[] }>>({});
+  const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }>>({});
   const [loadingCart, setLoadingCart] = useState(false);
 
   const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
@@ -366,7 +366,7 @@ export default function CheckoutPage() {
       const results = await Promise.allSettled(missing.map(pid => productApi.getProductById(String(pid))));
       if (!mounted) return;
 
-      const next: Record<number, { id: number; name: string; price: number; images: string[] }> = { ...serverProducts };
+      const next: Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }> = { ...serverProducts };
       results.forEach((r, idx) => {
         const pid = missing[idx];
         if (r.status === 'fulfilled' && r.value) {
@@ -375,6 +375,7 @@ export default function CheckoutPage() {
             name: r.value.name,
             price: Number(r.value.price),
             images: r.value.images || [],
+            promotion: r.value.promotion, // Include promotion data
           };
         }
       });
@@ -390,8 +391,18 @@ export default function CheckoutPage() {
         const product = serverProducts[ci.product_id];
         if (!product) return acc;
 
-        // Use classification price if available, otherwise use product base price
-        const actualPrice = ci.classificationPrice || ci.price || product.price;
+        // Calculate actual price with promotion discount
+        let actualPrice = ci.classificationPrice || ci.price || product.price;
+
+        // Apply promotion discount if exists
+        if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+          const discountValue = Number(product.promotion.discount_value);
+          if (product.promotion.discount_type === 'PERCENTAGE') {
+            actualPrice = actualPrice * (1 - discountValue / 100);
+          } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+            actualPrice = Math.max(0, actualPrice - discountValue);
+          }
+        }
 
         console.log('🔍 Server cart item price calculation:', {
           product: product.name,
@@ -399,6 +410,7 @@ export default function CheckoutPage() {
           classificationPrice: ci.classificationPrice,
           fallbackPrice: ci.price,
           actualPrice: actualPrice,
+          promotion: product.promotion,
           classification: ci.classifications
         });
 
@@ -586,11 +598,22 @@ export default function CheckoutPage() {
         const quantity = ci.quantity;
         const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
 
-        // Get actual price - prioritize classification price, then product price
+        // Get actual price with promotion discount
         let actualPrice: number;
         if (isServerItem) {
           const serverItem = ci as typeof serverItems[0];
           actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
+
+          // Apply promotion discount if exists
+          const product = serverProducts[pid];
+          if (product?.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+            const discountValue = Number(product.promotion.discount_value);
+            if (product.promotion.discount_type === 'PERCENTAGE') {
+              actualPrice = actualPrice * (1 - discountValue / 100);
+            } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+              actualPrice = Math.max(0, actualPrice - discountValue);
+            }
+          }
         } else {
           const guestItem = ci as CartItem;
           actualPrice = guestItem.price || guestItem.product.price;

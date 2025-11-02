@@ -164,6 +164,7 @@ export default function CartPage() {
               price: r.value.price,
               originalPrice: r.value.originalPrice,
               images: r.value.images,
+              promotion: r.value.promotion, // Include promotion data
             };
           }
         });
@@ -175,15 +176,27 @@ export default function CartPage() {
     };
   }, [serverItems, serverProducts]);
 
-  // 🔹 Total calculation - Updated to use classification prices
+  // 🔹 Total calculation - Updated to use classification prices with promotion discount
   const total = React.useMemo(() => {
     if (serverItems.length > 0) {
       const calculatedTotal = serverItems.reduce(
         (acc, ci) => {
           const product = serverProducts[String(ci.product_id)];
           if (!product) return acc;
-          // Use classification price if available, otherwise use product base price
-          const actualPrice = ci.classificationPrice || ci.price || product.price;
+
+          // Calculate actual price with promotion discount
+          let actualPrice = ci.classificationPrice || ci.price || product.price;
+
+          // Apply promotion discount if exists
+          if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+            const discountValue = Number(product.promotion.discount_value);
+            if (product.promotion.discount_type === 'PERCENTAGE') {
+              actualPrice = actualPrice * (1 - discountValue / 100);
+            } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+              actualPrice = Math.max(0, actualPrice - discountValue);
+            }
+          }
+
           return acc + actualPrice * (ci.quantity ?? 1);
         },
         0
@@ -264,8 +277,19 @@ export default function CartPage() {
                         const product = serverProducts[String(ci.product_id)];
                         if (!product) return null;
 
-                        // Use classification price if available, otherwise use product base price
-                        const actualPrice = ci.classificationPrice || ci.price || product.price;
+                        // Calculate actual price with promotion discount
+                        let actualPrice = ci.classificationPrice || ci.price || product.price;
+
+                        // Apply promotion discount if exists
+                        if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+                          const discountValue = Number(product.promotion.discount_value);
+                          if (product.promotion.discount_type === 'PERCENTAGE') {
+                            actualPrice = actualPrice * (1 - discountValue / 100);
+                          } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+                            actualPrice = Math.max(0, actualPrice - discountValue);
+                          }
+                        }
+
                         const totalPrice = actualPrice * ci.quantity;
 
                         console.log('🔍 Cart item pricing:', {
