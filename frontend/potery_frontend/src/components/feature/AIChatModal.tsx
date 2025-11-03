@@ -65,7 +65,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
   };
 
   return (
-    <div className="fixed bottom-24 right-5 z-[110] w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col border border-gray-200">
+    <div className="fixed bottom-10 right-20 z-[110] w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col border border-gray-200">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg flex font-bold text-gray-800"><BotIcon  className='mr-2'/> Chat với AI</h2>
