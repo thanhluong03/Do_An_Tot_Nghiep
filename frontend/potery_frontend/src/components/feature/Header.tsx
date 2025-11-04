@@ -5,7 +5,8 @@ import { useAuth } from '../../contexts';
 import { cn } from '../../utils/cn';
 import { categoryApi } from '../../api/modules/category'; // ✅ thêm import API
 import { useCart } from '../../contexts/CartContext';
-import Link from 'next/dist/client/link';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
@@ -100,6 +101,8 @@ export const Header: React.FC = () => {
   const { items } = useCart();
   const cartCount = items.length;
   const { user, isAuthenticated, logout } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // ✅ Lấy danh mục từ API thật
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -126,6 +129,25 @@ export const Header: React.FC = () => {
     { name: 'Tin Tức', href: '/news' },
     { name: 'Liên Hệ', href: '/contact' },
   ];
+
+  const isActiveHref = (href: string) => {
+    if (!pathname) return false;
+    const [pathOnly, query] = href.split('?');
+    if (query) {
+      try {
+        const urlSearch = new URLSearchParams(query);
+        for (const [key, value] of urlSearch.entries()) {
+          if (searchParams?.get(key) === value && pathname === pathOnly) return true;
+        }
+        return false;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    if (pathOnly === '/') return pathname === '/';
+    return pathname === pathOnly || pathname.startsWith(pathOnly + '/');
+  };
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -156,25 +178,31 @@ export const Header: React.FC = () => {
           <nav className="hidden md:flex items-center space-x-8">
             {menuItems.map((item) => (
               <div key={item.name} className="relative group">
-                <a
+                <Link
                   href={item.href}
-                  className="text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200 font-medium"
+                  className={cn(
+                    'text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200 font-medium',
+                    isActiveHref(item.href) && 'text-[#968371]'
+                  )}
                 >
                   {item.name}
-                </a>
+                </Link>
 
                 {/* submenu danh mục */}
                 {item.submenu && item.submenu.length > 0 && (
                   <div className="absolute top-full left-0 mt-2 w-52 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <div className="py-2">
                       {item.submenu.map((subItem) => (
-                        <a
+                        <Link
                           key={subItem.name}
                           href={subItem.href}
-                          className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E] transition-colors duration-200"
+                          className={cn(
+                            'block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E] transition-colors duration-200',
+                            isActiveHref(subItem.href) && 'text-[#968371]'
+                          )}
                         >
                           {subItem.name}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   </div>
@@ -185,16 +213,6 @@ export const Header: React.FC = () => {
 
           {/* ICONS + USER */}
           <div className="flex items-center space-x-4">
-            {/* Search */}
-            <button
-            title='as'
-             className="p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
             {/* Cart */}
             <Link href="/cart" className="relative p-2 text-[#2C2A24] hover:text-[#65604E] transition-colors duration-200">
               <img src="/Bag.png" alt="Giỏ hàng" className="w-5 h-5" />
@@ -236,13 +254,16 @@ export const Header: React.FC = () => {
           <div className="md:hidden border-t border-[#F5F1EB] bg-white">
             <div className="px-2 pt-2 pb-3 space-y-1">
               {menuItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
-                  className="block px-3 py-2 text-base font-medium text-[#2C2A24] hover:bg-[#F5F1EB] rounded-md"
+                  className={cn(
+                    'block px-3 py-2 text-base font-medium text-[#2C2A24] hover:bg-[#F5F1EB] rounded-md',
+                    isActiveHref(item.href) && 'text-[#968371]'
+                  )}
                 >
                   {item.name}
-                </a>
+                </Link>
               ))}
               {isAuthenticated && (
                 <button
