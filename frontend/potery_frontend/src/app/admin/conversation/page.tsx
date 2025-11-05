@@ -4,6 +4,7 @@ import { io, Socket } from "socket.io-client";
 import { conversationApi } from "@/api/services/conversationApi";
 import { getCustomers, Customer } from "@/api/services/customerService";
 import { AdminChatBox } from "@/components/adminChat/AdminChatBox";
+import { useSearchParams } from "next/navigation";
 
 interface Conversation {
   id: number;
@@ -20,6 +21,10 @@ export default function AdminChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const socketRef = useRef<Socket | null>(null);
+
+  const searchParams = useSearchParams();
+  const roleParam = (searchParams.get("role") || "ADMIN").toUpperCase();
+  const senderType = roleParam === "SUPERADMIN" ? "SUPERADMIN" : "ADMIN";
 
   const adminId = 1;
 
@@ -73,9 +78,9 @@ export default function AdminChatPage() {
         const updated = [...prev];
         const idx = updated.findIndex((c) => c.id === msg.conversation_id);
 
-        // 🚨 Lấy ID của người gửi tin nhắn cuối cùng
+        // 🚨 Lấy ID và loại người gửi tin nhắn cuối cùng
         const lastSenderId = msg.sender_id;
-        const isFromAdmin = msg.sender_type === "ADMIN";
+        const isFromStaff = msg.sender_type === "ADMIN" || msg.sender_type === "SUPERADMIN";
 
         if (idx !== -1) {
           // Cập nhật hội thoại hiện có
@@ -85,7 +90,7 @@ export default function AdminChatPage() {
             last_message_time: msg.sent_at,
             // Cập nhật người gửi tin nhắn cuối cùng
             user_id: lastSenderId,
-            unread: !isFromAdmin,
+            unread: !isFromStaff,
           };
         } else {
           // Nếu hội thoại mới (chưa có), thêm vào đầu danh sách
@@ -95,7 +100,7 @@ export default function AdminChatPage() {
             customer_id: lastSenderId, // Giả định customer_id = sender_id nếu là hội thoại mới
             last_message: msg.content,
             last_message_time: msg.sent_at,
-            unread: !isFromAdmin,
+            unread: !isFromStaff,
           });
         }
 
@@ -215,6 +220,7 @@ export default function AdminChatPage() {
             conversationId={selectedConv}
             currentAdminId={adminId}
             customer={selectedCustomer}
+            senderType={senderType}
           />
         ) : (
           <div className="flex items-center justify-center flex-1 text-gray-500">

@@ -8,7 +8,7 @@ interface Message {
   id?: number;
   conversation_id: number;
   sender_id: number;
-  sender_type: "ADMIN" | "USER";
+  sender_type: "ADMIN" | "USER" | "SUPERADMIN";
   content: string;
   sent_at?: string;
 }
@@ -22,9 +22,10 @@ interface ChatBoxProps {
   conversationId: number | null; // Cho phép null khi chưa chọn conversation
   currentAdminId: number;
   customer?: Customer | null;
+  senderType?: "ADMIN" | "SUPERADMIN"; // thêm hỗ trợ SUPERADMIN
 }
 
-export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAdminId, customer }) => {
+export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAdminId, customer, senderType = "ADMIN" }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const socketRef = useRef<Socket | null>(null); // Dùng useRef để tránh re-render không cần thiết
@@ -89,15 +90,15 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
     };
   }, [conversationId]);
 
- useEffect(() => {
-  const scrollContainer = endOfMessagesRef.current?.parentElement;
-  if (scrollContainer) {
-    scrollContainer.scrollTo({
-      top: scrollContainer.scrollHeight,
-      behavior: "smooth",
-    });
-  }
-}, [messages]);
+  useEffect(() => {
+    const scrollContainer = endOfMessagesRef.current?.parentElement;
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages]);
 
   const sendMessage = () => {
     const socket = socketRef.current;
@@ -106,9 +107,9 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
     const newMsg = {
       conversation_id: conversationId,
       sender_id: currentAdminId,
-      sender_type: "ADMIN" as "ADMIN",
+      sender_type: senderType,
       content: input.trim(),
-    };
+    } as const;
 
     // Chỉ emit. Server sẽ gửi 'new_message' về cho cả 2 bên.
     socket.emit("send_message", newMsg);
@@ -123,6 +124,8 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
       </div>
     )
   }
+
+  const isStaff = (type: Message["sender_type"]) => type === "ADMIN" || type === "SUPERADMIN";
 
   return (
   <div className="flex flex-col h-[80vh] bg-white rounded-xl border border-gray-200 shadow-lg">
@@ -152,12 +155,12 @@ export const AdminChatBox: React.FC<ChatBoxProps> = ({ conversationId, currentAd
         <div
           key={m.id || `msg-${i}`}
           className={`flex flex-col ${
-            m.sender_type === "ADMIN" ? "items-end" : "items-start"
+            isStaff(m.sender_type) ? "items-end" : "items-start"
           }`}
         >
           <div
             className={`px-4 py-2 rounded-2xl max-w-[70%] break-words shadow-sm ${
-              m.sender_type === "ADMIN"
+              isStaff(m.sender_type)
                 ? "bg-[#B95D26] text-white"
                 : "bg-gray-200 text-gray-800"
             }`}
