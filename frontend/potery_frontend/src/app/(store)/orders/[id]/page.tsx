@@ -336,7 +336,8 @@ function OrderDetailClient({ id }: { id: string }) {
                       </div>
                     </div>
 
-                    {/* review UI */}
+                    {/* review UI - only when order is DELIVERED */}
+                    {String(order?.status).toUpperCase() === 'DELIVERED' && (
                     <div className="mt-4">
                       {!reviewedProducts.includes(it.product_id) ? (
                         showReviewInput === it.product_id ? (
@@ -415,6 +416,7 @@ function OrderDetailClient({ id }: { id: string }) {
                         </div>
                       )}
                     </div>
+                    )}
                   </div>
                 ))}
               </div>

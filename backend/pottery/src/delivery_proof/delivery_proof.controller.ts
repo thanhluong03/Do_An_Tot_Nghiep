@@ -7,21 +7,40 @@ import { CreateDeliveryProofDto, UpdateDeliveryProofDto, ListDeliveryProofReques
 export class DeliveryProofController {
     constructor(private readonly deliveryProofService: DeliveryProofService) { }
 
-    @Post('createdeliveryproof')
+@Post('createdeliveryproof')
     @UseInterceptors(FileInterceptor('image_proof'))
     async createDeliveryProof(
         @UploadedFile() file: Express.Multer.File,
-        @Body() body: CreateDeliveryProofDto,
+        @Body() body: any,
     ) {
-        if (!body || !body.order_id || !body.user_id) {
-            throw new Error('Missing required fields in request body');
+        // Accept either user_id or driver_id from body
+        const userId = body?.user_id ?? body?.driver_id;
+        const orderId = body?.order_id;
+        if (!orderId || !userId) {
+            throw new Error('Missing required fields: order_id or user_id/driver_id');
         }
-        const { user_id, ...rest } = body;
-        const deliveryProofData = {
-            ...rest,
-            driver_id: user_id,
-            image_proof: file ? file.buffer : undefined,
+
+        // Build payload
+        const deliveryProofData: any = {
+            order_id: Number(orderId),
+            driver_id: Number(userId),
+            captured_at: body?.captured_at ? new Date(body.captured_at) : undefined,
         };
+
+        // Prefer uploaded file; fallback to base64 in body.image_proof or body.image
+        if (file && file.buffer) {
+            deliveryProofData.image_proof = file.buffer;
+        } else if (body?.image_proof || body?.image) {
+            const raw = String(body.image_proof || body.image);
+            const commaIdx = raw.indexOf(',');
+            const base64 = commaIdx >= 0 ? raw.substring(commaIdx + 1) : raw;
+            try {
+                deliveryProofData.image_proof = Buffer.from(base64, 'base64');
+            } catch (e) {
+                // ignore, will be undefined and repository can handle validation
+            }
+        }
+
         return await this.deliveryProofService.createDeliveryProof(deliveryProofData);
     }
 
