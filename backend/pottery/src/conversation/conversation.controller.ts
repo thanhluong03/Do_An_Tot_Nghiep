@@ -12,13 +12,27 @@ export class ConversationController {
 
   @Post('create-conversation')
   async createConversation(@Body() createConversationDto: CreateConversationDto,) {
-    const conversation = await this.conversationService.createConversation(
-      createConversationDto,
-    );
-    return new SuccessResponseDto(
-      'Conversation created successfully',
-      conversation,
-    );
+    console.log('🔵 [POST /conversations/create-conversation] Received:', createConversationDto);
+    try {
+      const conversation = await this.conversationService.createConversation(
+        createConversationDto,
+      );
+      console.log('✅ Conversation created:', conversation);
+      return new SuccessResponseDto(
+        'Conversation created successfully',
+        conversation,
+      );
+    } catch (error) {
+      console.error('❌ Error creating conversation:', error);
+      throw error;
+    }
+  }
+
+  // Route test đơn giản để debug
+  @Post('test-create')
+  async testCreate(@Body() body: any) {
+    console.log('🧪 [POST /conversations/test-create] Test route hit!', body);
+    return { success: true, message: 'Test route works!', received: body };
   }
 
   // ... (Các hàm khác giữ nguyên)
