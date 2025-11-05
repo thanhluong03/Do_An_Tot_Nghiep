@@ -202,7 +202,7 @@ export default function AdminSidebar() {
     );
 
     return (
-        <div className="w-64 bg-white flex flex-col h-screen sticky top-0 overflow-y-auto border-r border-gray-200 shadow-md scrollbar-none">
+        <div className="w-58 bg-white flex flex-col h-screen sticky top-0 overflow-y-auto border-r border-gray-200 shadow-md scrollbar-none">
 
             <div className="p-4 flex flex-col items-center justify-center border-b border-gray-100 mb-4">
                 <Link href="/admin/dashboard" passHref>

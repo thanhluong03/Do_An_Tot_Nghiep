@@ -11,6 +11,23 @@ import { X, Upload, Plus, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+
+
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 // Định nghĩa interface cho lỗi validation (được truyền từ ProductsPage)
@@ -51,6 +68,50 @@ export default function ProductFormModal({
   validationErrors,
   setValidationErrors,
 }: ProductFormModalProps) {
+
+  // --- Component hiển thị từng ảnh có thể kéo ---
+  function SortableImage({ id, src, onRemove, label }: any) {
+    const { attributes, listeners, setNodeRef, transform, transition } =
+      useSortable({ id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition group"
+      >
+        <Image
+          src={src}
+          alt="img"
+          width={112}
+          height={112}
+          className="object-cover w-full h-full"
+        />
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute top-1 right-1 bg-white/80 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-500 hover:text-white transition-all opacity-80 group-hover:opacity-100"
+          title="Xóa ảnh"
+        >
+          ×
+        </button>
+        <div
+          className={`absolute bottom-1 left-1 text-white text-xs px-2 py-1 rounded ${label === "Cũ" ? "bg-blue-500" : "bg-green-500"
+            }`}
+        >
+          {label}
+        </div>
+      </div>
+    );
+  }
+
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
 
@@ -58,9 +119,11 @@ export default function ProductFormModal({
   const [imageOperations, setImageOperations] = useState<{
     existing: Array<{ id: number, url: string, action: 'keep' | 'remove' | 'update', newFile?: File }>,
     newImages: File[]
+    order: string[];
   }>({
     existing: [],
-    newImages: []
+    newImages: [],
+    order: [],
   });
 
   // States cho phân loại sản phẩm
@@ -329,6 +392,7 @@ export default function ProductFormModal({
     const key = createMatrixKey(attr1Name, attr2Name);
     setPriceMatrix(prev => ({ ...prev, [key]: price }));
   };
+  const dndSensors = useSensors(useSensor(PointerSensor));
 
   if (!isModalOpen) return null;
 
@@ -408,13 +472,18 @@ export default function ProductFormModal({
     // Nếu đang edit, gửi thông tin về operations của ảnh
     if (editingProduct) {
       const imageOps = {
-        keep: imageOperations.existing.filter(img => img.action === 'keep').map(img => img.id),
-        remove: imageOperations.existing.filter(img => img.action === 'remove').map(img => img.id),
-        update: imageOperations.existing.filter(img => img.action === 'update').map(img => ({
-          id: img.id,
-          // File sẽ được gửi trong images array
-        }))
+        keep: imageOperations.existing
+          .filter(img => img.action === 'keep')
+          .map(img => img.id),
+        remove: imageOperations.existing
+          .filter(img => img.action === 'remove')
+          .map(img => img.id),
+        update: imageOperations.existing
+          .filter(img => img.action === 'update')
+          .map(img => ({ id: img.id })),
+        order: imageOperations.order || [], // ✅ THÊM DÒNG NÀY
       };
+
       form.append("imageOperations", JSON.stringify(imageOps));
     }
 
@@ -633,69 +702,107 @@ export default function ProductFormModal({
             )}
           </div>
 
-          {/* Preview ảnh */}
-          {(imageOperations.existing.length > 0 || previewImages.length > 0) && (
-            <div className="col-span-2">
-              <label className="block text-base font-semibold text-gray-800 mb-3">
-                Ảnh sản phẩm hiện tại
-              </label>
-              <div className="flex flex-wrap gap-5 mt-2">
+          {/* --- Preview ảnh với kéo thả --- */}
+          {(imageOperations.existing.filter(img => img.action !== "remove").length > 0 ||
+            previewImages.length > 0) && (
+              <div className="col-span-2">
+                <label className="block text-base font-semibold text-gray-800 mb-3">
+                  Sắp xếp ảnh sản phẩm (kéo để đổi vị trí)
+                </label>
 
-                {imageOperations.existing.filter(img => img.action !== 'remove').map((img, i) => (
-                  <div
-                    key={`existing-${img.id}`}
-                    className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition group"
-                  >
-                    <Image
-                      src={img.url}
-                      alt="existing"
-                      width={112}
-                      height={112}
-                      className="object-cover w-full h-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(i, true)}
-                      className="absolute top-1 right-1 bg-white/80 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-500 hover:text-white transition-all opacity-80 group-hover:opacity-100"
-                      title="Xóa ảnh hiện có"
-                    >
-                      ×
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                      Cũ
-                    </div>
-                  </div>
-                ))}
+                <DndContext
+                  sensors={dndSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => {
+                    const { active, over } = event;
+                    if (!over || active.id === over.id) return;
 
-                {/* Ảnh mới được chọn */}
-                {previewImages.map((src, i) => (
-                  <div
-                    key={`new-${i}`}
-                    className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition group"
+                    // Lấy danh sách ảnh cũ (keep) và ảnh mới
+                    const existingImages = imageOperations.existing.filter(img => img.action !== "remove");
+                    const newImages = previewImages.map((src, i) => ({ id: `new-${i}`, url: src }));
+
+                    // Gộp tất cả ảnh để tính vị trí mới
+                    const allImages = [...existingImages, ...newImages];
+
+                    const oldIndex = allImages.findIndex(img => img.id.toString() === active.id.toString());
+                    const newIndex = allImages.findIndex(img => img.id.toString() === over.id.toString());
+                    if (oldIndex === -1 || newIndex === -1) return;
+
+                    const reordered = arrayMove(allImages, oldIndex, newIndex);
+
+                    // Chia lại 2 mảng sau reorder
+                    const reorderedExisting = reordered.filter(img => !img.id.toString().startsWith("new-"));
+                    const reorderedNew = reordered.filter(img => img.id.toString().startsWith("new-"));
+
+                    // ✅ Cập nhật lại state: ảnh cũ giữ đúng id và action
+                    setImageOperations(prev => ({
+                      ...prev,
+                      existing: reorderedExisting.map((img, index) => {
+                        const original = prev.existing.find(x => x.id === Number(img.id));
+                        return original
+                          ? { ...original, url: img.url, order: index } // ✅ thêm order
+                          : { id: Number(img.id), url: img.url, action: "keep" as const, order: index };
+                      }),
+                      newImages: reorderedNew.map((_, i) => prev.newImages[i]).filter(Boolean),
+                      order: reordered.map(img => img.id.toString()), // ✅ lưu mảng thứ tự ID
+                    }));
+
+
+                    // ✅ Cập nhật lại preview images theo thứ tự mới
+                    setPreviewImages(reorderedNew.map(img => img.url));
+
+                    // ✅ Đồng bộ lại files (đảm bảo formData gửi đúng thứ tự)
+                    const reorderedFileIndexes = reorderedNew.map(img =>
+                      Number(String(img.id).split("-")[1])
+                    );
+                    setFiles(prevFiles => reorderedFileIndexes.map(i => prevFiles[i]));
+                  }}
+
+                >
+                  <SortableContext
+                    items={[
+                      ...imageOperations.existing
+                        .filter((img) => img.action !== "remove")
+                        .map((img) => img.id.toString()),
+                      ...previewImages.map((_, i) => `new-${i}`),
+                    ]}
+                    strategy={horizontalListSortingStrategy}
                   >
-                    <Image
-                      src={src}
-                      alt="preview"
-                      width={112}
-                      height={112}
-                      className="object-cover w-full h-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(i, false)}
-                      className="absolute top-1 right-1 bg-white/80 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-500 hover:text-white transition-all opacity-80 group-hover:opacity-100"
-                      title="Xóa ảnh mới"
-                    >
-                      ×
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                      Mới
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      {/* Ảnh cũ */}
+                      {imageOperations.existing
+                        .filter((img) => img.action !== "remove")
+                        .map((img) => (
+                          <SortableImage
+                            key={img.id}
+                            id={img.id.toString()}
+                            src={img.url}
+                            onRemove={() => {
+                              // tìm index đúng của ảnh trong imageOperations.existing
+                              const index = imageOperations.existing.findIndex(x => x.id === img.id);
+                              handleRemoveImage(index, true);
+                            }}
+                            label="Cũ"
+                          />
+                        ))}
+
+
+                      {/* Ảnh mới */}
+                      {previewImages.map((src, i) => (
+                        <SortableImage
+                          key={`new-${i}`}
+                          id={`new-${i}`}
+                          src={src}
+                          onRemove={() => handleRemoveImage(i, false)}
+                          label="Mới"
+                        />
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  </SortableContext>
+                </DndContext>
               </div>
-            </div>
-          )}
+            )}
+
         </div>
 
         {/* Phân loại sản phẩm */}
