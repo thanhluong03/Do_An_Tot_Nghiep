@@ -51,7 +51,7 @@ const AdminAIPage = () => {
       <div className="flex h-[calc(100vh-80px)] bg-gray-50 justify-center items-center">
         <main className="w-full max-w-2xl p-8 bg-white rounded-2xl shadow-lg">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">📄 Quản lý dữ liệu AI</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Quản lý dữ liệu AI</h1>
             <p className="text-gray-600 mt-2">Tải lên tài liệu để huấn luyện cho chatbot.</p>
           </div>
 

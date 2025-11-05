@@ -26,6 +26,7 @@ export interface IUpdateProduct {
     keep: number[];
     remove: number[];
     update: Array<{ id: number }>;
+    order?: (string | number)[]; 
   };
 }
 

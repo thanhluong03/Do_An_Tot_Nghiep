@@ -304,7 +304,7 @@ export default function NewsPage() {
                                         ],
                                     }}
 
-                                    className="bg-white border border-gray-300 rounded-lg min-h-[500px]"
+                                    className="bg-white border border-gray-300 rounded-lg min-h-[500px] overflow-hidden"
                                 />
                                 {errors.content && <p className="text-red-500 text-xs mt-1">{errors.content}</p>}
                             </div>

@@ -312,7 +312,7 @@ export class ProductService {
       if (data.imageOperations) {
         // Logic mới: xử lý operations
         console.log('Using new imageOperations logic:', data.imageOperations);
-        const { keep, remove, update } = data.imageOperations;
+        const { keep, remove, update, order } = data.imageOperations;
 
         // Xóa các ảnh được đánh dấu remove
         if (remove && remove.length > 0) {
@@ -338,7 +338,27 @@ export class ProductService {
           await this.productImageRepository.createMany(newImages);
           console.log('Added', data.images.length, 'new images');
         }
+        if (order && Array.isArray(order) && order.length > 0) {
+          console.log('Updating image priorities based on new order:', order);
+          for (let i = 0; i < order.length; i++) {
+            const imgId = Number(order[i]);
+            if (!isNaN(imgId)) {
+              await this.productImageRepository.update(imgId, { priority: i + 1 });
+            }
+          }
 
+          // Cập nhật ảnh chính theo thứ tự mới
+          const firstImageId = Number(order[0]);
+          if (!isNaN(firstImageId)) {
+            const remaining = await this.productImageRepository.findByProductId(id);
+            for (const img of remaining) {
+              if (img.is_main_image) {
+                await this.productImageRepository.update(img.id, { is_main_image: false });
+              }
+            }
+            await this.productImageRepository.update(firstImageId, { is_main_image: true });
+          }
+        }
         // Update main image (ảnh đầu tiên còn lại)
         const allRemainingImages = await this.productImageRepository.findByProductId(id);
         if (allRemainingImages.length > 0) {
