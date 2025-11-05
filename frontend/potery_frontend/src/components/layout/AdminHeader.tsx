@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
-import { LogOut, User } from "lucide-react";
+import { LockKeyhole, LogOut, User } from "lucide-react";
 
 interface HeaderInfo {
   title: string;
@@ -110,6 +110,9 @@ export default function AdminHeader() {
   const handleProfile = () => {
     router.push("/admin/profileAdmin");
   };
+  const handleChangePassword = () => {
+    router.push("/admin/changePassword");
+  };
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
@@ -177,6 +180,13 @@ export default function AdminHeader() {
             >
               <User className="w-4 h-4 mr-2 text-gray-500" />
               Trang cá nhân
+            </button>
+            <button
+              onClick={handleChangePassword}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+            >
+              <LockKeyhole className="w-4 h-4 mr-2 text-gray-500" />
+              Đổi mật khẩu
             </button>
             <button
               onClick={handleLogout}

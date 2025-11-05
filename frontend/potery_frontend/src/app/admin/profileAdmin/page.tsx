@@ -4,28 +4,33 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { getUserDetail, updateUser, getUserAvatarUrl, User } from "@/api/services/userService";
-import { Pencil, Save, X, User as UserIcon } from "lucide-react";
+import { Pencil, Save, X, User as UserIcon, AlertCircle } from "lucide-react";
 
 // --- Custom Components for better readability and reuse (optional, but good practice) ---
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   isEditing: boolean;
+  error?: string;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, isEditing, ...props }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, isEditing, error, ...props }) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
     <input
       {...props}
       readOnly={!isEditing}
-      className={`w-full border rounded-lg p-3 text-gray-800 transition duration-150 ease-in-out ${
-        isEditing
+      className={` appearance-none w-full border rounded-lg p-3 text-gray-800 transition duration-150 ease-in-out ${isEditing
           ? "border-orange-200 focus:ring-2 focus:ring-[#B95D26] focus:border-[#B95D26]"
-          : "border-gray-200 bg-gray-50 cursor-default shadow-inner"
-      } disabled:opacity-80`}
+          : "border-gray-100 bg-gray-50 cursor-default shadow-inner"
+        } disabled:opacity-80`}
       autoComplete={props.type === "password" ? "new-password" : "off"}
     />
+    {error && (
+      <div className="flex items-center text-sm text-red-500 mt-1">
+        <AlertCircle size={14} className="mr-1" /> {error}
+      </div>
+    )}
   </div>
 );
 
@@ -39,12 +44,12 @@ export default function AdminProfilePage() {
     email: "",
     phone_number: "",
     address: "",
-    password: "",
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const adminId = Number(typeof window !== "undefined" ? localStorage.getItem("adminID") || 0 : 0);
 
@@ -60,7 +65,6 @@ export default function AdminProfilePage() {
           email: res.email || "",
           phone_number: res.phone_number || "",
           address: res.address || "",
-          password: "",
         });
         setAvatarPreview(getUserAvatarUrl(res));
       } catch (err) {
@@ -72,7 +76,7 @@ export default function AdminProfilePage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Chỉ cho thay đổi khi đang edit (trừ field username - đã đọc ở logic gốc)
-    if (!isEditing && e.target.name !== "username") return; 
+    if (!isEditing && e.target.name !== "username") return;
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
   };
 
@@ -84,6 +88,27 @@ export default function AdminProfilePage() {
       setAvatarPreview(URL.createObjectURL(f));
     }
   };
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!form.full_name.trim() || form.full_name.length < 2) {
+      newErrors.full_name = "Họ tên phải có ít nhất 2 ký tự.";
+    }
+
+    if (!form.email.trim()) {
+      newErrors.email = "Email là bắt buộc.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = "Email không hợp lệ.";
+    }
+
+    if (form.phone_number && !/^\d{9,15}$/.test(form.phone_number)) {
+      newErrors.phone_number = "Số điện thoại phải gồm 9–15 chữ số.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
 
   const handleStartEdit = () => {
     setIsEditing(true);
@@ -101,14 +126,18 @@ export default function AdminProfilePage() {
       email: user.email || "",
       phone_number: user.phone_number || "",
       address: user.address || "",
-      password: "",
     });
     setAvatarPreview(getUserAvatarUrl(user));
   };
 
   const handleSubmit = async () => {
     if (!user || !user.id) return;
+    if (!validateForm()) {
+      toast.error("Vui lòng kiểm tra lại thông tin nhập vào!");
+      return;
+    }
     setSaving(true);
+
     try {
       const formData = new FormData();
       // formData.append("username", form.username); // username typically not editable
@@ -116,7 +145,6 @@ export default function AdminProfilePage() {
       formData.append("email", form.email);
       formData.append("phone_number", form.phone_number);
       formData.append("address", form.address);
-      if (form.password) formData.append("password", form.password);
       if (avatarFile) formData.append("avatar_image", avatarFile);
 
       await updateUser(user.id, formData);
@@ -193,10 +221,10 @@ export default function AdminProfilePage() {
 
         {/* Profile Details Section */}
         <div className="p-6 md:p-8">
-          
+
           {/* Avatar and Username Card */}
           <div className="flex flex-col md:flex-row items-center gap-8 p-6 mb-8 bg-indigo-50 rounded-xl border border-indigo-200 shadow-inner">
-            
+
             {/* Avatar */}
             <div className="relative h-36 w-36 flex-shrink-0">
               <Image
@@ -241,8 +269,8 @@ export default function AdminProfilePage() {
               value={form.full_name}
               onChange={handleChange}
               isEditing={isEditing}
+              error={errors.full_name}
             />
-
             <InputField
               label="Email"
               name="email"
@@ -250,8 +278,8 @@ export default function AdminProfilePage() {
               value={form.email}
               onChange={handleChange}
               isEditing={isEditing}
+              error={errors.email}
             />
-
             <InputField
               label="Số điện thoại"
               name="phone_number"
@@ -259,8 +287,8 @@ export default function AdminProfilePage() {
               value={form.phone_number}
               onChange={handleChange}
               isEditing={isEditing}
+              error={errors.phone_number}
             />
-
             <InputField
               label="Địa chỉ"
               name="address"
@@ -268,20 +296,6 @@ export default function AdminProfilePage() {
               onChange={handleChange}
               isEditing={isEditing}
             />
-
-            {isEditing && (
-              <div className="md:col-span-2">
-                <InputField
-                  label="Mật khẩu mới (Để trống nếu không muốn đổi)"
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  isEditing={isEditing}
-                  placeholder="********"
-                />
-              </div>
-            )}
           </div>
 
           {/* Footer message */}

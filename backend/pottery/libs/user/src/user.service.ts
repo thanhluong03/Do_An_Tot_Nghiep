@@ -1,5 +1,5 @@
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '../../database/src/repositories/user.repository';
 import { ICreateUser, IUpdateUser, IListUser } from './user.interface';
 import * as bcrypt from 'bcrypt';
@@ -87,4 +87,17 @@ export class UserService {
             users: formattedUsers,
         };
     }
+    async changePassword(id: number, oldPassword: string, newPassword: string) {
+        const user = await this.userRepository.findById(id);
+        if (!user) throw new NotFoundException('User not found');
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+        if (!isMatch) throw new BadRequestException('Mật khẩu cũ không đúng');
+
+        const newHash = await bcrypt.hash(newPassword, 10);
+        await this.userRepository.update(id, { password_hash: newHash });
+
+        return { message: 'Đổi mật khẩu thành công' };
+    }
+
 }
