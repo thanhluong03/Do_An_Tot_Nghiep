@@ -190,11 +190,11 @@ export default function ProductsPage() {
       errors.name = "Tên sản phẩm phải từ 3 đến 255 ký tự.";
     }
 
-    if (data.price === undefined || data.price <= 0) {
-      errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
-    } else if (isNaN(data.price)) {
-      errors.price = "Giá sản phẩm không hợp lệ.";
-    }
+    // if (data.price === undefined || data.price <= 0) {
+    //   errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
+    // } else if (isNaN(data.price)) {
+    //   errors.price = "Giá sản phẩm không hợp lệ.";
+    // }
 
     if (!data.description || data.description.trim() === "") {
       errors.description = "Mô tả sản phẩm không được để trống.";

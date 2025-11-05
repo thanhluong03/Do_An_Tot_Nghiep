@@ -67,11 +67,11 @@ export default function OrderStatusModal({
               onChange={(e) => setStatus(e.target.value as OrderStatus)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              <option value="CREATED">CREATED - Chờ xác nhận</option>
-              <option value="CONFIRMED">CONFIRMED - Đã xác nhận</option>
+              <option value="CREATED">Chờ xác nhận</option>
+              <option value="CONFIRMED">Đã xác nhận</option>
               {/* <option value="SHIPPING">SHIPPING - Đang giao</option>
               <option value="DELIVERED">DELIVERED - Đã giao</option> */}
-              <option value="REJECTED">REJECTED - Từ chối</option>
+              <option value="REJECTED">Từ chối</option>
               {/* <option value="CANCELLED">CANCELED - Đã hủy</option> */}
             </select>
           </div>
@@ -84,10 +84,10 @@ export default function OrderStatusModal({
               onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              <option value="UNPAID">UNPAID - Chưa thanh toán</option>
+              <option value="UNPAID">Chưa thanh toán</option>
               {/* <option value="PENDING">PENDING - Đang xử lý</option> */}
-              <option value="PAID">PAID - Đã thanh toán</option>
-              <option value="REFUNDED">REFUNDED - Hoàn tiền</option>
+              <option value="PAID">Đã thanh toán</option>
+              <option value="REFUNDED">Hoàn tiền</option>
             </select>
           </div>
 
@@ -99,9 +99,9 @@ export default function OrderStatusModal({
               onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
             >
-              <option value="COD">COD - Thanh toán khi nhận hàng</option>
-              <option value="BANK_TRANSFER">BANK TRANSFER - Chuyển khoản</option>
-              <option value="CARD">CARD - Thẻ ngân hàng</option>
+              <option value="COD">Thanh toán khi nhận hàng</option>
+              <option value="BANK_TRANSFER">Chuyển khoản</option>
+              <option value="CARD">Thẻ ngân hàng</option>
             </select>
           </div>
         </div>

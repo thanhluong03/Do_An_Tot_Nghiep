@@ -146,12 +146,12 @@ export default function SupplierPage() {
           <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
             <thead>
               <tr className="bg-gray-100 text-gray-700 text-sm uppercase">
-                <th className="px-4 py-3 text-left">STT</th>
-                <th className="px-4 py-3 text-left">Tên</th>
-                <th className="px-4 py-3 text-left">Địa chỉ</th>
-                <th className="px-4 py-3 text-left">Điện thoại</th>
-                <th className="px-4 py-3 text-left">Email</th>
-                <th className="px-4 py-3 text-center">Hành động</th>
+                <th className="px-1 py-3 text-left">STT</th>
+                <th className="px-1 py-3 text-left">Tên</th>
+                <th className="px-1 py-3 text-left">Địa chỉ</th>
+                <th className="px-1 py-3 text-left">Điện thoại</th>
+                <th className="px-1 py-3 text-left">Email</th>
+                <th className="px-1 py-3 text-center">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -160,12 +160,12 @@ export default function SupplierPage() {
                   key={s.id}
                   className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
                 >
-                  <td className="px-4 py-3 text-gray-500 text-sm">{idx + 1}</td>
-                  <td className="px-4 py-3 text-gray-600 text-sm">{s.name}</td>
-                  <td className="px-4 py-3 text-gray-600 text-sm">{s.address}</td>
-                  <td className="px-4 py-3 text-gray-600 text-sm">{s.phone}</td>
-                  <td className="px-4 py-3 text-gray-600 text-sm">{s.email}</td>
-                  <td className="px-4 py-3 flex gap-2 justify-center">
+                  <td className="px-1 py-3 text-gray-500 text-sm">{idx + 1}</td>
+                  <td className="px-1 py-3 text-gray-600 text-sm">{s.name}</td>
+                  <td className="px-1 py-3 text-gray-600 text-sm">{s.address}</td>
+                  <td className="px-1 py-3 text-gray-600 text-sm">{s.phone}</td>
+                  <td className="px-1 py-3 text-gray-600 text-sm">{s.email}</td>
+                  <td className="px-1 py-3 flex gap-2 justify-center">
                     <button
                       title="sua"
                       onClick={() => handleEdit(s)}
