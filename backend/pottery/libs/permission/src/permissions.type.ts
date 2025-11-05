@@ -55,6 +55,9 @@ export const AVAILABLE_PERMISSIONS = {
     'admin/ai': [
         { key: 'admin/ai', name: 'Quản lý AI' },
     ],
+    'admin/changePassword': [
+        { key: 'admin/changePassword', name: 'Đổi mật khẩu' },
+    ],
     'admin/driver-order': [
         { key: 'admin/driver-order', name: 'Quản lý đơn hàng tài xế' },
     ],

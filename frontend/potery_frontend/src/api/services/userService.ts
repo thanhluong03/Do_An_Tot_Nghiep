@@ -10,20 +10,20 @@ export interface User {
     address?: string;
     is_active?: boolean;
     role_id: number;
-    avatar_image?: string | { type: string; data: number[] }; 
+    avatar_image?: string | { type: string; data: number[] };
 }
 
 const bufferToBase64 = (buffer: { data: number[] }): string | null => {
     if (typeof window === 'undefined' || !buffer || !buffer.data) {
         return null;
     }
-    
+
     try {
         const binary = new Uint8Array(buffer.data).reduce(
             (acc, byte) => acc + String.fromCharCode(byte),
             ""
         );
-        return `data:image/jpeg;base64,${btoa(binary)}`; 
+        return `data:image/jpeg;base64,${btoa(binary)}`;
     } catch (error) {
         console.error(error);
         return null;
@@ -31,7 +31,7 @@ const bufferToBase64 = (buffer: { data: number[] }): string | null => {
 };
 
 export const getUserAvatarUrl = (user: User): string => {
-    const defaultImage = "http://localhost:3001/noAva.png"; 
+    const defaultImage = "http://localhost:3001/noAva.png";
     const avatarData = user.avatar_image;
 
     if (!avatarData) {
@@ -40,16 +40,16 @@ export const getUserAvatarUrl = (user: User): string => {
 
     if (typeof avatarData === "string" && avatarData.trim() !== "") {
         const trimmedData = avatarData.trim();
-        
+
         if (trimmedData.startsWith("data:") || trimmedData.startsWith("http")) {
             return trimmedData;
         }
-        
+
         if (trimmedData.length > 100 && !trimmedData.includes('/')) {
-             return `data:image/jpeg;base64,${trimmedData}`;
+            return `data:image/jpeg;base64,${trimmedData}`;
         }
 
-        return trimmedData; 
+        return trimmedData;
     }
 
     if (typeof avatarData === "object" && avatarData !== null && "data" in avatarData && Array.isArray(avatarData.data)) {
@@ -89,5 +89,12 @@ export async function updateUser(id: number, data: FormData) {
 
 export async function deleteUser(id: number) {
     const res = await axios.delete(`${API_URL}/deleteuser/${id}`);
+    return res.data;
+}
+export async function changePassword(
+    userId: number,
+    data: { oldPassword: string; newPassword: string }
+) {
+    const res = await axios.put(`${API_URL}/changepassword/${userId}`, data);
     return res.data;
 }

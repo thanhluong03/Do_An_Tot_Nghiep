@@ -2,6 +2,9 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UploadedFile, U
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from '../../libs/user/src/user.service';
 import { CreateUserDto, UpdateUserDto, ListUserRequestDto } from './user.dto';
+import { BadRequestException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+
 
 @Controller('users')
 export class UserController {
@@ -77,4 +80,13 @@ export class UserController {
     async getDrivers() {
         return await this.userService.getDrivers();
     }
+
+    @Put('changepassword/:id')
+    async changePassword(
+        @Param('id') id: number,
+        @Body() body: { oldPassword: string; newPassword: string },
+    ) {
+        return this.userService.changePassword(Number(id), body.oldPassword, body.newPassword);
+    }
+
 }

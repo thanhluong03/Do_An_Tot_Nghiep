@@ -119,9 +119,9 @@ export default function OrderTable({
                   {translateStatus(order.payment_status)}
                 </span>
               </td>
-             <td className="px-4 py-3 text-gray-600">
-              {order.order_date
-                ? new Date(order.order_date).toLocaleString("vi-VN", {
+              <td className="px-4 py-3 text-gray-600">
+                {order.order_date
+                  ? new Date(order.order_date).toLocaleString("vi-VN", {
                     day: "2-digit",
                     month: "2-digit",
                     year: "numeric",
@@ -129,8 +129,8 @@ export default function OrderTable({
                     minute: "2-digit",
                     hour12: false,
                   })
-                : "Không có ngày"}
-            </td>
+                  : "Không có ngày"}
+              </td>
 
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                 {order.status === 'CONFIRMED' ? (
@@ -167,13 +167,16 @@ export default function OrderTable({
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                <button
-                  title="Chỉnh sửa trạng thái"
-                  onClick={() => onEditStatus(order)}
-                  className="p-2 rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
-                >
-                  <Package className="w-4 h-4" />
-                </button>
+                {order.status !== "CANCELLED" && order.status !== "REJECTED" && (
+                  <button
+                    title="Chỉnh sửa trạng thái"
+                    onClick={() => onEditStatus(order)}
+                    className="p-2 rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+                  >
+                    <Package className="w-4 h-4" />
+                  </button>
+                )}
+
                 {(order.status === 'SHIPPING' || order.status === 'CONFIRMED') && onViewTracking && (
                   <button
                     title="Xem tracking"
