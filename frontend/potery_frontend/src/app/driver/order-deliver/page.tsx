@@ -6,9 +6,11 @@ import {
   getOrdersForDriver,
   acceptOrder,
   rejectOrder,
+  createDeliveryProof,
   DriverLocation,
   DriverStatus,
 } from '@/api/services/deliveryService';
+import { updateOrder } from '@/api/services/orderService';
 import { useAuth } from '@/contexts'; // Import useAuth để lấy ID tài xế
 import toast, { Toaster } from 'react-hot-toast';
 import { Check, X, Package, Clock, MapPin, User, Phone, Truck, Inbox } from 'lucide-react';
@@ -18,11 +20,14 @@ const formatCurrency = (amount: string | number) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(Number(amount));
 };
 
-const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
+const OrderCard = ({ assignment, onAccept, onReject, onUploadProof, onComplete, isProcessing, mode }: {
   assignment: DriverLocation;
   onAccept: (orderId: number) => void;
   onReject: (orderId: number) => void;
+  onUploadProof?: (orderId: number, file: File) => void;
+  onComplete?: (orderId: number) => void;
   isProcessing: boolean;
+  mode: 'WAITING' | 'SHIPPING' | 'DELIVERED';
 }) => {
   const order = assignment.order;
 
@@ -34,16 +39,19 @@ const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
     );
   }
 
-  const isWaiting = assignment.driver_status === DriverStatus.WAITING_ACCEPT;
+  const isWaiting = mode === 'WAITING';
+  const isShipping = mode === 'SHIPPING';
+  const isDelivered = mode === 'DELIVERED';
+  const [file, setFile] = React.useState<File | null>(null);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden transition-all hover:shadow-md">
       <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
         <h3 className="font-bold text-lg text-indigo-700">Đơn hàng #{order.id}</h3>
         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-          isWaiting ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+          isWaiting ? 'bg-yellow-100 text-yellow-800' : isDelivered ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
         }`}>
-          {isWaiting ? 'Chờ xác nhận' : 'Đang giao'}
+          {isWaiting ? 'Chờ xác nhận' : isDelivered ? 'Đã giao' : 'Đang giao'}
         </span>
       </div>
       <div className="p-5 space-y-4">
@@ -84,15 +92,20 @@ const OrderCard = ({ assignment, onAccept, onReject, isProcessing }: {
           </button>
         </div>
       )}
-      {!isWaiting && (
+      {isShipping && (
         <div className="p-4 bg-blue-50 border-t">
           <a
             href={`/driver/tracking/${order.id}`}
             className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-white bg-blue-600 border border-blue-700 rounded-lg hover:bg-blue-700 transition"
           >
             <MapPin className="w-4 h-4" />
-            Xem tracking
+            Xem tracking & cập nhật minh chứng
           </a>
+        </div>
+      )}
+      {isDelivered && (
+        <div className="p-4 bg-green-50 border-t">
+          <span className="text-green-700 text-sm">Đơn hàng đã giao thành công.</span>
         </div>
       )}
     </div>
@@ -104,7 +117,8 @@ function OrderDeliverContent() {
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DriverStatus>(DriverStatus.WAITING_ACCEPT);
+  type TabType = DriverStatus | 'DELIVERED';
+  const [activeTab, setActiveTab] = useState<TabType>(DriverStatus.WAITING_ACCEPT);
   
   // ✅ Lấy driver_id từ localStorage (admin login) thay vì useAuth
   const driverId = typeof window !== 'undefined' 
@@ -120,7 +134,7 @@ function OrderDeliverContent() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getOrdersForDriver(Number(driverId), { status: activeTab });
+      const data = await getOrdersForDriver(Number(driverId), (activeTab === 'DELIVERED') ? undefined : { status: activeTab as DriverStatus });
       setAssignments(data);
     } catch (err) {
       setError("Không thể tải danh sách đơn hàng. Vui lòng thử lại.");
@@ -132,6 +146,19 @@ function OrderDeliverContent() {
 
   useEffect(() => {
     fetchDriverOrders();
+  }, [fetchDriverOrders]);
+
+  // Refetch when page regains focus (e.g., after completing in tracking)
+  useEffect(() => {
+    const onFocus = () => fetchDriverOrders();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+      }
+    };
   }, [fetchDriverOrders]);
 
   const handleAcceptOrder = async (orderId: number) => {
@@ -196,6 +223,43 @@ function OrderDeliverContent() {
     }).finally(() => setIsProcessing(false));
   };
 
+  const handleUploadProof = async (orderId: number, file: File) => {
+    if (!driverId) {
+      toast.error('Thiếu thông tin tài xế.');
+      return;
+    }
+    setIsProcessing(true);
+    const promise = createDeliveryProof({ order_id: orderId, driver_id: Number(driverId), image: file });
+    toast.promise(promise, {
+      loading: 'Đang lưu minh chứng...',
+      success: 'Đã lưu minh chứng!',
+      error: 'Lưu minh chứng thất bại!',
+    }).finally(() => setIsProcessing(false));
+  };
+
+  const handleCompleteOrder = async (orderId: number) => {
+    if (!driverId) {
+      toast.error('Thiếu thông tin tài xế.');
+      return;
+    }
+    setIsProcessing(true);
+    const promise = updateOrder(orderId, {
+      status: 'DELIVERED',
+      payment_status: 'PAID',
+      payment_method: 'ONSITE',
+      user_id: Number(driverId),
+    } as any);
+    toast.promise(promise, {
+      loading: 'Đang hoàn tất đơn hàng...',
+      success: () => {
+        // Sau khi hoàn tất, làm mới danh sách hiện tại
+        setAssignments(prev => prev.filter(a => a.order_id !== orderId));
+        return 'Đã cập nhật trạng thái đơn hàng!';
+      },
+      error: 'Cập nhật đơn hàng thất bại!',
+    }).finally(() => setIsProcessing(false));
+  };
+
   return (
     <>
       <Toaster position="top-right" />
@@ -231,6 +295,18 @@ function OrderDeliverContent() {
             <Truck className="mr-2 w-5 h-5" />
             <span>Đang giao</span>
           </button>
+          <button
+            onClick={() => setActiveTab('DELIVERED')}
+            className={cn(
+              "group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm",
+              activeTab === 'DELIVERED'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            )}
+          >
+            <Check className="mr-2 w-5 h-5" />
+            <span>Đã giao</span>
+          </button>
         </nav>
       </div>
 
@@ -246,13 +322,19 @@ function OrderDeliverContent() {
       {!loading && !error && (
         assignments.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {assignments.map((assignment) => (
+            {(activeTab === 'DELIVERED'
+              ? assignments.filter(a => a.order?.status === 'DELIVERED')
+              : assignments.filter(a => a.order?.status !== 'DELIVERED')
+            ).map((assignment) => (
               <OrderCard
                 key={assignment.id}
                 assignment={assignment}
                 onAccept={handleAcceptOrder}
                 onReject={handleRejectOrder}
+                onUploadProof={handleUploadProof}
+                onComplete={handleCompleteOrder}
                 isProcessing={isProcessing}
+                mode={activeTab === 'DELIVERED' ? 'DELIVERED' : (assignment.driver_status === DriverStatus.WAITING_ACCEPT ? 'WAITING' : 'SHIPPING')}
               />
             ))}
           </div>

@@ -77,6 +77,7 @@ export interface ListOrderParams {
   payment_status?: PaymentStatus;
   shipping_address?: string;
   payment_method?: PaymentMethod;
+  user_id?: number;
 }
 export interface Store {
   id: number;

@@ -82,6 +82,13 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
             >
               Đơn hàng
             </Link>
+            <Link
+              href="/profile/change-password"
+              className="block px-4 py-2 text-sm text-[#2C2A24] hover:bg-[#F5F1EB] hover:text-[#65604E]"
+              onClick={() => setIsOpen(false)}
+            >
+              Đổi mật khẩu
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 border-t border-[#F5F1EB]"
