@@ -19,10 +19,11 @@ export default function CategoryModal({ open, onClose, editingCategory, onSucces
   const [form, setForm] = useState<Category>(initialForm);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  useEffect(() => {
-    if (editingCategory) setForm(editingCategory);
-    else setForm(initialForm);
-  }, [editingCategory]);
+ useEffect(() => {
+  if (editingCategory) setForm(editingCategory);
+  else setForm(initialForm);
+}, [editingCategory, open]);
+
 
   if (!open) return null;
 
@@ -53,6 +54,7 @@ export default function CategoryModal({ open, onClose, editingCategory, onSucces
         toast.success("Cập nhật danh mục thành công!");
       } else {
         await addCategory(form);
+        setForm(initialForm); 
         toast.success("Thêm danh mục mới thành công!");
       }
       onSuccess();

@@ -397,7 +397,7 @@ export default function ProductFormModal({
 
     const form = new FormData();
     form.append("name", formData.name);
-    form.append("price", formData.price.toString());
+    //form.append("price", formData.price.toString());
     form.append("description", formData.description || "");
     form.append("category_id", (formData.category_id || 0).toString());
     form.append("supplier_id", (formData.supplier_id || 0).toString());
@@ -498,7 +498,7 @@ export default function ProductFormModal({
         {/* Form nội dung */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2 gap-y-2">
           {/* Tên sản phẩm */}
-          <div className="">
+          <div className="col-span-2">
             <label className="block text-base font-semibold text-gray-800 mb-1">
               Tên sản phẩm
             </label>
@@ -514,7 +514,7 @@ export default function ProductFormModal({
             )}
           </div>
 
-          {/* Giá */}
+          {/* Giá
           <div>
             <label className="block text-base font-semibold text-gray-800 mb-1">
               Giá (VNĐ)
@@ -529,7 +529,7 @@ export default function ProductFormModal({
             {validationErrors.price && (
               <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
             )}
-          </div>
+          </div> */}
 
           {/* Danh mục */}
           <div>
@@ -581,7 +581,7 @@ export default function ProductFormModal({
           <div className="col-span-2">
             <label className="block text-base font-semibold text-gray-800 mb-1"
               htmlFor="product-description">Mô tả</label>
-            <div className={`transition ${validationErrors.description ? 'border-red-500 focus-within:ring-red-500' : 'focus-within:ring-orange-500'} focus-within:ring-2 rounded-xl`}>
+            <div className={`transition ${validationErrors.description ? 'border-red-500 focus-within:ring-red-500' : ''} rounded-xl`}>
               <ReactQuill
                 value={formData.description || ""} // Sử dụng giá trị từ formData
                 onChange={(content) => {
@@ -599,7 +599,7 @@ export default function ProductFormModal({
                 placeholder="Nhập mô tả chi tiết sản phẩm..."
                 className="w-full"
                 // Set height cho editor
-                style={{ height: '200px' }}
+                style={{ height: '300px' }}
               />
             </div>
             {validationErrors.description && (

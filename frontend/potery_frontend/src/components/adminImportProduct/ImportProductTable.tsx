@@ -156,8 +156,8 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-left text-sm text-gray-700 font-medium">
-                                            <div className="text-gray-800 truncate">{productName}</div>
+                                        <td className="px-4 py-3 text-left text-sm text-gray-700 font-medium truncate max-w-[300px]">
+                                            <div className="text-gray-800 break-words line-clamp-2">{productName}</div>
                                             {hasDetails && (
                                                 <div className="text-xs text-gray-500">
                                                     {item.details?.length || 0} phân loại

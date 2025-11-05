@@ -239,7 +239,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                                     placeholder="0"
                                                                     value={formatNumber(selectedProducts[p.id]?.quantity)}
                                                                     onChange={(e) => handleInputChange(String(p.id), "quantity", e.target.value)}
-                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 text-right font-mono"
+                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm0 text-right"
                                                                 />
                                                             </div>
                                                             <div>
@@ -252,7 +252,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                                     placeholder="0"
                                                                     value={formatNumber(selectedProducts[p.id]?.price)}
                                                                     onChange={(e) => handleInputChange(String(p.id), "price", e.target.value)}
-                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 text-right font-mono"
+                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm  text-right"
                                                                 />
                                                             </div>
                                                         </div>
@@ -266,7 +266,6 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                     </div>
                 </div>
 
-                {/* -------------------- CỘT PHẢI (5/12) (Giữ nguyên) -------------------- */}
                 <div className="lg:col-span-5">
 
                     <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
@@ -275,7 +274,6 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                     </h4>
 
                     <div className={`${MAX_HEIGHT_SCROLL_AREA} overflow-y-auto border border-gray-300 rounded-xl p-3 bg-white shadow-lg space-y-2`}>
-                        {/* ... (Nội dung chọn sản phẩm giữ nguyên) ... */}
                         {!selectedSupplier ? (
                             <p className="text-center text-gray-500 py-10 font-light">Chọn NCC để tải danh sách.</p>
                         ) : (
@@ -327,7 +325,6 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
             </div>
 
 
-            {/* --- FOOTER & BUTTON (Giữ nguyên) --- */}
             <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
                 <button
                     onClick={handleSubmit}

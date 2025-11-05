@@ -213,7 +213,7 @@ export default function AdminSidebar() {
                     />
                 </Link>
             </div>
-            <nav className="p-4 flex-1 space-y-4">
+            <nav className="p-4 flex-1 space-y-4 mb-10">
                 {renderMenuSection("Tổng Quan", dashboardItems)}
                 {renderMenuSection("Đơn hàng", orderItems)}
                 {renderMenuSection("Sản phẩm", salesOperationsItems)}
