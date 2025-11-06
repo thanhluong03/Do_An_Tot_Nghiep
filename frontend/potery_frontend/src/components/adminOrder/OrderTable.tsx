@@ -50,7 +50,7 @@ const getStatusColor = (status: OrderStatus | PaymentStatus) => {
 const translateStatus = (status: OrderStatus | PaymentStatus): string => {
   const translations: Record<string, string> = {
     // Trạng thái đơn hàng
-    CREATED: "CHờ xác nhận",
+    CREATED: "Chờ xác nhận",
     CONFIRMED: "Đã xác nhận",
     SHIPPING: "Đang giao",
     DELIVERED: "Đã giao",
