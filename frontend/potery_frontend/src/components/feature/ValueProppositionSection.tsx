@@ -330,18 +330,15 @@ export function JournalSection() {
                     <span className="text-sm font-medium text-[#8B7D6B] uppercase tracking-wider bg-white px-4 py-1 rounded-full inline-block mb-4 border border-[#F5F1EB]">
                         Nhật Ký Gốm Sứ
                     </span>
-
                     {/* Tiêu đề chính */}
                     <h2 className="text-5xl md:text-6xl font-serif font-bold text-[#2C2A24] mb-4">
                         Câu Chuyện & <span className="text-[#8B7D6B]">Cảm Hứng</span>
                     </h2>
-
                     {/* Mô tả */}
                     <p className="text-lg text-[#65604E] max-w-4xl mx-auto leading-relaxed">
                         Khám phá những câu chuyện thú vị về nghệ thuật gốm sứ, kỹ thuật chế tác và xu hướng thiết kế
                     </p>
                 </div>
-
                 {/* Blog Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
                     {featuredPosts.map((post, index) => (
