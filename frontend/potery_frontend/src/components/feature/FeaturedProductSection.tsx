@@ -115,11 +115,6 @@ export const FeaturedProductSection: React.FC = () => {
               <h1 className="text-6xl font-serif font-bold text-[#2C2A24] mb-4">
                 {product.name}
               </h1>
-
-              <p className="text-sm text-[#65604E] leading-relaxed mb-6">
-                {product.description || 'Không có mô tả.'}
-              </p>
-
               <div className="space-y-3 mb-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-1.5 h-1.5 bg-[#8B7D6B] rounded-full flex-shrink-0"></div>

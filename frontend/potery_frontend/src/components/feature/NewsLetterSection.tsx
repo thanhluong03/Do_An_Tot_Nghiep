@@ -21,6 +21,7 @@ export function NewsletterSection() {
                     </p>
                     
                     {/* Input and Button */}
+                    {/*
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto mb-4">
                         <input
                             type="email"
@@ -34,7 +35,7 @@ export function NewsletterSection() {
                             Đăng Ký Ngay
                         </button>
                     </div>
-
+                    */}
                     {/* Checkmarks/Cam kết */}
                     <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/80 mb-16">
                         <div className="flex items-center space-x-1">

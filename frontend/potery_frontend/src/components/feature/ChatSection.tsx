@@ -68,7 +68,7 @@ export function ChatModal({
           sender_type: 'USER',
           user_id: userId,
           store_id: storeId,
-          content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+          content: '',
         });
 
         const id = res?.id;
@@ -140,7 +140,6 @@ export function ChatModal({
       user_id: userId,
       store_id: storeId,
     };
-
     try {
       setSending(true);
       // Chỉ emit. Server sẽ gửi 'new_message' về.

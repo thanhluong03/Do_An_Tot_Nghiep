@@ -46,7 +46,7 @@ export default function NewsPage() {
   return (
     <BaseLayout>
       {/* === Popup Layer === */}
-            {isAuthenticated && user?.id && (
+      {isAuthenticated && user?.id && (
         <>
           {/* Voucher Modal */}
           {isVoucherModalOpen && (
@@ -112,7 +112,7 @@ export default function NewsPage() {
                           const created = await conversationApi.createConversation({
                             sender_id: Number(user.id),
                             sender_type: 'USER',
-                            content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                            content: '',
                             user_id: Number(user.id),
                             store_id: 1,
                           });
@@ -153,7 +153,6 @@ export default function NewsPage() {
             <ScrollToTopButton />
             <AboutSection />
             <ValuePropositionSection />
-      
             <div className="max-w-8xl mx-auto text-center mt-20 mb-30">
                 <h3 className="text-4xl md:text-5xl font-serif font-bold text-[#2C2A24] mb-4 mt-2">Hãy ghé Nhà Gạo</h3>
                 <p className="text-xl text-[#65604E] font-light mb-6">

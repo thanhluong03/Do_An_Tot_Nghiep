@@ -26,8 +26,13 @@ import {
   Mail,
   CheckCircle,
   X,
-  Clock
+  Clock,
+  Bot,
+  Gift,
+  MessageSquare
 } from 'lucide-react';
+import { conversationApi } from '@/api/modules/conversation';
+import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
 
 export default function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
@@ -40,8 +45,12 @@ export default function CheckoutPage() {
   const [city, setCity] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD');
-
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD')
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [conversationId, setConversationId] = useState<number | null>(null);
+    const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+    const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
+    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   // Guest info
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -745,6 +754,109 @@ export default function CheckoutPage() {
   }, [guestName, guestPhone, guestEmail, address, city]);
   return (
     <BaseLayout>
+      {isAuthenticated && user?.id && (
+        <>
+          {/* Voucher Modal */}
+          {isVoucherModalOpen && (
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-white/10">
+              <VoucherModal
+                customerId={user.id}
+                isOpen={isVoucherModalOpen}
+                onClose={() => setIsVoucherModalOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* Chat Modal */}
+          {isChatOpen && (
+            <ChatModal
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              userId={Number(user.id)}
+              storeId={0}
+              conversationId={conversationId} // ✅ truyền id xuống
+            />
+          )}
+
+          {/* AI Chat Modal */}
+          <AIChatModal
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+          />
+
+          {/* Floating Buttons */}
+          <div
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
+              isChatDropdownOpen ? 'right-1' : 'right-1'
+            }`}
+          >
+            {/* Voucher Button */}
+            <button
+              onClick={() => setIsVoucherModalOpen(true)}
+              className="bg-yellow-400 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+              title="Nhận Voucher Giảm Giá!"
+            >
+              <Gift className="w-6 h-6" />
+            </button>
+
+            {/* Chat Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsChatDropdownOpen(prev => !prev)}
+                className="bg-[#8B7D6B] text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                title="Bắt đầu trò chuyện"
+              >
+                <MessageSquare className="w-6 h-6" />
+              </button>
+
+              {isChatDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 flex flex-col gap-3 transition-all duration-300 ease-out transform origin-top-right">
+                  {/* Nút Chat với Admin */}
+                  <div className="relative group">
+                    <button
+                      onClick={async () => {
+                        if (!isAuthenticated || !user?.id) return;
+                        try {
+                          const created = await conversationApi.createConversation({
+                            sender_id: Number(user.id),
+                            sender_type: 'USER',
+                            content: '',
+                            user_id: Number(user.id),
+                            store_id: 1,
+                          });
+                          const conv = created?.conversation || created?.data || created;
+                          setConversationId(conv?.id || null);
+                          setIsChatOpen(true);
+                          setIsChatDropdownOpen(false);
+                        } catch (err) {
+                          console.error('❌ Lỗi tạo conversation:', err);
+                        }
+                      }}
+                      className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                      title="Chat với Admin"
+                    >
+                      <User className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {/* Nút Chat với AI */}
+                  <div className="relative group">
+                    <button
+                      onClick={() => {
+                        setIsAIChatOpen(true); // 2. Mở popup AI chat
+                        setIsChatDropdownOpen(false);
+                      }}
+                      className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                      title="Chat với AI"
+                    >
+                      <Bot className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
       {/* Container chính: Thu hẹp tối đa (max-w-3xl) và màu nền tinh tế */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white min-h-screen shadow-sm rounded-lg">
 

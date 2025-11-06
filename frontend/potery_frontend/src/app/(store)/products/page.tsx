@@ -168,7 +168,7 @@ export default function ProductsPage() {
                           const created = await conversationApi.createConversation({
                             sender_id: Number(user.id),
                             sender_type: 'USER',
-                            content: 'Xin chào, tôi muốn hỏi về sản phẩm!',
+                            content: '',
                             user_id: Number(user.id),
                             store_id: 1,
                           });
