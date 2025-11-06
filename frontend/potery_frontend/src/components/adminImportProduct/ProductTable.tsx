@@ -117,8 +117,8 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-3 py-2 text-left text-sm text-gray-700 font-medium">
-                                            <div className="text-gray-800 truncate">{product.name}</div>
+                                        <td className="px-3 py-2 text-left text-sm text-gray-700 font-medium break-words">
+                                            <div className="text-gray-800"  title={product.name}>{product.name}</div>
                                         </td>
                                         <td className="px-3 py-2 text-center text-sm font-medium text-gray-700">
                                             {formatCurrencyWithUnit(product.price)}

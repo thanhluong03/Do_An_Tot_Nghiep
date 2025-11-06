@@ -103,13 +103,13 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                     </td>
                                     
                                     <td
-                                        className="px-4 py-3 truncate text-sm max-w-[400px]"
+                                        className="px-4 py-3 text-sm max-w-[300px] break-words"
                                         title={getDisplayName(products, item.product_id)}
                                     >
                                         {getDisplayName(products, item.product_id)}
                                     </td>
                                     <td
-                                        className="px-4 py-3 truncate text-sm"
+                                        className="px-4 py-3 break-words text-sm"
                                         title={getDisplayName(stores, item.store_id)}
                                     >
                                         {getDisplayName(stores, item.store_id)}

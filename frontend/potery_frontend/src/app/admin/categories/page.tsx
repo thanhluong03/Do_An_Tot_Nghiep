@@ -8,6 +8,7 @@ import {
   Category,
 } from "@/api/services/categoryService";
 import CategoryModal from "@/components/adminCategory/CategoryModal";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function CategoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -28,16 +29,15 @@ export default function CategoryPage() {
     fetchCategories();
   }, []);
 
-  const handleDelete = async (id: number) => {
+   const handleDelete = async (id: number) => {
     try {
       await deleteCategory(id);
       toast.success(`Xoá danh mục ID ${id} thành công!`);
       fetchCategories();
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi xoá danh mục!");
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-100 p-2 relative">
       <Toaster position="top-right" />
@@ -112,32 +112,18 @@ export default function CategoryPage() {
         onSuccess={fetchCategories}
       />
 
-      {/* Modal Xoá */}
       {confirmDeleteId && (
-        <div className="fixed inset-0 bg-white/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-80">
-            <p className="text-gray-800 mb-5 text-center">
-              Bạn có chắc muốn xoá danh mục ID {confirmDeleteId} không?
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={async () => {
-                  await handleDelete(confirmDeleteId);
-                  setConfirmDeleteId(null);
-                }}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                Xóa
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Xác nhận xoá danh mục"
+          message={`Bạn có chắc muốn xoá danh mục ID ${confirmDeleteId} không?`}
+          confirmText="Xoá"
+          cancelText="Huỷ"
+          onConfirm={async () => {
+            await handleDelete(confirmDeleteId);
+            setConfirmDeleteId(null);
+          }}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </div>
   );

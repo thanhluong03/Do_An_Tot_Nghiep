@@ -135,7 +135,7 @@ export default function ProductsTable({
                                                 />
                                             </div>
                                         </td>
-                                        <td className="p-4 font-medium text-gray-900 truncate max-w-[300px]">{p.name}</td>
+                                        <td className="p-4 font-medium text-gray-900 max-w-[300px] break-words" title={p.name}>{p.name}</td>
                                         <td className="p-4 text-gray-700">
                                             {p.quantity ?? "N/A"}
                                         </td>
@@ -182,92 +182,101 @@ export default function ProductsTable({
 
                                     {/* Dòng mở rộng chi tiết */}
                                     {expandedRow === p.id && (
-                                        <tr className="bg-white border-gray-200">
-                                            <td colSpan={9} className="p-8">
+                                        <tr className="bg-white border-t border-gray-200">
+                                            <td colSpan={9} className="p-6">
                                                 {p.classifications && p.classifications.length > 0 ? (
-                                                    <div className="flex flex-col items-center justify-center text-center space-y-2">
-                                                        <h4 className="font-bold text-lg text-gray-800 border-gray-300 pb-2 w-full max-w-[600px]">
+                                                    <div className="flex flex-col gap-2 border border-gray-200 rounded-xl p-4 bg-gray-50 shadow-sm">
+                                                        <h4 className="font-semibold text-lg text-gray-800 text-center border-gray-200 pb-2">
                                                             Phân loại & Giá bán
                                                         </h4>
 
-                                                        {/* Danh sách phân loại */}
-                                                        <div className="flex flex-col gap-2 w-full max-w-[700px]">
-                                                            {p.classifications.map((c, ci) => (
-                                                                <div key={ci} className="bg-white shadow-sm rounded-xl border border-gray-200 p-4">
-                                                                    <p className="font-semibold text-gray-700 mb-3 text-base">
-                                                                        {c.name}
-                                                                    </p>
-                                                                    <div className="flex flex-wrap justify-center gap-2">
-                                                                        {c.attributes.map((a, ai) => (
-                                                                            <span
-                                                                                key={ai}
-                                                                                className="px-3 py-1.5 text-sm rounded-lg bg-orange-50 border border-orange-200 text-orange-700 font-medium"
-                                                                            >
-                                                                                {a.name}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                        {/* Chia bố cục thành 2 phần: trái/phải */}
+                                                        <div className="flex flex-col md:flex-row justify-center gap-6">
 
-                                                        {/* Bảng giá và số lượng */}
-                                                        {p.relationships && p.relationships.length > 0 && (
-                                                            <div className="w-full max-w-[800px]">
-                                                                <h5 className="text-base font-semibold text-gray-700 mb-3">
-                                                                    Chi tiết giá & số lượng
+                                                            {/* 🔹 Cột trái: Danh sách phân loại */}
+                                                            <div className="flex-1 max-w-[500px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                                                                <h5 className="font-semibold text-gray-700 mb-3 text-base text-center">
+                                                                    Phân loại sản phẩm
                                                                 </h5>
-                                                                <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
-                                                                    <table className="w-full text-sm text-gray-700">
-                                                                        <thead className="bg-orange-100 text-gray-800 text-sm font-semibold uppercase">
-                                                                            <tr>
-                                                                                <th className="px-4 py-2 border border-gray-200 text-left">Phân loại 1</th>
-                                                                                <th className="px-4 py-2 border border-gray-200 text-left">Phân loại 2</th>
-                                                                                <th className="px-4 py-2 border border-gray-200 text-right">Giá (₫)</th>
-                                                                                <th className="px-4 py-2 border border-gray-200 text-right">Số lượng</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {p.relationships.map((rel, ri) => {
-                                                                                const attr1 =
-                                                                                    p.classifications?.[0]?.attributes.find(
-                                                                                        (a) => a.id === rel.product_attribute_id_1
-                                                                                    )?.name ?? "-";
-                                                                                const attr2 =
-                                                                                    p.classifications?.[1]?.attributes.find(
-                                                                                        (a) => a.id === rel.product_attribute_id_2
-                                                                                    )?.name ?? "-";
-                                                                                const price = Number(rel.price || 0).toLocaleString("vi-VN");
-                                                                                const qty = rel.quantity ?? 0;
-                                                                                return (
-                                                                                    <tr key={ri} className="hover:bg-orange-50 transition">
-                                                                                        <td className="border border-gray-200 px-4 py-2 text-left font-medium">
-                                                                                            {attr1}
-                                                                                        </td>
-                                                                                        <td className="border border-gray-200 px-4 py-2 text-left font-medium">
-                                                                                            {attr2}
-                                                                                        </td>
-                                                                                        <td className="border border-gray-200 px-4 py-2 text-right text-gray-800 font-semibold">
-                                                                                            {price}
-                                                                                        </td>
-                                                                                        <td className="border border-gray-200 px-4 py-2 text-right text-gray-800">
-                                                                                            {qty}
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                );
-                                                                            })}
-                                                                        </tbody>
-                                                                    </table>
+                                                                <div className="flex flex-col gap-3">
+                                                                    {p.classifications.map((c, ci) => (
+                                                                        <div
+                                                                            key={ci}
+                                                                            className="border border-gray-100 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition"
+                                                                        >
+                                                                            <p className="font-medium text-gray-700 mb-2">{c.name}</p>
+                                                                            <div className="flex flex-wrap gap-2 justify-center">
+                                                                                {c.attributes.map((a, ai) => (
+                                                                                    <span
+                                                                                        key={ai}
+                                                                                        className="px-3 py-1 text-sm rounded-lg bg-orange-50 border border-orange-200 text-orange-700 font-medium"
+                                                                                    >
+                                                                                        {a.name}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             </div>
-                                                        )}
+
+                                                            {/* 🔹 Cột phải: Bảng giá & số lượng */}
+                                                            {p.relationships && p.relationships.length > 0 && (
+                                                                <div className="flex-1 max-w-[600px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                                                                    <h5 className="text-base font-semibold text-gray-700 mb-3 text-center">
+                                                                        Chi tiết giá & số lượng
+                                                                    </h5>
+                                                                    <div className="overflow-x-auto rounded-lg border border-gray-100">
+                                                                        <table className="w-full text-sm text-gray-700">
+                                                                            <thead className="bg-orange-100 text-gray-800 font-semibold uppercase text-xs">
+                                                                                <tr>
+                                                                                    <th className="px-4 py-2 border border-gray-200 text-left">Phân loại 1</th>
+                                                                                    <th className="px-4 py-2 border border-gray-200 text-left">Phân loại 2</th>
+                                                                                    <th className="px-4 py-2 border border-gray-200 text-right">Giá (₫)</th>
+                                                                                    <th className="px-4 py-2 border border-gray-200 text-right">Số lượng</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {p.relationships.map((rel, ri) => {
+                                                                                    const attr1 =
+                                                                                        p.classifications?.[0]?.attributes.find(
+                                                                                            (a) => a.id === rel.product_attribute_id_1
+                                                                                        )?.name ?? "-";
+                                                                                    const attr2 =
+                                                                                        p.classifications?.[1]?.attributes.find(
+                                                                                            (a) => a.id === rel.product_attribute_id_2
+                                                                                        )?.name ?? "-";
+                                                                                    const price = Number(rel.price || 0).toLocaleString("vi-VN");
+                                                                                    const qty = rel.quantity ?? 0;
+                                                                                    return (
+                                                                                        <tr key={ri} className="hover:bg-orange-50 transition">
+                                                                                            <td className="border border-gray-200 px-4 py-2">{attr1}</td>
+                                                                                            <td className="border border-gray-200 px-4 py-2">{attr2}</td>
+                                                                                            <td className="border border-gray-200 px-4 py-2 text-right font-semibold text-gray-800">
+                                                                                                {price}
+                                                                                            </td>
+                                                                                            <td className="border border-gray-200 px-4 py-2 text-right text-gray-800">
+                                                                                                {qty}
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                })}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-gray-500 italic text-center">Không có phân loại cho sản phẩm này</p>
+                                                    <p className="text-gray-500 italic text-center">
+                                                        Không có phân loại cho sản phẩm này
+                                                    </p>
                                                 )}
                                             </td>
                                         </tr>
                                     )}
+
 
                                 </React.Fragment>
                             );

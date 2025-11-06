@@ -54,7 +54,7 @@ const StoreForm: React.FC<StoreFormProps> = ({
                         placeholder="Nhập tên cửa hàng"
                         value={form.store_name}
                         onChange={onChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none"
                     />
                     {errors.store_name && <p className="text-red-500 text-xs mt-1">{errors.store_name}</p>}
                 </div>
@@ -67,7 +67,7 @@ const StoreForm: React.FC<StoreFormProps> = ({
                         placeholder="Nhập địa chỉ"
                         value={form.address}
                         onChange={onChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none"
                     />
                     {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
                 </div>
@@ -80,7 +80,7 @@ const StoreForm: React.FC<StoreFormProps> = ({
                         placeholder="Nhập số điện thoại"
                         value={form.phone}
                         onChange={onChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none"
                     />
                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
