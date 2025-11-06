@@ -3,7 +3,6 @@ import { InventoryService } from '@app/inventory';
 import {
     CreateInventoryDto,
     UpdateInventoryDto,
-    ListInventoryDto,
     TransferInventoryDto,
     DistributeInventoryDto,
     CollectInventoryDto,
@@ -35,7 +34,7 @@ export class InventoryController {
 
 
     @Get('list')
-    async list(@Query() query: ListInventoryDto) {
+    async list(@Query() query: any) {
         const input = {
             ...query,
             page: query.page ?? 1,
@@ -53,10 +52,9 @@ export class InventoryController {
     async transfer(@Body() dto: TransferInventoryDto) {
         return await this.inventoryService.transferInventory({
             product_id: dto.product_id,
-            from_store_id: dto.from_store_id === 'all' ? 'all' : Number(dto.from_store_id),
-            to_store_id: dto.to_store_id === 'all' ? 'all' :
-                Array.isArray(dto.to_store_id) ? dto.to_store_id.map(id => Number(id)) : Number(dto.to_store_id),
-            quantity: dto.quantity,
+            from_store_ids: dto.from_store_ids,
+            to_store_ids: dto.to_store_ids,
+            details: dto.details,
         });
     }
 

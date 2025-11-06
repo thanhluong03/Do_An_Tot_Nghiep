@@ -16,15 +16,14 @@ import {
     Inventory,
     CreateInventoryDto,
     UpdateInventoryDto,
-    InventoryDetailItemDto,
-    InventoryDetailsResponse,
     SelectOption,
     Product,
 } from "@/api/services/inventoryService";
 
 import InventoryForm from "@/components/inventory/InventoryForm";
 import InventoryTable from "@/components/inventory/InventoryTable";
-import { getCategories, Category } from "@/api/services/categoryService";
+import TransferInventoryForm from "@/components/inventory/TransferInventoryForm";
+import { getCategories } from "@/api/services/categoryService";
 
 import Pagination from "@/components/inventory/Pagination";
 
@@ -38,8 +37,6 @@ export interface InventoryFormState {
 export type FormName = "product_id" | "store_id" | "quantity_stock" | "quantity_sold";
 
 export default function InventoryPage() {
-    const [categories, setCategories] = useState<Category[]>([]);
-
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
 
@@ -56,6 +53,7 @@ export default function InventoryPage() {
     const [selectedStoreId, setSelectedStoreId] = useState<number>(0);
 
     const [isAdding, setIsAdding] = useState(false);
+    const [showTransferForm, setShowTransferForm] = useState(false);
 
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
@@ -82,13 +80,11 @@ export default function InventoryPage() {
         },
         []
     );
+
     useEffect(() => {
         fetchDropdownData();
     }, []);
 
-    useEffect(() => {
-        fetchData();
-    }, [currentPage, pageSize]);
     const fetchDropdownData = async () => {
         try {
             const [productRes, storeRes, allProductRes] = await Promise.all([
@@ -102,12 +98,11 @@ export default function InventoryPage() {
             setStores(Array.isArray(storeRes) ? storeRes : []);
             setAllProducts(Array.isArray(allProductRes) ? allProductRes : []);
 
-        } catch (error) {
+        } catch {
             toast.error("Lỗi khi tải danh sách sản phẩm/cửa hàng.");
             setProducts([]);
             setStores([]);
             setAllProducts([]);
-            setCategories([]);
         }
     };
 
@@ -129,7 +124,7 @@ export default function InventoryPage() {
             setTotalItems(res.total || inventoryList.length);
             setCurrentPage(res.page || currentPage);
             setPageSize(res.size || pageSize);
-        } catch (error) {
+        } catch {
             toast.error("Không thể tải danh sách tồn kho.");
             setInventories([]);
             setTotalItems(0);
@@ -137,6 +132,11 @@ export default function InventoryPage() {
             setLoading(false);
         }
     }, [currentPage, pageSize, searchQuery, selectedStoreId, fromDate, toDate]);
+
+    // useEffect 2: Gọi fetchData khi page hoặc pageSize thay đổi
+    useEffect(() => {
+        fetchData();
+    }, [currentPage, pageSize, fetchData]);
 
     // useEffect 3: Reset trang về 1 khi bộ lọc thay đổi, sau đó gọi fetchData
     useEffect(() => {
@@ -164,6 +164,7 @@ export default function InventoryPage() {
     const handleCancelEdit = () => {
         setEditingId(null);
         setIsAdding(false);
+        setShowTransferForm(false);
         setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 });
         setEditClassificationData({});
         setErrors({});
@@ -202,7 +203,7 @@ export default function InventoryPage() {
         }
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = async (id: number) => {
         setItemToDeleteId(id);
         setIsDeleteDialogOpen(true);
     };
@@ -219,8 +220,8 @@ export default function InventoryPage() {
             await deleteInventory(id);
             toast.success(`Đã xoá tồn kho ID ${id}!`);
             fetchData();
-        } catch (error: any) {
-            const msg = error.response?.data?.message || "Không thể xoá tồn kho!";
+        } catch {
+            const msg = "Không thể xoá tồn kho!";
             toast.error(msg);
         }
     };
@@ -274,7 +275,11 @@ export default function InventoryPage() {
                 const createDto: CreateInventoryDto = {
                     product_id: productId as string | string[],
                     store_id: storeId as string | string[],
-                    quantity_stock: form.quantity_stock,
+                    inventory_details: [{
+                        classification_attribute_relationship_id: 0, // Default classification
+                        quantity_stock: form.quantity_stock,
+                        quantity_sold: 0
+                    }]
                 };
                 await createInventory(createDto);
                 toast.success("Tạo tồn kho thành công!");
@@ -282,8 +287,11 @@ export default function InventoryPage() {
             } else {
                 // Logic cho CẬP NHẬT
                 const updateDto: UpdateInventoryDto = {
-                    quantity_stock: form.quantity_stock,
-                    quantity_sold: form.quantity_sold,
+                    inventory_details: [{
+                        classification_attribute_relationship_id: 0, // Default classification
+                        quantity_stock: form.quantity_stock,
+                        quantity_sold: form.quantity_sold
+                    }]
                 };
                 await updateInventory(editingId!, updateDto);
                 toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
@@ -292,7 +300,7 @@ export default function InventoryPage() {
 
             handleCancelEdit();
             fetchData();
-        } catch (error) {
+        } catch {
             toast.error("Số lượng trong kho không đủ!");
         }
     };
@@ -307,12 +315,9 @@ export default function InventoryPage() {
                 const productId = form.product_id;
                 const storeId = form.store_id;
 
-                // Tính tổng quantity từ classifications
-                const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
-
                 // Tạo inventory_details từ classification data
                 const inventoryDetails = Object.entries(classificationQuantities)
-                    .filter(([_, quantity]) => quantity > 0)
+                    .filter(([, quantity]) => quantity > 0)
                     .map(([classificationId, quantity]) => ({
                         classification_attribute_relationship_id: parseInt(classificationId),
                         quantity_stock: quantity,
@@ -322,7 +327,6 @@ export default function InventoryPage() {
                 const createDto: CreateInventoryDto = {
                     product_id: productId as string | string[],
                     store_id: storeId as string | string[],
-                    quantity_stock: totalQuantity,
                     inventory_details: inventoryDetails
                 };
 
@@ -331,11 +335,10 @@ export default function InventoryPage() {
                 await fetchDropdownData();
             } else {
                 // Logic cho CẬP NHẬT với phân loại
-                const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
 
                 // Tạo inventory_details từ classification data
                 const inventoryDetails = Object.entries(classificationQuantities)
-                    .filter(([_, quantity]) => quantity > 0)
+                    .filter(([, quantity]) => quantity > 0)
                     .map(([classificationId, quantity]) => ({
                         classification_attribute_relationship_id: parseInt(classificationId),
                         quantity_stock: quantity,
@@ -343,7 +346,6 @@ export default function InventoryPage() {
                     }));
 
                 const updateDto: UpdateInventoryDto = {
-                    quantity_stock: totalQuantity,
                     inventory_details: inventoryDetails
                 };
 
@@ -354,7 +356,7 @@ export default function InventoryPage() {
 
             handleCancelEdit();
             fetchData();
-        } catch (error) {
+        } catch {
             toast.error("Lỗi khi chia hàng theo phân loại!");
         }
     };
@@ -363,6 +365,16 @@ export default function InventoryPage() {
     const handleOpenAddForm = () => {
         setIsAdding(true);
         setEditingId(null);
+        setShowTransferForm(false); // Đảm bảo đóng form chuyển hàng
+        setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 }); // Reset form
+        setErrors({}); // Xóa lỗi cũ
+    }
+
+    // Hàm mở form chuyển hàng
+    const handleOpenTransferForm = () => {
+        setShowTransferForm(true);
+        setIsAdding(false); // Đảm bảo đóng form thêm mới
+        setEditingId(null); // Đảm bảo đóng form chỉnh sửa
         setForm({ product_id: undefined, store_id: undefined, quantity_stock: 0, quantity_sold: 0 }); // Reset form
         setErrors({}); // Xóa lỗi cũ
     }
@@ -376,130 +388,154 @@ export default function InventoryPage() {
                     Quản lý Tồn kho trong cửa hàng
                 </h2>
 
-                {/* --- NÚT THÊM MỚI --- */}
-                <div className="flex justify-end mb-6">
-                    {editingId === null && !isAdding && (
-                        <button
-                            onClick={handleOpenAddForm}
-                            className="px-6 py-2 rounded-lg font-semibold shadow-md transition bg-[#F54900] hover:bg-orange-600 text-white flex items-center gap-2"
-                        >
+                {/* --- QUẢN LÝ TỒN KHO THÔNG THƯỜNG --- */}
+                <>
+                    {/* --- NÚT THÊM MỚI VÀ CHUYỂN HÀNG --- */}
+                    <div className="flex justify-end gap-4 mb-6">
+                        {editingId === null && !isAdding && !showTransferForm && (
+                            <>
+                                <button
+                                    onClick={handleOpenAddForm}
+                                    className="px-6 py-2 rounded-lg font-semibold shadow-md transition bg-[#F54900] hover:bg-orange-600 text-white flex items-center gap-2"
+                                >
+                                    + Thêm Tồn Kho Mới
+                                </button>
+                                <button
+                                    onClick={handleOpenTransferForm}
+                                    className="px-6 py-2 rounded-lg font-semibold shadow-md transition bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                                >
+                                    🔄 Chuyển Hàng Giữa Cửa Hàng
+                                </button>
+                            </>
+                        )}
+                    </div>
 
-                            + Thêm Tồn Kho Mới
-                        </button>
+                    {showTransferForm && (
+                        <div className="mb-6" key="transfer-inventory-form">
+                            <TransferInventoryForm
+                                key="transfer-form-unique"
+                                onSuccess={() => {
+                                    fetchData();
+                                    setShowTransferForm(false);
+                                }}
+                                onCancel={() => setShowTransferForm(false)}
+                            />
+                        </div>
                     )}
-                </div>
 
-                {(editingId !== null || isAdding) && (
-                    <InventoryForm
-                        form={form}
-                        editingId={editingId}
-                        errors={errors}
-                        products={products}
-                        stores={stores}
-                        allProducts={allProducts}
-                        getDisplayName={getDisplayName}
-                        handleValueChange={handleValueChange}
-                        handleNumberChange={handleNumberChange}
-                        handleSubmit={handleSubmit}
-                        handleSubmitWithClassifications={handleSubmitWithClassifications}
-                        handleCancelEdit={handleCancelEdit}
-                        editClassificationData={editClassificationData}
-                    />
-                )}
+                    {(editingId !== null || isAdding) && (
+                        <InventoryForm
+                            form={form}
+                            editingId={editingId}
+                            errors={errors}
+                            products={products}
+                            stores={stores}
+                            allProducts={allProducts}
+                            getDisplayName={getDisplayName}
+                            handleValueChange={handleValueChange}
+                            handleNumberChange={handleNumberChange}
+                            handleSubmit={handleSubmit}
+                            handleSubmitWithClassifications={handleSubmitWithClassifications}
+                            handleCancelEdit={handleCancelEdit}
+                            editClassificationData={editClassificationData}
+                        />
+                    )}
 
-                {/* --- BỘ LỌC & TÌM KIẾM --- */}
-                <div className="mt-10 bg-white p-6 rounded-xl border border-gray-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Cửa hàng
-                            </label>
-                            <select
-                                title="store-filter"
-                                value={selectedStoreId}
-                                onChange={(e) => setSelectedStoreId(Number(e.target.value))}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value={0}>-- Tất cả --</option>
-                                {stores.map((store) => (
-                                    <option key={store.id} value={store.id}>
-                                        {store.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                    {/* --- BỘ LỌC & TÌM KIẾM --- */}
+                    <div className="mt-10 bg-white p-6 rounded-xl border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Cửa hàng
+                                </label>
+                                <select
+                                    title="store-filter"
+                                    value={selectedStoreId}
+                                    onChange={(e) => setSelectedStoreId(Number(e.target.value))}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value={0}>-- Tất cả --</option>
+                                    {stores.map((store) => (
+                                        <option key={store.id} value={store.id}>
+                                            {store.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Tìm kiếm (SP / Cửa hàng)
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Nhập từ khoá..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tìm kiếm (SP / Cửa hàng)
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Nhập từ khoá..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Từ ngày
-                            </label>
-                            <input
-                                title="date-from"
-                                type="date"
-                                value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Từ ngày
+                                </label>
+                                <input
+                                    title="date-from"
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Đến ngày
-                            </label>
-                            <input
-                                title="date-to"
-                                type="date"
-                                value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                            />
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Đến ngày
+                                </label>
+                                <input
+                                    title="date-to"
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* --- BẢNG DỮ LIỆU --- */}
-                {loading ? (
-                    <div className="text-center py-10 text-lg text-gray-500">
-                        Đang tải dữ liệu...
-                    </div>
-                ) : (
-                    <InventoryTable
-                        inventories={inventories}
-                        products={products}
-                        stores={stores}
-                        allProducts={allProducts}
-                        getDisplayName={getDisplayName}
-                        handleEdit={handleEdit}
-                        handleDelete={handleDelete}
+                    {/* --- BẢNG DỮ LIỆU --- */}
+                    {loading ? (
+                        <div className="text-center py-10 text-lg text-gray-500">
+                            Đang tải dữ liệu...
+                        </div>
+                    ) : (
+                        <InventoryTable
+                            inventories={inventories}
+                            products={products}
+                            stores={stores}
+                            allProducts={allProducts}
+                            getDisplayName={getDisplayName}
+                            handleEdit={handleEdit}
+                            handleDelete={handleDelete}
+                            totalItems={totalItems}
+                        />
+                    )}
+
+                    {/* --- PHÂN TRANG --- */}
+                    <Pagination
                         totalItems={totalItems}
+                        currentPage={currentPage}
+                        pageSize={pageSize}
+                        onPageChange={(page) => setCurrentPage(page)}
+                        onPageSizeChange={(size) => {
+                            setPageSize(size);
+                            setCurrentPage(1);
+                        }}
                     />
-                )}
-
-                {/* --- PHÂN TRANG --- */}
-                <Pagination
-                    totalItems={totalItems}
-                    currentPage={currentPage}
-                    pageSize={pageSize}
-                    onPageChange={(page) => setCurrentPage(page)}
-                    onPageSizeChange={(size) => {
-                        setPageSize(size);
-                        setCurrentPage(1);
-                    }}
-                />
+                </>
             </div>
+
             {isDeleteDialogOpen && (
                 <ConfirmDialog
                     message={`Bạn có chắc chắn muốn xóa Tồn kho ID: ${itemToDeleteId} này không? Hành động này không thể hoàn tác.`}

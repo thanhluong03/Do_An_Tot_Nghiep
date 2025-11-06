@@ -132,17 +132,6 @@ export class OrderService {
             quantity_stock: inventoryDetail.quantity_stock - item.quantity,
             quantity_sold: (inventoryDetail.quantity_sold || 0) + item.quantity,
           });
-
-          // Cập nhật classification_attribute_relationship
-          const classification = await this.classificationAttributeRelationshipRepository.findById(
-            item.classification_attribute_relationship_id
-          );
-
-          if (classification) {
-            await this.classificationAttributeRelationshipRepository.update(classification.id, {
-              quantity: classification.quantity - item.quantity,
-            });
-          }
         }
       }
 

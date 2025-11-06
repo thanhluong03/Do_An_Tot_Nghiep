@@ -1,11 +1,5 @@
 
-import {
-    IsInt,
-    IsNotEmpty,
-    IsOptional,
-    IsArray,
-    ValidateNested,
-} from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class InventoryDetailItemDto {
@@ -20,27 +14,6 @@ export class InventoryDetailItemDto {
     @IsOptional()
     @IsInt()
     quantity_sold?: number;
-}
-
-export class ListInventoryDto {
-    @IsInt()
-    @IsOptional()
-    page?: number = 1;
-
-    @IsInt()
-    @IsOptional()
-    size?: number = 10;
-
-    @IsOptional()
-    key?: string;
-
-    @IsOptional()
-    @IsInt()
-    product_id?: number;
-
-    @IsOptional()
-    @IsInt()
-    store_id?: number;
 }
 
 export class CreateInventoryDto {
@@ -62,20 +35,33 @@ export class UpdateInventoryDto {
     @ValidateNested({ each: true })
     @Type(() => InventoryDetailItemDto)
     inventory_details?: InventoryDetailItemDto[];
-} export class TransferInventoryDto {
+}
+
+export class TransferInventoryDetailDto {
+    @IsInt()
+    @IsNotEmpty()
+    classification_attribute_relationship_id: number;
+
+    @IsInt()
+    @IsNotEmpty()
+    quantity: number;
+}
+
+export class TransferInventoryDto {
     @IsInt()
     @IsNotEmpty()
     product_id: number;
 
     @IsNotEmpty()
-    from_store_id: number | string;
+    from_store_ids: number[] | 'all';
 
     @IsNotEmpty()
-    to_store_id: number | number[] | string;
+    to_store_ids: number[] | 'all';
 
-    @IsInt()
-    @IsNotEmpty()
-    quantity: number;
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => TransferInventoryDetailDto)
+    details: TransferInventoryDetailDto[];
 }
 
 export class DistributionItemDto {

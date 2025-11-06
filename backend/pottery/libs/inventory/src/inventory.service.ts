@@ -328,9 +328,85 @@ export class InventoryService {
         return { data, total, page, size };
     }
 
-    // TODO: Cần cập nhật các hàm này để làm việc với inventory_details thay vì quantity_stock trực tiếp
-    async transferInventory(data: TransferInventoryInput) {
-        throw new NotFoundException('Transfer inventory functionality is temporarily disabled during refactoring');
+    async transferInventory(data: {
+        product_id: number;
+        from_store_ids: number[] | 'all';
+        to_store_ids: number[] | 'all';
+        details: { classification_attribute_relationship_id: number; quantity: number }[];
+    }) {
+        // Lấy danh sách cửa hàng gửi
+        let fromStores: number[] = [];
+        if (data.from_store_ids === 'all') {
+            const stores = await this.storeRepository.findAll({ size: 1000, page: 1 });
+            fromStores = stores.map(s => s.id);
+        } else {
+            fromStores = data.from_store_ids;
+        }
+        // Lấy danh sách cửa hàng nhận
+        let toStores: number[] = [];
+        if (data.to_store_ids === 'all') {
+            const stores = await this.storeRepository.findAll({ size: 1000, page: 1 });
+            toStores = stores.map(s => s.id);
+        } else {
+            toStores = data.to_store_ids;
+        }
+
+        // Kiểm tra tồn kho từng combo ở từng cửa hàng gửi
+        for (const fromStoreId of fromStores) {
+            const inventory = await this.inventoryRepository.findByProductAndStore(data.product_id, fromStoreId);
+            if (!inventory) throw new NotFoundException(`Không tìm thấy tồn kho ở cửa hàng gửi ${fromStoreId}`);
+            for (const detail of data.details) {
+                const invDetail = await this.inventoryDetailRepository.findByInventoryAndClassification(
+                    inventory.id,
+                    detail.classification_attribute_relationship_id
+                );
+                if (!invDetail || invDetail.quantity_stock < detail.quantity) {
+                    throw new NotFoundException(`Cửa hàng ${fromStoreId} không đủ tồn kho combo ${detail.classification_attribute_relationship_id}`);
+                }
+            }
+        }
+
+        // Trừ tồn kho ở cửa hàng gửi
+        for (const fromStoreId of fromStores) {
+            const inventory = await this.inventoryRepository.findByProductAndStore(data.product_id, fromStoreId);
+            if (!inventory) continue;
+            for (const detail of data.details) {
+                const invDetail = await this.inventoryDetailRepository.findByInventoryAndClassification(
+                    inventory.id,
+                    detail.classification_attribute_relationship_id
+                );
+                if (!invDetail) continue;
+                invDetail.quantity_stock -= detail.quantity;
+                await this.inventoryDetailRepository.update(invDetail.id, { quantity_stock: invDetail.quantity_stock });
+            }
+        }
+
+        // Cộng tồn kho ở cửa hàng nhận
+        for (const toStoreId of toStores) {
+            let inventory = await this.inventoryRepository.findByProductAndStore(data.product_id, toStoreId);
+            if (!inventory) {
+                inventory = await this.inventoryRepository.create({ product_id: data.product_id, store_id: toStoreId });
+            }
+            for (const detail of data.details) {
+                let invDetail = await this.inventoryDetailRepository.findByInventoryAndClassification(
+                    inventory.id,
+                    detail.classification_attribute_relationship_id
+                );
+                if (invDetail) {
+                    invDetail.quantity_stock += detail.quantity;
+                    await this.inventoryDetailRepository.update(invDetail.id, { quantity_stock: invDetail.quantity_stock });
+                } else {
+                    await this.inventoryDetailRepository.create({
+                        inventory_id: inventory.id,
+                        classification_attribute_relationship_id: detail.classification_attribute_relationship_id,
+                        quantity_stock: detail.quantity,
+                        quantity_sold: 0
+                    });
+                }
+            }
+        }
+
+        return { success: true, message: 'Chuyển kho thành công', fromStores, toStores, details: data.details };
     }
 
     async distributeInventory(data: DistributeInventoryInput) {
