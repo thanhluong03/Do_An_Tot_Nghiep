@@ -1,3 +1,26 @@
+// Lấy danh sách sản phẩm tồn kho của một cửa hàng
+export const getStoreInventories = async (storeId: number): Promise<Inventory[]> => {
+    const res = await axios.get(`${API_URL_INVENTORY}/list`, {
+        params: { store_id: storeId }
+    });
+    return res.data?.data || [];
+};
+
+// Lấy chi tiết tồn kho (combo) của một sản phẩm tại một cửa hàng
+export const getStoreProductInventoryDetails = async (storeId: number, productId: number): Promise<InventoryDetailsResponse | null> => {
+    try {
+        // Tìm inventory của sản phẩm tại cửa hàng
+        const inventories = await getStoreInventories(storeId);
+        const inventory = inventories.find(inv => inv.product_id === productId);
+        if (!inventory) return null;
+        // Lấy chi tiết combo
+        const details = await getInventoryDetails(inventory.id);
+        return details;
+    } catch (error) {
+        console.error('Error fetching store product inventory details:', error);
+        return null;
+    }
+};
 import axios from "axios";
 // GIẢ ĐỊNH: Product và getProductImageUrl được import từ file productApi
 // Bạn cần đảm bảo file productApi.ts (hoặc file chứa Product) tồn tại
@@ -208,6 +231,33 @@ export const listDropdownStores = async (): Promise<SelectOption[]> => {
     return stores.map(s => ({ id: s.id as number, name: s.store_name }));
 };
 
+// Lấy danh sách sản phẩm có trong cửa hàng (có tồn kho)
+export const listStoreProducts = async (storeId: number): Promise<SelectOption[]> => {
+    try {
+        const inventories = await getStoreInventories(storeId);
+        const uniqueProducts = new Map<number, string>();
+
+        // Lấy danh sách tất cả sản phẩm để lấy tên
+        const allProducts = await listAllProducts();
+        const productMap = new Map(allProducts.map(p => [p.id as number, p.name]));
+
+        // Chỉ lấy sản phẩm có tồn kho
+        inventories.forEach(inv => {
+            if (inv.product_id && !uniqueProducts.has(inv.product_id)) {
+                const productName = productMap.get(inv.product_id);
+                if (productName) {
+                    uniqueProducts.set(inv.product_id, productName);
+                }
+            }
+        });
+
+        return Array.from(uniqueProducts.entries()).map(([id, name]) => ({ id, name }));
+    } catch (error) {
+        console.error("Error fetching store products:", error);
+        return [];
+    }
+};
+
 // Get product classifications for a specific product
 export const getProductClassifications = async (productId: number): Promise<ProductClassification[]> => {
     try {
@@ -217,4 +267,23 @@ export const getProductClassifications = async (productId: number): Promise<Prod
         console.error("Error fetching product classifications:", error);
         return [];
     }
+};
+
+// Transfer inventory interfaces and functions
+export interface TransferInventoryDetailDto {
+    classification_attribute_relationship_id: number;
+    quantity: number;
+}
+
+export interface TransferInventoryDto {
+    product_id: number;
+    from_store_ids: number[] | 'all';
+    to_store_ids: number[] | 'all';
+    details: TransferInventoryDetailDto[];
+}
+
+// Chuyển combo phân loại giữa các cửa hàng
+export const transferInventory = async (data: TransferInventoryDto): Promise<{ success: boolean; message: string }> => {
+    const res = await axios.post(`${API_URL_INVENTORY}/transfer`, data);
+    return res.data;
 };
