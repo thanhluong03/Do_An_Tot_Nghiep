@@ -2,11 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { BaseLayout } from '@/layouts';
-import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { useAuth } from '@/contexts';
-import { getUserDetail } from '@/api/services/userService';
-import { updateUser as updateUserMultipart } from '@/api/services/userService';
+import { userApi } from '@/api/modules/users';
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -53,39 +51,12 @@ export default function ChangePasswordPage() {
     }
     setIsSubmitting(true);
     try {
-      // Gather existing user fields if API requires full object
-      let baseUser: any = {};
-      try {
-        const raw = localStorage.getItem('customer');
-        if (raw) baseUser = JSON.parse(raw);
-      } catch {}
-
-      // Keep payload minimal to avoid 413
-      const payload: any = {
-        password: newPassword,
-        current_password: currentPassword,
-      };
-
-      // Prefer backend's expected multipart format
-      const detail = await getUserDetail(userId);
-      const user = detail?.data || detail || {};
+      // Gửi đúng endpoint customers/updatecustomer với 2 trường mật khẩu
       const form = new FormData();
-      const appendIf = (k: string, v: any) => {
-        if (v !== undefined && v !== null && v !== '') form.append(k, String(v));
-      };
-      // Known fields
-      appendIf('username', user.username);
-      appendIf('email', user.email);
-      appendIf('full_name', user.full_name);
-      appendIf('phone_number', user.phone_number);
-      appendIf('address', user.address);
-      appendIf('role_id', user.role_id);
-      appendIf('is_active', user.is_active);
-      // Change password fields
-      appendIf('current_password', currentPassword);
-      appendIf('password', newPassword);
+      // Backend không có cột current_password -> KHÔNG gửi trường này
+      form.append('password', newPassword);
 
-      await updateUserMultipart(userId, form);
+      await userApi.updateProfile(form as any);
       toast.success('Đổi mật khẩu thành công!');
       setCurrentPassword('');
       setNewPassword('');
