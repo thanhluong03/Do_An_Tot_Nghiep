@@ -188,15 +188,15 @@ const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
                                         editingId === store.id ? "bg-yellow-50/50" : "hover:bg-blue-50/30"
                                     } transition-colors duration-150`}
                                 >
-                                    <td className="px-5 py-3 text-xs text-gray-600 text-center">{index + 1}</td>
-                                    <td className="px-5 py-3 font-semibold text-gray-700 truncate" title={store.store_name}>{store.store_name}</td>
-                                    <td className="px-5 py-3 text-gray-700 text-xs truncate" title={store.address}>{store.address}</td>
-                                    <td className="px-5 py-3 text-center text-xs text-gray-700">{store.phone}</td>
-                                    
-                                    <td className="px-5 py-3 text-center text-xs text-gray-700">
+                                    <td className="px-5 py-3 text-sm text-gray-600 text-center">{index + 1}</td>
+                                    <td className="px-5 py-3 font-semibold text-gray-700 break-words" title={store.store_name}>{store.store_name}</td>
+                                    <td className="px-5 py-3 text-gray-700 text-sm break-words" title={store.address}>{store.address}</td>
+                                    <td className="px-5 py-3 text-center text-sm text-gray-700">{store.phone}</td>
+
+                                    <td className="px-5 py-3 text-center text-sm text-gray-700">
                                         {formatDateTime(store.created_at)}
                                     </td>
-                                    <td className="px-5 py-3 text-center text-xs text-gray-700">
+                                    <td className="px-5 py-3 text-center text-sm text-gray-700">
                                         {formatDateTime(store.updated_at)}
                                     </td>
                                     

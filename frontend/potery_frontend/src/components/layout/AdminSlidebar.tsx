@@ -42,7 +42,7 @@ interface MenuItem {
 
 const dashboardItems: MenuItem[] = [
     { name: "Dashboard", icon: faHome, href: "/admin/dashboard" },
-    { name: "Tin nhắn khách hàng", icon: faMessage, href: "/admin/conversation", color: "bg-blue-100 text-blue-600" },
+    { name: "Tư vấn khách hàng", icon: faMessage, href: "/admin/conversation", color: "bg-blue-100 text-blue-600" },
 ];
 
 const salesOperationsItems: MenuItem[] = [
@@ -213,7 +213,7 @@ export default function AdminSidebar() {
                     />
                 </Link>
             </div>
-            <nav className="p-4 flex-1 space-y-4 mb-10">
+            <nav className="p-4 flex-1 space-y-4 mb-10 text-sm">
                 {renderMenuSection("Tổng Quan", dashboardItems)}
                 {renderMenuSection("Đơn hàng", orderItems)}
                 {renderMenuSection("Sản phẩm", salesOperationsItems)}

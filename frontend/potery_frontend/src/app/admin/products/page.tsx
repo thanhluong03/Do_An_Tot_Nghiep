@@ -14,6 +14,7 @@ import { getCategories, Category } from "@/api/services/categoryService";
 import ProductFormModal from "@/components/adminProducts/ProductFormModal";
 import ProductsTable from "@/components/adminProducts/ProductsTable";
 import { getSuppliers, Supplier } from "@/api/services/supplierService";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export interface ProductFormErrors {
   name?: string;
@@ -31,6 +32,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   // Lọc & tìm kiếm
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0);
@@ -186,8 +188,8 @@ export default function ProductsPage() {
 
     if (!data.name || data.name.trim() === "") {
       errors.name = "Tên sản phẩm không được để trống.";
-    } else if (data.name.length < 3 || data.name.length > 255) {
-      errors.name = "Tên sản phẩm phải từ 3 đến 255 ký tự.";
+    } else if (data.name.length < 3 || data.name.length > 150) {
+      errors.name = "Tên sản phẩm phải từ 3 đến 150 ký tự.";
     }
 
     // if (data.price === undefined || data.price <= 0) {
@@ -249,56 +251,21 @@ export default function ProductsPage() {
       toast.error("Lưu sản phẩm thất bại!");
     }
   };
+  const handleDelete = (id: number) => {
+    setConfirmDeleteId(id);
+  };
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
 
-  const handleDelete = async (id: number) => {
-    toast(
-      (t) => (
-        <div className="flex flex-col items-center mt-96 p-4 bg-white rounded-xl shadow-2xl max-w-sm mx-auto">
-          <p className="font-semibold mb-3 text-lg text-gray-800">
-            Bạn có chắc chắn muốn xóa sản phẩm này?
-          </p>
-          <p className="text-sm text-gray-500 mb-4">
-            Hành động này không thể hoàn tác.
-          </p>
-          <div className="flex justify-center gap-3 w-full">
-            <button
-              onClick={async () => {
-                toast.dismiss(t.id);
-                try {
-                  await deleteProduct(id);
-                  toast.success("Xóa sản phẩm thành công!");
-                  await fetchProducts();
-                } catch {
-                  toast.error("Không thể xóa sản phẩm!");
-                }
-              }}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl shadow-md font-medium transition"
-            >
-              Xóa
-            </button>
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl text-gray-800 font-medium transition"
-            >
-              Hủy
-            </button>
-          </div>
-        </div>
-      ),
-      {
-        duration: Infinity, // Giữ toast cho đến khi người dùng tương tác
-        position: 'top-center', // Giữ nguyên position, logic căn giữa sẽ nằm ở `style`
-
-        style: {
-          width: '100%',
-          maxWidth: '100%',
-          padding: '0',
-          background: 'transparent',
-          boxShadow: 'none',
-
-        },
-      }
-    );
+    try {
+      await deleteProduct(confirmDeleteId);
+      toast.success("Xóa sản phẩm thành công!");
+      await fetchProducts();
+    } catch {
+      toast.error("Không thể xóa sản phẩm!");
+    } finally {
+      setConfirmDeleteId(null);
+    }
   };
 
   const getCategoryName = (product: Product): string => {
@@ -436,6 +403,17 @@ export default function ProductsPage() {
           </>
         )}
       </div>
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="Xác nhận xóa sản phẩm"
+          message="Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác."
+          confirmText="Xóa"
+          cancelText="Hủy"
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
 
       {/* Modal thêm/sửa */}
       <ProductFormModal
@@ -450,7 +428,7 @@ export default function ProductsPage() {
         validationErrors={validationErrors}
         setValidationErrors={setValidationErrors}
       />
-
     </div>
+
   );
 }
