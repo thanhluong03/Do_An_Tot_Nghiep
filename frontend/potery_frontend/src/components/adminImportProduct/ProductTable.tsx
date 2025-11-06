@@ -65,10 +65,10 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-white border-b-2 border-gray-200">
                     <tr>
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-16">ID</th>
+                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-16">STT</th>
                         <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-16">Ảnh</th>
                         <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/4">TÊN SẢN PHẨM</th>
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">GIÁ BÁN</th>
+                        {/* <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">GIÁ BÁN</th> */}
                         <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">SL TỒN KHO NHẬP</th>
                         <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/6">NHÀ CUNG CẤP</th>
                         <th className="px-2 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-8">CHI TIẾT</th>
@@ -88,14 +88,14 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                             </td>
                         </tr>
                     ) : (
-                        products.map((product) => {
+                        products.map((product, index) => {
                             const imageUrl = getProductImage(product.id);
                             const isExpanded = expandedRows.includes(product.id);
                             return (
                                 <React.Fragment key={product.id}>
                                     <tr className="hover:bg-gray-50 transition duration-150">
                                         <td className="px-3 py-2 whitespace-nowrap text-center text-sm font-medium text-gray-600">
-                                            {product.id}
+                                            {index + 1}
                                         </td>
                                         <td className="px-3 py-2 text-sm">
                                             <div className="flex justify-center items-center">
@@ -120,9 +120,9 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                                         <td className="px-3 py-2 text-left text-sm text-gray-700 font-medium break-words">
                                             <div className="text-gray-800"  title={product.name}>{product.name}</div>
                                         </td>
-                                        <td className="px-3 py-2 text-center text-sm font-medium text-gray-700">
+                                        {/* <td className="px-3 py-2 text-center text-sm font-medium text-gray-700">
                                             {formatCurrencyWithUnit(product.price)}
-                                        </td>
+                                        </td> */}
                                         <td className="px-3 py-2 text-center text-sm font-bold text-orange-700">
                                             <Box size={14} className='inline text-orange-500 mr-1' />
                                             {formatCurrency(product.total_quantity_divided)}
