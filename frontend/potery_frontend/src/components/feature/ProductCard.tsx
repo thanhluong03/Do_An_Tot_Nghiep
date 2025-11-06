@@ -410,12 +410,14 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           product_id: product.id,
           store_id: selectedStoreId || '',
           quantity,
-          // Find the classification relationship ID for backend
           classification_attribute_relationship_id: storeClassifications.find(c =>
             c.attribute1_id === selectedClassifications.attribute1_id &&
             c.attribute2_id === selectedClassifications.attribute2_id
           )?.id || null,
         });
+        if (window.reloadCartCount) {
+          window.reloadCartCount();
+        }
         toast.success('Đã thêm vào giỏ hàng!');
       }
       setShowAddCart(false);

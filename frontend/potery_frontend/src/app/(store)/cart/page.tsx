@@ -231,6 +231,9 @@ export default function CartPage() {
     try {
       await cartApi.remove(ciId);
       setServerItems((prev) => prev.filter((x) => x.id !== ciId));
+      if (window.reloadCartCount) {
+        window.reloadCartCount();
+      }
     } catch (err) {
       console.error('Lỗi khi xóa sản phẩm:', err);
     }
@@ -522,6 +525,20 @@ export default function CartPage() {
                                       ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
                                       : undefined;
                                     removeItem(product.id, cartKey);
+                                    if (!isAuthenticated) {
+                                      try {
+                                        let parsed: any[] | null = null;
+                                        if (typeof window !== 'undefined') {
+                                          const ss = sessionStorage.getItem('cart_session');
+                                          if (ss) parsed = JSON.parse(ss);
+                                        }
+                                        if (!parsed) {
+                                          const saved = Cookies.get('cart_session');
+                                          if (saved) parsed = JSON.parse(saved || '[]');
+                                        }
+                                        if (Array.isArray(parsed)) setCookieItems(parsed);
+                                      } catch { }
+                                    }
                                   }}
                                   className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
                                 >

@@ -3,10 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts';
 import { cn } from '../../utils/cn';
-import { categoryApi } from '../../api/modules/category'; // ✅ thêm import API
+import { categoryApi } from '../../api/modules/category';
+import { cartApi } from '../../api/modules/cart';
 import { useCart } from '../../contexts/CartContext';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useContext } from 'react';
+import { CartCountContext } from '../../contexts/CartContext';
 
 // --- COMPONENT CON: USER DROPDOWN MENU ---
 interface UserDropdownProps {
@@ -104,12 +107,34 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ user }) => {
 
 // --- COMPONENT CHÍNH: HEADER ---
 export const Header: React.FC = () => {
+  declare global {
+    interface Window {
+      reloadCartCount?: () => void;
+    }
+  }
+  const cartCountCtx = useContext(CartCountContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { items } = useCart();
-  const cartCount = items.length;
+  const [cartCount, setCartCount] = useState(items.length);
   const { user, isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Nếu đăng nhập thì lấy số lượng từ API, nếu không thì lấy từ context
+  useEffect(() => {
+    window.reloadCartCount = async () => {
+      if (isAuthenticated && user?.id) {
+        try {
+          const cartItems = await cartApi.getByCustomer(user.id);
+          setCartCount(Array.isArray(cartItems) ? cartItems.length : 0);
+        } catch {
+          setCartCount(0);
+        }
+      } else {
+        setCartCount(items.length);
+      }
+    };
+    window.reloadCartCount();
+  }, [isAuthenticated, user, items.length]);
 
   // ✅ Lấy danh mục từ API thật
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);

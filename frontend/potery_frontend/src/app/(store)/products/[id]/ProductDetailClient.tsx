@@ -327,11 +327,7 @@ export function ProductDetailClient({ product }: { product: any }) {
           } : undefined,
           price: currentPrice || product.price
         });
-
-        const classificationText = selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id)
-          ? ` (${selectedClassifications.attribute1_name || ''} ${selectedClassifications.attribute2_name || ''})`
-          : '';
-        toast.success(`Đã thêm ${quantity} sản phẩm${classificationText} vào giỏ hàng`);
+        toast.success(`Đã thêm vào giỏ hàng!`);
       } finally {
         setLoading(false);
       }
@@ -372,11 +368,10 @@ export function ProductDetailClient({ product }: { product: any }) {
         quantity,
         classification_attribute_relationship_id: classificationId,
       });
-
-      const classificationText = selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id)
-        ? ` (${selectedClassifications.attribute1_name || ''} ${selectedClassifications.attribute2_name || ''})`
-        : '';
-      toast.success(`Đã thêm ${quantity} sản phẩm${classificationText} vào giỏ hàng`);
+      if (window.reloadCartCount) {
+        window.reloadCartCount();
+      }
+      toast.success(`Đã thêm vào giỏ hàng!`);
     } catch (e) {
       console.error(e);
       const error = e as Error;
