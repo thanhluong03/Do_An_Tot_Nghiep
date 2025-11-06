@@ -76,7 +76,7 @@ export default function OrderStatusModal({
             </select>
           </div>
 
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái thanh toán</label>
             <select
               title="change"
@@ -86,7 +86,7 @@ export default function OrderStatusModal({
             >
               <option value="UNPAID">Chưa thanh toán</option>
               {/* <option value="PENDING">PENDING - Đang xử lý</option> */}
-              <option value="PAID">Đã thanh toán</option>
+              {/* <option value="PAID">Đã thanh toán</option>
               <option value="REFUNDED">Hoàn tiền</option>
             </select>
           </div>
@@ -103,7 +103,7 @@ export default function OrderStatusModal({
               <option value="BANK_TRANSFER">Chuyển khoản</option>
               <option value="CARD">Thẻ ngân hàng</option>
             </select>
-          </div>
+          </div>  */}
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
