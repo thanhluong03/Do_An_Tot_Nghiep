@@ -1,4 +1,7 @@
+
 'use client';
+import { createContext as createReactContext } from 'react';
+export const CartCountContext = createReactContext<{ reloadCartCount: () => void } | undefined>(undefined);
 
 import React, { createContext, useContext, useMemo, useState, ReactNode, useEffect } from 'react';
 import { Product } from '../types';
@@ -136,6 +139,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       try { if (typeof window !== 'undefined') sessionStorage.setItem('cart_session', JSON.stringify(next)); } catch { }
       try { Cookies.set('cart_session', JSON.stringify(next), { expires: 7 }); } catch { }
+      if (typeof window !== 'undefined' && !window.__forceCartUpdate) {
+        window.__forceCartUpdate = true;
+        setTimeout(() => { window.__forceCartUpdate = false; }, 100);
+      }
       return next;
     });
   };

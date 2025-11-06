@@ -54,11 +54,7 @@ export function AddToCartClient({
           } : undefined,
           price: currentPrice || product.price
         });
-
-        const classificationText = selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id)
-          ? ` (${selectedClassifications.attribute1_name || ''} ${selectedClassifications.attribute2_name || ''})`
-          : '';
-        setMessage(`Đã thêm ${quantity} sản phẩm${classificationText} vào giỏ hàng`);
+        setMessage(`Đã thêm vào giỏ hàng!`);
       } finally {
         setLoading(false);
       }
@@ -98,6 +94,9 @@ export function AddToCartClient({
         quantity,
         classification_attribute_relationship_id: classificationId,
       });
+      if (window.reloadCartCount) {
+        window.reloadCartCount();
+      }
 
       console.log('🟢 Add to cart called with:', {
         product: product.name,
@@ -105,11 +104,7 @@ export function AddToCartClient({
         classificationId,
         price: currentPrice
       });
-
-      const classificationText = selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id)
-        ? ` (${selectedClassifications.attribute1_name || ''} ${selectedClassifications.attribute2_name || ''})`
-        : '';
-      setMessage(`Đã thêm ${quantity} sản phẩm${classificationText} vào giỏ hàng`);
+      setMessage(`Đã thêm vào giỏ hàng!`);
     } catch (e) {
       console.error(e);
       setMessage('Không thể thêm vào giỏ hàng');
