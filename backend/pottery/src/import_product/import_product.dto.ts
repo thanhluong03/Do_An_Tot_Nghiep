@@ -53,6 +53,12 @@ export class CreateImportProductDto {
   @ValidateNested({ each: true })
   @Type(() => ImportProductClassificationDto)
   classifications: ImportProductClassificationDto[];
+
+  @IsOptional()
+  import_quantity?: number;
+
+  @IsOptional()
+  import_price?: number;
 }
 
 export class UpdateImportProductDto {
@@ -61,4 +67,10 @@ export class UpdateImportProductDto {
   @ValidateNested({ each: true })
   @Type(() => ImportProductClassificationDto)
   classifications?: ImportProductClassificationDto[];
+
+  @IsOptional()
+  import_quantity?: number;
+
+  @IsOptional()
+  import_price?: number;
 }

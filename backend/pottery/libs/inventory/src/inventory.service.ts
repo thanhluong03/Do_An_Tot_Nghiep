@@ -11,6 +11,16 @@ export class InventoryService {
         private readonly productRepository: ProductRepository,
         private readonly storeRepository: StoreRepository,
     ) { }
+    async getTotalQuantityStock(inventoryId: number): Promise<number> {
+        const details = await this.inventoryDetailRepository.findByInventoryId(inventoryId);
+        if (!details || details.length === 0) return 0;
+        return details.reduce((sum, detail) => sum + (detail.quantity_stock || 0), 0);
+    }
+    async getTotalQuantitySold(inventoryId: number): Promise<number> {
+        const details = await this.inventoryDetailRepository.findByInventoryId(inventoryId);
+        if (!details || details.length === 0) return 0;
+        return details.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+    }
 
     async create(data: CreateInventoryInput) {
         let productIds: number[] = [];
@@ -314,17 +324,19 @@ export class InventoryService {
         const size = input.size && input.size > 0 ? input.size : 10;
         const start = (page - 1) * size;
         const end = start + size;
-        const data = list.slice(start, end).map(inv => ({
-            id: inv.id,
-            product_id: inv.product_id,
-            product_name: inv.product?.name,
-            store_id: inv.store_id,
-            store_name: inv.store?.store_name,
-            quantity_stock: inv.quantity_stock, // Sử dụng getter từ entity
-            quantity_sold: inv.quantity_sold, // Sử dụng getter từ entity
-            created_at: inv.created_at,
-            updated_at: inv.updated_at,
-        }));
+        const data = await Promise.all(
+            list.slice(start, end).map(async (inv) => ({
+                id: inv.id,
+                product_id: inv.product_id,
+                product_name: inv.product?.name,
+                store_id: inv.store_id,
+                store_name: inv.store?.store_name,
+                quantity_stock: await this.getTotalQuantityStock(inv.id),
+                quantity_sold: await this.getTotalQuantitySold(inv.id),
+                created_at: inv.created_at,
+                updated_at: inv.updated_at,
+            }))
+        );
         return { data, total, page, size };
     }
 

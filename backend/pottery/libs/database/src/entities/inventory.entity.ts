@@ -20,28 +20,15 @@ export class InventoryEntity extends BaseEntity {
     @JoinColumn({ name: 'store_id' })
     store: StoreEntity;
 
+    @Column({ type: 'integer', nullable: true })
+    quantity_stock: number;
+
+    @Column({ type: 'integer', nullable: true })
+    quantity_sold: number;
+
     @OneToMany(
         () => InventoryDetailEntity,
         (inventoryDetail) => inventoryDetail.inventory,
     )
     inventory_details: InventoryDetailEntity[];
-    get quantity_stock(): number {
-        if (!this.inventory_details || this.inventory_details.length === 0) {
-            return 0;
-        }
-        return this.inventory_details.reduce(
-            (sum, detail) => sum + (detail.quantity_stock || 0),
-            0,
-        );
-    }
-
-    get quantity_sold(): number {
-        if (!this.inventory_details || this.inventory_details.length === 0) {
-            return 0;
-        }
-        return this.inventory_details.reduce(
-            (sum, detail) => sum + (detail.quantity_sold || 0),
-            0,
-        );
-    }
 }
