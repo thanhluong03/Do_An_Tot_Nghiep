@@ -27,6 +27,8 @@ export interface CreateImportProductDto {
     product_id: number | string;
     supplier_id: number | string;
     classifications: ImportProductClassificationDto[];
+    import_quantity?: number; // Dành cho sản phẩm không có phân loại
+    import_price?: number;
 }
 
 /**
@@ -45,6 +47,8 @@ export interface ImportProduct {
     details?: ImportProductDetail[];
     created_at?: string;
     updated_at?: string;
+    import_quantity?: number; // SỐ LƯỢNG NẾU KHÔNG CÓ DETAILS
+    import_price?: number;   
 }
 
 export interface ImportProductDetail {

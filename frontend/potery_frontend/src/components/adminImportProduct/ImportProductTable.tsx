@@ -67,14 +67,27 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
         setExpandedRows(newExpanded);
     };
 
-    const calculateTotals = (details: ImportProductDetail[] = []) => {
-        return details.reduce(
-            (acc, detail) => ({
-                totalQuantity: acc.totalQuantity + (detail.import_quantity || 0),
-                totalAmount: acc.totalAmount + ((detail.import_quantity || 0) * (detail.import_price || 0))
-            }),
-            { totalQuantity: 0, totalAmount: 0 }
-        );
+    const calculateTotals = (item: ImportProduct) => {
+        // 1. Trường hợp có Details (sản phẩm có phân loại)
+        if (item.details && item.details.length > 0) {
+            return item.details.reduce(
+                (acc, detail) => ({
+                    totalQuantity: acc.totalQuantity + (detail.import_quantity || 0),
+                    totalAmount: acc.totalAmount + ((detail.import_quantity || 0) * (detail.import_price || 0))
+                }),
+                { totalQuantity: 0, totalAmount: 0 }
+            );
+        }
+
+        // 2. Trường hợp KHÔNG có Details (sản phẩm không phân loại)
+        // Dữ liệu được lấy từ các trường cấp cao của ImportProduct (đã thêm ở bước 1)
+        const quantity = item.import_quantity || 0;
+        const price = item.import_price || 0;
+
+        return {
+            totalQuantity: quantity,
+            totalAmount: quantity * price,
+        };
     };
 
     const totalPages = Math.ceil(totalItems / pageSize);
@@ -110,23 +123,23 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
             <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-200">
 
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-white border-b-2 border-gray-200">
+                    <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">STT</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">Ảnh</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/4">SẢN PHẨM</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">TỔNG SL</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">NHÀ CUNG CẤP</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">NGÀY TẠO</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">TỔNG TIỀN</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">CHI TIẾT</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">XÓA</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-16">STT</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">Ảnh</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-1/4">SẢN PHẨM</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-1/6">SỐ LƯỢNG NHẬP</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20">NHÀ CUNG CẤP</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-1/6">NGÀY TẠO</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24">TỔNG TIỀN</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-20">CHI TIẾT</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-16">XÓA</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
                         {importProducts.map((item, index) => {
                             const productId = item.product_id;
-                            const { totalQuantity, totalAmount } = calculateTotals(item.details);
+                            const { totalQuantity, totalAmount } = calculateTotals(item);
                             const imageUrl = getProductImage(productId);
                             const productName = getProductName(productId);
                             const stt = startIndex + index;
@@ -188,7 +201,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                 </button>
                                             ) : (
-                                                <span className="text-gray-400 text-xs">Không có</span>
+                                                <span className="text-gray-400 text-xs">Không có phân loại</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
