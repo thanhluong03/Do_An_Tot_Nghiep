@@ -59,20 +59,39 @@ export default function ProductsTable({
 }: ProductsTableProps) {
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
+    // Kích hoạt/Vô hiệu hóa dòng mở rộng
+    const toggleExpandedRow = (productId: number | undefined) => {
+        if (productId === undefined) return;
+
+        // Chỉ cho phép mở rộng nếu sản phẩm có ít nhất 1 phân loại
+        const product = products.find(p => p.id === productId);
+        if (product && product.classifications && product.classifications.length > 0) {
+             setExpandedRow(expandedRow === productId ? null : productId);
+        } else {
+             // Nếu không có phân loại, đảm bảo đóng nếu đang mở
+             if (expandedRow === productId) {
+                 setExpandedRow(null);
+             }
+             // Và không làm gì nếu chưa mở và không có phân loại
+        }
+    };
+
+
     return (
         <div className="overflow-x-auto bg-white rounded-2xl shadow-md border border-gray-200">
             <table className="min-w-full text-sm text-gray-800">
                 <thead>
                     <tr className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 text-xs uppercase tracking-wider">
-                        <th className="p-4 text-left font-semibold">STT</th>
-                        <th className="p-4 text-left font-semibold">Ảnh</th>
-                        <th className="p-4 text-left font-semibold">Tên sản phẩm</th>
-                        <th className="p-4 text-left font-semibold">Số lượng</th>
-                        <th className="p-4 text-left font-semibold">Trạng thái</th>
-                        <th className="p-4 text-left font-semibold">Danh mục</th>
-                        <th className="p-4 text-left font-semibold">Nhà cung cấp</th>
-                        <th className="p-4 text-left font-semibold">Thời gian tạo</th>
-                        <th className="p-4 text-center font-semibold">Hành động</th>
+                        <th className="p-3 text-left text-xs ">STT</th>
+                        <th className="p-3 text-left text-xs ">Ảnh</th>
+                        <th className="p-3 text-left text-xs">Tên sản phẩm</th>
+                        <th className="p-3 text-left text-xs">Giá</th>
+                        <th className="p-3 text-left text-xs">Số lượng</th>
+                        <th className="p-3 text-left text-xs">Trạng thái</th>
+                        <th className="p-3 text-left text-xs">Danh mục</th>
+                        <th className="p-3 text-left text-xs">Nhà cung cấp</th>
+                        <th className="p-3 text-left text-xs">Thời gian tạo</th>
+                        <th className="p-3 text-center text-xs">Hành động</th>
                     </tr>
                 </thead>
 
@@ -80,7 +99,7 @@ export default function ProductsTable({
                     {products.length === 0 ? (
                         <tr>
                             <td
-                                colSpan={9}
+                                colSpan={10} // Cập nhật từ 9 lên 10
                                 className="text-center p-10 text-gray-500 italic bg-gray-50"
                             >
                                 Không có sản phẩm nào
@@ -92,6 +111,7 @@ export default function ProductsTable({
                             let mainImage: string | null = null;
                             const firstImage = p.images?.[0];
 
+                            // Logic lấy ảnh chính (giữ nguyên)
                             if (p.main_image && typeof p.main_image === "string") {
                                 mainImage = p.main_image;
                             } else if (firstImage?.url && typeof firstImage.url === "string") {
@@ -114,6 +134,10 @@ export default function ProductsTable({
                                 mainImage =
                                     "https://placehold.co/100x100/9ca3af/ffffff?text=No+Image";
                             }
+                            
+                            // Kiểm tra có phân loại để hiển thị nút
+                            const hasClassifications = p.classifications && p.classifications.length > 0;
+
 
                             return (
                                 <React.Fragment key={p.id ?? index}>
@@ -121,9 +145,9 @@ export default function ProductsTable({
                                         key={p.id}
                                         className="hover:bg-gray-50 transition-all duration-150 border-b border-gray-100"
                                     >
-                                        <td className="p-4 text-gray-700">{serialNumber}</td>
-                                        <td className="p-4">
-                                            <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                                        <td className="p-3 text-gray-700">{serialNumber}</td>
+                                        <td className="p-3">
+                                            <div className="w-12 h-12 rounded-xl overflow-hidden left border border-gray-200 shadow-sm">
                                                 <img
                                                     src={mainImage}
                                                     alt={p.name}
@@ -135,14 +159,15 @@ export default function ProductsTable({
                                                 />
                                             </div>
                                         </td>
-                                        <td className="p-4 font-medium text-gray-900 max-w-[300px] break-words" title={p.name}>{p.name}</td>
-                                        <td className="p-4 text-gray-700">
+                                        <td className="p-3 text-xs text-gray-900 max-w-[300px] break-words " title={p.name}>{p.name}</td>
+                                        <td className="p-3 text-gray-700 text-xs">{p.price ?? "Xem chi tiết"}</td>
+                                        <td className="p-3 text-gray-700 text-xs">
                                             {p.quantity ?? "N/A"}
                                         </td>
-                                        <td className="p-4 text-left">{getStatusBadge(p.quantity)}</td>
-                                        <td className="p-4 text-gray-600">{getCategoryName(p)}</td>
-                                        <td className="p-4 text-gray-600">{getSupplierName(p)}</td>
-                                        <td className="p-4 text-gray-600">
+                                        <td className="p-3 text-left text-xs">{getStatusBadge(p.quantity)}</td>
+                                        <td className="p-3 text-gray-600 text-xs">{getCategoryName(p)}</td>
+                                        <td className="p-3 text-gray-600 text-xs">{getSupplierName(p)}</td>
+                                        <td className="p-3 text-gray-600 text-xs">
                                             {p.created_at
                                                 ? new Date(p.created_at).toLocaleDateString("vi-VN", {
                                                     day: "2-digit",
@@ -152,30 +177,32 @@ export default function ProductsTable({
                                                 : "N/A"}
                                         </td>
                                         <td className="p-4 text-center space-x-2">
+                                            {hasClassifications && ( // Chỉ hiển thị nút nếu có phân loại
                                             <button
-                                                title="Chi tiết"
-                                                onClick={() =>
-                                                    setExpandedRow(expandedRow === p.id ? null : (p.id ?? null))
-                                                }
+                                                title={expandedRow === p.id ? "Ẩn chi tiết" : "Xem chi tiết"}
+                                                onClick={() => toggleExpandedRow(p.id)}
                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition"
                                             >
-                                                <ChevronDown size={10} />
-                                                {expandedRow === p.id ? "Ẩn" : <Eye size={14} />}
+                                                <ChevronDown 
+                                                    size={14} 
+                                                    className={`transition-transform ${expandedRow === p.id ? 'rotate-180' : 'rotate-0'}`} 
+                                                />
+                                                {expandedRow === p.id ? "Ẩn" : "Xem"}
                                             </button>
-
+                                            )}
                                             <button
                                                 title="Sửa"
                                                 onClick={() => openEditModal(p)}
                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
                                             >
-                                                <Pencil size={10} />
+                                                <Pencil size={14} />
                                             </button>
                                             <button
                                                 title="Xóa"
                                                 onClick={() => handleDelete(p.id!)}
                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
                                             >
-                                                <Trash2 size={10} />
+                                                <Trash2 size={14} />
                                             </button>
                                         </td>
                                     </tr>
@@ -183,8 +210,8 @@ export default function ProductsTable({
                                     {/* Dòng mở rộng chi tiết */}
                                     {expandedRow === p.id && (
                                         <tr className="bg-white border-t border-gray-200">
-                                            <td colSpan={9} className="p-6">
-                                                {p.classifications && p.classifications.length > 0 ? (
+                                            <td colSpan={10} className="p-6"> {/* Cập nhật từ 9 lên 10 */}
+                                                {hasClassifications ? ( // Kiểm tra lại lần nữa để hiển thị nội dung chi tiết
                                                     <div className="flex flex-col gap-2 border border-gray-200 rounded-xl p-4 bg-gray-50 shadow-sm">
                                                         <h4 className="font-semibold text-lg text-gray-800 text-center border-gray-200 pb-2">
                                                             Phân loại & Giá bán
@@ -194,12 +221,13 @@ export default function ProductsTable({
                                                         <div className="flex flex-col md:flex-row justify-center gap-6">
 
                                                             {/* 🔹 Cột trái: Danh sách phân loại */}
+                                                            {p.relationships && p.relationships.length > 0 ? (
                                                             <div className="flex-1 max-w-[500px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                                                                 <h5 className="font-semibold text-gray-700 mb-3 text-base text-center">
                                                                     Phân loại sản phẩm
                                                                 </h5>
                                                                 <div className="flex flex-col gap-3">
-                                                                    {p.classifications.map((c, ci) => (
+                                                                    {p.classifications!.map((c, ci) => (
                                                                         <div
                                                                             key={ci}
                                                                             className="border border-gray-100 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition"
@@ -219,9 +247,16 @@ export default function ProductsTable({
                                                                     ))}
                                                                 </div>
                                                             </div>
+                                                             ) : (
+                                                                <div className="flex-1 max-w-[600px] bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center justify-center">
+                                                                    <p className="text-gray-500 italic text-center">
+                                                                        Không có chi tiết phân loại cho phân loại này.
+                                                                    </p>
+                                                                </div>
+                                                            )}
 
                                                             {/* 🔹 Cột phải: Bảng giá & số lượng */}
-                                                            {p.relationships && p.relationships.length > 0 && (
+                                                            {p.relationships && p.relationships.length > 0 ? (
                                                                 <div className="flex-1 max-w-[600px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                                                                     <h5 className="text-base font-semibold text-gray-700 mb-3 text-center">
                                                                         Chi tiết giá & số lượng
@@ -265,12 +300,18 @@ export default function ProductsTable({
                                                                         </table>
                                                                     </div>
                                                                 </div>
+                                                            ) : (
+                                                                <div className="flex-1 max-w-[600px] bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center justify-center">
+                                                                    <p className="text-gray-500 italic text-center">
+                                                                        Không có chi tiết giá/số lượng cho phân loại này.
+                                                                    </p>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <p className="text-gray-500 italic text-center">
-                                                        Không có phân loại cho sản phẩm này
+                                                         Không có phân loại cho sản phẩm này.
                                                     </p>
                                                 )}
                                             </td>

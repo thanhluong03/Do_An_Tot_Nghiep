@@ -332,74 +332,79 @@ export default function ImportProductPage() {
         setClassificationSelections({});
         setEditingItem(null);
     }, [allProductsForForm]);
-
-
     const handleSubmit = async () => {
         if (!selectedSupplier) {
             toast.error("Vui lòng chọn nhà cung cấp!");
             return;
         }
 
-        // Collect all classification selections from all selected products
-        const allClassificationData: Array<{
-            product_id: number;
-            supplier_id: number;
-            classifications: Array<{
-                classification_attribute_relationship_id: number;
-                import_quantity: number;
-                import_price: number;
-            }>;
-        }> = [];
+        // 1. Tách biệt hai loại payload (có phân loại và không có phân loại)
+        const productImportsWithClassifications: CreateImportProductDto[] = [];
+        const productImportsWithoutClassifications: CreateImportProductDto[] = [];
 
-        Object.entries(selectedProducts).forEach(([productId, productData]) => {
-            if (productData.checked) {
-                const productClassifications = selectedProductClassifications[productId] || [];
-                const productClassificationSelections = classificationSelections[productId] || {};
+        const selectedProductsData = allProductsForForm.filter(p => selectedProducts[String(p.id)]?.checked);
 
-                if (productClassifications.length > 0) {
-                    // Product has classifications
-                    const selectedClassifications = Object.entries(productClassificationSelections)
-                        .filter(([_, classData]) => classData.checked && Number(classData.quantity) > 0)
-                        .map(([classificationId, classData]) => ({
-                            classification_attribute_relationship_id: Number(classificationId),
-                            import_quantity: Number(classData.quantity),
-                            import_price: Number(classData.price)
-                        }));
+        for (const product of selectedProductsData) {
+            const productId = String(product.id);
+            const productData = selectedProducts[productId];
+            const supplierId = Number(selectedSupplier);
 
-                    if (selectedClassifications.length > 0) {
-                        allClassificationData.push({
-                            product_id: Number(productId),
-                            supplier_id: Number(selectedSupplier),
-                            classifications: selectedClassifications
-                        });
-                    }
-                } else {
-                    // Product has no classifications, use old logic
-                    if (Number(productData.quantity) > 0) {
-                        allClassificationData.push({
-                            product_id: Number(productId),
-                            supplier_id: Number(selectedSupplier),
-                            classifications: [] // Empty classifications for products without variants
-                        });
-                    }
+            const productClassifications = selectedProductClassifications[productId] || [];
+            const productClassificationSelections = classificationSelections[productId] || {};
+
+            if (productClassifications.length > 0) {
+                // TRƯỜNG HỢP 1: SẢN PHẨM CÓ PHÂN LOẠI
+                const selectedClassifications = Object.entries(productClassificationSelections)
+                    .filter(([_, classData]) => classData.checked && Number(classData.quantity) > 0)
+                    .map(([classificationId, classData]) => ({
+                        classification_attribute_relationship_id: Number(classificationId),
+                        import_quantity: Number(classData.quantity),
+                        import_price: Number(classData.price)
+                    }));
+
+                if (selectedClassifications.length > 0) {
+                    // SỬ DỤNG DTO CHUẨN (với mảng classifications)
+                    productImportsWithClassifications.push({
+                        product_id: Number(productId),
+                        supplier_id: supplierId,
+                        classifications: selectedClassifications
+                    });
+                }
+            } else {
+                // TRƯỜNG HỢP 2: SẢN PHẨM KHÔNG CÓ PHÂN LOẠI
+                const quantity = Number(productData.quantity);
+                const price = Number(productData.price);
+
+                if (quantity > 0 && price > 0) {
+                    // SỬ DỤNG DTO CHO SẢN PHẨM KHÔNG PHÂN LOẠI (sử dụng trường import_quantity/import_price)
+                    productImportsWithoutClassifications.push({
+                        product_id: Number(productId),
+                        supplier_id: supplierId,
+                        import_quantity: quantity, // THÊM TRƯỜNG NÀY
+                        import_price: price, // THÊM TRƯỜNG NÀY
+                        classifications: [] // Đảm bảo trường này là mảng rỗng nếu backend yêu cầu, hoặc có thể bỏ qua nếu API cho phép
+                    });
                 }
             }
-        });
+        }
 
-        if (allClassificationData.length === 0) {
+        // Gộp tất cả dữ liệu cần gửi
+        const allImportData = [...productImportsWithClassifications, ...productImportsWithoutClassifications];
+
+        if (allImportData.length === 0) {
             toast.error("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ!");
             return;
         }
 
         try {
-            // Create import for each product
-            for (const productImportData of allClassificationData) {
+            // Gửi từng yêu cầu nhập kho
+            for (const productImportData of allImportData) {
                 await createImportProduct(productImportData);
             }
 
-            const totalProducts = allClassificationData.length;
-            const totalClassifications = allClassificationData.reduce(
-                (sum, item) => sum + item.classifications.length, 0
+            const totalProducts = allImportData.length;
+            const totalClassifications = allImportData.reduce(
+                (sum, item) => sum + (item.classifications?.length || 0), 0 // Tính tổng số phân loại
             );
 
             toast.success(
@@ -407,9 +412,8 @@ export default function ImportProductPage() {
             );
             resetForm();
 
-            // Cập nhật lại tồn kho của trang hiện tại
+            // Cập nhật lại dữ liệu
             await fetchProductsForTable(productListCurrentPage, productListSize);
-            // Cập nhật lại list sản phẩm đầy đủ cho form (để số lượng mới)
             await fetchAllProductsForForm();
 
             if (showTable) {
@@ -479,9 +483,9 @@ export default function ImportProductPage() {
         <div className="min-h-screen">
             <Toaster position="top-center" />
 
-            <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-8">
+            <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-1">
 
-                <div className="flex justify-between items-center mb-6  border-gray-200 pb-3">
+                <div className="flex justify-between items-center m-6  border-gray-200 pb-3">
                     <h1 className="text-2xl font-bold text-[#B95D26]">
                         Quản lý nhập kho sản phẩm
                     </h1>
@@ -519,24 +523,27 @@ export default function ImportProductPage() {
                 )}
 
                 <div className="mt-6">
-                    <div className="flex justify-end items-center mb-4">
+                    <div className="mt-6">
+                        <div className="flex justify-end items-center mb-4">
+                            <button
+                                onClick={() => {
+                                    setShowTable(prev => !prev);
+                                    if (!showTable) {
+                                        setImportPage(1);
+                                    }
+                                }}
+                                className="text-orange-600 hover:text-orange-700 p-2 transition duration-150"
+                                title={showTable ? "Ẩn danh sách" : "Hiển thị danh sách"}
+                            >
+                                <div className="flex mr-3 items-center">
+                                    <span className="font-semibold ">
+                                        {showTable ? "Ẩn lịch sử nhập kho" : "Xem lịch sử nhập kho"}
+                                    </span>
 
-                        <button
-                            onClick={() => {
-                                setShowTable(prev => !prev);
-                                if (!showTable) {
-                                    setImportPage(1);
-                                }
-                            }}
-                            className="text-orange-600 hover:text-orange-700 p-2 transition duration-150"
-                            title={showTable ? "Ẩn danh sách" : "Hiển thị danh sách"}
-                        >
-                            <div className="flex">
-                                <span className="font-semibold mr-2 ">Xem lịch sử nhập</span>
-
-                                <RotateCw size={30} className={showTable ? "animate-spin-slow" : ""} />
-                            </div>
-                        </button>
+                                    <RotateCw size={25} className={showTable ? "animate-spin-slow ml-2" : "ml-2"} />
+                                </div>
+                            </button>
+                        </div>
                     </div>
 
                     {showTable && (

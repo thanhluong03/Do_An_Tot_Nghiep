@@ -129,7 +129,7 @@ export default function ProductFormModal({
   // States cho phân loại sản phẩm
   const [classifications, setClassifications] = useState<ProductClassification[]>([]);
   // Always show classification inputs (at least the first one)
-  const [showClassifications, setShowClassifications] = useState(true);
+  const [showClassifications, setShowClassifications] = useState(false);
   const [priceMatrix, setPriceMatrix] = useState<{ [key: string]: number }>({});
   const [classificationErrors, setClassificationErrors] = useState<{ [key: string]: string }>({});
   const [attributeErrors, setAttributeErrors] = useState<{ [key: string]: string }>({});
@@ -172,7 +172,7 @@ export default function ProductFormModal({
       if (!editingProduct) {
         // For a new product, ensure we display at least one empty classification
         setClassifications([{ name: "", attributes: [{ name: "" }] }]);
-        setShowClassifications(true);
+        setShowClassifications(false);
         setPriceMatrix({});
       } else {
         // Load existing images từ product đang edit
@@ -461,7 +461,7 @@ export default function ProductFormModal({
 
     const form = new FormData();
     form.append("name", formData.name);
-    //form.append("price", formData.price.toString());
+    form.append("price", formData.price.toString());
     form.append("description", formData.description || "");
     form.append("category_id", (formData.category_id || 0).toString());
     form.append("supplier_id", (formData.supplier_id || 0).toString());
@@ -547,8 +547,8 @@ export default function ProductFormModal({
 
       {/* --- MAIN MODAL --- */}
       <div
-        className="relative z-10 w-full max-w-[1500px] bg-white rounded-3xl shadow-2xl border border-gray-200 
-        p-10 animate-[fadeIn_0.2s_ease-in-out] overflow-y-auto max-h-[95vh]"
+        className="relative z-10 w-full max-w-[1350px] bg-white rounded-3xl shadow-2xl border border-gray-200 
+        p-10 animate-[fadeIn_0.2s_ease-in-out] overflow-y-auto max-h-[98vh]"
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-10 pb-5">
@@ -567,7 +567,7 @@ export default function ProductFormModal({
         {/* Form nội dung */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2 gap-y-2">
           {/* Tên sản phẩm */}
-          <div className="col-span-2">
+          <div className="">
             <label className="block text-base font-semibold text-gray-800 mb-1">
               Tên sản phẩm
             </label>
@@ -583,7 +583,7 @@ export default function ProductFormModal({
             )}
           </div>
 
-          {/* Giá
+          
           <div>
             <label className="block text-base font-semibold text-gray-800 mb-1">
               Giá (VNĐ)
@@ -598,7 +598,7 @@ export default function ProductFormModal({
             {validationErrors.price && (
               <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
             )}
-          </div> */}
+          </div> 
 
           {/* Danh mục */}
           <div>
@@ -809,12 +809,22 @@ export default function ProductFormModal({
         <div className="mt-8 pt-2">
           <div className="flex items-center justify-between">
             <label className="block text-xl font-bold text-gray-800 mb-4">
-              Thông tin bán hàng
+              Thêm thông tin bán hàng nếu có phân loại sản phẩm
+            </label>
+            <label className="inline-flex items-center gap-2 text-gray-600 font-medium">
+              <input
+                type="checkbox"
+                checked={showClassifications}
+                onChange={(e) => setShowClassifications(e.target.checked)}
+                className="h-5 w-5 rounded border-gray-300 focus:ring-orange-500"
+              />
+              Chọn nếu có phân loại sản phẩm
             </label>
           </div>
 
           {showClassifications && (
             <div className="space-y-6">
+              <p className="text-sm text-gray-500">Giá của sản phẩm sẽ theo phân loại</p>
               {classifications.map((classification, classIndex) => (
                 <div key={classIndex} className="border border-gray-200 rounded-xl p-4">
                   {/* Header + name on one row to match screenshot */}
