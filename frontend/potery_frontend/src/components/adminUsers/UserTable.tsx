@@ -3,10 +3,12 @@ import React from "react";
 import { User, getUserAvatarUrl } from "@/api/services/userService";
 import { Pencil, Trash2 } from "lucide-react";
 import { Role } from "@/api/services/roleService";
+import { Store } from "@/api/services/storeService";
 
 interface UserTableProps {
   users: User[];
   roles: Role[];
+  stores: Store[];
   onEdit: (user: User) => void;
   onDelete: (id: number) => void;
 }
@@ -16,11 +18,17 @@ export default function UserTable({
   onEdit,
   onDelete,
   roles,
+  stores,
 }: UserTableProps) {
   const getRoleName = (roleId: number): string => {
     const role = roles.find((r) => r.id === roleId);
     return role ? role.name : `#${roleId}`;
   };
+  const getStoreName = (storeId: number | string): string => {
+    const store = stores.find((s) => Number(s.id) === Number(storeId));
+    return store ? store.store_name : `#${storeId}`;
+  };
+
 
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-lg">
@@ -33,6 +41,7 @@ export default function UserTable({
           <th className="px-4 py-3">Email</th>
           <th className="px-4 py-3">Điện thoại</th>
           <th className="px-4 py-3">Vai trò</th>
+          <th className="px-4 py-3">Cửa hàng</th>
           <th className="px-4 py-3 text-center">Trạng thái</th>
           <th className="px-4 py-3 text-center">Thao tác</th>
         </tr>
@@ -64,7 +73,7 @@ export default function UserTable({
                     ) : (
                       // HIỂN THỊ DIV CHỮ A KHI KHÔNG CÓ BASE64 HỢP LỆ
                       <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-500">
-                        { 'A'}
+                        {'A'}
                       </div>
                     )}
                   </td>
@@ -77,11 +86,15 @@ export default function UserTable({
                   <td className="px-4 py-3 font-medium text-indigo-600">
                     {getRoleName(u.role_id)}
                   </td>
+                  <td className="px-4 py-3 font-medium text-indigo-600">
+                    {u.store_id ? getStoreName(Number(u.store_id)) : "-"}
+                  </td>
+
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${u.is_active
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
                         }`}
                     >
                       {u.is_active ? "Active" : "Bị khóa"}

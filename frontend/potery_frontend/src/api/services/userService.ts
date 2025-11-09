@@ -10,6 +10,7 @@ export interface User {
     address?: string;
     is_active?: boolean;
     role_id: number;
+    store_id?: number;
     avatar_image?: string | { type: string; data: number[] };
 }
 

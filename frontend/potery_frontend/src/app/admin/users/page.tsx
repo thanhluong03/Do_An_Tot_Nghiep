@@ -13,10 +13,11 @@ import {
 } from "@/api/services/userService";
 import UserFormModal from "@/components/adminUsers/UserFormModal";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { getStores, Store } from "@/api/services/storeService";
 
 export default function UserPage() {
   const [roles, setRoles] = useState<Role[]>([]);
-
+  const [stores, setStores] = useState<Store[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -42,11 +43,20 @@ export default function UserPage() {
     toast.error("Không thể tải danh sách vai trò!");
   }
 };
+  const fetchStores = async () => {
+    try {
+      const data = await getStores();
+      setStores(data);
+    } catch {
+      toast.error("Không thể tải danh sách cửa hàng!");
+    }
+};
 
 
   useEffect(() => {
     fetchUsers();
     fetchRoles();
+    fetchStores();
   }, []);
 
   
@@ -55,6 +65,7 @@ export default function UserPage() {
       await createUser(formData);
       toast.success("Tạo người dùng thành công.");
       fetchUsers();
+
     } catch (error) {
       toast.error("Tạo người dùng thất bại.");
     }
@@ -114,6 +125,7 @@ export default function UserPage() {
         <UserTable
           users={users}
           roles={roles}
+          stores={stores}
           onEdit={(user) => {
             setEditingUser(user);
             setModalOpen(true);
@@ -146,3 +158,4 @@ export default function UserPage() {
     </div>
   );
 }
+  
