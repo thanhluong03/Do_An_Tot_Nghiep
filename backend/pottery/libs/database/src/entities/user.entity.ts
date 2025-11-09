@@ -47,9 +47,13 @@ export class UserEntity extends BaseEntity {
     @OneToMany(() => ConversationEntity, (conversation) => conversation.user)
     conversations: ConversationEntity[];
 
+    @Column({ type: 'integer', nullable: true })
+    store_id: number;
+
     @ManyToOne(() => StoreEntity, (store) => store.users)
     @JoinColumn({ name: 'store_id' })
     store: StoreEntity;
+
 
     @OneToMany(() => DeliveryProofEntity, (deliveryProof) => deliveryProof.user)
     deliveryProofs: DeliveryProofEntity[];

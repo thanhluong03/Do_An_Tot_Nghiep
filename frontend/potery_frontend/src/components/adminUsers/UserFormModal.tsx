@@ -4,6 +4,7 @@ import { User } from "@/api/services/userService";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import { getRoles, Role } from "@/api/services/roleService";
+import { getStores, Store } from "@/api/services/storeService";
 
 interface UserFormModalProps {
     user: User | null;
@@ -27,7 +28,10 @@ export default function UserFormModal({
     const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");
     const [roleId, setRoleId] = useState<number>(1);
+    const [storeId, setStoreId] = useState<number>(0);
+
     const [roles, setRoles] = useState<Role[]>([]);
+    const [stores, setStores] = useState<Store[]>([]);
     const [isActive, setIsActive] = useState(true);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string>("");
@@ -43,18 +47,31 @@ export default function UserFormModal({
                 toast.error("Không thể tải danh sách vai trò.");
             }
         }
+
+        async function fetchStores() {
+            try {
+                const data = await getStores(); // ✅ gọi API cửa hàng
+                setStores(data);
+            } catch (err) {
+                console.error(err);
+                toast.error("Không thể tải danh sách cửa hàng.");
+            }
+        }
+
         fetchRoles();
+        fetchStores(); // ✅ gọi thêm hàm này
     }, []);
 
     useEffect(() => {
         if (user) {
-            setUsername(user.username);
+            setUsername(user.username || "");
             setEmail(user.email || "");
             setFullName(user.full_name || "");
             setPhoneNumber(user.phone_number || "");
             setAddress(user.address || "");
             setRoleId(user.role_id);
             setIsActive(user.is_active ?? true);
+            setStoreId(user.store_id ?? 0);
             let preview = "";
             if (typeof user.avatar_image === "string" && user.avatar_image.length > 50) {
                 // Giả định nếu là chuỗi dài và không bắt đầu bằng 'http', nó là Base64
@@ -62,12 +79,12 @@ export default function UserFormModal({
                     preview = user.avatar_image; // Nếu là URL HTTP/S
                 } else {
                     // Cần tiền tố để Next.js Image component nhận dạng Base64 hợp lệ
-                    preview = `data:image/jpeg;base64,${user.avatar_image}`; 
+                    preview = `data:image/jpeg;base64,${user.avatar_image}`;
                 }
             }
 
             setAvatarPreview(preview);
-            
+
             setPassword("");
         } else {
             setUsername("");
@@ -76,8 +93,9 @@ export default function UserFormModal({
             setFullName("");
             setPhoneNumber("");
             setAddress("");
-            setRoleId(1);
+            setRoleId(0);
             setIsActive(true);
+            setStoreId(0);
             setAvatarFile(null);
             setAvatarPreview("");
         }
@@ -118,7 +136,7 @@ export default function UserFormModal({
             newErrors.phoneNumber = "Số điện thoại không hợp lệ.";
 
         if (!fullName.trim()) newErrors.fullName = "Họ và tên là bắt buộc.";
-
+        if (storeId === 0) newErrors.storeId = "Vui lòng chọn cửa hàng.";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -138,8 +156,14 @@ export default function UserFormModal({
         formData.append("phone_number", phoneNumber);
         formData.append("address", address);
         formData.append("role_id", roleId.toString());
+        formData.append("store_id", storeId.toString());
         formData.append("is_active", String(isActive));
         if (avatarFile) formData.append("avatar_image", avatarFile);
+        // ---------- debug: show formData ----------
+        for (const [k, v] of formData.entries()) {
+            console.log("FORMDATA", k, v);
+        }
+
 
         if (user && user.id) onUpdate(user.id, formData);
         else onCreate(formData);
@@ -278,7 +302,27 @@ export default function UserFormModal({
                             )}
                         </select>
                     </div>
+                    {/* Store */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Cửa hàng (Store)
+                        </label>
+                        <select
+                            title="Select Store"
+                            value={storeId}
+                            onChange={(e) => setStoreId(Number(e.target.value))}
+                            className={`${inputClasses} bg-white`}
+                        >
+                            <option value="0">-- Chọn cửa hàng --</option>   {/* ✅ luôn luôn hiển thị */}
 
+                            {stores.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.store_name}
+                                </option>
+                            ))}
+                        </select>
+                        {errorText("storeId")}
+                    </div>
                     {/* Active */}
                     <div className="flex items-center space-x-3 pt-2">
                         <input

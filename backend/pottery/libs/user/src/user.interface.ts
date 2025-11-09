@@ -8,6 +8,7 @@ export class ICreateUser {
     avatar_image?: Buffer
     is_active?: boolean
     role_id?: number
+    store_id?: number;
 }
 export interface IUpdateUser {
     username?: string
@@ -19,6 +20,7 @@ export interface IUpdateUser {
     avatar_image?: Buffer
     is_active?: boolean
     role_id?: number
+    store_id?: number;
 }
 export interface IListUser {
     page?: number

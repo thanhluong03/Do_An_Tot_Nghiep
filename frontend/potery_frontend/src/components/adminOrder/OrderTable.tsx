@@ -136,6 +136,7 @@ export default function OrderTable({
                 {order.status === 'CONFIRMED' ? (
                   <div className="flex items-center space-x-2 min-w-[250px]">
                     <select
+                      title="Chọn tài xế"
                       value={selectedDriver[order.id] || ''}
                       onChange={(e) => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
                       className="block w-full pl-3 pr-10 py-2 text-xs border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md"
