@@ -52,138 +52,258 @@ export class ImportProductService {
         const productId = Number(data.product_id);
         const supplierId = Number(data.supplier_id);
 
-        // Always create new import_product for each import session
-        const importProduct = await this.importProductRepository.create({
-            product_id: productId,
-            supplier_id: supplierId,
-        });
+        // Kiểm tra có phân loại hay không
+        const hasClassification = Array.isArray(data.classifications) && data.classifications.length > 0;
 
-        // Create import_product_details for each classification
-        for (const item of data.classifications) {
-            const classificationId = Number(
-                item.classification_attribute_relationship_id,
-            );
+        let importProduct;
+        try {
+            if (!hasClassification) {
+                // Không có phân loại: lưu số lượng nhập và giá nhập vào bảng nhập hàng
+                importProduct = await this.importProductRepository.create({
+                    product_id: productId,
+                    supplier_id: supplierId,
+                    import_quantity: data.import_quantity,
+                    import_price: data.import_price,
+                });
+                // Cập nhật số lượng cho sản phẩm
+                const product = await this.productRepository.findById(productId);
+                if (product) {
+                    const newQuantity = Number(product.quantity || 0) + (data.import_quantity || 0);
+                    await this.productRepository.update(productId, {
+                        quantity: newQuantity,
+                        total_quantity_divided: newQuantity,
+                    });
+                }
+                // Trả về thông báo và dữ liệu
+                return {
+                    success: true,
+                    message: 'Nhập sản phẩm thành công',
+                    importProduct,
+                };
+            } else {
+                // Có phân loại: logic cũ
+                importProduct = await this.importProductRepository.create({
+                    product_id: productId,
+                    supplier_id: supplierId,
+                });
 
-            await this.importProductDetailRepository.createDetail({
-                import_product_id: importProduct.id,
-                classification_attribute_relationship_id: classificationId,
-                import_quantity: item.import_quantity,
-                import_price: item.import_price,
-            });
+                // Create import_product_details for each classification
+                for (const item of data.classifications ?? []) {
+                    const classificationId = Number(
+                        item.classification_attribute_relationship_id,
+                    );
 
-            // Update classification quantity
-            const classification =
-                await this.classificationAttributeRelationshipRepository.findById(
-                    classificationId,
-                );
-            if (classification) {
-                classification.quantity =
-                    Number(classification.quantity || 0) + item.import_quantity;
-                await this.classificationAttributeRelationshipRepository.update(
-                    classificationId,
-                    {
-                        quantity: classification.quantity,
-                    },
-                );
+                    await this.importProductDetailRepository.createDetail({
+                        import_product_id: importProduct.id,
+                        classification_attribute_relationship_id: classificationId,
+                        import_quantity: item.import_quantity,
+                        import_price: item.import_price,
+                    });
+
+                    // Update classification quantity
+                    const classification =
+                        await this.classificationAttributeRelationshipRepository.findById(
+                            classificationId,
+                        );
+                    if (classification) {
+                        classification.quantity =
+                            Number(classification.quantity || 0) + item.import_quantity;
+                        await this.classificationAttributeRelationshipRepository.update(
+                            classificationId,
+                            {
+                                quantity: classification.quantity,
+                            },
+                        );
+                    }
+                }
+
+                // Update total_quantity_divided for the product
+                await this.updateTotalQuantityDivided(productId);
+
+                const { data: allImportProducts } = await this.list({
+                    page: 1,
+                    size: 1000,
+                });
+
+                return {
+                    success: true,
+                    message: 'Nhập sản phẩm thành công',
+                    importProduct,
+                    importProducts: allImportProducts,
+                };
             }
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Nhập sản phẩm thất bại',
+                error: error?.message || error,
+            };
         }
-
-        // Update total_quantity_divided for the product
-        await this.updateTotalQuantityDivided(productId);
-
-        const { data: allImportProducts } = await this.list({
-            page: 1,
-            size: 1000,
-        });
-
-        return {
-            importProducts: allImportProducts,
-        };
     }
 
     async update(id: number, data: UpdateImportProductInput) {
-        const importProduct = await this.importProductRepository.findById(id);
-        if (!importProduct) {
-            throw new NotFoundException('Import product not found');
-        }
+        try {
+            const importProduct = await this.importProductRepository.findById(id);
+            if (!importProduct) {
+                return {
+                    success: false,
+                    message: 'Không tìm thấy phiếu nhập hàng',
+                };
+            }
 
-        if (data.classifications) {
-            // Delete existing details
+            // Check if product has classification details
             const existingDetails = await this.importProductDetailRepository.findByImportProductId(id);
-            let totalOld = 0;
-            for (const detail of existingDetails) {
-                const classification = await this.classificationAttributeRelationshipRepository.findById(detail.classification_attribute_relationship_id);
-                if (classification) {
-                    classification.quantity = Number(classification.quantity || 0) - (detail.import_quantity || 0);
-                    await this.classificationAttributeRelationshipRepository.update(detail.classification_attribute_relationship_id, { quantity: classification.quantity });
+            if (existingDetails.length > 0) {
+                // Logic for products with classification
+                const newClassifications = data.classifications ?? [];
+                // Map old details by classification id
+                const oldDetailMap = new Map<number, any>();
+                for (const detail of existingDetails) {
+                    oldDetailMap.set(Number(detail.classification_attribute_relationship_id), detail);
                 }
-                totalOld += detail.import_quantity || 0;
-                await this.importProductDetailRepository.softDeleteDetail(detail.id);
+                // Map new classifications by id
+                const newClassifyMap = new Map<number, any>();
+                for (const item of newClassifications) {
+                    newClassifyMap.set(Number(item.classification_attribute_relationship_id), item);
+                }
+
+                // Update or add details
+                for (const item of newClassifications) {
+                    const classificationId = Number(item.classification_attribute_relationship_id);
+                    const oldDetail = oldDetailMap.get(classificationId);
+                    if (oldDetail) {
+                        // Cập nhật detail
+                        await this.importProductDetailRepository.update(oldDetail.id, {
+                            import_quantity: item.import_quantity,
+                            import_price: item.import_price,
+                        });
+                        // Cập nhật lại quantity cho classification
+                        const classification = await this.classificationAttributeRelationshipRepository.findById(classificationId);
+                        if (classification) {
+                            // Trừ đi số lượng cũ, cộng số lượng mới
+                            classification.quantity = Number(classification.quantity || 0) - (oldDetail.import_quantity || 0) + item.import_quantity;
+                            await this.classificationAttributeRelationshipRepository.update(classificationId, { quantity: classification.quantity });
+                        }
+                    } else {
+                        // Thêm mới detail
+                        await this.importProductDetailRepository.createDetail({
+                            import_product_id: id,
+                            classification_attribute_relationship_id: classificationId,
+                            import_quantity: item.import_quantity,
+                            import_price: item.import_price,
+                        });
+                        // Cộng quantity cho classification
+                        const classification = await this.classificationAttributeRelationshipRepository.findById(classificationId);
+                        if (classification) {
+                            classification.quantity = Number(classification.quantity || 0) + item.import_quantity;
+                            await this.classificationAttributeRelationshipRepository.update(classificationId, { quantity: classification.quantity });
+                        }
+                    }
+                }
+
+                // Xóa các detail cũ không còn trong danh sách mới
+                for (const detail of existingDetails) {
+                    const classificationId = Number(detail.classification_attribute_relationship_id);
+                    if (!newClassifyMap.has(classificationId)) {
+                        // Trừ quantity cho classification
+                        const classification = await this.classificationAttributeRelationshipRepository.findById(classificationId);
+                        if (classification) {
+                            classification.quantity = Number(classification.quantity || 0) - (detail.import_quantity || 0);
+                            await this.classificationAttributeRelationshipRepository.update(classificationId, { quantity: classification.quantity });
+                        }
+                        // Xóa detail
+                        await this.importProductDetailRepository.softDeleteDetail(detail.id);
+                    }
+                }
+
+                // Cập nhật lại tổng quantity cho product
+                await this.updateTotalQuantityDivided(importProduct.product_id);
+            } else {
+                // Logic for products without classification
+                // Trừ số lượng nhập cũ
+                const oldImportQuantity = Number(importProduct.import_quantity || 0);
+                const product = await this.productRepository.findById(importProduct.product_id);
+                if (product) {
+                    let newQuantity = Number(product.quantity || 0) - oldImportQuantity;
+                    // Cộng số lượng nhập mới
+                    const newImportQuantity = Number(data.import_quantity || 0);
+                    newQuantity += newImportQuantity;
+                    await this.importProductRepository.update(id, {
+                        import_quantity: newImportQuantity,
+                        import_price: data.import_price,
+                    });
+                    await this.productRepository.update(importProduct.product_id, {
+                        quantity: newQuantity,
+                        total_quantity_divided: newQuantity,
+                    });
+                }
             }
 
-            // Create new details
-            let totalNew = 0;
-            for (const item of data.classifications) {
-                const classificationId = Number(item.classification_attribute_relationship_id);
-                await this.importProductDetailRepository.createDetail({
-                    import_product_id: id,
-                    classification_attribute_relationship_id: classificationId,
-                    import_quantity: item.import_quantity,
-                    import_price: item.import_price,
-                });
-                const classification = await this.classificationAttributeRelationshipRepository.findById(classificationId);
-                if (classification) {
-                    classification.quantity = Number(classification.quantity || 0) + item.import_quantity;
-                    await this.classificationAttributeRelationshipRepository.update(classificationId, { quantity: classification.quantity });
-                }
-                totalNew += item.import_quantity || 0;
+            return {
+                success: true,
+                message: 'Cập nhật phiếu nhập hàng thành công',
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Cập nhật phiếu nhập hàng thất bại',
+                error: error?.message || error,
+            };
+        }
+    }
+
+    async delete(id: number) {
+        try {
+            const importProduct = await this.importProductRepository.findById(id);
+            if (!importProduct) {
+                return {
+                    success: false,
+                    message: 'Không tìm thấy phiếu nhập hàng',
+                };
             }
-            // Update product quantity: trừ đi nhập cũ, cộng nhập mới
+
+            // Check if product has classification details
+            const details = await this.importProductDetailRepository.findByImportProductId(id);
+            let totalDelete = 0;
+            if (details.length > 0) {
+                // Logic for products with classification
+                for (const detail of details) {
+                    const classification = await this.classificationAttributeRelationshipRepository.findById(detail.classification_attribute_relationship_id);
+                    if (classification) {
+                        classification.quantity = Number(classification.quantity || 0) - (detail.import_quantity || 0);
+                        await this.classificationAttributeRelationshipRepository.update(detail.classification_attribute_relationship_id, { quantity: classification.quantity });
+                    }
+                    totalDelete += detail.import_quantity || 0;
+                    await this.importProductDetailRepository.softDeleteDetail(detail.id);
+                }
+            } else {
+                // Logic for products without classification
+                totalDelete = Number(importProduct.import_quantity || 0);
+            }
+
+            await this.importProductRepository.softDelete(id);
+
+            // Trừ số lượng nhập đã xóa khỏi product
             const product = await this.productRepository.findById(importProduct.product_id);
             if (product) {
-                const newQuantity = Number(product.quantity || 0) - totalOld + totalNew;
+                const newQuantity = Number(product.quantity || 0) - totalDelete;
                 await this.productRepository.update(importProduct.product_id, {
                     quantity: newQuantity,
                     total_quantity_divided: newQuantity,
                 });
             }
+
+            return {
+                success: true,
+                message: 'Xóa phiếu nhập hàng thành công',
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Xóa phiếu nhập hàng thất bại',
+                error: error?.message || error,
+            };
         }
-
-        return { updated: true };
-    }
-
-    async delete(id: number) {
-        const importProduct = await this.importProductRepository.findById(id);
-        if (!importProduct) {
-            throw new NotFoundException('Import product not found');
-        }
-
-        // Delete all details and revert quantities
-        const details = await this.importProductDetailRepository.findByImportProductId(id);
-        let totalDelete = 0;
-        for (const detail of details) {
-            const classification = await this.classificationAttributeRelationshipRepository.findById(detail.classification_attribute_relationship_id);
-            if (classification) {
-                classification.quantity = Number(classification.quantity || 0) - (detail.import_quantity || 0);
-                await this.classificationAttributeRelationshipRepository.update(detail.classification_attribute_relationship_id, { quantity: classification.quantity });
-            }
-            totalDelete += detail.import_quantity || 0;
-            await this.importProductDetailRepository.softDeleteDetail(detail.id);
-        }
-
-        await this.importProductRepository.softDelete(id);
-
-        // Trừ số lượng nhập đã xóa khỏi product
-        const product = await this.productRepository.findById(importProduct.product_id);
-        if (product) {
-            const newQuantity = Number(product.quantity || 0) - totalDelete;
-            await this.productRepository.update(importProduct.product_id, {
-                quantity: newQuantity,
-                total_quantity_divided: newQuantity,
-            });
-        }
-
-        return { deleted: true };
     }
     async list(
         input: ListImportProductInput,
@@ -234,34 +354,44 @@ export class ImportProductService {
         // Get details for each import product
         const dataWithDetails = await Promise.all(
             list.slice(start, end).map(async (inv) => {
-                const details =
-                    await this.importProductDetailRepository.findByImportProductId(
-                        inv.id,
-                    );
-
-                return {
-                    id: inv.id,
-                    product_id: inv.product_id,
-                    product_name: inv.product?.name,
-                    supplier_id: inv.supplier_id,
-                    supplier_name: inv.supplier?.name,
-                    details: details.map((detail) => ({
-                        id: detail.id,
-                        classification_attribute_relationship_id:
-                            detail.classification_attribute_relationship_id,
-                        classification_name: `${detail.classification_attribute_relationship?.attribute1?.name || ''} - ${detail.classification_attribute_relationship?.attribute2?.name || ''}`,
-                        attribute1_name:
-                            detail.classification_attribute_relationship?.attribute1?.name ||
-                            '',
-                        attribute2_name:
-                            detail.classification_attribute_relationship?.attribute2?.name ||
-                            '',
-                        import_quantity: detail.import_quantity,
-                        import_price: detail.import_price,
-                    })),
-                    created_at: inv.created_at,
-                    updated_at: inv.updated_at,
-                };
+                const details = await this.importProductDetailRepository.findByImportProductId(inv.id);
+                if (details.length > 0) {
+                    // Product with classification
+                    return {
+                        id: inv.id,
+                        product_id: inv.product_id,
+                        product_name: inv.product?.name,
+                        supplier_id: inv.supplier_id,
+                        supplier_name: inv.supplier?.name,
+                        details: details.map((detail) => ({
+                            id: detail.id,
+                            classification_attribute_relationship_id:
+                                detail.classification_attribute_relationship_id,
+                            classification_name: `${detail.classification_attribute_relationship?.attribute1?.name || ''} - ${detail.classification_attribute_relationship?.attribute2?.name || ''}`,
+                            attribute1_name:
+                                detail.classification_attribute_relationship?.attribute1?.name || '',
+                            attribute2_name:
+                                detail.classification_attribute_relationship?.attribute2?.name || '',
+                            import_quantity: detail.import_quantity,
+                            import_price: detail.import_price,
+                        })),
+                        created_at: inv.created_at,
+                        updated_at: inv.updated_at,
+                    };
+                } else {
+                    // Product without classification
+                    return {
+                        id: inv.id,
+                        product_id: inv.product_id,
+                        product_name: inv.product?.name,
+                        supplier_id: inv.supplier_id,
+                        supplier_name: inv.supplier?.name,
+                        import_quantity: inv.import_quantity,
+                        import_price: inv.import_price,
+                        created_at: inv.created_at,
+                        updated_at: inv.updated_at,
+                    };
+                }
             }),
         );
 

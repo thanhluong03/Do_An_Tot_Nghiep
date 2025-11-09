@@ -15,9 +15,13 @@ export interface ImportProductClassificationInput {
 export interface CreateImportProductInput {
   product_id: number | string;
   supplier_id: number | string;
-  classifications: ImportProductClassificationInput[];
+  classifications?: ImportProductClassificationInput[];
+  import_quantity?: number;
+  import_price?: number;
 }
 
 export interface UpdateImportProductInput {
   classifications?: ImportProductClassificationInput[];
+  import_quantity?: number;
+  import_price?: number;
 }
