@@ -23,10 +23,15 @@ export class CreateInventoryDto {
     @IsNotEmpty()
     store_id: number | string;
 
+    @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => InventoryDetailItemDto)
-    inventory_details: InventoryDetailItemDto[]; // Bắt buộc phải có
+    inventory_details?: InventoryDetailItemDto[];
+
+    @IsOptional()
+    @IsInt()
+    quantity_stock?: number;
 }
 
 export class UpdateInventoryDto {

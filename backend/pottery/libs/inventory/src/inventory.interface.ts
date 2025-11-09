@@ -15,7 +15,8 @@ export interface InventoryDetailItemInput {
 export interface CreateInventoryInput {
     product_id: number | string | number[] | string[];
     store_id: number | string | number[] | string[];
-    inventory_details: InventoryDetailItemInput[]; // Bắt buộc phải có details
+    inventory_details?: InventoryDetailItemInput[];
+    quantity_stock?: number;
 }
 
 export interface UpdateInventoryInput {
