@@ -671,7 +671,18 @@ export class ProductService {
         let promotion: PromotionEntity | null = null;
         const productPromotion = await this.productPromotionRepository.findActiveByProductId(inv.product_id);
         if (productPromotion && productPromotion.promotion_id) {
-          promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+          const promo = await this.promotionRepository.findById(productPromotion.promotion_id);
+          const now = new Date();
+          if (
+            promo &&
+            promo.is_active &&
+            promo.start_date &&
+            new Date(promo.start_date) <= now
+          ) {
+            promotion = promo;
+          } else {
+            promotion = null;
+          }
         }
         let categoryName: string | null = null;
         if (product.category_id) {
@@ -762,7 +773,19 @@ export class ProductService {
           let promotion: PromotionEntity | null = null;
           const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
           if (productPromotion && productPromotion.promotion_id) {
-            promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+            const promo = await this.promotionRepository.findById(productPromotion.promotion_id);
+            const now = new Date();
+            if (
+              promo &&
+              promo.is_active &&
+              promo.start_date &&
+              promo.start_date <= now &&
+              true
+            ) {
+              promotion = promo;
+            } else {
+              promotion = null;
+            }
           }
           let categoryName: string | null = null;
           if (product && product.category_id) {
@@ -904,7 +927,18 @@ export class ProductService {
         let promotion: PromotionEntity | null = null;
         const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
         if (productPromotion && productPromotion.promotion_id) {
-          promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+          const promo = await this.promotionRepository.findById(productPromotion.promotion_id);
+          const now = new Date();
+          if (
+            promo &&
+            promo.is_active &&
+            promo.start_date &&
+            new Date(promo.start_date) <= now
+          ) {
+            promotion = promo;
+          } else {
+            promotion = null;
+          }
         }
         let categoryName: string | null = null;
         if (product.category_id) {
@@ -1051,7 +1085,18 @@ export class ProductService {
     let promotion: PromotionEntity | null = null;
     const productPromotion = await this.productPromotionRepository.findActiveByProductId(productId);
     if (productPromotion && productPromotion.promotion_id) {
-      promotion = await this.promotionRepository.findById(productPromotion.promotion_id);
+      const promo = await this.promotionRepository.findById(productPromotion.promotion_id);
+      const now = new Date();
+      if (
+        promo &&
+        promo.is_active &&
+        promo.start_date &&
+        new Date(promo.start_date) <= now
+      ) {
+        promotion = promo;
+      } else {
+        promotion = null;
+      }
     }
 
     let categoryName: string | null = null;

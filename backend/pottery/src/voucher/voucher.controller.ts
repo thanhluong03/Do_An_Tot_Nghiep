@@ -15,6 +15,7 @@ import {
     ListVoucherRequestDto,
     VoucherResponseDto,
     VoucherCustomerDto,
+    UpdateVoucherCustomerStatusDto,
 } from './voucher.dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -104,5 +105,14 @@ export class VoucherController {
                 excludeExtraneousValues: true,
             }),
         );
+    }
+    @Put('updatevouchercustomerstatus/:voucherCustomerId')
+    async updateVoucherCustomerStatus(
+        @Param('voucherCustomerId') id: number,
+        @Body() dto: UpdateVoucherCustomerStatusDto
+    ): Promise<{ message: string, voucherCustomer?: any }> {
+        // Chuyển đổi status sang enum
+        const statusEnum = dto.status as any;
+        return await this.voucherService.updateVoucherCustomerStatus(Number(id), statusEnum);
     }
 }

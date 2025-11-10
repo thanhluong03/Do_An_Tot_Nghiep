@@ -61,8 +61,11 @@ export class VoucherService {
                 });
                 const now = new Date();
                 const vouchers = allVouchers.filter(voucher => {
-                        if (!voucher.end_time) return true;
-                        return new Date(voucher.end_time) > now;
+                        const start = voucher.start_time ? new Date(voucher.start_time) : null;
+                        const end = voucher.end_time ? new Date(voucher.end_time) : null;
+                        if (!start || start > now) return false;
+                        if (end && end < now) return false;
+                        return true;
                 });
                 return {
                         message:
@@ -163,5 +166,17 @@ export class VoucherService {
                 return voucherCustomers
                         .filter(vc => vc.status === VoucherCustomerStatus.CREATED && vc.voucher)
                         .map(vc => vc.voucher);
+        }
+        async updateVoucherCustomerStatus(voucherCustomerId: number, status: VoucherCustomerStatus): Promise<{ message: string, voucherCustomer?: VoucherCustomerEntity }> {
+                const voucherCustomer = await this.voucherCustomerRepository.findById(voucherCustomerId);
+                if (!voucherCustomer) {
+                        throw new NotFoundException('Voucher customer not found');
+                }
+                voucherCustomer.status = status;
+                await this.voucherCustomerRepository.update(voucherCustomerId, { status });
+                return {
+                        message: 'Voucher customer status updated successfully',
+                        voucherCustomer,
+                };
         }
 }
