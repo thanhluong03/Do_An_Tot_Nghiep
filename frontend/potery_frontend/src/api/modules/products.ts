@@ -84,7 +84,7 @@ const mapProductDetail = (p: any): ProductDetail => {
     const discountValue = Number(p.promotion.discount_value);
     if (p.promotion.discount_type === 'PERCENTAGE') {
       currentPrice = minPrice * (1 - discountValue / 100);
-    } else if (p.promotion.discount_type === 'FIXED') {
+    } else if (p.promotion.discount_type === 'FIXED_AMOUNT') {
       currentPrice = Math.max(0, minPrice - discountValue);
     }
   }
@@ -155,7 +155,7 @@ const mapProduct = (p: any): Product => {
     const discountValue = Number(p.promotion.discount_value);
     if (p.promotion.discount_type === 'PERCENTAGE') {
       currentPrice = currentPrice * (1 - discountValue / 100);
-    } else if (p.promotion.discount_type === 'FIXED') {
+    } else if (p.promotion.discount_type === 'FIXED_AMOUNT') {
       currentPrice = Math.max(0, currentPrice - discountValue);
     }
     if (currentPrice < minPrice) {
