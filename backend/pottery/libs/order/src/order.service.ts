@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, forwardRef } from '@nestjs/common';
 import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository } from '@app/database';
 import { ProductRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
@@ -28,7 +28,7 @@ export class OrderService {
   ) { }
 
   async createOrder(data: ICreateOrder): Promise<OrderEntity> {
-    // ✅ Thêm xử lý phân biệt guest / user
+    // ✅ Thêm xử lý phân biệt guest / user và gán is_login_customer đúng chuẩn
     const { items, status, payment_status, payment_method, guest_id, customer_id, ...orderData } = data;
 
     // Nếu là khách vãng lai (guest)
@@ -46,6 +46,18 @@ export class OrderService {
       orderData['customer_id'] = null;
       orderData['guest_id'] = null;
     }
+
+    // Bổ sung xác định kiểu khách hàng
+    let isLoginCustomer = true;
+    if (customer_id) {
+      const customer = await this.customerRepository.findById(customer_id);
+      if (customer && typeof customer.username === 'string' && customer.username.startsWith('guest_')) {
+        isLoginCustomer = false;
+      }
+    } else {
+      isLoginCustomer = false;
+    }
+    orderData['is_login_customer'] = isLoginCustomer;
 
     // Tiếp tục logic cũ
     const enrichedItems: IOrderItem[] = [];

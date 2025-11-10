@@ -65,6 +65,9 @@ export class OrderEntity extends BaseEntity {
     @Column({ type: 'json', nullable: true })
     current_order: object
 
+    @Column({ type: 'boolean', nullable: true })
+    is_login_customer: boolean
+
     @OneToMany(() => PaymentTransactionEntity, (paymentTransaction) => paymentTransaction.order)
     paymentTransactions: PaymentTransactionEntity[];
 

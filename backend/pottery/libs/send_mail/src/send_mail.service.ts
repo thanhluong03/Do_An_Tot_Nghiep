@@ -98,7 +98,7 @@ export class SendMailService {
     const mailOptions = {
       from: 'Tiệm Gốm Nhà Gạo <' + process.env.SMTP_USER + '>',
       to: order.to,
-      subject: '🌟 Xác nhận đơn hàng #' + order.orderId + ' - Tiệm Gốm Nhà Gạo',
+      subject: '🌟 Đặt hàng thành công #' + order.orderId + ' - Tiệm Gốm Nhà Gạo',
       html: `
         <!DOCTYPE html>
         <html lang="vi">
@@ -109,7 +109,7 @@ export class SendMailService {
         </head>
         <body style="margin:0;padding:0;font-family:'Inter','Segoe UI','Roboto','Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#f8f4f0 0%,#ede4d8 100%);min-height:100vh;">
           <!-- Header Section -->
-          <div style="background:linear-gradient(135deg,#8b6f47 0%,#a0845c 50%,#b48a78 100%);padding:40px 20px;text-align:center;border-bottom:3px solid #6d5537;">
+          <div style="background:linear-gradient(135deg,#8b6f47 0%,#a0845c 50%,#b48a78 100%);padding:40px 20px;text-align:center;border-bottom:3px solid #968A71;">
             <div style="max-width:600px;margin:0 auto;">
               <h1 style="color:#fff;margin:0;font-size:2.8rem;font-weight:600;letter-spacing:1px;text-shadow:2px 2px 4px rgba(0,0,0,0.3);">TIỆM GỐM NHÀ GẠO</h1>
               <div style="width:80px;height:2px;background:#fff;margin:15px auto;opacity:0.8;"></div>
@@ -122,7 +122,7 @@ export class SendMailService {
             
             <!-- Success Banner -->
             <div style="background:linear-gradient(90deg,#4CAF50,#45a049);padding:20px;text-align:center;">
-              <h2 style="color:#fff;margin:0;font-size:1.4rem;font-weight:600;">ĐƠN HÀNG ĐÃ ĐƯỢC XÁC NHẬN THÀNH CÔNG</h2>
+              <h2 style="color:#fff;margin:0;font-size:1.4rem;font-weight:600;">ĐƠN HÀNG ĐÃ ĐƯỢC ĐẶT THÀNH CÔNG</h2>
             </div>
 
             <!-- Order Details -->
@@ -135,7 +135,7 @@ export class SendMailService {
 
               <!-- Order Summary Box -->
               <div style="background:#faf7f2;border:2px solid #e6d7c8;border-radius:8px;padding:25px;margin:25px 0;">
-                <h4 style="color:#8b6f47;margin:0 0 20px 0;font-size:1.2rem;text-align:center;border-bottom:1px solid #d4c4b0;padding-bottom:10px;">📦 CHI TIẾT ĐƠN HÀNG</h4>
+                <h4 style="color:#8b6f47;margin:0 0 20px 0;font-size:1.2rem;text-align:center;border-bottom:1px solid #d4c4b0;padding-bottom:10px;">CHI TIẾT ĐƠN HÀNG</h4>
                 
                 <!-- Products Table -->
                 <table style="width:100%;border-collapse:collapse;margin:20px 0;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
@@ -157,7 +157,7 @@ export class SendMailService {
                       ${(Number(order.totalAmount) + 30000).toLocaleString('vi-VN')}₫
                     </p>
                   </div>
-                  <div style="background:#fff;padding:15px;border-radius:6px;border-left:4px solid #8b6f47;">
+                  <div style="background:#fff;padding:15px;border-radius:6px;border-left:4px solid #b48a78;">
                     <p style="margin:0;color:#666;font-size:0.9rem;">Phương thức thanh toán</p>
                     <p style="margin:5px 0 0 0;font-weight:600;color:#8b6f47;">${order.paymentMethod}</p>
                   </div>
@@ -188,12 +188,12 @@ export class SendMailService {
 
               <!-- Next Steps -->
               <div style="background:#f0f8ff;border:1px solid #b8d4f0;border-radius:8px;padding:25px;margin:25px 0;">
-                <h4 style="color:#2c5282;margin:0 0 15px 0;font-size:1.1rem;">📋 NHỮNG BƯỚC TIẾP THEO</h4>
+                <h4 style="color:#2c5282;margin:0 0 15px 0;font-size:1.1rem;">NHỮNG BƯỚC TIẾP THEO</h4>
                 <ul style="color:#4a5568;line-height:1.7;padding-left:20px;margin:0;">
                   <li>Đơn hàng sẽ được xử lý trong vòng <strong>24-48 giờ</strong></li>
                   <li>Quý khách sẽ nhận được thông báo khi đơn hàng được đóng gói và giao vận</li>
                   <li>Thời gian giao hàng dự kiến: <strong>3-5 ngày làm việc</strong></li>
-                  <li>Mọi thắc mắc, vui lòng liên hệ hotline: <strong>1900-XXXXX</strong></li>
+                  <li>Mọi thắc mắc, vui lòng liên hệ hotline: <strong>(+84) 96 692 13 75</strong></li>
                 </ul>
               </div>
 
@@ -201,9 +201,9 @@ export class SendMailService {
               <div style="text-align:center;margin-top:30px;padding:25px;background:#8b6f47;color:#fff;border-radius:8px;">
                 <h4 style="margin:0 0 15px 0;color:#f5f5dc;">LIÊN HỆ HỖ TRỢ</h4>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;color:#f5f5dc;">
-                  <div>📞 Hotline: 1900-XXXXX</div>
-                  <div>📧 Email: support@gomhacom.vn</div>
-                  <div>🌐 Website: www.tiemgomnhagao.vn</div>
+                  <div>Hotline: (+84) 96 692 13 75</div>
+                  <div>Email: tiemnhagao.xinchao@gmail.com</div>
+                  <div>Địa chỉ: 379 Xuân Phương, Nam Từ Liêm, Hà Nội, Việt Nam</div>
                 </div>
               </div>
             </div>
@@ -213,7 +213,7 @@ export class SendMailService {
           <div style="text-align:center;padding:40px 20px;background:#2d3748;color:#a0aec0;">
             <div style="max-width:600px;margin:0 auto;">
               <p style="margin:0 0 10px 0;font-size:1.1rem;color:#e2e8f0;">Tiệm Gốm Nhà Gạo</p>
-              <p style="margin:0 0 15px 0;font-size:0.9rem;">Địa chỉ: Hà Nội</p>
+              <p style="margin:0 0 15px 0;font-size:0.9rem;">Địa chỉ: 379 Xuân Phương, Nam Từ Liêm,Hà Nội, Việt Nam</p>
               <div style="border-top:1px solid #4a5568;padding-top:15px;margin-top:15px;">
                 <p style="margin:0;font-size:0.8rem;color:#718096;">
                   © 2025 Tiệm Gốm Nhà Gạo. Tất cả quyền được bảo lưu.<br>
@@ -237,6 +237,177 @@ export class SendMailService {
       to,
       subject,
       text,
+    };
+    return await this.transporter.sendMail(mailOptions);
+  }
+
+  async sendOrderConfirmedMail(dto: SendOrderMailDto) {
+    const orderDetail = await this.orderService.getOrderById(dto.orderId);
+    if (!orderDetail) {
+      throw new NotFoundException(`Không tìm thấy đơn hàng với ID: ${dto.orderId}`);
+    }
+
+    const order: OrderMail = {
+      to: dto.to,
+      orderId: orderDetail.id.toString(),
+      customerName: orderDetail.customer_name || 'Khách hàng',
+      products: orderDetail.current_order?.items?.map((item: any) => ({
+        name: item.product_name || 'Sản phẩm',
+        quantity: item.quantity || 0,
+        price: item.price_at_order || 0,
+        attribute1_name: item.attribute1_name || '',
+        attribute2_name: item.attribute2_name || '',
+      })) || [],
+      totalAmount: orderDetail.total_amount || 0,
+      paymentMethod: this.getPaymentMethodText(orderDetail.payment_method),
+      paymentStatus: this.getPaymentStatusText(orderDetail.payment_status),
+      orderTime: orderDetail.created_at ? new Date(orderDetail.created_at).toLocaleString('vi-VN') : 'N/A',
+      shippingAddress: orderDetail.shipping_address || 'Chưa có thông tin địa chỉ',
+    };
+
+    return await this.sendEmailTemplate(order, 'ĐƠN HÀNG ĐÃ ĐƯỢC XÁC NHẬN THÀNH CÔNG', '#4CAF50', '🌟');
+  }
+
+  async sendOrderRejectedMail(dto: SendOrderMailDto) {
+    const orderDetail = await this.orderService.getOrderById(dto.orderId);
+    if (!orderDetail) {
+      throw new NotFoundException(`Không tìm thấy đơn hàng với ID: ${dto.orderId}`);
+    }
+
+    const order: OrderMail = {
+      to: dto.to,
+      orderId: orderDetail.id.toString(),
+      customerName: orderDetail.customer_name || 'Khách hàng',
+      products: orderDetail.current_order?.items?.map((item: any) => ({
+        name: item.product_name || 'Sản phẩm',
+        quantity: item.quantity || 0,
+        price: item.price_at_order || 0,
+        attribute1_name: item.attribute1_name || '',
+        attribute2_name: item.attribute2_name || '',
+      })) || [],
+      totalAmount: orderDetail.total_amount || 0,
+      paymentMethod: this.getPaymentMethodText(orderDetail.payment_method),
+      paymentStatus: this.getPaymentStatusText(orderDetail.payment_status),
+      orderTime: orderDetail.created_at ? new Date(orderDetail.created_at).toLocaleString('vi-VN') : 'N/A',
+      shippingAddress: orderDetail.shipping_address || 'Chưa có thông tin địa chỉ',
+    };
+
+    return await this.sendEmailTemplate(order, 'ĐƠN HÀNG ĐÃ BỊ TỪ CHỐI', '#f44336', '🌟');
+  }
+
+  private async sendEmailTemplate(order: OrderMail, title: string, color: string, icon: string) {
+    const productRows = order.products.map((p) => {
+      const phanLoai = p.attribute1_name || p.attribute2_name
+        ? `<div style='color:#8b6f47;font-size:0.92rem;margin-top:2px;'>Phân loại: ${[p.attribute1_name, p.attribute2_name].filter(Boolean).join(' - ')}</div>`
+        : '';
+      return `<tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:15px 12px;color:#333;font-weight:500;vertical-align:top;font-size:1rem;">
+          <div>${p.name}</div>
+          ${phanLoai}
+        </td>
+        <td style="padding:15px 12px;text-align:center;color:#666;font-weight:600;vertical-align:middle;">${p.quantity}</td>
+        <td style="padding:15px 12px;text-align:right;color:#b48a78;font-weight:700;font-size:1.05rem;vertical-align:middle;">${p.price.toLocaleString()}₫</td>
+      </tr>`;
+    }).join('');
+
+    const mailOptions = {
+      from: 'Tiệm Gốm Nhà Gạo <' + process.env.SMTP_USER + '>',
+      to: order.to,
+      subject: `${icon} ${title.includes('XÁC NHẬN') ? 'Xác nhận' : 'Từ chối'} đơn hàng #${order.orderId} - Tiệm Gốm Nhà Gạo`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Thông báo đơn hàng</title>
+        </head>
+        <body style="margin:0;padding:0;font-family:'Inter','Segoe UI','Roboto','Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#f8f4f0 0%,#ede4d8 100%);min-height:100vh;">
+          <div style="background:linear-gradient(135deg,#8b6f47 0%,#a0845c 50%,#b48a78 100%);padding:40px 20px;text-align:center;border-bottom:3px solid #968A71;">
+            <div style="max-width:600px;margin:0 auto;">
+              <h1 style="color:#fff;margin:0;font-size:2.8rem;font-weight:600;letter-spacing:1px;text-shadow:2px 2px 4px rgba(0,0,0,0.3);">TIỆM GỐM NHÀ GẠO</h1>
+              <div style="width:80px;height:2px;background:#fff;margin:15px auto;opacity:0.8;"></div>
+              <p style="color:#f5f5dc;font-size:1.1rem;margin:10px 0 0 0;font-style:normal;letter-spacing:0.5px;font-weight:400;">Nghệ thuật gốm sứ tinh túy Việt Nam</p>
+            </div>
+          </div>
+
+          <div style="max-width:650px;margin:40px auto;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(139,111,71,0.15);overflow:hidden;">
+            <div style="background:${color};padding:20px;text-align:center;">
+              <h2 style="color:#fff;margin:0;font-size:1.4rem;font-weight:600;">${title}</h2>
+            </div>
+
+            <div style="padding:40px;">
+              <div style="margin-bottom:30px;">
+                <h3 style="color:#8b6f47;font-size:1.3rem;margin:0 0 8px 0;border-bottom:2px solid #f0e6d6;padding-bottom:8px;">Kính chào Quý khách ${order.customerName},</h3>
+                <p style="color:#666;line-height:1.6;margin:15px 0;">
+                  ${title.includes('TỪ CHỐI')
+          ? `Đơn hàng <strong style=\"color:${color};\">#${order.orderId}</strong> của Quý khách đã bị từ chối.`
+          : title.includes('XÁC NHẬN')
+            ? `Đơn hàng <strong style=\"color:${color};\">#${order.orderId}</strong> của Quý khách đã được xác nhận.`
+            : `Chúng tôi xin thông báo về đơn hàng <strong style=\"color:${color};\">#${order.orderId}</strong> của Quý khách.`}
+                </p>
+              </div>
+
+              <div style="background:#faf7f2;border:2px solid #e6d7c8;border-radius:8px;padding:25px;margin:25px 0;">
+                <h4 style="color:#8b6f47;margin:0 0 20px 0;font-size:1.2rem;text-align:center;border-bottom:1px solid #d4c4b0;padding-bottom:10px;">CHI TIẾT ĐƠN HÀNG</h4>
+                
+                <table style="width:100%;border-collapse:collapse;margin:20px 0;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                  <thead>
+                    <tr style="background:linear-gradient(90deg,#8b6f47,#a0845c);color:#fff;">
+                      <th style="padding:15px 12px;text-align:left;font-weight:600;font-size:0.95rem;">SẢN PHẨM</th>
+                      <th style="padding:15px 12px;text-align:center;font-weight:600;font-size:0.95rem;">SỐ LƯỢNG</th>
+                      <th style="padding:15px 12px;text-align:right;font-weight:600;font-size:0.95rem;">ĐƠN GIÁ</th>
+                    </tr>
+                  </thead>
+                  <tbody style="color:#333;">${productRows}</tbody>
+                </table>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:25px;">
+                  <div style="background:#fff;padding:15px;border-radius:6px;border-left:4px solid #b48a78;">
+                    <p style="margin:0;color:#666;font-size:0.9rem;">Tổng tiền</p>
+                    <p style="margin:5px 0 0 0;font-size:1.3rem;font-weight:bold;color:#b48a78;">
+                      ${(Number(order.totalAmount) + 30000).toLocaleString('vi-VN')}₫
+                    </p>
+                  </div>
+                  <div style="background:#fff;padding:15px;border-radius:6px;border-left:4px solid #b48a78;">
+                    <p style="margin:0;color:#666;font-size:0.9rem;">Phương thức thanh toán</p>
+                    <p style="margin:5px 0 0 0;font-weight:600;color:#8b6f47;">${order.paymentMethod}</p>
+                  </div>
+                </div>
+
+                <div style="margin-top:20px;padding:20px;background:#fff;border-radius:6px;">
+                  <div style="margin-bottom:12px;"><strong style="color:#8b6f47;">Thời gian đặt hàng:</strong> ${order.orderTime}</div>
+                  <div><strong style="color:#8b6f47;">Địa chỉ giao hàng:</strong><br><span style="color:#666;font-style:italic;">${order.shippingAddress}</span></div>
+                </div>
+              </div>
+
+              <div style="text-align:center;margin-top:30px;padding:25px;background:#8b6f47;color:#fff;border-radius:8px;">
+                <h4 style="margin:0 0 15px 0;color:#f5f5dc;">LIÊN HỆ HỖ TRỢ</h4>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;color:#f5f5dc;">
+                  <div>Hotline: (+84) 96 692 13 75</div>
+                  <div>Email: tiemnhagao.xinchao@gmail.com</div>
+                  <div>Địa chỉ: 379 Xuân Phương, Nam Từ Liêm, Hà Nội, Việt Nam</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center;padding:40px 20px;background:#2d3748;color:#a0aec0;">
+            <div style="max-width:600px;margin:0 auto;">
+              <p style="margin:0 0 10px 0;font-size:1.1rem;color:#e2e8f0;">Tiệm Gốm Nhà Gạo</p>
+              <p style="margin:0 0 15px 0;font-size:0.9rem;">Địa chỉ: 379 Xuân Phương, Nam Từ Liêm,Hà Nội, Việt Nam</p>
+              <div style="border-top:1px solid #4a5568;padding-top:15px;margin-top:15px;">
+                <p style="margin:0;font-size:0.8rem;color:#718096;">
+                  © 2025 Tiệm Gốm Nhà Gạo. Tất cả quyền được bảo lưu.<br>
+                  Email này được gửi tự động, vui lòng không trả lời trực tiếp.
+                  Hãy liên hệ với chúng tôi qua trang web để được hỗ trợ.
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
     };
     return await this.transporter.sendMail(mailOptions);
   }
