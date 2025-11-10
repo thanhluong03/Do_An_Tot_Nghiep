@@ -704,13 +704,23 @@ export class ProductService {
           attribute1_name: rel.attribute1?.name || '',
           attribute2_name: rel.attribute2?.name || '',
         }));
+
+        // Tính quantity_stock, quantity_sold đúng cho cả sản phẩm có và không có phân loại
+        let quantity_stock = inv.quantity_stock;
+        let quantity_sold = inv.quantity_sold;
+        if (Array.isArray(inv.inventory_details) && inv.inventory_details.length > 0) {
+          // Nếu có phân loại, cộng dồn quantity từ các inventory_details
+          quantity_stock = inv.inventory_details.reduce((sum, detail) => sum + (detail.quantity_stock || 0), 0);
+          quantity_sold = inv.inventory_details.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+        }
+
         return {
           ...product,
           images: processedImages,
           main_image: processedImages.find((img) => img.is_main_image) || null,
           store_id: inv.store_id,
-          quantity_stock: inv.quantity_stock,
-          quantity_sold: inv.quantity_sold,
+          quantity_stock,
+          quantity_sold,
           store_name: inv.store?.store_name,
           store_address: inv.store?.address,
           promotion,
@@ -832,12 +842,19 @@ export class ProductService {
                 quantity_sold: detail.quantity_sold,
               };
             }));
+            // Tính quantity_stock, quantity_sold đúng cho cả sản phẩm có và không có phân loại
+            let quantity_stock = inv.quantity_stock;
+            let quantity_sold = inv.quantity_sold;
+            if (Array.isArray(inventoryDetails) && inventoryDetails.length > 0) {
+              quantity_stock = inventoryDetails.reduce((sum, detail) => sum + (detail.quantity_stock || 0), 0);
+              quantity_sold = inventoryDetails.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+            }
             return {
               store_id: inv.store_id,
               store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
               store_address: inv.store && inv.store.address ? inv.store.address : null,
-              quantity_stock: inv.quantity_stock,
-              quantity_sold: inv.quantity_sold,
+              quantity_stock,
+              quantity_sold,
               classifications: storeClassifications,
             };
           }));
@@ -1093,12 +1110,20 @@ export class ProductService {
         };
       }));
 
+      // Tính quantity_stock, quantity_sold đúng cho cả sản phẩm có và không có phân loại
+      let quantity_stock = inv.quantity_stock;
+      let quantity_sold = inv.quantity_sold;
+      if (Array.isArray(inventoryDetails) && inventoryDetails.length > 0) {
+        quantity_stock = inventoryDetails.reduce((sum, detail) => sum + (detail.quantity_stock || 0), 0);
+        quantity_sold = inventoryDetails.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+      }
+
       return {
         store_id: inv.store_id,
         store_name: inv.store && inv.store.store_name ? inv.store.store_name : null,
         store_address: inv.store && inv.store.address ? inv.store.address : null,
-        quantity_stock: inv.quantity_stock, // Total for this store
-        quantity_sold: inv.quantity_sold,   // Total for this store
+        quantity_stock,
+        quantity_sold,
         classifications, // Available combinations for this store
       };
     }));

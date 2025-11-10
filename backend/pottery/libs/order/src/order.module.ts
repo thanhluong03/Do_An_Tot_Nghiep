@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { DatabaseModule } from '@app/database';
 import {
