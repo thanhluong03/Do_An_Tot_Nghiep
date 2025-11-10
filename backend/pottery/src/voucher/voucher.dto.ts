@@ -174,3 +174,14 @@ export class VoucherCustomerDto {
     @IsPositive()
     customer_id: number;
 }
+
+export class UpdateVoucherCustomerStatusDto {
+    @Expose()
+    @IsNumber()
+    @IsPositive()
+    voucherCustomerId: number;
+
+    @Expose()
+    @IsString()
+    status: string;
+}
