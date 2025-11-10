@@ -1,5 +1,5 @@
 import React from 'react';
-import Image from "next/image"; 
+import Image from "next/image";
 import { Inventory, SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService";
 import { Pencil, Trash2 } from 'lucide-react';
 
@@ -11,7 +11,7 @@ interface InventoryTableProps {
     handleEdit: (item: Inventory) => void;
     handleDelete: (id: number) => Promise<void>;
     totalItems: number;
-    allProducts: Product[]; 
+    allProducts: Product[];
 }
 
 const formatDateTime = (isoString: string) => {
@@ -29,11 +29,11 @@ const formatDateTime = (isoString: string) => {
 
 const getInventoryProductImageUrl = (productId: number, allProducts: Product[]): string => {
     const product = allProducts.find(p => p.id === productId);
-    
+
     if (product) {
-        return getProductImageUrl(product); 
+        return getProductImageUrl(product);
     }
-    return "/no-image.jpg"; 
+    return "/no-image.jpg";
 };
 
 
@@ -45,8 +45,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     handleEdit,
     handleDelete,
     totalItems,
-    allProducts, 
+    allProducts,
 }) => {
+
     return (
         <>
             {inventories.length === 0 && totalItems > 0 && (
@@ -61,14 +62,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             )}
 
             {inventories.length > 0 && (
-                <div className="overflow-x-auto rounded-xl shadow-lg mt-6 border border-gray-100"> 
+                <div className="overflow-x-auto rounded-xl shadow-lg mt-6 border border-gray-100">
                     <table className="min-w-full border-collapse bg-white table-fixed">
                         <thead>
                             <tr className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider font-bold border-b border-gray-200">
                                 <th className="px-4 py-3 text-left w-[50px] rounded-tl-xl">STT</th>
-                                <th className="px-2 py-3 text-center w-[60px]">Ảnh</th> 
-                                <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th> 
-                                <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th> 
+                                <th className="px-2 py-3 text-center w-[60px]">Ảnh</th>
+                                <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th>
+                                <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th>
                                 <th className="px-4 py-3 text-center w-[90px]">Trong kho cửa hàng</th>
                                 <th className="px-4 py-3 text-center w-[90px]">Đã bán</th>
                                 <th className="px-4 py-3 text-left w-[150px]">Ngày tạo</th>
@@ -77,7 +78,8 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {inventories.map((item, index) => ( 
+                            {inventories.map((item, index) => (
+
                                 <tr
                                     key={item.id}
                                     className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
@@ -85,14 +87,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                     <td className="px-4 py-3 font-semibold text-gray-800 truncate">
                                         {index + 1}
                                     </td>
-                                    
+
                                     <td className="px-2 py-2 text-center">
                                         <div className="flex justify-center">
                                             <Image
                                                 src={getInventoryProductImageUrl(item.product_id, allProducts) || "/no-image.jpg"}
                                                 alt={getDisplayName(products, item.product_id) || "Product Image"}
                                                 width={36}
-                                                height={36} 
+                                                height={36}
                                                 className="object-cover rounded-md shadow-sm"
                                                 onError={(e) => {
                                                     const target = e.currentTarget as HTMLImageElement;
@@ -101,7 +103,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                             />
                                         </div>
                                     </td>
-                                    
+
                                     <td
                                         className="px-4 py-3 text-sm max-w-[300px] break-words"
                                         title={getDisplayName(products, item.product_id)}
@@ -114,17 +116,27 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                     >
                                         {getDisplayName(stores, item.store_id)}
                                     </td>
-                                    
+
                                     <td className="px-4 py-3 text-center text-base font-extrabold text-teal-600">
-                                        {(item.quantity_stock ?? 0).toLocaleString()} 
+                                        {(
+                                            item.inventory_details && item.inventory_details.length > 0
+                                                ? item.inventory_details.reduce((sum, d) => sum + (d.quantity_stock ?? 0), 0)
+                                                : item.quantity_stock ?? 0
+                                        ).toLocaleString()}
                                     </td>
+
                                     <td className="px-4 py-3 text-center text-base font-extrabold text-red-500">
-                                        {(item.quantity_sold ?? 0).toLocaleString()}
+                                        {(
+                                            item.inventory_details && item.inventory_details.length > 0
+                                                ? item.inventory_details.reduce((sum, d) => sum + (d.quantity_sold ?? 0), 0)
+                                                : item.quantity_sold ?? 0
+                                        ).toLocaleString()}
                                     </td>
-                                    
+
+
                                     <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.created_at)}</td>
                                     <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updated_at)}</td>
-                                    
+
                                     <td className="px-4 py-3 text-center space-x-1">
                                         <button
                                             title='edit'

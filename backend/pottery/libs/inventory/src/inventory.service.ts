@@ -11,16 +11,35 @@ export class InventoryService {
         private readonly productRepository: ProductRepository,
         private readonly storeRepository: StoreRepository,
     ) { }
-    async getTotalQuantityStock(inventoryId: number): Promise<number> {
+    // async getTotalQuantityStock(inventoryId: number): Promise<number> {
+    //     const details = await this.inventoryDetailRepository.findByInventoryId(inventoryId);
+    //     if (!details || details.length === 0) return 0;
+    //     return details.reduce((sum, detail) => sum + (detail.quantity_stock || 0), 0);
+    // }
+    // async getTotalQuantitySold(inventoryId: number): Promise<number> {
+    //     const details = await this.inventoryDetailRepository.findByInventoryId(inventoryId);
+    //     if (!details || details.length === 0) return 0;
+    //     return details.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+    // }
+    //hoang sua
+    async getTotalQuantityStock(inventoryId: number, inventory?: any): Promise<number> {
         const details = await this.inventoryDetailRepository.findByInventoryId(inventoryId);
-        if (!details || details.length === 0) return 0;
+        if (!details || details.length === 0) {
+            // Nếu sản phẩm không phân loại, trả quantity_stock trực tiếp từ inventory
+            return inventory?.quantity_stock || 0;
+        }
         return details.reduce((sum, detail) => sum + (detail.quantity_stock || 0), 0);
     }
-    async getTotalQuantitySold(inventoryId: number): Promise<number> {
+
+    async getTotalQuantitySold(inventoryId: number, inventory?: any): Promise<number> {
         const details = await this.inventoryDetailRepository.findByInventoryId(inventoryId);
-        if (!details || details.length === 0) return 0;
+        if (!details || details.length === 0) {
+            // Nếu sản phẩm không phân loại, trả quantity_sold trực tiếp từ inventory
+            return inventory?.quantity_sold || 0;
+        }
         return details.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
     }
+
 
     async create(data: CreateInventoryInput) {
         let productIds: number[] = [];
@@ -397,8 +416,12 @@ export class InventoryService {
                 product_name: inv.product?.name,
                 store_id: inv.store_id,
                 store_name: inv.store?.store_name,
-                quantity_stock: await this.getTotalQuantityStock(inv.id),
-                quantity_sold: await this.getTotalQuantitySold(inv.id),
+                // quantity_stock: await this.getTotalQuantityStock(inv.id),
+                // quantity_sold: await this.getTotalQuantitySold(inv.id),
+                //hoang sua
+                quantity_stock: await this.getTotalQuantityStock(inv.id, inv),
+                quantity_sold: await this.getTotalQuantitySold(inv.id, inv),
+
                 created_at: inv.created_at,
                 updated_at: inv.updated_at,
             }))

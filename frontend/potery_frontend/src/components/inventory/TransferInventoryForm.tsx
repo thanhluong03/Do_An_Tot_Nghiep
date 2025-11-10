@@ -14,10 +14,6 @@ import {
 } from '@/api/services/inventoryService';
 import { ArrowRight, Package, Store, Shuffle } from 'lucide-react';
 
-interface TransferInventoryFormProps {
-    onSuccess?: () => void;
-}
-
 interface ClassificationSelection {
     [key: number]: {
         checked: boolean;
@@ -44,6 +40,10 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
     // Classifications and selections
     const [classifications, setClassifications] = useState<ProductClassification[]>([]);
     const [classificationSelections, setClassificationSelections] = useState<ClassificationSelection>({});
+    const hasClassifications = classifications.length > 0;
+
+    const [quantityToTransfer, setQuantityToTransfer] = useState<string>('');
+    const [availableStock, setAvailableStock] = useState<number>(0);
 
     const loadStoresData = useCallback(async () => {
         try {
@@ -94,23 +94,47 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
         if (!selectedProductId || !selectedFromStoreId) return;
 
         try {
-            const inventoryDetails = await getStoreProductInventoryDetails(selectedFromStoreId, selectedProductId);
+            const inventoryDetails = await getStoreProductInventoryDetails(
+                selectedFromStoreId,
+                selectedProductId
+            );
 
-            if (inventoryDetails) {
+            if (!inventoryDetails) {
+                setAvailableStock(0);
+                setQuantityToTransfer('');
+                return;
+            }
+
+            const details = inventoryDetails.inventory_details || [];
+
+            if (!details || details.length === 0) {
+                // Sản phẩm không phân loại
+                const stock = inventoryDetails.inventory?.quantity_stock ?? 0;
+                setAvailableStock(stock);
+                setQuantityToTransfer('');
+            } else {
+                // Sản phẩm có phân loại
                 setClassificationSelections(prev => {
                     const updatedSelections = { ...prev };
-                    inventoryDetails.inventory_details.forEach(detail => {
-                        if (updatedSelections[detail.classification_attribute_relationship_id]) {
-                            updatedSelections[detail.classification_attribute_relationship_id].availableStock = detail.quantity_stock;
-                        }
+                    details.forEach(detail => {
+                        updatedSelections[detail.classification_attribute_relationship_id] = {
+                            availableStock: detail.quantity_stock ?? 0,
+                            quantity: '',
+                            checked: false
+                        };
                     });
                     return updatedSelections;
                 });
+
+                setAvailableStock(0); // reset root stock
+                setQuantityToTransfer('');
             }
         } catch (error) {
             console.error('Error loading available stock:', error);
+            toast.error('Không thể tải tồn kho sản phẩm');
         }
     }, [selectedProductId, selectedFromStoreId]);
+
 
     useEffect(() => {
         loadStoresData();
@@ -172,38 +196,62 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
             return;
         }
 
-        // Collect selected classifications
-        const selectedDetails: TransferInventoryDetailDto[] = [];
-        Object.entries(classificationSelections).forEach(([classificationId, selection]) => {
-            if (selection.checked && selection.quantity && Number(selection.quantity) > 0) {
-                const quantity = Number(selection.quantity);
-                if (quantity > selection.availableStock) {
-                    toast.error(`Số lượng vượt quá tồn kho có sẵn cho phân loại ${classificationId}`);
-                    return;
+        let transferData: TransferInventoryDto;
+
+        if (hasClassifications) {
+            // Sản phẩm có phân loại (giữ nguyên logic cũ)
+            const selectedDetails: TransferInventoryDetailDto[] = [];
+            Object.entries(classificationSelections).forEach(([classificationId, selection]) => {
+                if (selection.checked && selection.quantity && Number(selection.quantity) > 0) {
+                    const quantity = Number(selection.quantity);
+                    if (quantity > selection.availableStock) {
+                        toast.error(`Số lượng vượt quá tồn kho có sẵn cho phân loại ${classificationId}`);
+                        return;
+                    }
+                    selectedDetails.push({
+                        classification_attribute_relationship_id: Number(classificationId),
+                        quantity
+                    });
                 }
-                selectedDetails.push({
-                    classification_attribute_relationship_id: Number(classificationId),
-                    quantity
-                });
+            });
+
+            if (selectedDetails.length === 0) {
+                toast.error('Vui lòng chọn ít nhất một phân loại và nhập số lượng hợp lệ!');
+                return;
             }
-        });
 
-        if (selectedDetails.length === 0) {
-            toast.error('Vui lòng chọn ít nhất một phân loại và nhập số lượng hợp lệ!');
-            return;
+            transferData = {
+                product_id: selectedProductId,
+                from_store_ids: [selectedFromStoreId],
+                to_store_ids: [selectedToStoreId],
+                details: selectedDetails
+            };
+        } else {
+            // Sản phẩm không phân loại
+            const qty = Number(quantityToTransfer);
+            if (!qty || qty <= 0) {
+                toast.error('Vui lòng nhập số lượng hợp lệ!');
+                return;
+            }
+            if (qty > availableStock) {
+                toast.error('Số lượng vượt quá tồn kho có sẵn!');
+                return;
+            }
+
+            transferData = {
+                product_id: selectedProductId,
+                from_store_ids: [selectedFromStoreId],
+                to_store_ids: [selectedToStoreId],
+                details: [
+                    { classification_attribute_relationship_id: 0, quantity: qty }
+                ]
+            };
         }
-
-        const transferData: TransferInventoryDto = {
-            product_id: selectedProductId,
-            from_store_ids: [selectedFromStoreId],
-            to_store_ids: [selectedToStoreId],
-            details: selectedDetails
-        };
 
         setLoading(true);
         try {
             await transferInventory(transferData);
-            toast.success('Chuyển combo phân loại thành công!');
+            toast.success('Chuyển hàng thành công!');
             resetForm();
             onSuccess?.();
         } catch (error) {
@@ -213,6 +261,7 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
             setLoading(false);
         }
     };
+
 
     const resetForm = () => {
         setSelectedProductId(null);
@@ -248,6 +297,7 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
                     </h4>
                     <div className="p-4">
                         <select
+                            title='storeFirst'
                             value={selectedFromStoreId || ''}
                             onChange={(e) => {
                                 setSelectedFromStoreId(Number(e.target.value) || null);
@@ -277,6 +327,7 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
                     </h4>
                     <div className="p-4">
                         <select
+                            title='product'
                             value={selectedProductId || ''}
                             onChange={(e) => setSelectedProductId(Number(e.target.value) || null)}
                             disabled={!selectedFromStoreId}
@@ -302,6 +353,7 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
                     </h4>
                     <div className="p-4">
                         <select
+                            title='storeSecond'
                             value={selectedToStoreId || ''}
                             onChange={(e) => setSelectedToStoreId(Number(e.target.value) || null)}
                             disabled={!selectedFromStoreId}
@@ -396,6 +448,26 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
                             })}
                         </div>
                     </div>
+                </div>
+            )}
+            {!hasClassifications && selectedFromStoreId && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <label className="block text-sm font-semibold text-blue-700 mb-2">
+                        Nhập số lượng muốn chuyển
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <input
+                            title='quanity'
+                            type="text"
+                            value={quantityToTransfer}
+                            onChange={(e) => setQuantityToTransfer(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-32 border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-600">Tồn kho: {availableStock}</span>
+                    </div>
+                    {Number(quantityToTransfer) > availableStock && (
+                        <div className="text-red-500 text-xs mt-1">Vượt quá tồn kho có sẵn</div>
+                    )}
                 </div>
             )}
 

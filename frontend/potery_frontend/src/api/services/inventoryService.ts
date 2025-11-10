@@ -46,7 +46,9 @@ export interface ListInventoryDto {
 export interface CreateInventoryDto {
     product_id: number | string | number[] | string[];
     store_id: number | string | number[] | string[];
-    inventory_details: InventoryDetailItemDto[]; // Bắt buộc phải có
+    inventory_details?: InventoryDetailItemDto[];// Bắt buộc phải có
+    quantity_stock?: number; 
+    
 }
 
 export interface InventoryDetailItemDto {
@@ -64,9 +66,12 @@ export interface EnhancedInventoryFormData {
 
 export interface UpdateInventoryDto {
     inventory_details?: InventoryDetailItemDto[];
+    quantity_stock?: number;
+    quantity_sold?: number;
 }
 
 export interface Inventory {
+    
     id: number;
     product_id: number;
     store_id: number;
@@ -76,6 +81,7 @@ export interface Inventory {
     updated_at: string;
     product_name?: string;
     store_name?: string;
+    inventory_details?: InventoryDetailItemDto[];
 }
 export interface Product {
     id: number;
@@ -175,10 +181,20 @@ export const listInventories = async (
     return { data: [], total: 0, page: 1, size: 10 };
 };
 
-export const createInventory = async (data: CreateInventoryDto): Promise<Inventory> => {
-    const res = await axios.post(`${API_URL_INVENTORY}/createinventory`, data);
-    return res.data;
+export const createInventory = async (data: CreateInventoryDto) => {
+  const payload = {
+    ...data,
+  };
+
+  // ✅ Nếu sản phẩm không có phân loại, backend chỉ cần quantity_stock
+  if (!payload.inventory_details || payload.inventory_details.length === 0) {
+    delete payload.inventory_details;
+  }
+
+  const res = await axios.post(`${API_URL_INVENTORY}/createinventory`, payload);
+  return res.data;
 };
+
 
 export const updateInventory = async (id: number, data: UpdateInventoryDto): Promise<Inventory> => {
     const res = await axios.put(`${API_URL_INVENTORY}/updateinventory/${id}`, data);
@@ -198,6 +214,8 @@ export interface InventoryDetailsResponse {
         quantity_sold: number;
         classification_attribute_relationship: object;
     }[];
+    quantity_stock : number;
+    quantity_sold : number;
 }
 
 export const getInventoryDetails = async (id: number): Promise<InventoryDetailsResponse> => {
@@ -279,11 +297,14 @@ export interface TransferInventoryDto {
     product_id: number;
     from_store_ids: number[] | 'all';
     to_store_ids: number[] | 'all';
-    details: TransferInventoryDetailDto[];
+    details?: TransferInventoryDetailDto[];
+    quantity?: number;
 }
+
 
 // Chuyển combo phân loại giữa các cửa hàng
 export const transferInventory = async (data: TransferInventoryDto): Promise<{ success: boolean; message: string }> => {
-    const res = await axios.post(`${API_URL_INVENTORY}/transfer`, data);
-    return res.data;
+  // backend endpoint: POST /inventory/transfer
+  const res = await axios.post(`${API_URL_INVENTORY}/transfer`, data);
+  return res.data;
 };
