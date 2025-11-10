@@ -8,6 +8,7 @@ import { AdminFooter } from '@/components/layout/AdminFooter';
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAdminPermissionSync } from '@/hooks/useAdminPermissionSync';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   useAdminPermissionSync();
@@ -47,6 +48,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setChecked(true);
     }
   }, [isLoginPage, permissionPath, pathname, router]);
+  React.useEffect(() => {
+    if (!isLoginPage && !hasAccess) {
+      toast.error("Bạn không có quyền truy cập trang này!");
+    }
+  }, [isLoginPage, hasAccess]);
 
   if (!checked) return null;
   if (!isLoginPage && !hasAccess) {
@@ -63,20 +69,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    isLoginPage ? (
-      <>{children}</>
-    ) : (
-      <div className="flex min-h-screen bg-gray-100">
-        <AdminSidebar />
-        <div className="flex flex-col flex-1 overflow-y-auto">
-          <AdminHeader />
-          {/* Nội dung chính */}
-          <main className="flex-1 sm:p-2 md:p-4">
-            {children}
-          </main>
-          <AdminFooter />
+    <>
+      <Toaster position="top-right" />
+      {isLoginPage ? (
+        <>{children}</>
+      ) : (
+        <div className="flex min-h-screen bg-gray-100">
+          <AdminSidebar />
+          <div className="flex flex-col flex-1 overflow-y-auto">
+            <AdminHeader />
+            {/* Nội dung chính */}
+            <main className="flex-1 sm:p-2 md:p-4">
+              {children}
+            </main>
+            <AdminFooter />
+          </div>
         </div>
-      </div>
-    )
+      )}
+    </>
   );
 }

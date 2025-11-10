@@ -10,6 +10,8 @@ import {
   listDropdownStores,
   OrderStatus,
   PaymentStatus,
+  sendOrderRejectedMail,
+  sendOrderConfirmedMail,
 } from "@/api/services/orderService";
 import { getCustomers, Customer } from "@/api/services/customerService";
 import { getAvailableDrivers, assignDriverToOrder } from "@/api/services/deliveryService";
@@ -51,6 +53,7 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
   total_amount: number;
   items: OrderItem[];
   customer_name?: string;
+  customer_email?: string;
 }
 
 export default function AdminOrderPage() {
@@ -251,23 +254,32 @@ export default function AdminOrderPage() {
       setEditingOrder({ ...order, items: order.items || [], total_amount: parseFloat(order.total_amount as string) });
     }
   };
-
   const handleOrderUpdated = async (orderId: number, updateData: any) => {
     setLoading(true);
     try {
-      // Call API to update order
       await updateOrder(orderId, updateData);
       toast.success("Cập nhật đơn hàng thành công!");
-      await fetchOrders();
-      await fetchAllOrders();
+
+      // Chỉ cập nhật state local để tránh gọi API toàn bộ
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
+      setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
+
+      // Gửi mail nếu cần
+      const order = orders.find(o => o.id === orderId);
+      const customerEmail = order?.customer_email;
+      if (customerEmail && order?.is_login_customer === false) {
+        if (updateData.status === "CONFIRMED") await sendOrderConfirmedMail({ orderId, to: customerEmail });
+        else if (updateData.status === "REJECTED") await sendOrderRejectedMail({ orderId, to: customerEmail });
+      }
+
       setEditingOrder(null);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Không thể cập nhật đơn hàng!";
-      toast.error(errorMessage);
+      toast.error(err.response?.data?.message || "Không thể cập nhật đơn hàng!");
     } finally {
       setLoading(false);
     }
   };
+
 
 
 

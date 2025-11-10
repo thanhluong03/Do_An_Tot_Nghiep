@@ -2,6 +2,7 @@
 import axios from 'axios';
 const API_URL_STORES = "http://localhost:3000/stores";
 const API_URL = 'http://localhost:3000/orders';
+const API_URLMail = 'http://localhost:3000/mail';
 export interface ProductImage {
   id: number;
   image_data: string;
@@ -60,6 +61,8 @@ export interface Order {
   payment_status: PaymentStatus;
   current_order?: CurrentOrderDetails;
   items?: OrderItem[];
+  customer_email?: string;
+  is_login_customer?: boolean;
 }
 
 export interface ListOrderParams {
@@ -169,3 +172,10 @@ export async function getRevenueData(): Promise<{ month: string; revenue: number
 
   return Array.from(map.entries()).map(([month, revenue]) => ({ month, revenue }));
 }
+export const sendOrderConfirmedMail = async (data: { orderId: number, to: string }) => {
+  return axios.post(`${API_URLMail}/order-confirmed`, data);
+};
+
+export const sendOrderRejectedMail = async (data: { orderId: number, to: string }) => {
+  return axios.post(`${API_URLMail}/order-rejected`, data);
+};
