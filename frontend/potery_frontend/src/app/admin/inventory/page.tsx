@@ -26,6 +26,7 @@ import TransferInventoryForm from "@/components/inventory/TransferInventoryForm"
 import { getCategories } from "@/api/services/categoryService";
 
 import Pagination from "@/components/inventory/Pagination";
+import { ArrowLeftRight, Circle } from "lucide-react";
 
 // Interface cho state của form
 export interface InventoryFormState {
@@ -63,6 +64,7 @@ export default function InventoryPage() {
         store_id: undefined,
         quantity_stock: 0,
         quantity_sold: 0,
+        
     });
 
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -263,47 +265,44 @@ export default function InventoryPage() {
     };
 
     // Submit form
-    const handleSubmit = async () => {
-        const isCreating = editingId === null;
-        if (!validate(isCreating)) return;
+    // Submit form (SP KHÔNG CÓ PHÂN LOẠI)
+const handleSubmit = async () => {
+    const isCreating = editingId === null;
+    if (!validate(isCreating)) return;
 
-        try {
-            if (isCreating) {
-                const productId = form.product_id;
-                const storeId = form.store_id;
+    try {
+        if (isCreating) {
+            const productId = form.product_id;
+            const storeId = form.store_id;
 
-                const createDto: CreateInventoryDto = {
-                    product_id: productId as string | string[],
-                    store_id: storeId as string | string[],
-                    inventory_details: [{
-                        classification_attribute_relationship_id: 0, // Default classification
-                        quantity_stock: form.quantity_stock,
-                        quantity_sold: 0
-                    }]
-                };
-                await createInventory(createDto);
-                toast.success("Tạo tồn kho thành công!");
-                await fetchDropdownData();
-            } else {
-                // Logic cho CẬP NHẬT
-                const updateDto: UpdateInventoryDto = {
-                    inventory_details: [{
-                        classification_attribute_relationship_id: 0, // Default classification
-                        quantity_stock: form.quantity_stock,
-                        quantity_sold: form.quantity_sold
-                    }]
-                };
-                await updateInventory(editingId!, updateDto);
-                toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
-                await fetchDropdownData(); // Thêm dòng này
-            }
+            const createDto: CreateInventoryDto = {
+                product_id: productId as string | string[],
+                store_id: storeId as string | string[],
+                quantity_stock: form.quantity_stock,
+            };
 
-            handleCancelEdit();
-            fetchData();
-        } catch {
-            toast.error("Số lượng trong kho không đủ!");
+            await createInventory(createDto);
+            toast.success("Tạo tồn kho thành công!");
+            await fetchDropdownData();
+        } else {
+            const updateDto: UpdateInventoryDto = {
+                quantity_stock: form.quantity_stock,
+                quantity_sold: form.quantity_sold,
+            };
+
+            await updateInventory(editingId!, updateDto);
+            toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
+            await fetchDropdownData();
         }
-    };
+
+        handleCancelEdit();
+        fetchData();
+    } catch (error) {
+        console.error(error);
+        toast.error("Số lượng trong kho không đủ hoặc có lỗi khi cập nhật!");
+    }
+};
+
 
     // Hàm submit với dữ liệu phân loại
     const handleSubmitWithClassifications = async (classificationQuantities: { [classificationId: number]: number }) => {
@@ -402,9 +401,10 @@ export default function InventoryPage() {
                                 </button>
                                 <button
                                     onClick={handleOpenTransferForm}
-                                    className="px-6 py-2 rounded-lg font-semibold shadow-md transition bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                                    className="px-6 py-2 rounded-lg font-semibold shadow-md bg-blue-500 hover:bg-blue-700 text-white flex items-center gap-2"
                                 >
-                                    🔄 Chuyển Hàng Giữa Cửa Hàng
+                                    <ArrowLeftRight className="w-4 h-4 text-white" />
+                                    Chuyển Hàng Giữa Cửa Hàng
                                 </button>
                             </>
                         )}

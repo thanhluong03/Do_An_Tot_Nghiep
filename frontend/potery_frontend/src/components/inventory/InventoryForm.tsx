@@ -49,6 +49,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     const [classificationQuantities, setClassificationQuantities] = useState<{ [classificationId: number]: number }>({});
     const [showClassifications, setShowClassifications] = useState(false);
 
+
     // Load classifications khi sản phẩm được chọn
     useEffect(() => {
         const loadClassifications = async () => {
@@ -104,26 +105,26 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     };
 
     const handleFormSubmit = async () => {
-        if (editingId) {
-            // Cho edit mode, kiểm tra xem có classification data không
-            const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+        try {
+            const { createInventory } = await import("@/api/services/inventoryService");
+            const productId = form.product_id;
+            const storeId = form.store_id;
 
-            if (hasClassificationData && handleSubmitWithClassifications) {
-                // Nếu có classification data, sử dụng handleSubmitWithClassifications
-                await handleSubmitWithClassifications(classificationQuantities);
-            } else {
-                // Nếu không có classification data, dùng handleSubmit thông thường
-                await handleSubmit();
-            }
-        } else {
-            // Cho create, kiểm tra nếu có classification data thì gửi kèm
-            const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+            // Kiểm tra xem sản phẩm có phân loại hay không
+            const hasClassifications = Object.values(productClassifications).some(
+                (classifications) => classifications.length > 0
+            );
 
-            if (hasClassificationData) {
-                // Tính tổng quantity từ classifications
+            // Nếu sản phẩm có phân loại → xử lý inventory_details
+            if (hasClassifications) {
+                const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+
+                if (!hasClassificationData) {
+                    toast.error("Vui lòng nhập số lượng cho ít nhất một phân loại!");
+                    return;
+                }
+
                 const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
-
-                // Tạo inventory details
                 const inventoryDetails = Object.entries(classificationQuantities)
                     .filter(([, qty]) => qty > 0)
                     .map(([classificationId, quantity]) => ({
@@ -132,35 +133,40 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         quantity_sold: 0
                     }));
 
-                // Gọi API với classification data
-                try {
-                    const productId = form.product_id;
-                    const storeId = form.store_id;
+                await createInventory({
+                    product_id: productId as string | string[],
+                    store_id: storeId as string | string[],
+                    quantity_stock: totalQuantity,
+                    inventory_details: inventoryDetails,
+                });
 
-                    // Import createInventory từ inventoryService
-                    const { createInventory } = await import("@/api/services/inventoryService");
-
-                    await createInventory({
-                        product_id: productId as string | string[],
-                        store_id: storeId as string | string[],
-                        quantity_stock: totalQuantity,
-                        inventory_details: inventoryDetails
-                    });
-
-                    toast.success("Chia hàng theo phân loại thành công!");
-                    handleCancelEdit();
-
-                    // Reload trang để refresh data
-                    window.location.reload();
-                } catch (error) {
-                    console.error('Error creating inventory with classifications:', error);
-                    toast.error("Lỗi khi chia hàng theo phân loại!");
-                }
-            } else {
-                toast.error("Vui lòng nhập số lượng cho ít nhất một phân loại!");
+                toast.success("Tạo tồn kho theo phân loại thành công!");
             }
+            // Nếu sản phẩm KHÔNG có phân loại → chỉ gửi quantity_stock
+            else {
+                if (!form.quantity_stock || form.quantity_stock <= 0) {
+                    toast.error("Vui lòng nhập số lượng tồn kho hợp lệ!");
+                    return;
+                }
+
+                await createInventory({
+                    product_id: productId as string | string[],
+                    store_id: storeId as string | string[],
+                    quantity_stock: form.quantity_stock,
+                });
+
+                toast.success("Tạo tồn kho thành công (sản phẩm không có phân loại)!");
+            }
+
+            handleCancelEdit();
+            window.location.reload();
+        } catch (error) {
+            console.error("Error submitting inventory form:", error);
+            toast.error("Có lỗi xảy ra khi tạo tồn kho!");
         }
-    }; const onNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    };
+
+    const onNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         let numericValue = 0;
         if (value !== "" && value !== null && value !== undefined) {
@@ -229,20 +235,17 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                 {editingId ? `SỬA TỒN KHO ID: ${editingId}` : "QUẢN LÝ TỒN KHO LINH HOẠT"}
             </label>
 
-            {/* Điều chỉnh Grid chính */}
             <div className={`grid gap-8 ${editingId === null ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
 
-                {/* --- KHỐI THÊM MỚI (Card Sản phẩm & Cửa hàng) --- */}
                 {editingId === null ? (
                     <>
-                        {/* 1. Card Chọn Sản phẩm (Cột 1) */}
+                        {/* 1. Card chọn sản phẩm */}
                         <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
                             <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
                                 <Package size={18} className="text-orange-500" />
                                 1. CHỌN SẢN PHẨM
                             </h4>
                             <div className="p-4">
-                                {/* Component CheckboxList (Được bọc trong Card) */}
                                 <CheckboxList
                                     name="product_id"
                                     label="Sản phẩm"
@@ -252,19 +255,17 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                     error={errors.product_id}
                                     allProducts={allProducts}
                                     categories={categories}
-
                                 />
                             </div>
                         </div>
 
-                        {/* 2. Card Chọn Cửa hàng (Cột 2) */}
+                        {/* 2. Card chọn cửa hàng */}
                         <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
                             <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
                                 <Store size={18} className="text-orange-500" />
                                 2. CHỌN CỬA HÀNG
                             </h4>
                             <div className="p-4">
-                                {/* Component CheckboxList (Được bọc trong Card) */}
                                 <CheckboxList
                                     name="store_id"
                                     label="Cửa hàng"
@@ -273,12 +274,11 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                     onChange={handleValueChange}
                                     error={errors.store_id}
                                     allProducts={[]}
-
                                 />
                             </div>
                         </div>
 
-                        {/* 3. Phân loại sản phẩm và số lượng (Cột 1, Hàng 2) */}
+                        {/* 3. Phân loại sản phẩm & input số lượng */}
                         <div className="col-span-2 pt-4">
                             <div>
                                 <label className="block text-sm font-extrabold text-gray-800 mb-4 flex items-center gap-2">
@@ -291,25 +291,48 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                             const product = allProducts.find(p => p.id === Number(productId));
                                             return (
                                                 <div key={productId} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                                    <div className="flex items-center gap-3 mb-3 pb-2 border-b">
-                                                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-white">
+
+                                                    {/* Header sản phẩm: ảnh + tên */}
+                                                    <div className="flex items-center gap-4 mb-4 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                                                        {/* Ảnh sản phẩm */}
+                                                        <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                                                             {product && (
                                                                 <Image
                                                                     src={getProductImageUrl(product)}
                                                                     alt={product.name}
-                                                                    width={48}
-                                                                    height={48}
+                                                                    width={64}
+                                                                    height={64}
                                                                     className="w-full h-full object-cover"
                                                                 />
                                                             )}
                                                         </div>
-                                                        <div>
-                                                            <h5 className="font-semibold text-gray-800">{product?.name}</h5>
-                                                            <p className="text-sm text-gray-600">Còn lại: {product?.total_quantity_divided || 0}</p>
+
+                                                        {/* Thông tin sản phẩm */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <h5 className="font-semibold text-gray-800 text-base truncate">{product?.name}</h5>
+                                                            <p className="text-sm text-gray-500 mt-1">Còn lại: <span className="font-medium text-gray-700">{product?.total_quantity_divided || 0}</span></p>
                                                         </div>
+
+                                                        {/* Input số lượng (không phân loại) */}
+                                                        {classifications.length === 0 && (
+                                                            <div className="flex flex-col items-end w-24">
+                                                                <label className="text-xs font-medium text-gray-600 mb-1">Số lượng</label>
+                                                                <input
+                                                                    title="quantity_stock"
+                                                                    type="number"
+                                                                    min={0}
+                                                                    value={form.quantity_stock || 0}
+                                                                    onChange={onNumberInputChange}
+                                                                    name="quantity_stock"
+                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
+                                                                />
+                                                            </div>
+                                                        )}
                                                     </div>
 
-                                                    {classifications.length > 0 ? (
+
+                                                    {/* Phân loại sản phẩm nếu có */}
+                                                    {classifications.length > 0 && (
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             {classifications.map(classification => (
                                                                 <div key={classification.id} className="border border-gray-300 rounded-lg p-3 bg-white">
@@ -348,8 +371,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    ) : (
-                                                        <p className="text-center py-3 text-gray-500">Sản phẩm này chưa có phân loại</p>
                                                     )}
                                                 </div>
                                             );
@@ -365,9 +386,9 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         </div>
                     </>
                 ) : (
-                    // --- KHỐI SỬA (layout gọn gàng) ---
+                    // --- Khối
+                    // <> sửa ---
                     <>
-                        {/* Thông tin sản phẩm và cửa hàng */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* 1. Sản phẩm (Readonly) */}
                             <div className="p-4 bg-red-50 rounded-lg border border-red-200 shadow-sm">
@@ -499,9 +520,17 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <div className="text-center py-6 bg-gray-50 rounded border border-dashed border-gray-300">
-                                                            <Box size={32} className="mx-auto mb-2 text-gray-400" />
-                                                            <p className="text-gray-500 text-sm">Không có phân loại</p>
+                                                        <div className="flex items-center gap-3 mt-2">
+                                                            <label className="text-sm font-medium text-gray-700">Số lượng:</label>
+                                                            <input
+                                                                title='quantity_stock'
+                                                                type="number"
+                                                                min={0}
+                                                                value={form.quantity_stock || 0}
+                                                                onChange={onNumberInputChange} // hàm bạn đã có
+                                                                name="quantity_stock"
+                                                                className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-center focus:ring-1 focus:ring-orange-500"
+                                                            />
                                                         </div>
                                                     )}
                                                 </div>
@@ -523,7 +552,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
             {/* --- Button controls --- */}
             <div className="flex justify-end gap-3 pt-8 border-t mt-8 border-gray-100">
-
                 <button
                     onClick={handleCancelEdit}
                     className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
@@ -535,7 +563,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                     onClick={handleFormSubmit}
                     className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform hover:scale-[1.02] ${btnPrimaryClass}`}
                 >
-
                     {editingId ? "CẬP NHẬT TỒN KHO" : "THÊM MỚI TỒN KHO"}
                 </button>
             </div>
