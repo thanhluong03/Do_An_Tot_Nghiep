@@ -35,10 +35,10 @@ export default function OrderStatusModal({
       payment_method: paymentMethod,
     };
 
-    await onUpdated(orderId, updateData); // ✅ gọi hàm của cha
+   await onUpdated(orderId, updateData);
     onClose();
-  } catch (err) {
-    alert("Cập nhật thất bại, vui lòng thử lại!");
+  } catch (error) {
+    console.error("Error updating order:", error);
   } finally {
     setLoading(false);
   }
