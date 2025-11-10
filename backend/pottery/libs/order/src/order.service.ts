@@ -49,10 +49,21 @@ export class OrderService {
 
     // Bổ sung xác định kiểu khách hàng
     let isLoginCustomer = true;
+    let customerInfo: any = null;
     if (customer_id) {
       const customer = await this.customerRepository.findById(customer_id);
       if (customer && typeof customer.username === 'string' && customer.username.startsWith('guest_')) {
         isLoginCustomer = false;
+      }
+      if (customer) {
+        customerInfo = {
+          id: customer.id,
+          username: customer.username,
+          full_name: customer.full_name,
+          email: customer.email,
+          phone_number: customer.phone_number,
+          address: customer.address,
+        };
       }
     } else {
       isLoginCustomer = false;
@@ -158,6 +169,7 @@ export class OrderService {
       payment_status: payment_status ?? PaymentStatus.UNPAID,
       payment_method: payment_method ?? PaymentMethod.ONSITE,
       order_date: new Date(),
+      customer_info: customerInfo,
     };
 
     const order = await this.orderRepository.createOrder(
@@ -270,11 +282,14 @@ export class OrderService {
     const { orders, total } = await this.orderRepository.findAll(params);
     for (const order of orders) {
       let customerName = '';
+      let customerEmail = '';
       if (order.customer_id) {
         const customer = await this.customerRepository.findById(order.customer_id);
         customerName = customer?.full_name || customer?.username || '';
+        customerEmail = customer?.email || '';
       }
       (order as any).customer_name = customerName;
+      (order as any).customer_email = customerEmail;
       const currentOrder: any = order.current_order || {};
       const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
       const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
