@@ -308,14 +308,14 @@ export default function ProductsPage() {
             placeholder="Tìm theo tên hoặc mô tả..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="border border-gray-300 rounded-xl p-2 px-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            className="border border-gray-300 rounded-xl p-2 px-4  text-xs "
           />
 
           <select
             title="Lọc theo danh mục"
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(parseInt(e.target.value))}
-            className="border border-gray-300 rounded-xl p-2 focus:ring-2 focus:ring-indigo-500"
+            className="border border-gray-300 text-xs rounded-xl p-2"
           >
             <option value={0}>Tất cả danh mục</option>
             {categories.map((c) => (
@@ -330,7 +330,7 @@ export default function ProductsPage() {
               title="Lọc theo giá"
               value={priceSort}
               onChange={(e) => setPriceSort(e.target.value as "asc" | "desc" | "")}
-              className="border border-gray-300 rounded-xl p-2 flex-1 focus:ring-2 focus:ring-indigo-500"
+              className="border border-gray-300 rounded-xl p-2 text-xs flex-1"
             >
               <option value="">Sắp xếp theo giá</option>
               <option value="asc">Giá tăng dần</option>
@@ -341,7 +341,7 @@ export default function ProductsPage() {
               title="Lọc theo thời gian"
               value={dateSort}
               onChange={(e) => setDateSort(e.target.value as "newest" | "oldest" | "")}
-              className="border border-gray-300 rounded-xl p-2 flex-1 focus:ring-2 focus:ring-indigo-500"
+              className="border border-gray-300 rounded-xl p-2 flex-1 text-xs"
             >
               <option value="">Sắp xếp theo thời gian</option>
               <option value="newest">Mới nhất</option>

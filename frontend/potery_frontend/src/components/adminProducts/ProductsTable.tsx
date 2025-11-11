@@ -66,13 +66,13 @@ export default function ProductsTable({
         // Chỉ cho phép mở rộng nếu sản phẩm có ít nhất 1 phân loại
         const product = products.find(p => p.id === productId);
         if (product && product.classifications && product.classifications.length > 0) {
-             setExpandedRow(expandedRow === productId ? null : productId);
+            setExpandedRow(expandedRow === productId ? null : productId);
         } else {
-             // Nếu không có phân loại, đảm bảo đóng nếu đang mở
-             if (expandedRow === productId) {
-                 setExpandedRow(null);
-             }
-             // Và không làm gì nếu chưa mở và không có phân loại
+            // Nếu không có phân loại, đảm bảo đóng nếu đang mở
+            if (expandedRow === productId) {
+                setExpandedRow(null);
+            }
+            // Và không làm gì nếu chưa mở và không có phân loại
         }
     };
 
@@ -86,7 +86,7 @@ export default function ProductsTable({
                         <th className="p-3 text-left text-xs ">Ảnh</th>
                         <th className="p-3 text-left text-xs">Tên sản phẩm</th>
                         <th className="p-3 text-left text-xs">Giá</th>
-                        <th className="p-3 text-left text-xs">Số lượng</th>
+                        <th className="p-3 text-left text-xs">Số lượng kho tổng</th>
                         <th className="p-3 text-left text-xs">Trạng thái</th>
                         <th className="p-3 text-left text-xs">Danh mục</th>
                         <th className="p-3 text-left text-xs">Nhà cung cấp</th>
@@ -134,9 +134,16 @@ export default function ProductsTable({
                                 mainImage =
                                     "https://placehold.co/100x100/9ca3af/ffffff?text=No+Image";
                             }
-                            
+
                             // Kiểm tra có phân loại để hiển thị nút
-                            const hasClassifications = p.classifications && p.classifications.length > 0;
+                            // ✅ Kiểm tra thật sự có phân loại hợp lệ
+                            const hasClassifications = Array.isArray(p.classifications)
+                                && p.classifications.some(
+                                    c =>
+                                        (c.name && c.name.trim() !== "") ||
+                                        (Array.isArray(c.attributes) && c.attributes.some(a => a.name && a.name.trim() !== ""))
+                                );
+
 
 
                             return (
@@ -145,7 +152,7 @@ export default function ProductsTable({
                                         key={p.id}
                                         className="hover:bg-gray-50 transition-all duration-150 border-b border-gray-100"
                                     >
-                                        <td className="p-3 text-gray-700">{serialNumber}</td>
+                                        <td className="p-3 text-gray-700  text-xs ">{serialNumber}</td>
                                         <td className="p-3">
                                             <div className="w-12 h-12 rounded-xl overflow-hidden left border border-gray-200 shadow-sm">
                                                 <img
@@ -159,8 +166,25 @@ export default function ProductsTable({
                                                 />
                                             </div>
                                         </td>
-                                        <td className="p-3 text-xs text-gray-900 max-w-[300px] break-words " title={p.name}>{p.name}</td>
-                                        <td className="p-3 text-gray-700 text-xs">{p.price ?? "Xem chi tiết"}</td>
+                                        <td className="p-3 text-xs text-gray-900 max-w-[150px] break-words " title={p.name}>{p.name}</td>
+                                        <td className="p-3 text-gray-700 text-xs   break-words text-xs overflow-hidden">
+                                            {hasClassifications ? (
+                                                <button
+                                                    onClick={() => toggleExpandedRow(p.id)}
+                                                    // Sử dụng màu cam cho nút xem chi tiết
+                                                    className="text-orange-700 hover:underline"
+                                                >
+                                                    
+                                                    {expandedRow === p.id
+                                                        ? "Ẩn chi tiết"
+                                                        : "Xem chi tiết giá phân loại"}
+                                                </button>
+                                            ) : (
+                                                // Hiển thị giá cố định nếu không có phân loại
+                                                p.price?.toLocaleString("vi-VN") + " ₫"
+                                            )}
+                                        </td>
+
                                         <td className="p-3 text-gray-700 text-xs">
                                             {p.quantity ?? "N/A"}
                                         </td>
@@ -177,19 +201,19 @@ export default function ProductsTable({
                                                 : "N/A"}
                                         </td>
                                         <td className="p-4 text-center space-x-2">
-                                            {hasClassifications && ( // Chỉ hiển thị nút nếu có phân loại
-                                            <button
-                                                title={expandedRow === p.id ? "Ẩn chi tiết" : "Xem chi tiết"}
-                                                onClick={() => toggleExpandedRow(p.id)}
-                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition"
-                                            >
-                                                <ChevronDown 
-                                                    size={14} 
-                                                    className={`transition-transform ${expandedRow === p.id ? 'rotate-180' : 'rotate-0'}`} 
-                                                />
-                                                {expandedRow === p.id ? "Ẩn" : "Xem"}
-                                            </button>
-                                            )}
+                                            {/* {hasClassifications && ( // Chỉ hiển thị nút nếu có phân loại
+                                                <button
+                                                    title={expandedRow === p.id ? "Ẩn chi tiết" : "Xem chi tiết"}
+                                                    onClick={() => toggleExpandedRow(p.id)}
+                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition"
+                                                >
+                                                    <ChevronDown
+                                                        size={14}
+                                                        className={`transition-transform ${expandedRow === p.id ? 'rotate-180' : 'rotate-0'}`}
+                                                    />
+                                                    {expandedRow === p.id ? "Ẩn" : "Xem"}
+                                                </button>
+                                            )} */}
                                             <button
                                                 title="Sửa"
                                                 onClick={() => openEditModal(p)}
@@ -212,8 +236,8 @@ export default function ProductsTable({
                                         <tr className="bg-white border-t border-gray-200">
                                             <td colSpan={10} className="p-6"> {/* Cập nhật từ 9 lên 10 */}
                                                 {hasClassifications ? ( // Kiểm tra lại lần nữa để hiển thị nội dung chi tiết
-                                                    <div className="flex flex-col gap-2 border border-gray-200 rounded-xl p-4 bg-gray-50 shadow-sm">
-                                                        <h4 className="font-semibold text-lg text-gray-800 text-center border-gray-200 pb-2">
+                                                    <div className="flex flex-col gap-2 border border-gray-200 rounded-xl p-2 bg-gray-50 shadow-sm">
+                                                        <h4 className="font-semibold text-lg text-orange-800 text-center border-gray-200 pb-1">
                                                             Phân loại & Giá bán
                                                         </h4>
 
@@ -222,32 +246,32 @@ export default function ProductsTable({
 
                                                             {/* 🔹 Cột trái: Danh sách phân loại */}
                                                             {p.relationships && p.relationships.length > 0 ? (
-                                                            <div className="flex-1 max-w-[500px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                                                                <h5 className="font-semibold text-gray-700 mb-3 text-base text-center">
-                                                                    Phân loại sản phẩm
-                                                                </h5>
-                                                                <div className="flex flex-col gap-3">
-                                                                    {p.classifications!.map((c, ci) => (
-                                                                        <div
-                                                                            key={ci}
-                                                                            className="border border-gray-100 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition"
-                                                                        >
-                                                                            <p className="font-medium text-gray-700 mb-2">{c.name}</p>
-                                                                            <div className="flex flex-wrap gap-2 justify-center">
-                                                                                {c.attributes.map((a, ai) => (
-                                                                                    <span
-                                                                                        key={ai}
-                                                                                        className="px-3 py-1 text-sm rounded-lg bg-orange-50 border border-orange-200 text-orange-700 font-medium"
-                                                                                    >
-                                                                                        {a.name}
-                                                                                    </span>
-                                                                                ))}
+                                                                <div className="flex-1 max-w-[500px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                                                                    <h5 className="font-semibold text-orange-700 mb-3 text-base text-center">
+                                                                        Phân loại sản phẩm
+                                                                    </h5>
+                                                                    <div className="flex flex-col gap-3">
+                                                                        {p.classifications!.map((c, ci) => (
+                                                                            <div
+                                                                                key={ci}
+                                                                                className="border border-gray-100 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition"
+                                                                            >
+                                                                                <p className="font-medium text-gray-700 mb-2">{c.name}</p>
+                                                                                <div className="flex flex-wrap gap-2 justify-center">
+                                                                                    {c.attributes.map((a, ai) => (
+                                                                                        <span
+                                                                                            key={ai}
+                                                                                            className="px-3 py-1 text-sm rounded-lg bg-orange-50 border border-orange-200 text-orange-700 font-medium"
+                                                                                        >
+                                                                                            {a.name}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    ))}
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                             ) : (
+                                                            ) : (
                                                                 <div className="flex-1 max-w-[600px] bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center justify-center">
                                                                     <p className="text-gray-500 italic text-center">
                                                                         Không có chi tiết phân loại cho phân loại này.
@@ -258,17 +282,17 @@ export default function ProductsTable({
                                                             {/* 🔹 Cột phải: Bảng giá & số lượng */}
                                                             {p.relationships && p.relationships.length > 0 ? (
                                                                 <div className="flex-1 max-w-[600px] bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                                                                    <h5 className="text-base font-semibold text-gray-700 mb-3 text-center">
+                                                                    <h5 className="text-base font-semibold text-orange-700 mb-3 text-center">
                                                                         Chi tiết giá & số lượng
                                                                     </h5>
                                                                     <div className="overflow-x-auto rounded-lg border border-gray-100">
                                                                         <table className="w-full text-sm text-gray-700">
                                                                             <thead className="bg-orange-100 text-gray-800 font-semibold uppercase text-xs">
                                                                                 <tr>
-                                                                                    <th className="px-4 py-2 border border-gray-200 text-left">Phân loại 1</th>
-                                                                                    <th className="px-4 py-2 border border-gray-200 text-left">Phân loại 2</th>
-                                                                                    <th className="px-4 py-2 border border-gray-200 text-right">Giá (₫)</th>
-                                                                                    <th className="px-4 py-2 border border-gray-200 text-right">Số lượng</th>
+                                                                                    <th className="px-2 py-2 border border-gray-200 text-left">Phân loại 1</th>
+                                                                                    <th className="px-2 py-2 border border-gray-200 text-left">Phân loại 2</th>
+                                                                                    <th className="px-2 py-2 border border-gray-200 text-right">Giá (₫)</th>
+                                                                                    <th className="px-2 py-2 border border-gray-200 text-right">Số lượng</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -311,7 +335,7 @@ export default function ProductsTable({
                                                     </div>
                                                 ) : (
                                                     <p className="text-gray-500 italic text-center">
-                                                         Không có phân loại cho sản phẩm này.
+                                                        Không có phân loại cho sản phẩm này.
                                                     </p>
                                                 )}
                                             </td>
