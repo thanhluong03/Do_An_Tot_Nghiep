@@ -10,7 +10,7 @@ import { productApi } from '../../../api/modules/products';
 import { useCart } from '@/contexts/CartContext';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/dist/client/components/navigation';
-import { ArrowLeft, Bot, Gift, MessageSquare, User } from 'lucide-react';
+import { ArrowLeft, Bot, Gift, MessageSquare, Search, User } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
 
@@ -38,7 +38,13 @@ const translateStatus = (status: string | undefined): string => {
       return status;
   }
 };
-
+const statusTabs = [
+  { key: 'ALL', name: 'Tất cả', statuses: [] },
+  { key: 'PENDING', name: 'Chờ xử lý', statuses: ['CREATED', 'PENDING'] },
+  { key: 'PROCESSING', name: 'Đang giao hàng', statuses: ['CONFIRMED', 'PROCESSING', 'SHIPPING'] },
+  { key: 'COMPLETED', name: 'Đã hoàn thành', statuses: ['DELIVERED', 'COMPLETED'] },
+  { key: 'CANCELLED', name: 'Đã hủy', statuses: ['CANCELLED', 'FAILED'] },
+];
 const translatePaymentStatus = (status: string | undefined): string => {
   if (!status) return 'Chờ thanh toán';
   const s = status.toUpperCase();
@@ -51,26 +57,6 @@ const translatePaymentStatus = (status: string | undefined): string => {
       return 'Thanh toán thất bại';
     default:
       return status;
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'CREATED':
-    case 'PENDING':
-    case 'CONFIRMED':
-      return 'text-[#856D4D] bg-[#FFF8E1] border-[#F2E5C9]';
-    case 'PROCESSING':
-    case 'SHIPPED':
-      return 'text-[#4A856D] bg-[#E8F5E9] border-[#DCEADF]';
-    case 'COMPLETED':
-    case 'DELIVERED':
-      return 'text-green-700 bg-green-100 border-green-200';
-    case 'CANCELLED':
-    case 'FAILED':
-      return 'text-red-700 bg-red-100 border-red-200';
-    default:
-      return 'text-gray-700 bg-gray-100 border-gray-200';
   }
 };
 const translatePaymentMethod = (method: string | undefined): string => {
@@ -88,18 +74,21 @@ const translatePaymentMethod = (method: string | undefined): string => {
   }
 };
 export default function MyOrdersPage() {
-    const router = useRouter();
+  const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productMap, setProductMap] = useState<Record<number, any>>({});
   const { clear: clearCart } = useCart();
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [conversationId, setConversationId] = useState<number | null>(null);
-    const [isAIChatOpen, setIsAIChatOpen] = useState(false);
-    const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
-    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("ALL");
+
   const handleCancelOrder = async (orderId: any) => {
     if (window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
       try {
@@ -192,7 +181,61 @@ export default function MyOrdersPage() {
     const num = Number(price) || 0;
     return num.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
+  const filteredOrders = orders.filter((order) => {
+    const normalizedStatus = order.status?.toUpperCase();
 
+    // 1. Lọc theo Tab Trạng thái
+    const currentTab = statusTabs.find(tab => tab.key === activeTab);
+    const statusMatch = activeTab === 'ALL' || currentTab?.statuses.includes(normalizedStatus);
+
+    if (!statusMatch) return false;
+
+    // 2. Lọc theo Thanh tìm kiếm (ID hoặc Tên sản phẩm)
+    if (searchQuery.trim() === "") return true;
+
+    const query = searchQuery.toLowerCase().trim();
+    const orderId = (order.id ?? order._id)?.toString();
+
+    // Check nếu ID khớp
+    if (orderId?.includes(query)) return true;
+
+    // Check nếu Tên sản phẩm khớp
+    const items = order.current_order?.items || order.items || [];
+    const productNameMatch = items.some((item: any) =>
+      item.product_name?.toLowerCase().includes(query)
+    );
+
+    if (productNameMatch) return true;
+
+    return false;
+  });
+  const tabCounts = statusTabs.reduce((acc, tab) => {
+    const count = orders.filter((order) => {
+      const normalizedStatus = order.status?.toUpperCase();
+
+      // 1. Check Status Match (sử dụng tiêu chí của tab hiện tại)
+      const statusMatch = tab.key === 'ALL' || tab.statuses.includes(normalizedStatus);
+      if (!statusMatch) return false;
+
+      // 2. Check Search Query Match (giữ nguyên logic tìm kiếm)
+      if (searchQuery.trim() === "") return true;
+
+      const query = searchQuery.toLowerCase().trim();
+      const orderId = (order.id ?? order._id)?.toString();
+
+      if (orderId?.includes(query)) return true;
+
+      const items = order.current_order?.items || order.items || [];
+      const productNameMatch = items.some((item: any) =>
+        item.product_name?.toLowerCase().includes(query)
+      );
+
+      return productNameMatch;
+    }).length;
+
+    acc[tab.key] = count;
+    return acc;
+  }, {} as Record<string, number>);
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'created':
@@ -210,7 +253,7 @@ export default function MyOrdersPage() {
 
   return (
     <BaseLayout>
-       {isAuthenticated && user?.id && (
+      {isAuthenticated && user?.id && (
         <>
           {/* Voucher Modal */}
           {isVoucherModalOpen && (
@@ -242,9 +285,8 @@ export default function MyOrdersPage() {
 
           {/* Floating Buttons */}
           <div
-            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
-              isChatDropdownOpen ? 'right-1' : 'right-1'
-            }`}
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${isChatDropdownOpen ? 'right-1' : 'right-1'
+              }`}
           >
             {/* Voucher Button */}
             <button
@@ -313,28 +355,80 @@ export default function MyOrdersPage() {
           </div>
         </>
       )}
-      {/* 1. Thu hẹp max-w container và sử dụng màu nền ấm */}
+
       <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 p-4 ml-10 rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="">Trang trước đó</span>
-        </button>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-[#F5F1EB] min-h-[80vh]">
+        onClick={() => router.back()}
+        className="flex items-center gap-2 p-4 ml-10 rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="">Trang trước đó</span>
+      </button>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-[#F5F1EB] min-h-[80vh]">
 
         {/* Tiêu đề: Tinh tế, font serif */}
         <h1 className="text-3xl font-serif mb-8 text-[#2C2A24] text-center tracking-wider relative pb-2 border-b border-[#C4975A]/30">
           Lịch sử Đơn hàng
         </h1>
+        <div className="bg-white p-4 rounded-xl shadow-lg mb-2 border border-[#E5E2D8]">
+          {/* Thanh tìm kiếm */}
+          <div className="mb-2">
+            {/* Thêm relative để định vị icon bên trong */}
+            <div className="relative">
+              {/* Icon Search */}
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"
+              />
+              {/* Input field */}
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo Mã đơn hàng hoặc Tên sản phẩm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                // Thay đổi p-3 thành pl-10 để nhường chỗ cho icon
+                className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-[#C4975A] focus:border-[#C4975A] transition duration-150"
+              />
+            </div>
+          </div>
+          {/* Tabs trạng thái */}
+          <div className="flex flex-wrap gap-2 sm:gap-4 pb-1">
+            {statusTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`
+                  px-2 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-200 flex gap-2
+                  ${activeTab === tab.key
+                    ? 'bg-[#C4975A] text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }
+                `}
+              >
+                {tab.name}
+                <span className={`
+                    text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full
+                    ${activeTab === tab.key ? 'bg-white text-[#C4975A]' : 'bg-gray-100 text-gray-800'}
+                `}>
+                  {tabCounts[tab.key] ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {loading && <div className="text-center py-10 text-[#65604E] text-sm">Đang tải đơn hàng...</div>}
         {error && <div className="text-center text-red-600 py-10 text-sm border border-red-300 bg-red-50 rounded-lg mx-auto max-w-lg">{error}</div>}
 
         {!loading && !error && (
-          orders.length === 0 ? (
+
+
+          filteredOrders.length === 0 ? (
             <div className="text-center py-16 text-gray-500 bg-white rounded-xl shadow-md border border-[#E5E2D8]">
-              <p className="text-base mb-4">Bạn chưa có đơn hàng nào.</p>
+              <p className="text-base mb-4">
+                {orders.length === 0
+                  ? 'Bạn chưa có đơn hàng nào.'
+                  : 'Không tìm thấy đơn hàng nào khớp với tiêu chí tìm kiếm/lọc.'
+                }
+              </p>
               <Link
                 href="/products"
                 className="mt-4 inline-block px-6 py-2 text-sm bg-[#C4975A] text-white font-medium rounded-full shadow-md hover:bg-[#a97e4a] transition-all"
@@ -343,8 +437,8 @@ export default function MyOrdersPage() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-6">
-              {orders.map((order) => {
+            <div className="space-y-3">
+              {filteredOrders.map((order) => {
                 const id = order.id ?? order._id;
                 const info = order.current_order || order;
                 const items = info.items || [];
@@ -357,9 +451,9 @@ export default function MyOrdersPage() {
                   >
 
                     {/* Header */}
-                    <div className="flex justify-between items-center border-b border-[#E5E2D8] px-5 py-3 bg-[#F9F8F4]">
+                    <div className="flex justify-between items-center px-5 py-3 border-b border-[#E5E2D8]">
                       <div>
-                        <div className="font-semibold text-base text-[#2C2A24]">
+                        <div className="font-semibold text-base text-[#2C2A24] ">
                           Mã đơn hàng: <span className="font-bold text-[#C4975A]">#{id}</span>
                         </div>
                         <div className="text-xs text-[#65604E] mt-0.5">
@@ -424,22 +518,21 @@ export default function MyOrdersPage() {
                     </div>
 
                     {/* Footer: Tổng cộng & Nút chi tiết */}
-                    <div className="flex justify-between items-center px-5 py-3 border-t border-[#E5E2D8] bg-[#F9F8F4]">
+                    <div className="flex justify-between items-center px-5 py-3 border-[#E5E2D8]">
 
                       <div className='text-left'>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-sm text-gray-600">
                           Thanh toán: <span className="font-semibold text-[#2C2A24]">{translatePaymentMethod(info.payment_method)}</span>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-sm text-gray-600">
                           Phí vận chuyển: <span className="font-semibold text-[#2C2A24]">{formatPrice(30000)}</span>
                         </div>
                       </div>
 
                       <div className="text-right flex items-center gap-4">
-                        <div>
-                          <div className="text-xs text-gray-600">Tổng tiền hàng</div>
-                          <div className="text-sm font-bold text-[#2C2A24]">{formatPrice(info.total_amount)}</div>
-                          <div className="text-xs text-gray-600">Tổng thanh toán: <span className="font-bold text-[#A38D64]">{formatPrice(info.total_amount + 30000)}</span></div>
+                        <div> 
+                          <div className="text-sm font-semibold  text-gray-600">Tổng tiền hàng: <span>{formatPrice(info.total_amount)}</span></div>
+                          <div className="text-sm font-semibold  text-gray-600">Tổng thanh toán: <span className="font-bold text-[#A38D64]">{formatPrice(info.total_amount + 30000)}</span></div>
                         </div>
                       </div>
 
@@ -469,6 +562,6 @@ export default function MyOrdersPage() {
           )
         )}
       </div>
-    </BaseLayout>
+    </BaseLayout >
   );
 }
