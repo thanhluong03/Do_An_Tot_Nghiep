@@ -14,14 +14,16 @@ export class InventoryRepository {
         product_id: number,
         store_id: number,
     ): Promise<InventoryEntity | null> {
-        return this.repository.findOne({
-            where: {
-                product_id,
-                store_id,
-                deleted_at: IsNull(),
-            },
-            relations: ['product', 'store', 'inventory_details'],
-        });
+        return this.repository.createQueryBuilder('inventory')
+            .leftJoinAndSelect('inventory.product', 'product')
+            .leftJoinAndSelect('inventory.store', 'store')
+            .leftJoinAndSelect('inventory.inventory_details', 'inventory_details')
+            .where('inventory.product_id = :product_id', { product_id })
+            .andWhere('inventory.store_id = :store_id', { store_id })
+            .andWhere('inventory.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('store.deleted_at IS NULL')
+            .getOne();
     }
 
     async create(data: Partial<InventoryEntity>): Promise<InventoryEntity> {
@@ -29,32 +31,51 @@ export class InventoryRepository {
     }
 
     async findById(id: number): Promise<InventoryEntity | null> {
-        return this.repository.findOne({
-            where: { id, deleted_at: IsNull() },
-            relations: ['product', 'store', 'inventory_details'],
-        });
+        return this.repository.createQueryBuilder('inventory')
+            .leftJoinAndSelect('inventory.product', 'product')
+            .leftJoinAndSelect('inventory.store', 'store')
+            .leftJoinAndSelect('inventory.inventory_details', 'inventory_details')
+            .where('inventory.id = :id', { id })
+            .andWhere('inventory.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('store.deleted_at IS NULL')
+            .getOne();
     }
 
     async findAll(): Promise<InventoryEntity[]> {
-        return this.repository.find({
-            where: { deleted_at: IsNull() },
-            order: { created_at: 'DESC' },
-            relations: ['product', 'store', 'inventory_details'],
-        });
+        return this.repository.createQueryBuilder('inventory')
+            .leftJoinAndSelect('inventory.product', 'product')
+            .leftJoinAndSelect('inventory.store', 'store')
+            .leftJoinAndSelect('inventory.inventory_details', 'inventory_details')
+            .where('inventory.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('store.deleted_at IS NULL')
+            .orderBy('inventory.created_at', 'DESC')
+            .getMany();
     }
 
     async findByProduct(product_id: number): Promise<InventoryEntity[]> {
-        return this.repository.find({
-            where: { product_id, deleted_at: IsNull() },
-            relations: ['product', 'store', 'inventory_details'],
-        });
+        return this.repository.createQueryBuilder('inventory')
+            .leftJoinAndSelect('inventory.product', 'product')
+            .leftJoinAndSelect('inventory.store', 'store')
+            .leftJoinAndSelect('inventory.inventory_details', 'inventory_details')
+            .where('inventory.product_id = :product_id', { product_id })
+            .andWhere('inventory.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('store.deleted_at IS NULL')
+            .getMany();
     }
 
     async findByStore(store_id: number): Promise<InventoryEntity[]> {
-        return this.repository.find({
-            where: { store_id, deleted_at: IsNull() },
-            relations: ['product', 'store', 'inventory_details'],
-        });
+        return this.repository.createQueryBuilder('inventory')
+            .leftJoinAndSelect('inventory.product', 'product')
+            .leftJoinAndSelect('inventory.store', 'store')
+            .leftJoinAndSelect('inventory.inventory_details', 'inventory_details')
+            .where('inventory.store_id = :store_id', { store_id })
+            .andWhere('inventory.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('store.deleted_at IS NULL')
+            .getMany();
     }
 
     async update(id: number, data: Partial<InventoryEntity>): Promise<void> {

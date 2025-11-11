@@ -123,6 +123,7 @@ export class LoginService {
             id: user.id,
             username: user.username,
             role: role.name,
+            store_id: user.store_id,
         });
 
         return {
@@ -134,7 +135,7 @@ export class LoginService {
             roleId: role.id,
             roleName: role.name,
             permissions,
-
+            store_id: user.store_id,
         };
     }
 

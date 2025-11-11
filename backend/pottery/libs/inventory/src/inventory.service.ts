@@ -376,7 +376,8 @@ export class InventoryService {
 
 
     async list(input: ListInventoryInput): Promise<{ data: any[]; total: number; page: number; size: number }> {
-        let list = await this.inventoryRepository.findAll();
+        let list = (await this.inventoryRepository.findAll())
+            .filter(inv => inv.product && inv.store);
         let pid: number | undefined = undefined;
         let sid: number | undefined = undefined;
         if (input.product_id !== undefined && input.product_id !== null) {
