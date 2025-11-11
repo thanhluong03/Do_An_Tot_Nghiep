@@ -461,7 +461,7 @@ export default function ProductFormModal({
 
     const form = new FormData();
     form.append("name", formData.name);
-    form.append("price", formData.price.toString());
+    form.append("price", formData.price != null ? formData.price.toString() : "");
     form.append("description", formData.description || "");
     form.append("category_id", (formData.category_id || 0).toString());
     form.append("supplier_id", (formData.supplier_id || 0).toString());
@@ -590,7 +590,7 @@ export default function ProductFormModal({
             </label>
             <input
               type="number"
-              value={formData.price}
+              value={formData.price ?? ""}
               onChange={(e) => handleChange(e, 'price')}
               className={getInputClassName('price')}
               placeholder="Nhập giá..."

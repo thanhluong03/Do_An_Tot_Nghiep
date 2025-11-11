@@ -11,14 +11,15 @@ export class ImportProductRepository {
     ) { }
 
     async findByProductAndSupplier(product_id: number, supplier_id: number): Promise<ImportProductEntity | null> {
-        return this.repository.findOne({
-            where: {
-                product_id,
-                supplier_id,
-                deleted_at: IsNull(),
-            },
-            relations: ['product', 'supplier'],
-        });
+        return this.repository.createQueryBuilder('import_product')
+            .leftJoinAndSelect('import_product.product', 'product')
+            .leftJoinAndSelect('import_product.supplier', 'supplier')
+            .where('import_product.product_id = :product_id', { product_id })
+            .andWhere('import_product.supplier_id = :supplier_id', { supplier_id })
+            .andWhere('import_product.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('supplier.deleted_at IS NULL')
+            .getOne();
     }
 
     async create(data: Partial<ImportProductEntity>): Promise<ImportProductEntity> {
@@ -30,15 +31,36 @@ export class ImportProductRepository {
     }
 
     async findAll(): Promise<ImportProductEntity[]> {
-        return this.repository.find({ where: { deleted_at: IsNull() }, order: { created_at: 'DESC' } });
+        return this.repository.createQueryBuilder('import_product')
+            .leftJoinAndSelect('import_product.product', 'product')
+            .leftJoinAndSelect('import_product.supplier', 'supplier')
+            .where('import_product.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('supplier.deleted_at IS NULL')
+            .orderBy('import_product.created_at', 'DESC')
+            .getMany();
     }
 
     async findByProduct(product_id: number): Promise<ImportProductEntity[]> {
-        return this.repository.find({ where: { product_id, deleted_at: IsNull() } });
+        return this.repository.createQueryBuilder('import_product')
+            .leftJoinAndSelect('import_product.product', 'product')
+            .leftJoinAndSelect('import_product.supplier', 'supplier')
+            .where('import_product.product_id = :product_id', { product_id })
+            .andWhere('import_product.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('supplier.deleted_at IS NULL')
+            .getMany();
     }
 
     async findBySupplier(supplier_id: number): Promise<ImportProductEntity[]> {
-        return this.repository.find({ where: { supplier_id, deleted_at: IsNull() } });
+        return this.repository.createQueryBuilder('import_product')
+            .leftJoinAndSelect('import_product.product', 'product')
+            .leftJoinAndSelect('import_product.supplier', 'supplier')
+            .where('import_product.supplier_id = :supplier_id', { supplier_id })
+            .andWhere('import_product.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('supplier.deleted_at IS NULL')
+            .getMany();
     }
 
     async update(id: number, data: Partial<ImportProductEntity>): Promise<void> {

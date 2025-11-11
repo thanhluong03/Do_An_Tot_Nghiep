@@ -78,4 +78,8 @@ export class ClassificationAttributeRelationshipRepository {
       .orderBy('car.id', 'ASC')
       .getMany();
   }
+
+  async save(entity: ClassificationAttributeRelationshipEntity): Promise<ClassificationAttributeRelationshipEntity> {
+    return this.repository.save(entity);
+  }
 }

@@ -308,7 +308,8 @@ export class ImportProductService {
     async list(
         input: ListImportProductInput,
     ): Promise<{ data: any[]; total: number; page: number; size: number }> {
-        let list = await this.importProductRepository.findAll();
+        let list = (await this.importProductRepository.findAll())
+            .filter(inv => inv.product && inv.supplier);
 
         let pid: number | undefined = undefined;
         let sid: number | undefined = undefined;

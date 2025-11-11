@@ -27,6 +27,7 @@ export class AdminLoginController {
       permissions: result.permissions,
       adminName: result.adminName,
       roleId: result.roleId,
+      store_id: result.store_id,
     });
   }
 
