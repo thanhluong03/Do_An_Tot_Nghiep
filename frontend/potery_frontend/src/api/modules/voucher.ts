@@ -30,7 +30,7 @@ export interface Voucher {
   voucher_percentage?: number;
   discount?: number;
   discount_value?: number;
-  discount_type?: 'FIXED' | 'PERCENT';
+  discount_type?: 'FIXED_AMOUNT' | 'PERCENTAGE';
   quantity?: number;
   remaining_quantity?: number;
   order_conditions?: number;

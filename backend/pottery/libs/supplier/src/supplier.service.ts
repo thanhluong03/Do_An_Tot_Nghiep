@@ -1,4 +1,4 @@
-import { SupplierEntity, SupplierRepository } from '@app/database';
+import { SupplierEntity, SupplierRepository, ProductRepository, ClassificationAttributeRelationshipRepository } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreateSupplier, IListSupplier, IUpdateSupplier } from './supplier.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
@@ -7,6 +7,8 @@ import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
 export class SupplierService {
     constructor(
         private readonly supplierRepository: SupplierRepository,
+        private readonly productRepository: ProductRepository,
+        private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
     ) { }
 
     async create(data: ICreateSupplier): Promise<{ message: string, supplier: SupplierEntity | null }> {
@@ -63,6 +65,31 @@ export class SupplierService {
     async softDelete(id: number): Promise<{ message: string }> {
         const supplier = await this.supplierRepository.findById(id);
         if (!supplier) throw new NotFoundException('Supplier not found');
+
+        // Lấy danh sách sản phẩm của supplier
+        const products = await this.productRepository.findBySupplier(id);
+        for (const product of products) {
+            // Trừ quantity đi total_quantity_divided
+            const newQuantity = (product.quantity || 0) - (product.total_quantity_divided || 0);
+            // Đặt total_quantity_divided về 0
+            await this.productRepository.update(product.id, {
+                quantity: newQuantity < 0 ? 0 : newQuantity,
+                total_quantity_divided: 0,
+            });
+
+            // Nếu có phân loại, trừ quantity của từng classification_attribute_relationship về 0
+            const relationships = await this.classificationAttributeRelationshipRepository.findByProductIdForImport(product.id);
+            if (relationships && relationships.length > 0) {
+                for (const rel of relationships) {
+                    if (rel.id) {
+                        await this.classificationAttributeRelationshipRepository.update(rel.id, {
+                            quantity: 0,
+                        });
+                    }
+                }
+            }
+        }
+
         await this.supplierRepository.softDelete(id);
         return { message: 'Supplier deleted successfully' };
     }

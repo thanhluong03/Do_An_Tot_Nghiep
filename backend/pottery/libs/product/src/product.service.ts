@@ -745,7 +745,10 @@ export class ProductService {
   }
 
   async findAllByInventory() {
-    const inventories = await this.inventoryRepository.findAll();
+    // Chỉ lấy inventory có store chưa bị xóa mềm
+    const inventories = (await this.inventoryRepository.findAll()).filter(
+      (inv) => inv.store && inv.store.deleted_at === null,
+    );
     const inventoryMap = new Map<number, InventoryEntity[]>();
     inventories.forEach((inv: InventoryEntity) => {
       if (!inv.product_id) return;
@@ -902,7 +905,10 @@ export class ProductService {
   }
 
   async findAllByInventoryWithCategory(categoryId: number) {
-    const inventories = await this.inventoryRepository.findAll();
+    // Chỉ lấy inventory có store chưa bị xóa mềm
+    const inventories = (await this.inventoryRepository.findAll()).filter(
+      (inv) => inv.store && inv.store.deleted_at === null,
+    );
     const inventoryMap = new Map<number, InventoryEntity[]>();
     inventories.forEach((inv: InventoryEntity) => {
       if (!inv.product_id) return;
@@ -1048,7 +1054,8 @@ export class ProductService {
 
   async findInventoryDetailByProductId(productId: number) {
     const inventories = await this.inventoryRepository.findAll();
-    const invList = inventories.filter((inv: InventoryEntity) => inv.product_id === productId);
+    // Chỉ lấy inventory có store chưa bị xóa mềm
+    const invList = inventories.filter((inv: InventoryEntity) => inv.product_id === productId && inv.store && inv.store.deleted_at === null);
     if (invList.length === 0) {
       throw new NotFoundException('No inventory found for this product');
     }

@@ -61,4 +61,8 @@ export class ProductRepository {
       order: { created_at: 'DESC' },
     });
   }
+  
+  async save(product: ProductEntity): Promise<ProductEntity> {
+    return this.repository.save(product);
+  }
 }

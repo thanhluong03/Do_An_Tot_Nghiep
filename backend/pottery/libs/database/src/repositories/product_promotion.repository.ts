@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In } from 'typeorm'; 
+import { Repository, IsNull, In } from 'typeorm';
 import { ProductPromotionEntity } from '../entities/product_promotion.entity';
 
 @Injectable()
@@ -19,40 +19,58 @@ export class ProductPromotionRepository {
     }
 
     async findAll(): Promise<ProductPromotionEntity[]> {
-        return this.repository.find({
-            relations: ['product', 'promotion'],
-            where: { deleted_at: IsNull() },
-        });
+        // Loại bỏ các bản ghi có product hoặc promotion bị xóa mềm
+        return this.repository.createQueryBuilder('product_promotion')
+            .leftJoinAndSelect('product_promotion.product', 'product')
+            .leftJoinAndSelect('product_promotion.promotion', 'promotion')
+            .where('product_promotion.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('promotion.deleted_at IS NULL')
+            .andWhere('product.id IS NOT NULL')
+            .andWhere('promotion.id IS NOT NULL')
+            .getMany();
     }
 
     async findByProductId(productId: number): Promise<ProductPromotionEntity[]> {
-        return this.repository.find({
-            where: {
-                product_id: productId,
-                deleted_at: IsNull()
-            },
-            relations: ['promotion'],
-        });
+        // Loại bỏ các bản ghi có product hoặc promotion bị xóa mềm
+        return this.repository.createQueryBuilder('product_promotion')
+            .leftJoinAndSelect('product_promotion.product', 'product')
+            .leftJoinAndSelect('product_promotion.promotion', 'promotion')
+            .where('product_promotion.product_id = :productId', { productId })
+            .andWhere('product_promotion.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('promotion.deleted_at IS NULL')
+            .andWhere('product.id IS NOT NULL')
+            .andWhere('promotion.id IS NOT NULL')
+            .getMany();
     }
-     // ✅ THÊM HÀM findByProductIds VÀO ĐÂY
+    // ✅ THÊM HÀM findByProductIds VÀO ĐÂY
     async findByProductIds(productIds: number[]): Promise<ProductPromotionEntity[]> {
-        return this.repository.find({
-            relations: ['product', 'promotion'], // Có thể cần relations cho các trường hợp đặc biệt
-            where: {
-                product_id: In(productIds), // Sử dụng In(productIds)
-                deleted_at: IsNull()
-            }
-        });
+        // Loại bỏ các bản ghi có product hoặc promotion bị xóa mềm
+        return this.repository.createQueryBuilder('product_promotion')
+            .leftJoinAndSelect('product_promotion.product', 'product')
+            .leftJoinAndSelect('product_promotion.promotion', 'promotion')
+            .where('product_promotion.product_id IN (:...productIds)', { productIds })
+            .andWhere('product_promotion.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('promotion.deleted_at IS NULL')
+            .andWhere('product.id IS NOT NULL')
+            .andWhere('promotion.id IS NOT NULL')
+            .getMany();
     }
 
     async findByPromotionId(promotionId: number): Promise<ProductPromotionEntity[]> {
-        return this.repository.find({
-            where: {
-                promotion_id: promotionId,
-                deleted_at: IsNull()
-            },
-            relations: ['product'],
-        });
+        // Loại bỏ các bản ghi có product hoặc promotion bị xóa mềm
+        return this.repository.createQueryBuilder('product_promotion')
+            .leftJoinAndSelect('product_promotion.product', 'product')
+            .leftJoinAndSelect('product_promotion.promotion', 'promotion')
+            .where('product_promotion.promotion_id = :promotionId', { promotionId })
+            .andWhere('product_promotion.deleted_at IS NULL')
+            .andWhere('product.deleted_at IS NULL')
+            .andWhere('promotion.deleted_at IS NULL')
+            .andWhere('product.id IS NOT NULL')
+            .andWhere('promotion.id IS NOT NULL')
+            .getMany();
     } async deleteByProductAndPromotion(productId: number, promotionId: number): Promise<void> {
         await this.repository.softDelete({
             product_id: productId,
