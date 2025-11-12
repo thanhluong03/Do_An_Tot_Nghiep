@@ -21,6 +21,9 @@ export default function AdminLoginPage() {
       });
 
       const data = await res.json();
+      console.log("===> data login response:", data);
+    //  alert("Login response:\n" + JSON.stringify(data, null, 2));
+
       if (!res.ok) {
         toast.error(data.message || "Đăng nhập thất bại");
         return;
@@ -57,8 +60,11 @@ export default function AdminLoginPage() {
           localStorage.setItem(`adminPermissions_${data.roleId}`, JSON.stringify(data.permissions));
         }
       }
+      if (data.storeId) {
+        localStorage.setItem("storeId", data.storeId.toString());
+      }
 
-
+     
       if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
         toast.error("Tài khoản không có quyền truy cập quản trị!");
         return;
@@ -70,6 +76,15 @@ export default function AdminLoginPage() {
         window.location.href = `${baseUrl}/driver/order-deliver`;
         return;
       }
+      if (data.roleName === "ADMIN") {
+         console.log("Redirecting to adminstore dashboard...");
+         
+        const baseUrl =
+          process.env.FRONTEND_URL_ADMINSTORE || "http://localhost:3001";
+        window.location.href = `${baseUrl}/adminstore/dashboard`;
+        return;
+      }
+      console.log("Login response data:", data);
 
       toast.success("Đăng nhập thành công!");
       const firstPermission = data.permissions[0];

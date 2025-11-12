@@ -108,10 +108,10 @@ export default function AdminHeader() {
 
   };
   const handleProfile = () => {
-    router.push("/admin/profileAdmin");
+    router.push("/adminstore/profileAdmin");
   };
   const handleChangePassword = () => {
-    router.push("/admin/changePassword");
+    router.push("/adminstore/changePassword");
   };
 
   return (
