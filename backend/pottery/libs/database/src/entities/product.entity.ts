@@ -8,10 +8,8 @@ import { CategoryEntity } from './category.entity';
 import { SupplierEntity } from './supplier.entity';
 import { OrderItemEntity } from './order_item.entity';
 import { CartItemEntity } from './cart_item.entity';
-import { ProductClassificationEntity } from './product_classification.entity'
-
-// import { RoleEntity } from './role.entity'
-
+import { ProductClassificationEntity } from './product_classification.entity';
+import { ImportRequestDetailEntity } from './import_request_detail.entity';
 @Entity('products')
 export class ProductEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: false })
@@ -65,4 +63,7 @@ export class ProductEntity extends BaseEntity {
 
   @OneToMany(() => ProductClassificationEntity, (productClassification) => productClassification.product)
   classifications: ProductClassificationEntity[];
+
+  @OneToMany(() => ImportRequestDetailEntity, (importRequestDetail) => importRequestDetail.product)
+  importRequestDetails: ImportRequestDetailEntity[];
 }

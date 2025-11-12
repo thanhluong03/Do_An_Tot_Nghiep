@@ -3,6 +3,7 @@ import { BaseEntity } from './base.entity'
 import { ProductAttributeEntity } from './product_attributes.entity'
 import { ImportProductDetailEntity } from './import_product_detail.entity'
 import { InventoryDetailEntity } from './inventory_detail.entity'
+import { ImportRequestDetailEntity } from './import_request_detail.entity'
 
 @Entity('classification_attribute_relationships')
 export class ClassificationAttributeRelationshipEntity extends BaseEntity {
@@ -32,4 +33,7 @@ export class ClassificationAttributeRelationshipEntity extends BaseEntity {
 
     @OneToMany(() => InventoryDetailEntity, inventoryDetail => inventoryDetail.classification_attribute_relationship)
     inventory_details: InventoryDetailEntity[];
+
+    @OneToMany(() => ImportRequestDetailEntity, importRequestDetail => importRequestDetail.classificationAttributeRelationship)
+    importRequestDetails: ImportRequestDetailEntity[];
 }

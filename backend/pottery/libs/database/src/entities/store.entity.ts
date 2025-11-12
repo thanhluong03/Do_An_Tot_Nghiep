@@ -4,6 +4,7 @@ import { InventoryEntity } from './inventory.entity';
 import { CartItemEntity } from './cart_item.entity';
 import { OrderItemEntity } from './order_item.entity';
 import { UserEntity } from './user.entity';
+import { ImportRequestEntity } from './import_request.entity';
 
 @Entity('stores')
 export class StoreEntity extends BaseEntity {
@@ -28,4 +29,7 @@ export class StoreEntity extends BaseEntity {
 
     @OneToMany(() => UserEntity, (user) => user.store)
     users: UserEntity[];
+
+    @OneToMany(() => ImportRequestEntity, (importRequest) => importRequest.store)
+    importRequests: ImportRequestEntity[];
 }

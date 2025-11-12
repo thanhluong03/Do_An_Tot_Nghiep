@@ -22,6 +22,12 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@app/auth": [
+        "libs/auth/src"
+      ],
+      "@app/auth/*": [
+        "libs/auth/src/*"
+      ],
       "@app/cart_item": [
         "libs/cart_item/src"
       ],
@@ -169,11 +175,11 @@
       "@app/voucher/*": [
         "libs/voucher/src/*"
       ],
-      "@app/auth": [
-        "libs/auth/src"
+      "@app/import_request": [
+        "libs/import_request/src"
       ],
-      "@app/auth/*": [
-        "libs/auth/src/*"
+      "@app/import_request/*": [
+        "libs/import_request/src/*"
       ]
     }
   }
