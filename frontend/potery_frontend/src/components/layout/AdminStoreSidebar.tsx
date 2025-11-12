@@ -44,9 +44,15 @@ const dashboardItems: MenuItem[] = [
     { name: "Dashboard", icon: faHome, href: "/adminstore/dashboard" },
 ];
 
-const salesOperationsItems: MenuItem[] = [  
-    { name: "Nhập kho sản phẩm", icon: faTruckArrowRight, href: "/adminstore/requestimportproduct" },
-
+const salesOperationsItems: MenuItem[] = [
+    {
+        name: "Kho hàng",
+        icon: faWarehouse,
+        children: [
+            { name: "Yêu cầu nhập kho sản phẩm", icon: faTruckArrowRight, href: "/adminstore/importproduct" },
+            { name: "Tồn kho cửa hàng", icon: faClipboardList, href: "/adminstore/inventory" },
+        ],
+    },
 ];
 
 const usersItems: MenuItem[] = [
