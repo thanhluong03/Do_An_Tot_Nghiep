@@ -36,6 +36,8 @@ import {
   ProductClassificationEntity,
   ProductAttributeEntity,
   ClassificationAttributeRelationshipEntity,
+  ImportRequestDetailEntity,
+  ImportRequestEntity,
 } from './entities';
 import {
   ProductRepository,
@@ -66,6 +68,8 @@ import {
   ProductClassificationRepository,
   ProductAttributeRepository,
   ClassificationAttributeRelationshipRepository,
+  ImportRequestRepository,
+  ImportRequestDetailRepository,
 } from './repositories';
 
 const postgresRepositories = [
@@ -97,6 +101,8 @@ const postgresRepositories = [
   ProductClassificationRepository,
   ProductAttributeRepository,
   ClassificationAttributeRelationshipRepository,
+  ImportRequestRepository,
+  ImportRequestDetailRepository,
 ];
 const postgresEntities = [
   ProductEntity,
@@ -130,6 +136,8 @@ const postgresEntities = [
   ProductClassificationEntity,
   ProductAttributeEntity,
   ClassificationAttributeRelationshipEntity,
+  ImportRequestEntity,
+  ImportRequestDetailEntity,
 ];
 @Module({
   imports: [

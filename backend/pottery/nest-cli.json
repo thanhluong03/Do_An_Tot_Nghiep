@@ -106,6 +106,15 @@
         "tsConfigPath": "libs/import_product/tsconfig.lib.json"
       }
     },
+    "import_request": {
+      "type": "library",
+      "root": "libs/import_request",
+      "entryFile": "index",
+      "sourceRoot": "libs/import_request/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/import_request/tsconfig.lib.json"
+      }
+    },
     "inventory": {
       "type": "library",
       "root": "libs/inventory",

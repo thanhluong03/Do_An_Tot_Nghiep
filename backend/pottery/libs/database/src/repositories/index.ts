@@ -26,3 +26,5 @@ export * from './product-classification.repository';
 export * from './product-attribute.repository';
 export * from './classification-attribute-relationship.repository';
 export * from './import_product_detail.repository';
+export * from './import_request.repository';
+export * from './import_request_detail.repository';
