@@ -523,211 +523,172 @@ export default function CheckoutPage() {
   }, [isAuthenticated, guestName, guestPhone, guestEmail, address, city]);
   /** ===================== TẠO ĐƠN HÀNG ===================== */
   const handleCreate = async () => {
-    if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
-    const cartItems = serverItems.length > 0 ? serverItems : items;
-    console.log('🛒 Using cart items for checkout:', cartItems);
-    console.log('🔧 Server items length:', serverItems.length);
-    console.log('🔧 Guest items length:', items.length);
+  if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
+  const cartItems = serverItems.length > 0 ? serverItems : items;
+  console.log('🛒 Using cart items for checkout:', cartItems);
 
-    if (!cartItems.length) return setError('❌ Giỏ hàng trống');
+  if (!cartItems.length) return setError('❌ Giỏ hàng trống');
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) return;
 
-    setCreating(true);
-    setError(null);
+  setCreating(true);
+  setError(null);
 
-    try {
-      let customerId: number | null = null;
-      const authType = localStorage.getItem('auth_type');
-      const storedGuestId = localStorage.getItem('guest_id');
+  try {
+    let customerId: number | null = null;
+    const authType = localStorage.getItem('auth_type');
+    const storedGuestId = localStorage.getItem('guest_id');
 
-      // ✅ Nếu user thật (đã đăng nhập)
-      if (isAuthenticated && authType === 'user') {
-        // Lấy customerId từ localStorage (được lưu khi đăng nhập)
-        const storedCustomerId = localStorage.getItem('customerId');
-        if (storedCustomerId) {
-          customerId = Number(storedCustomerId);
-        } else {
-          throw new Error('Không tìm thấy customerId. Vui lòng đăng xuất và đăng nhập lại.');
-        }
-      }
-      // ✅ Nếu là guest
-      else {
-        if (storedGuestId) {
-          customerId = Number(storedGuestId);
-        } else {
-          if (!guestName.trim() || !guestPhone.trim()) {
-            throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
-          }
-
-          const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
-          const created = await customersApi.createCustomer({
-            username: `guest_${Date.now()}`,
-            password: `guest-${Math.random().toString(36).slice(2)}`,
-            full_name: guestName.trim(),
-            email: fallbackEmail,
-            phone_number: guestPhone.trim(),
-            address: `${address.trim()}, ${city.trim()}`,
-          });
-
-          customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
-          if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
-
-          // 🧩 Lưu thông tin guest để lần sau dùng lại
-          localStorage.setItem('guest_id', String(customerId));
-          localStorage.setItem('guest_name', guestName.trim());
-          localStorage.setItem('guest_phone', guestPhone.trim());
-          localStorage.setItem('guest_email', fallbackEmail);
-          localStorage.setItem('auth_type', 'guest');
-        }
-      }
-
-      // ✅ Build payload sau khi có customerId
-      const totalBeforeDiscount = total; // Giá hàng hóa trước discount
-      const discount = totalBeforeDiscount - finalTotal; // Số tiền discount
-      const totalAfterDiscount = finalTotal; // Giá hàng hóa sau discount 
-      const finalTotalWithShipping = totalAfterDiscount + SHIPPING_FEE; // Tổng cuối cùng bao gồm phí vận chuyển
-
-      console.log('💰 Chi tiết tính toán payload:', {
-        total,
-        finalTotal,
-        totalWithShipping,
-        SHIPPING_FEE,
-        totalBeforeDiscount,
-        discount,
-        totalAfterDiscount,
-        finalTotalWithShipping
-      });
-
-      const payloadItems = cartItems.map(ci => {
-        const isServerItem = 'product_id' in ci;
-        const pid = isServerItem ? Number(ci.product_id) : Number(ci.product?.id ?? 0);
-        const quantity = ci.quantity;
-        const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
-
-        // Get actual price with promotion discount
-        let actualPrice: number;
-        if (isServerItem) {
-          const serverItem = ci as typeof serverItems[0];
-          actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
-
-          // Apply promotion discount if exists
-          const product = serverProducts[pid];
-          if (product?.promotion && product.promotion.discount_type && product.promotion.discount_value) {
-            const discountValue = Number(product.promotion.discount_value);
-            if (product.promotion.discount_type === 'PERCENTAGE') {
-              actualPrice = actualPrice * (1 - discountValue / 100);
-            } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
-              actualPrice = Math.max(0, actualPrice - discountValue);
-            }
-          }
-        } else {
-          const guestItem = ci as CartItem;
-          actualPrice = guestItem.price || guestItem.product.price;
+    // ✅ Nếu user thật (đã đăng nhập)
+    if (isAuthenticated && authType === 'user') {
+      const storedCustomerId = localStorage.getItem('customerId');
+      if (storedCustomerId) {
+        customerId = Number(storedCustomerId);
+      } else throw new Error('Không tìm thấy customerId. Vui lòng đăng xuất và đăng nhập lại.');
+    } 
+    // ✅ Nếu là guest
+    else {
+      if (storedGuestId) {
+        customerId = Number(storedGuestId);
+      } else {
+        if (!guestName.trim() || !guestPhone.trim()) {
+          throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
         }
 
-        // Calculate discounted price
-        const share = totalBeforeDiscount > 0 ? (actualPrice * quantity) / totalBeforeDiscount : 0;
-        const discountedPrice = actualPrice - (share * discount) / quantity;
-
-        // Sửa: Lấy đúng classification_attribute_relationship_id cho cả guest và user
-        let classificationId = null;
-        let attribute1Name = '';
-        let attribute2Name = '';
-
-        if (isServerItem) {
-          const serverItem = ci as typeof serverItems[0];
-          classificationId = serverItem.classificationId || null;
-          attribute1Name = serverItem.classifications?.attribute1_name || '';
-          attribute2Name = serverItem.classifications?.attribute2_name || '';
-        } else {
-          const guestItem = ci as CartItem;
-          classificationId = guestItem.classificationId || null;
-          attribute1Name = guestItem.classifications?.attribute1_name || '';
-          attribute2Name = guestItem.classifications?.attribute2_name || '';
-        }
-
-        console.log('📦 Order item payload:', {
-          product_id: pid,
-          quantity: quantity,
-          price_at_order: Math.round(discountedPrice),
-          store_id: storeId,
-          classification_attribute_relationship_id: classificationId,
-          attribute1_name: attribute1Name,
-          attribute2_name: attribute2Name,
-          originalPrice: actualPrice,
-          isServerItem
+        const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
+        const created = await customersApi.createCustomer({
+          username: `guest_${Date.now()}`,
+          password: `guest-${Math.random().toString(36).slice(2)}`,
+          full_name: guestName.trim(),
+          email: fallbackEmail,
+          phone_number: guestPhone.trim(),
+          address: `${address.trim()}, ${city.trim()}`,
         });
 
-        return {
-          product_id: pid,
-          quantity: quantity,
-          price_at_order: Math.round(discountedPrice),
-          store_id: storeId,
-          classification_attribute_relationship_id: classificationId,
-          attribute1_name: attribute1Name,
-          attribute2_name: attribute2Name,
-        };
-      });
+        customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
+        if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
 
-      // ✅ Không phân bổ phí vận chuyển vào items - giữ nguyên giá sản phẩm
-      const payload = {
+        // Lưu guest info
+        localStorage.setItem('guest_id', String(customerId));
+        localStorage.setItem('guest_name', guestName.trim());
+        localStorage.setItem('guest_phone', guestPhone.trim());
+        localStorage.setItem('guest_email', fallbackEmail);
+        localStorage.setItem('auth_type', 'guest');
+      }
+    }
+
+    // Build payload items
+    const payloadItems = cartItems.map(ci => {
+      const isServerItem = 'product_id' in ci;
+      const pid = isServerItem ? Number(ci.product_id) : Number(ci.product?.id ?? 0);
+      const quantity = ci.quantity;
+      const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
+
+      let actualPrice: number;
+      if (isServerItem) {
+        const serverItem = ci as typeof serverItems[0];
+        actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
+
+        // Apply promotion
+        const product = serverProducts[pid];
+        if (product?.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+          const discountValue = Number(product.promotion.discount_value);
+          if (product.promotion.discount_type === 'PERCENTAGE') actualPrice *= 1 - discountValue / 100;
+          else if (product.promotion.discount_type === 'FIXED_AMOUNT') actualPrice = Math.max(0, actualPrice - discountValue);
+        }
+      } else {
+        const guestItem = ci as CartItem;
+        actualPrice = guestItem.price || guestItem.product.price;
+      }
+
+      const share = total > 0 ? (actualPrice * quantity) / total : 0;
+      const discountedPrice = actualPrice - (share * discountAmount) / quantity;
+
+      let classificationId = null, attribute1Name = '', attribute2Name = '';
+      if (isServerItem) {
+        const serverItem = ci as typeof serverItems[0];
+        classificationId = serverItem.classificationId || null;
+        attribute1Name = serverItem.classifications?.attribute1_name || '';
+        attribute2Name = serverItem.classifications?.attribute2_name || '';
+      } else {
+        const guestItem = ci as CartItem;
+        classificationId = guestItem.classificationId || null;
+        attribute1Name = guestItem.classifications?.attribute1_name || '';
+        attribute2Name = guestItem.classifications?.attribute2_name || '';
+      }
+
+      return {
+        product_id: pid,
+        quantity,
+        price_at_order: Math.round(discountedPrice),
+        store_id: storeId,
+        classification_attribute_relationship_id: classificationId,
+        attribute1_name: attribute1Name,
+        attribute2_name: attribute2Name,
+      };
+    });
+    
+    // Nhóm items theo store_id
+    const itemsByStore: Record<number, typeof payloadItems> = {};
+    payloadItems.forEach(item => {
+      if (!itemsByStore[item.store_id]) itemsByStore[item.store_id] = [];
+      itemsByStore[item.store_id].push(item);
+    });
+
+    // Tạo đơn cho từng cửa hàng
+    const storeIds = Object.keys(itemsByStore).map(Number);
+    for (const [index, storeId] of storeIds.entries()) {
+      const storeItems = itemsByStore[storeId];
+      const storeTotalBeforeDiscount = storeItems.reduce((sum, i) => sum + i.price_at_order * i.quantity, 0);
+      const storeDiscount = total > 0 ? storeItems.reduce((sum, i) => sum + ((i.price_at_order * i.quantity) / total) * discountAmount, 0) : 0;
+      const storeFinalTotal = Math.max(0, storeTotalBeforeDiscount - storeDiscount);
+      const storeFinalTotalWithShipping = storeFinalTotal + SHIPPING_FEE;
+
+      const payloadPerStore = {
         customer_id: customerId,
         shipping_address: `${address.trim()}, ${city.trim()}`,
         voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
         payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-        items: payloadItems, // Items với giá gốc, không bao gồm phí vận chuyển
+        items: storeItems,
       };
 
-      console.log('📦 Gửi đơn hàng với payload giá gốc:', payload);
-      console.log('💰 Items gửi backend (giá gốc):', payloadItems);
-      console.log('📋 Backend sẽ tự tính total_amount từ giá sản phẩm =', payloadItems.reduce((sum: number, item: any) => sum + (item.price_at_order * item.quantity), 0));
-      console.log('🚚 Phí vận chuyển sẽ hiển thị riêng biệt trên frontend:', SHIPPING_FEE);
+      console.log(`📦 Tạo đơn cho cửa hàng ${storeId}`, payloadPerStore);
 
-      const res = await orderApi.createOrder(payload);
+      const res = await orderApi.createOrder(payloadPerStore);
       const createdId = Number(res?.data?.id ?? res?.id);
+      if (!createdId) throw new Error(`Không thể tạo đơn cho cửa hàng ${storeId}`);
 
-      if (!createdId) {
-        const backendMsg = res?.data?.error || res?.data?.message || 'Không lấy được ID đơn hàng';
-        throw new Error(backendMsg);
+      // COD email cho guest
+      if (paymentMethod === 'COD' && !isAuthenticated) {
+        await sendOrderConfirmationEmail(createdId);
       }
 
-      if (paymentMethod === 'VNPAY') {
-        // Với VNPay, chỉ chuyển hướng thanh toán, email sẽ được gửi từ backend nếu là guest
-        // 🧹 XÓA THÔNG TIN GUEST NGAY TRƯỚC KHI CHUYỂN SANG VNPAY
-        if (!isAuthenticated) {
-          clearGuestData();
-        }
-        await handlePayment(createdId, finalTotalWithShipping);
-      } else {
-        // Với COD, chỉ gửi email cho guest, user đăng nhập không cần email
-        if (!isAuthenticated) {
-          await sendOrderConfirmationEmail(createdId);
-
-          // 🧹 XÓA SẠCH THÔNG TIN GUEST SAU KHI ĐẶT HÀNG THÀNH CÔNG
-          clearGuestData();
-          window.location.href = `/confirmation?orderId=${createdId}`;
-          return;
-        }
-
-        clearCart();
-        try {
-          sessionStorage.removeItem('cart_session');
-          Cookies.remove('cart_session');
-        } catch { }
-        window.location.href = '/orders';
+      // VNPay: redirect đơn đầu tiên
+      if (paymentMethod === 'VNPAY' && index === 0) {
+        if (!isAuthenticated) clearGuestData();
+        await handlePayment(createdId, storeFinalTotalWithShipping);
+        return;
       }
-    } catch (e: unknown) {
-      const error = e as Error & { response?: { data?: { error?: string; message?: string } }; message?: string };
-      const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Không thể tạo đơn hàng';
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setCreating(false);
     }
-  };
+
+    // Nếu COD + user đã login
+    if (paymentMethod === 'COD') {
+      clearCart();
+      try { sessionStorage.removeItem('cart_session'); Cookies.remove('cart_session'); } catch {}
+      if (!isAuthenticated) clearGuestData();
+      window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderId=${storeIds[0]}`;
+    }
+
+  } catch (e: unknown) {
+    const error = e as Error & { response?: { data?: { error?: string; message?: string } }; message?: string };
+    const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Không thể tạo đơn hàng';
+    setError(msg);
+    toast.error(msg);
+  } finally {
+    setCreating(false);
+  }
+};
+
 
   /** ===================== LOAD ORDERS ===================== */
   useEffect(() => {
