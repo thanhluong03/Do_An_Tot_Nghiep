@@ -13,6 +13,7 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Bot, Gift, MessageSquare, 
 import { useRouter } from 'next/dist/client/components/navigation';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
+import { orderApi } from '@/api/modules/orders';
 
 export default function CartPage() {
   // Constants for styling
@@ -51,7 +52,22 @@ export default function CartPage() {
   const [error, setError] = useState<string | null>(null);
   const [serverProducts, setServerProducts] = useState<Record<string, any>>({});
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
+const [selectedStores, setSelectedStores] = useState<Record<string, boolean>>({});
 
+  const orderData = {
+  customer_id: user?.id,
+  payment_method: 'COD', // hoặc 'VNPAY'
+  items: items.map(i => ({
+    product_id: i.product.id,
+    quantity: i.quantity,
+    price_at_order: i.price || i.price || 0,
+    store_id: i.storeId || undefined,
+    classification_attribute_relationship_id: i.classificationId || null,
+    attribute1_name: i.classifications?.attribute1_name || undefined,
+    attribute2_name: i.classifications?.attribute2_name || undefined,
+  })),
+};
   // 🔹 Fetch cart from server (Logic giữ nguyên)
   useEffect(() => {
     let mounted = true;
@@ -214,6 +230,83 @@ export default function CartPage() {
   }, [serverItems, serverProducts, subtotal]);
 
   const subTotalOnly = React.useMemo(() => total - 30000, [total]);
+  // 🧾 Hàm xử lý chia đơn hàng theo từng cửa hàng
+// 🧾 Hàm xử lý chia đơn hàng theo từng cửa hàng — ĐÃ CHỈNH ĐÚNG CHUẨN API
+const handleCheckout = async () => {
+  if (!isAuthenticated || !user?.id) {
+    router.push('/login');
+    return;
+  }
+  
+  if (serverItems.length === 0) return alert('Giỏ hàng trống');
+
+  try {
+    setLoading(true);
+
+    // 1️⃣ Nhóm sản phẩm theo cửa hàng
+    const groupedByStore = serverItems.reduce((acc, item) => {
+      const storeId = item.store_id || 'unknown';
+      if (!acc[storeId]) acc[storeId] = [];
+      acc[storeId].push(item);
+      return acc;
+    }, {} as Record<string, typeof serverItems>);
+
+    console.log('📦 Nhóm sản phẩm theo cửa hàng:', groupedByStore);
+
+    // 2️⃣ Tạo đơn hàng riêng cho từng cửa hàng
+    const createdOrders: any[] = [];
+
+    for (const [storeId, items] of Object.entries(groupedByStore)) {
+      // ✅ Chuẩn hóa payload đúng theo API backend
+      const orderPayload = {
+        customer_id: Number(user.id),
+        shipping_address: user?.address || 'Chưa có địa chỉ',
+        payment_method: 'COD', // hoặc 'CARD', 'VNPAY'...
+        status: 'CREATED',
+        payment_status: 'UNPAID',
+        items: items.map(i => {
+          const product = serverProducts[String(i.product_id)];
+          let actualPrice = i.classificationPrice || i.price || product?.price || 0;
+
+          // Áp dụng khuyến mãi (nếu có)
+          if (product?.promotion?.discount_type && product.promotion.discount_value) {
+            const discount = Number(product.promotion.discount_value);
+            if (product.promotion.discount_type === 'PERCENTAGE') {
+              actualPrice *= (1 - discount / 100);
+            } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+              actualPrice = Math.max(0, actualPrice - discount);
+            }
+          }
+
+          return {
+            product_id: Number(i.product_id),
+            store_id: Number(storeId),
+            quantity: i.quantity,
+            price_at_order: Math.round(actualPrice),
+            classification_attribute_relationship_id: i.classificationId || null,
+            attribute1_name: i.classifications?.attribute1_name || undefined,
+            attribute2_name: i.classifications?.attribute2_name || undefined,
+          };
+        }),
+      };
+
+      console.log(`🚀 Gửi order cho cửa hàng ${storeId}:`, orderPayload);
+
+      // 3️⃣ Gọi API tạo đơn hàng
+      const res = await orderApi.createOrder(orderPayload);
+      createdOrders.push(res);
+    }
+
+    alert(`✅ Tạo thành công ${createdOrders.length} đơn hàng!`);
+    router.push('/orders');
+  } catch (err) {
+    console.error('❌ Lỗi khi tạo đơn hàng:', err);
+    alert('Đã xảy ra lỗi khi thanh toán');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 🔹 Handlers
   // Hàm xử lý tăng/giảm số lượng
@@ -386,128 +479,115 @@ export default function CartPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-10">
                     {/* Bên trái: Danh sách sản phẩm */}
                     <div className="space-y-6">
-                      {serverItems.map((ci) => {
-                        const product = serverProducts[String(ci.product_id)];
-                        if (!product) return null;
-
-                        // Calculate actual price with promotion discount
-                        let actualPrice = ci.classificationPrice || ci.price || product.price;
-
-                        // Apply promotion discount if exists
-                        if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
-                          const discountValue = Number(product.promotion.discount_value);
-                          if (product.promotion.discount_type === 'PERCENTAGE') {
-                            actualPrice = actualPrice * (1 - discountValue / 100);
-                          } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
-                            actualPrice = Math.max(0, actualPrice - discountValue);
-                          }
-                        }
-
-                        const totalPrice = actualPrice * ci.quantity;
-
-                        console.log('🔍 Cart item pricing:', {
-                          productId: ci.product_id,
-                          productName: product.name,
-                          productBasePrice: product.price,
-                          classificationPrice: ci.classificationPrice,
-                          fallbackPrice: ci.price,
-                          actualPrice: actualPrice,
-                          classifications: ci.classifications
-                        });
-
-                        // Debug log for pricing
-                        console.log('🔍 Cart item pricing:', {
-                          productName: product.name,
-                          basePrice: product.price,
-                          classificationPrice: ci.price,
-                          actualPrice: actualPrice,
-                          classifications: ci.classifications,
-                          classificationId: ci.classificationId
-                        });
-
-                        return (
-                          // KHỐI SẢN PHẨM
-                          <div
-                            key={ci.id}
-                            className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-5 shadow-lg shadow-gray-100/50"
-                          >
-                            {/* Ảnh sản phẩm */}
-                            <Link href={`/products/${product.id}`} className="flex-shrink-0">
-                              <img
-                                src={product.images?.[0] || '/pott.jpg'}
-                                alt={product.name}
-                                className="w-24 h-24 rounded-lg object-cover transition-transform hover:scale-105"
+                        {Object.entries(
+                          serverItems.reduce((acc, ci) => {
+                            const storeId = ci.store_id || 'unknown';
+                            if (!acc[storeId]) acc[storeId] = [];
+                            acc[storeId].push(ci);
+                            return acc;
+                          }, {} as Record<string, typeof serverItems>)
+                        ).map(([storeId, items]) => (
+                          <div key={storeId} className="mb-10 rounded-xl p-5 md:p-6 shadow-sm bg-white">
+                            {/* Header cửa hàng với checkbox */}
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedStores[storeId] || false}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setSelectedStores(prev => ({ ...prev, [storeId]: checked }));
+                                  const newSelected = { ...selectedItems };
+                                  items.forEach(ci => {
+                                    newSelected[ci.id] = checked;
+                                  });
+                                  setSelectedItems(newSelected);
+                                }}
                               />
-                            </Link>
+                              🏪 Cửa hàng #{storeId}
+                            </h2>
 
-                            {/* Thông tin & Số lượng */}
-                            <div className="flex-grow flex justify-between items-center w-full md:w-auto">
-                              <div className="flex-grow">
-                                <Link href={`/products/${product.id}`}>
-                                  <h3 className={`font-medium text-lg ${DARK_TEXT} hover:underline transition`}>
-                                    {product.name}
-                                  </h3>
-                                </Link>
-                                <p className={`text-sm ${LIGHT_TEXT}`}>
-                                  Đơn giá: {formatPrice(actualPrice)}
-                                </p>
+                            {items.map((ci) => {
+                              const product = serverProducts[String(ci.product_id)];
+                              if (!product) return null;
 
-                                {/* Show classification info if available */}
-                                {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
-                                  <div className="flex gap-2 mt-2">
-                                    {ci.classifications.attribute1_name && (
-                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
-                                        {ci.classifications.attribute1_name}
-                                      </span>
-                                    )}
-                                    {ci.classifications.attribute2_name && (
-                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
-                                        {ci.classifications.attribute2_name}
-                                      </span>
-                                    )}
+                              // Tính giá thực với khuyến mãi
+                              let actualPrice = ci.classificationPrice || ci.price || product.price;
+                              if (product.promotion?.discount_type && product.promotion?.discount_value) {
+                                const discount = Number(product.promotion.discount_value);
+                                if (product.promotion.discount_type === 'PERCENTAGE') actualPrice *= (1 - discount / 100);
+                                else actualPrice = Math.max(0, actualPrice - discount);
+                              }
+                              const totalPrice = actualPrice * ci.quantity;
+
+                              return (
+                                <div key={ci.id} className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-5 shadow-lg shadow-gray-100/50">
+                                  {/* Checkbox sản phẩm */}
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedItems[ci.id] || false}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setSelectedItems(prev => ({ ...prev, [ci.id]: checked }));
+                                      // Cập nhật checkbox cửa hàng: nếu tất cả sản phẩm check → check store
+                                      const allChecked = items.every(item => item.id === ci.id ? checked : selectedItems[item.id]);
+                                      setSelectedStores(prev => ({ ...prev, [storeId]: allChecked }));
+                                    }}
+                                    className="mr-3"
+                                  />
+
+                                  {/* Ảnh sản phẩm */}
+                                  <Link href={`/products/${product.id}`} className="flex-shrink-0">
+                                    <img
+                                      src={product.images?.[0] || '/pott.jpg'}
+                                      alt={product.name}
+                                      className="w-24 h-24 rounded-lg object-cover transition-transform hover:scale-105"
+                                    />
+                                  </Link>
+
+                                  {/* Thông tin & Số lượng */}
+                                  <div className="flex-grow flex justify-between items-center w-full md:w-auto">
+                                    <div className="flex-grow">
+                                      <Link href={`/products/${product.id}`}>
+                                        <h3 className={`font-medium text-lg ${DARK_TEXT} hover:underline transition`}>
+                                          {product.name}
+                                        </h3>
+                                      </Link>
+                                      <p className={`text-sm ${LIGHT_TEXT}`}>Đơn giá: {formatPrice(actualPrice)}</p>
+
+                                      {/* Show classification info */}
+                                      {ci.classifications && (ci.classifications.attribute1_name || ci.classifications.attribute2_name) && (
+                                        <div className="flex gap-2 mt-2">
+                                          {ci.classifications.attribute1_name && <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">{ci.classifications.attribute1_name}</span>}
+                                          {ci.classifications.attribute2_name && <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">{ci.classifications.attribute2_name}</span>}
+                                        </div>
+                                      )}
+
+                                      {/* Bộ đếm số lượng */}
+                                      <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
+                                        <button onClick={() => handleUpdateQuantity(ci.id, ci.quantity, -1)} disabled={ci.quantity === 1} className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition">
+                                          <Minus className="w-4 h-4" />
+                                        </button>
+                                        <span className={`px-3 font-semibold ${DARK_TEXT}`}>{ci.quantity}</span>
+                                        <button onClick={() => handleUpdateQuantity(ci.id, ci.quantity, 1)} className="p-2 text-gray-700 hover:bg-gray-100 transition">
+                                          <Plus className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Tổng tiền và Nút xóa */}
+                                    <div className="text-right flex flex-col items-end gap-2">
+                                      <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>{formatPrice(totalPrice)}</p>
+                                      <button onClick={() => handleRemoveItem(ci.id)} className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}>
+                                        <Trash2 className="w-4 h-4" /> Xóa
+                                      </button>
+                                    </div>
                                   </div>
-                                )}
-
-                                {/* Bộ đếm số lượng */}
-                                <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
-                                  <button
-                                    title='update'
-                                    onClick={() => handleUpdateQuantity(ci.id, ci.quantity, -1)}
-                                    disabled={ci.quantity === 1}
-                                    className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
-                                  >
-                                    <Minus className="w-4 h-4" />
-                                  </button>
-                                  <span className={`px-3 font-semibold ${DARK_TEXT}`}>
-                                    {ci.quantity}
-                                  </span>
-                                  <button
-                                    title='update'
-                                    onClick={() => handleUpdateQuantity(ci.id, ci.quantity, 1)}
-                                    className="p-2 text-gray-700 hover:bg-gray-100 transition"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
                                 </div>
-                              </div>
-
-                              {/* Tổng tiền và Nút xóa */}
-                              <div className="text-right flex flex-col items-end gap-2">
-                                <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>
-                                  {formatPrice(totalPrice)}
-                                </p>
-                                <button
-                                  onClick={() => handleRemoveItem(ci.id)}
-                                  className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
-                                >
-                                  <Trash2 className="w-4 h-4" /> Xóa
-                                </button>
-                              </div>
-                            </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
+                        ))}
+                      </div>
 
                     {/* Bên phải: Tóm tắt đơn hàng */}
                     <div className="bg-gray-50 border border-gray-200 rounded-xl shadow-inner p-6 h-fit">
@@ -679,12 +759,13 @@ export default function CartPage() {
                         <span>Tổng cộng:</span>
                         <span>{formatPrice((items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0))) + 30000)}</span>
                       </div>
-                      <Link
-                        href="/checkout"
-                        className={`block text-center mt-8 bg-[${ACCENT_COLOR}] text-white py-3 rounded-lg font-semibold text-lg hover:bg-[#8B4513] transition-all duration-300`}
-                      >
-                        Tiến hành thanh toán
-                      </Link>
+                      <button
+                          onClick={handleCheckout}
+                          className="block w-full text-center mt-8 bg-[#A0522D] text-white py-3 rounded-lg font-semibold text-lg transition-all duration-300 hover:bg-[#8B4513] shadow-md hover:shadow-lg"
+                        >
+                          Tiến hành thanh toán
+                        </button>
+
                     </div>
                   </div>
                 ) : (
