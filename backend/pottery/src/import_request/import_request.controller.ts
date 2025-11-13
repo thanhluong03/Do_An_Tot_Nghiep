@@ -15,8 +15,8 @@ import { ImportRequestService } from '@app/import_request';
 import {
   CreateImportRequestDto,
   UpdateImportRequestDto,
-  UpdateImportRequestDetailDto,
   GetImportRequestsQueryDto,
+  AcceptImportRequestDto,
 } from './import_request.dto';
 
 @Controller('importrequests')
@@ -105,6 +105,24 @@ export class ImportRequestController {
         throw new HttpException(error.message, HttpStatus.NOT_FOUND)
       }
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST)
+    }
+  }
+
+  @Put('acceptimportrequest/:id')
+  async acceptImportRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() acceptDto: AcceptImportRequestDto,
+  ) {
+    try {
+      await this.importRequestService.acceptImportRequest(id, acceptDto);
+      return {
+        message: 'Import request accepted and inventory updated successfully',
+      };
+    } catch (error) {
+      if (error.message === 'Import request not found') {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
   }
 

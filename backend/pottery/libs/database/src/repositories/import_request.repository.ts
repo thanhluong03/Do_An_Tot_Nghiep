@@ -17,7 +17,14 @@ export class ImportRequestRepository {
     async findById(id: number): Promise<ImportRequestEntity | null> {
         return this.repository.findOne({
             where: { id, deleted_at: IsNull() },
-            relations: ['store', 'importRequestDetails', 'importRequestDetails.product', 'importRequestDetails.classificationAttributeRelationship'],
+            relations: [
+                'store',
+                'importRequestDetails',
+                'importRequestDetails.product',
+                'importRequestDetails.classificationAttributeRelationship',
+                'importRequestDetails.classificationAttributeRelationship.attribute1',
+                'importRequestDetails.classificationAttributeRelationship.attribute2',
+            ],
         });
     }
 
@@ -31,7 +38,14 @@ export class ImportRequestRepository {
 
         const [data, total] = await this.repository.findAndCount({
             where,
-            relations: ['store', 'importRequestDetails'],
+            relations: [
+                'store',
+                'importRequestDetails',
+                'importRequestDetails.product',
+                'importRequestDetails.classificationAttributeRelationship',
+                'importRequestDetails.classificationAttributeRelationship.attribute1',
+                'importRequestDetails.classificationAttributeRelationship.attribute2',
+            ],
             order: { created_at: 'DESC' },
             take: size,
             skip: (page - 1) * size,
@@ -43,7 +57,14 @@ export class ImportRequestRepository {
     async findByStore(store_id: number): Promise<ImportRequestEntity[]> {
         return this.repository.find({
             where: { store_id, deleted_at: IsNull() },
-            relations: ['store', 'importRequestDetails', 'importRequestDetails.product'],
+            relations: [
+                'store',
+                'importRequestDetails',
+                'importRequestDetails.product',
+                'importRequestDetails.classificationAttributeRelationship',
+                'importRequestDetails.classificationAttributeRelationship.attribute1',
+                'importRequestDetails.classificationAttributeRelationship.attribute2',
+            ],
             order: { created_at: 'DESC' },
         });
     }

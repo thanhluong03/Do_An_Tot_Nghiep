@@ -53,4 +53,24 @@ export class ImportRequestDetailRepository {
     async deleteByImportRequestId(import_request_id: number): Promise<void> {
         await this.repository.softDelete({ import_request_id })
     }
+
+    async findByProductAndClassification(
+        import_request_id: number,
+        product_id: number,
+        classification_attribute_relationship_id?: number
+    ): Promise<ImportRequestDetailEntity | null> {
+        const whereCondition: any = {
+            import_request_id,
+            product_id,
+            deleted_at: IsNull()
+        };
+
+        if (classification_attribute_relationship_id) {
+            whereCondition.classification_attribute_relationship_id = classification_attribute_relationship_id;
+        } else {
+            whereCondition.classification_attribute_relationship_id = IsNull();
+        }
+
+        return this.repository.findOne({ where: whereCondition });
+    }
 }
