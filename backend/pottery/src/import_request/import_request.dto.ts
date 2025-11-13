@@ -79,6 +79,32 @@ export class UpdateImportRequestDto {
     importRequestDetails?: UpdateImportRequestDetailDto[];
 }
 
+export class AcceptImportRequestDetailDto {
+    @IsNotEmpty()
+    @IsNumber()
+    detail_id: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    product_id: number;
+
+    @IsOptional()
+    @IsNumber()
+    classification_attribute_relationship_id?: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    accept_quantity: number;
+}
+
+export class AcceptImportRequestDto {
+    @IsArray()
+    @ArrayMinSize(1)
+    @ValidateNested({ each: true })
+    @Type(() => AcceptImportRequestDetailDto)
+    details: AcceptImportRequestDetailDto[];
+}
+
 export class GetImportRequestsQueryDto {
     @IsOptional()
     @IsNumber()

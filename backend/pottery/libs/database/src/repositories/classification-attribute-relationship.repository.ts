@@ -82,4 +82,12 @@ export class ClassificationAttributeRelationshipRepository {
   async save(entity: ClassificationAttributeRelationshipEntity): Promise<ClassificationAttributeRelationshipEntity> {
     return this.repository.save(entity);
   }
+
+  async decreaseQuantity(id: number, quantity: number): Promise<void> {
+    const classification = await this.findById(id);
+    if (!classification || classification.quantity < quantity) {
+      throw new Error('Insufficient quantity in classification');
+    }
+    await this.repository.decrement({ id }, 'quantity', quantity);
+  }
 }

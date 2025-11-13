@@ -1,41 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { ImportRequestRepository, ImportRequestDetailRepository } from '@app/database';
-import { ImportRequestEntity, ImportRequestDetailEntity, importRequestStatus } from '@app/database';
-
-export interface CreateImportRequestDto {
-    store_id: number;
-    note?: string;
-    importRequestDetails: CreateImportRequestDetailDto[];
-}
-
-export interface CreateImportRequestDetailDto {
-    product_id: number;
-    classification_attribute_relationship_id?: number;
-    requested_quantity: number;
-}
-
-export interface UpdateImportRequestDto {
-    import_request_status?: importRequestStatus;
-    note?: string;
-    importRequestDetails?: UpdateImportRequestDetailDto[];
-}
-
-export interface UpdateImportRequestDetailDto {
-    id?: number;
-    product_id: number;
-    classification_attribute_relationship_id?: number;
-    requested_quantity: number;
-    accept_quantity?: number;
-}
-
+import {
+    ImportRequestRepository,
+    ImportRequestDetailRepository,
+    ProductRepository,
+    ClassificationAttributeRelationshipRepository,
+} from '@app/database';
+import { ImportRequestEntity, importRequestStatus } from '@app/database';
+import { CreateImportRequestInput, UpdateImportRequestInput, AcceptImportRequestInput } from './import_request.interface';
 @Injectable()
 export class ImportRequestService {
     constructor(
         private readonly importRequestRepository: ImportRequestRepository,
         private readonly importRequestDetailRepository: ImportRequestDetailRepository,
+        private readonly productRepository: ProductRepository,
+        private readonly classificationRepository: ClassificationAttributeRelationshipRepository,
     ) { }
 
-    async createImportRequest(data: CreateImportRequestDto): Promise<ImportRequestEntity> {
+    async createImportRequest(data: CreateImportRequestInput): Promise<ImportRequestEntity> {
         console.log('Creating import request:', data);
 
         // Tạo import request
@@ -80,7 +61,7 @@ export class ImportRequestService {
         return this.importRequestRepository.findByStore(store_id);
     }
 
-    async updateImportRequest(id: number, data: UpdateImportRequestDto): Promise<ImportRequestEntity | null> {
+    async updateImportRequest(id: number, data: UpdateImportRequestInput): Promise<ImportRequestEntity | null> {
         console.log('Updating import request:', id, data);
 
         const existingRequest = await this.importRequestRepository.findByIdWithoutRelations(id);
@@ -162,5 +143,68 @@ export class ImportRequestService {
 
         // Xóa import request
         await this.importRequestRepository.softDelete(id);
+    }
+
+    async acceptImportRequest(id: number, data: AcceptImportRequestInput): Promise<void> {
+        const importRequest = await this.importRequestRepository.findById(id);
+        if (!importRequest) {
+            throw new Error('Import request not found');
+        }
+
+        for (const acceptDetail of data.details) {
+            // Lấy detail theo ID để có đầy đủ thông tin
+            const detail = await this.importRequestDetailRepository.findById(acceptDetail.detail_id);
+            if (!detail) {
+                throw new Error(`Import request detail not found with ID ${acceptDetail.detail_id}`);
+            }
+
+            // Validate product_id khớp
+            if (detail.product_id !== acceptDetail.product_id) {
+                throw new Error(`Product ID mismatch. Expected: ${detail.product_id}, got: ${acceptDetail.product_id}`);
+            }
+
+            // Validate classification_id khớp
+            if (detail.classification_attribute_relationship_id !== acceptDetail.classification_attribute_relationship_id) {
+                throw new Error(`Classification ID mismatch`);
+            }
+
+            // Kiểm tra số lượng có đủ không
+            if (acceptDetail.classification_attribute_relationship_id) {
+                // Có phân loại: kiểm tra quantity trong classification
+                const classification = await this.classificationRepository.findById(
+                    acceptDetail.classification_attribute_relationship_id
+                );
+                if (!classification || classification.quantity < acceptDetail.accept_quantity) {
+                    throw new Error(`Không đủ số lượng phân loại. Có sẵn: ${classification?.quantity || 0}, yêu cầu: ${acceptDetail.accept_quantity}`);
+                }
+
+                // Trừ từ classification
+                await this.classificationRepository.update(
+                    acceptDetail.classification_attribute_relationship_id,
+                    { quantity: classification.quantity - acceptDetail.accept_quantity }
+                );
+            }
+
+            // Kiểm tra total_quantity_divided trong product
+            const product = await this.productRepository.findById(acceptDetail.product_id);
+            if (!product || product.total_quantity_divided < acceptDetail.accept_quantity) {
+                throw new Error(`Không đủ số lượng sản phẩm. Có sẵn: ${product?.total_quantity_divided || 0}, yêu cầu: ${acceptDetail.accept_quantity}`);
+            }
+
+            // Trừ total_quantity_divided từ product
+            await this.productRepository.update(acceptDetail.product_id, {
+                total_quantity_divided: product.total_quantity_divided - acceptDetail.accept_quantity
+            });
+
+            // Cập nhật accept_quantity cho detail
+            await this.importRequestDetailRepository.update(acceptDetail.detail_id, {
+                accept_quantity: acceptDetail.accept_quantity,
+            });
+        }
+
+        // Đổi status thành ACCEPTED
+        await this.importRequestRepository.update(id, {
+            import_request_status: importRequestStatus.ACCEPTED,
+        });
     }
 }

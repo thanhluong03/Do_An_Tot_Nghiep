@@ -61,8 +61,16 @@ export class ProductRepository {
       order: { created_at: 'DESC' },
     });
   }
-  
+
   async save(product: ProductEntity): Promise<ProductEntity> {
     return this.repository.save(product);
+  }
+
+  async decreaseQuantityDivided(id: number, quantity: number): Promise<void> {
+    const product = await this.findById(id);
+    if (!product || product.total_quantity_divided < quantity) {
+      throw new Error('Insufficient quantity in product');
+    }
+    await this.repository.decrement({ id }, 'total_quantity_divided', quantity);
   }
 }
