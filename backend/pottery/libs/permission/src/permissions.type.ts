@@ -61,4 +61,7 @@ export const AVAILABLE_PERMISSIONS = {
     'admin/driver-order': [
         { key: 'admin/driver-order', name: 'Quản lý đơn hàng tài xế' },
     ],
+    'adminStore/storeRequestImportProduct': [
+        { key: 'adminStore/storeRequestImportProduct', name: 'Quản lý yêu cầu nhập kho' },
+    ],
 };
