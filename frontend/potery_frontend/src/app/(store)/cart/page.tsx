@@ -121,6 +121,18 @@ const [selectedStores, setSelectedStores] = useState<Record<string, boolean>>({}
       mounted = false;
     };
   }, [isAuthenticated, user]);
+  useEffect(() => {
+          if (serverItems.length > 0) {
+            const allSelectedItems: Record<string, boolean> = {};
+            const allSelectedStores: Record<string, boolean> = {};
+            serverItems.forEach(ci => {
+              allSelectedItems[ci.id] = true;         // Mặc định chọn hết
+              allSelectedStores[ci.store_id] = true;
+            });
+            setSelectedItems(allSelectedItems);
+            setSelectedStores(allSelectedStores);
+          }
+        }, [serverItems]);
 
   // 🔹 Guest: read session cart (fallback cookie) as fallback if context empty
   useEffect(() => {
@@ -204,6 +216,7 @@ const [selectedStores, setSelectedStores] = useState<Record<string, boolean>>({}
     if (serverItems.length > 0) {
       const calculatedTotal = serverItems.reduce(
         (acc, ci) => {
+          if (!selectedItems[ci.id]) return acc;
           const product = serverProducts[String(ci.product_id)];
           if (!product) return acc;
 
@@ -227,29 +240,33 @@ const [selectedStores, setSelectedStores] = useState<Record<string, boolean>>({}
       return calculatedTotal + 30000;
     }
     return subtotal + 30000;
-  }, [serverItems, serverProducts, subtotal]);
+  }, [serverItems, serverProducts, selectedItems]);
 
-  const subTotalOnly = React.useMemo(() => total - 30000, [total]);
+  const subTotalOnly = React.useMemo(() => {
+  return total - 30000;
+}, [total]);
+
   // 🧾 Hàm xử lý chia đơn hàng theo từng cửa hàng
 // 🧾 Hàm xử lý chia đơn hàng theo từng cửa hàng — ĐÃ CHỈNH ĐÚNG CHUẨN API
 const handleCheckout = async () => {
-  if (!isAuthenticated || !user?.id) {
-    router.push('/login');
-    return;
-  }
-  
-  if (serverItems.length === 0) return alert('Giỏ hàng trống');
+      if (!isAuthenticated || !user?.id) {
+        router.push('/login');
+        return;
+      }
+      
+      const selectedServerItems = serverItems.filter(ci => selectedItems[ci.id]);
+    if (selectedServerItems.length === 0) return alert('Chưa chọn sản phẩm nào để thanh toán');
 
-  try {
-    setLoading(true);
+      try {
+        setLoading(true);
 
     // 1️⃣ Nhóm sản phẩm theo cửa hàng
-    const groupedByStore = serverItems.reduce((acc, item) => {
-      const storeId = item.store_id || 'unknown';
-      if (!acc[storeId]) acc[storeId] = [];
-      acc[storeId].push(item);
-      return acc;
-    }, {} as Record<string, typeof serverItems>);
+    const groupedByStore = selectedServerItems.reduce((acc, item) => {
+        const storeId = item.store_id || 'unknown';
+        if (!acc[storeId]) acc[storeId] = [];
+        acc[storeId].push(item);
+        return acc;
+      }, {} as Record<string, typeof serverItems>);
 
     console.log('📦 Nhóm sản phẩm theo cửa hàng:', groupedByStore);
 
@@ -479,6 +496,33 @@ const handleCheckout = async () => {
                   <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-10">
                     {/* Bên trái: Danh sách sản phẩm */}
                     <div className="space-y-6">
+                        <div className="flex items-center gap-3 mb-4">
+                        <input
+                          type="checkbox"
+                          checked={
+                            Object.values(selectedItems).length > 0 &&
+                            Object.values(selectedItems).every(v => v === true)
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+
+                            // Bật tất cả sản phẩm
+                            const newSelectedItems: Record<string, boolean> = {};
+                            serverItems.forEach(ci => {
+                              newSelectedItems[ci.id] = checked;
+                            });
+                            setSelectedItems(newSelectedItems);
+
+                            // Bật tất cả cửa hàng
+                            const newSelectedStores: Record<string, boolean> = {};
+                            serverItems.forEach(ci => {
+                              newSelectedStores[ci.store_id] = checked;
+                            });
+                            setSelectedStores(newSelectedStores);
+                          }}
+                        />
+                        <span className="text-lg font-semibold">Chọn tất cả</span>
+                      </div>
                         {Object.entries(
                           serverItems.reduce((acc, ci) => {
                             const storeId = ci.store_id || 'unknown';
@@ -597,7 +641,7 @@ const handleCheckout = async () => {
 
                       <div className="space-y-3 mb-6">
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
-                          <span>Tạm tính ({serverItems.length} sản phẩm):</span>
+                          <span>Tạm tính ({Object.values(selectedItems).filter(Boolean).length} sản phẩm):</span>
                           <span>{formatPrice(subTotalOnly)}</span>
                         </div>
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
@@ -612,12 +656,61 @@ const handleCheckout = async () => {
                         <span>{formatPrice(total)}</span>
                       </div>
 
-                      <Link
-                        href="/checkout"
-                        className="block text-center mt-8 bg-[#A0522D] text-white py-3 rounded-lg font-semibold text-lg transition-all duration-300 hover:bg-[#8B4513] shadow-md hover:shadow-lg"
+                      <button
+                        onClick={() => {
+                          // Đảm bảo so sánh id đúng cách (string vs string)
+                          const selectedServerItems = serverItems.filter(ci => {
+                            const ciId = String(ci.id);
+                            const isSelected = selectedItems[ciId] === true;
+                            console.log(`🔍 Checking item ${ciId}: selected=${isSelected}`);
+                            return isSelected;
+                          });
+                          
+                          console.log('🔍 Selected items map:', selectedItems);
+                          console.log('🔍 Total server items:', serverItems.length);
+                          console.log('🔍 Filtered selected items count:', selectedServerItems.length);
+                          console.log('🔍 Filtered selected items:', selectedServerItems);
+                          
+                          if (selectedServerItems.length === 0) {
+                            alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
+                            return;
+                          }
+                          
+                          // Lưu các sản phẩm được chọn vào sessionStorage
+                          const checkoutItems = selectedServerItems.map(ci => {
+                            const product = serverProducts[String(ci.product_id)];
+                            const item = {
+                              id: String(ci.id),
+                              product_id: Number(ci.product_id),
+                              quantity: Number(ci.quantity),
+                              store_id: Number(ci.store_id),
+                              price: ci.classificationPrice || ci.price || product?.price || 0,
+                              classificationPrice: ci.classificationPrice || null,
+                              classificationId: ci.classificationId || null,
+                              classifications: ci.classifications || null
+                            };
+                            console.log('📦 Checkout item mapped:', item);
+                            return item;
+                          });
+                          
+                          console.log('💾 Saving to sessionStorage:', checkoutItems);
+                          console.log('💾 JSON string:', JSON.stringify(checkoutItems));
+                          
+                          try {
+                            sessionStorage.setItem('checkout_items', JSON.stringify(checkoutItems));
+                            const verify = sessionStorage.getItem('checkout_items');
+                            console.log('✅ Saved to sessionStorage successfully');
+                            console.log('✅ Verification read:', verify);
+                            router.push('/checkout');
+                          } catch (error) {
+                            console.error('❌ Error saving to sessionStorage:', error);
+                            alert('Có lỗi xảy ra khi lưu dữ liệu. Vui lòng thử lại.');
+                          }
+                        }}
+                        className="block w-full text-center mt-8 bg-[#A0522D] text-white py-3 rounded-lg font-semibold text-lg transition-all duration-300 hover:bg-[#8B4513] shadow-md hover:shadow-lg"
                       >
                         Tiến hành thanh toán
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 ) : !isAuthenticated && (items.length > 0 || cookieItems.length > 0) ? (
