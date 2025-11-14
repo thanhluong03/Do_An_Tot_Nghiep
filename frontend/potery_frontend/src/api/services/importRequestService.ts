@@ -8,7 +8,7 @@ export interface ImportRequest {
   id: number;
   store_id: number;
   note?: string;
-  import_request_status: "PENDING" | "APPROVED" | "REJECTED";
+  import_request_status: "PENDING" | "ACCEPTED";
   created_at: string;
   updated_at: string;
   store_name?: string;
@@ -91,12 +91,32 @@ export const deleteImportRequest = async (id: number) => {
   );
   return res.data;
 };
+// 🛠️ ĐÃ SỬA: Khắc phục lỗi 404 bằng cách gọi endpoint detail chính xác
 export const getImportRequestDetail = async (
-  requestId: number
+  requestId: number
 ): Promise<ImportRequestDetail[]> => {
-  const res = await axios.get(
-    `${API_URL_IMPORT_REQUEST}/importrequestdetails/${requestId}`
-  );
+  // FIX: Thay đổi path từ 'importrequestdetails' sang 'importrequestdetail'
+  const res = await axios.get(
+    `${API_URL_IMPORT_REQUEST}/importrequestdetail/${requestId}`
+  );
 
-  return res.data?.data || [];
+  // FIX: Trích xuất mảng chi tiết từ res.data.data.importRequestDetails
+  return res.data?.data?.importRequestDetails || [];
+};
+
+export interface AcceptDetailDto {
+  detail_id: number;
+  product_id: number;
+  classification_attribute_relationship_id?: number;
+  accept_quantity: number;
+}
+export const acceptImportRequest = async (
+  id: number,
+  details: AcceptDetailDto[]
+) => {
+  const res = await axios.put(
+    `${API_URL_IMPORT_REQUEST}/acceptimportrequest/${id}`,
+    { details }
+  );
+  return res.data;
 };

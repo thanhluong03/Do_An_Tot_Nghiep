@@ -64,4 +64,7 @@ export const AVAILABLE_PERMISSIONS = {
     'adminStore/storeRequestImportProduct': [
         { key: 'adminStore/storeRequestImportProduct', name: 'Quản lý yêu cầu nhập kho' },
     ],
+    'admin/adminImportrequests': [
+        { key: 'admin/adminImportrequests', name: 'Duyệt yêu cầu nhập kho cửa hàng' },
+    ],
 };
