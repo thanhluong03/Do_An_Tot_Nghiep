@@ -18,6 +18,15 @@ export interface ClassificationAttributeRelationship {
   quantity?: number;
   attribute1_name?: string;
   attribute2_name?: string;
+  attribute1?: {
+    id: number;
+    name: string;
+  };
+
+  attribute2?: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface StoreClassification {

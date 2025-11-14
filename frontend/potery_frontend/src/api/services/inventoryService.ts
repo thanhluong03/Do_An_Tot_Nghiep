@@ -93,6 +93,19 @@ export interface Product {
     // Chấp nhận cả url (string) hoặc image_data (Buffer/string Base64)
     images?: { url?: string; image_data?: string | { data: number[] } }[];
     main_image?: string | { data: number[] };
+    relationships?: ProductRelationship[]; // Mảng các combo phân loại
+    
+    // (Optional) Nếu bạn dùng classifications trong code, cần update
+    classifications?: any[]; // Hoặc định nghĩa type chi tiết hơn nếu cần
+}
+export interface ProductRelationship {
+    id: number; // classification_attribute_relationship_id
+    product_attribute_id_1: number;
+    product_attribute_id_2: number;
+    price: string | number; // Dùng string hoặc number tùy vào dữ liệu
+    quantity: number;
+    attribute1_name: string;
+    attribute2_name: string;
 }
 export interface SelectOption {
     id: number;
