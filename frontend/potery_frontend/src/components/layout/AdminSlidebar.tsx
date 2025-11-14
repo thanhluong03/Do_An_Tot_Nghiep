@@ -50,6 +50,7 @@ const salesOperationsItems: MenuItem[] = [
         name: "Kho hàng",
         icon: faWarehouse,
         children: [
+            { name: "Duyệt yêu cầu nhập kho cửa hàng", icon: faClipboardList, href: "/admin/adminImportrequests" },
             { name: "Nhập kho sản phẩm", icon: faTruckArrowRight, href: "/admin/importproduct" },
             { name: "Tồn kho cửa hàng", icon: faClipboardList, href: "/admin/inventory" },
         ],

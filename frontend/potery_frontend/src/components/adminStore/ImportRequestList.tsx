@@ -119,7 +119,6 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
