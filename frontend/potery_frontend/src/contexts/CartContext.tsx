@@ -21,6 +21,7 @@ export interface CartItem {
   classifications?: CartClassification;
   price?: number; // Actual price with classification
   classificationId?: number; // For backend cart
+  selected?: boolean;
 }
 
 interface CartContextValue {
@@ -30,7 +31,9 @@ interface CartContextValue {
     classifications?: CartClassification;
     price?: number;
     classificationId?: number;
+    
   }) => void;
+  selectItem: (productId: string, selected: boolean, classificationKey?: string) => void;
   removeItem: (productId: string, classificationKey?: string) => void;
   updateQuantity: (productId: string, quantity: number, classificationKey?: string) => void;
   clear: () => void;
@@ -41,6 +44,17 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const selectItem = (productId: string, selected: boolean, classificationKey?: string) => {
+  setItems(prev => prev.map(i => {
+    if (classificationKey) {
+      const key = getCartItemKey(String(i.product.id), i.classifications);
+      return key === classificationKey ? { ...i, selected } : i;
+    } else {
+      return String(i.product.id) === String(productId) ? { ...i, selected } : i;
+    }
+  }));
+};
+
   // ✅ Load cart từ cookie khi reload trang
   useEffect(() => {
     // Prefer sessionStorage for immediate navigation reliability
@@ -112,6 +126,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           classifications: options?.classifications,
           price: options?.price || product.price,
           classificationId: options?.classificationId
+          
         };
         next = [...prev, newItem];
       }
@@ -184,6 +199,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     updateQuantity,
     clear,
     subtotal,
+    selectItem,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

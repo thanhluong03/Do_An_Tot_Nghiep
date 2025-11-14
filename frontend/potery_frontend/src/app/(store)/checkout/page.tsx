@@ -73,6 +73,7 @@ export default function CheckoutPage() {
   }>>([]);
   const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }>>({});
   const [loadingCart, setLoadingCart] = useState(false);
+  const [hasCheckoutItems, setHasCheckoutItems] = useState(false); // Đánh dấu đã load từ checkout_items
 
   const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
@@ -189,7 +190,83 @@ export default function CheckoutPage() {
   /** ===================== LOAD CART & VOUCHERS ===================== */
   useEffect(() => {
     let mounted = true;
+    let loadedFromCheckout = false; // Flag local để track xem đã load từ checkout_items chưa
+    
     (async () => {
+      // ✅ ƯU TIÊN: Kiểm tra sessionStorage cho các sản phẩm được chọn từ cart TRƯỚC
+      // Đọc ngay đầu tiên, không phụ thuộc vào flag
+      if (typeof window !== 'undefined') {
+        const checkoutItemsStr = sessionStorage.getItem('checkout_items');
+        console.log('🔍 Reading from sessionStorage:', checkoutItemsStr ? `Found ${JSON.parse(checkoutItemsStr).length} items` : 'Not found');
+        
+        if (checkoutItemsStr) {
+          try {
+            const checkoutItems = JSON.parse(checkoutItemsStr);
+            console.log('🛒 Checkout items from sessionStorage (chỉ sản phẩm đã chọn):', checkoutItems);
+            console.log('🛒 Is array?', Array.isArray(checkoutItems));
+            console.log('🛒 Length:', checkoutItems?.length);
+            
+            if (Array.isArray(checkoutItems) && checkoutItems.length > 0) {
+              // Chỉ sử dụng các sản phẩm được chọn từ cart
+              // Đảm bảo format đúng - chuyển null thành undefined để match với type
+              const formattedItems = checkoutItems.map(item => ({
+                id: String(item.id),
+                product_id: Number(item.product_id),
+                quantity: Number(item.quantity),
+                store_id: Number(item.store_id),
+                price: item.price ? Number(item.price) : undefined,
+                classificationPrice: item.classificationPrice ? Number(item.classificationPrice) : undefined,
+                classificationId: item.classificationId ? Number(item.classificationId) : undefined,
+                classifications: item.classifications || undefined
+              }));
+              
+              console.log('✅ Formatted checkout items:', formattedItems);
+              
+              if (mounted) {
+                setServerItems(formattedItems);
+                setHasCheckoutItems(true); // Đánh dấu đã load từ checkout_items
+                console.log('✅ Set serverItems to checkout items:', formattedItems.length, 'items');
+                loadedFromCheckout = true; // Set flag local
+                // ✅ KHÔNG xóa sessionStorage ngay - để tránh bị override khi re-render
+                // Sẽ xóa khi tạo đơn hàng thành công hoặc khi unmount
+              }
+              if (mounted) setLoadingCart(false);
+              // Load product details sẽ được xử lý ở useEffect khác
+              // Load vouchers trước khi return
+              setLoadingVouchers(true);
+              let vouchers: Voucher[] = [];
+              if (isAuthenticated && user?.id) {
+                try {
+                  vouchers = await voucherApi.fetchCustomerVouchers(user.id);
+                } catch (err) {
+                  console.error('❌ Lỗi khi tải voucher người dùng:', err);
+                }
+              } else {
+                try {
+                  vouchers = await voucherApi.fetchAvailableVouchers();
+                } catch { }
+              }
+              if (mounted) {
+                setAvailableVouchers(vouchers);
+                setLoadingVouchers(false);
+              }
+              return; // Return ngay sau khi load từ checkout_items
+            } else {
+              console.warn('⚠️ Checkout items is not a valid array or is empty');
+            }
+          } catch (e) {
+            console.error('❌ Lỗi parse checkout_items:', e);
+            console.error('❌ Raw string:', checkoutItemsStr);
+          }
+        }
+      }
+      
+      // ✅ Nếu đã load từ checkout_items, không chạy phần dưới
+      if (loadedFromCheckout) {
+        console.log('⏭️ Already loaded from checkout_items, skipping cart load');
+        return;
+      }
+      
       setLoadingCart(true);
       try {
         // 🔥 NẾU NGƯỜI DÙNG THẬT ĐĂNG NHẬP → XÓA THÔNG TIN GUEST CŨ
@@ -258,8 +335,10 @@ export default function CheckoutPage() {
           return;
         }
 
-        // Load cart cho user đã đăng nhập
-        if (isAuthenticated && user?.id) {
+        // Load cart cho user đã đăng nhập (fallback nếu không có checkout_items)
+        // ⚠️ CHỈ chạy nếu KHÔNG load từ checkout_items (loadedFromCheckout = false)
+        // ✅ KIỂM TRA: Nếu đã load từ checkout_items, KHÔNG load cart nữa
+        if (!loadedFromCheckout && isAuthenticated && user?.id) {
           const data = await cartApi.getByCustomer(user.id as string);
           const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
             id: String(ci.id ?? ci._id ?? ''),
@@ -279,10 +358,12 @@ export default function CheckoutPage() {
             classificationPrice: ci.classificationPrice || null
           }));
 
-          console.log('🛒 Server cart items with classifications:', mapped);
-          setServerItems(mapped);
-        } else {
-          // Load cart cho guest
+          console.log('🛒 Server cart items with classifications (FALLBACK - không có checkout_items):', mapped);
+          if (mounted && !loadedFromCheckout) {
+            setServerItems(mapped);
+          }
+        } else if (!loadedFromCheckout) {
+          // Load cart cho guest (fallback nếu không có checkout_items)
           let localItems: any[] | null = null;
           try {
             if (typeof window !== 'undefined') {
@@ -329,8 +410,10 @@ export default function CheckoutPage() {
                 };
               })
             );
-            console.log('🛒 Guest cart items with classifications:', mapped);
-            setServerItems(mapped);
+            console.log('🛒 Guest cart items with classifications (FALLBACK - không có checkout_items):', mapped);
+            if (mounted && !hasCheckoutItems) {
+              setServerItems(mapped);
+            }
           }
         }
 
@@ -363,7 +446,8 @@ export default function CheckoutPage() {
     })();
 
     return () => { mounted = false; };
-  }, [isAuthenticated, user?.id, clearGuestData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id]); // ✅ Chỉ chạy khi isAuthenticated hoặc user.id thay đổi
 
   /** ===================== LOAD PRODUCTS ===================== */
   useEffect(() => {
@@ -392,6 +476,22 @@ export default function CheckoutPage() {
     })();
     return () => { mounted = false; };
   }, [serverItems, serverProducts]);
+  /** ===================== SYNC SERVER PRODUCTS FROM CONTEXT ===================== */
+useEffect(() => {
+  const next: Record<number, any> = { ...serverProducts };
+  items.forEach(i => {
+    const pid = Number(i.product?.id);
+    if (pid && !next[pid]) {
+      next[pid] = {
+        id: pid,
+        name: i.product?.name || 'Sản phẩm',
+        price: i.product?.price || 0,
+        images: i.product?.images || [],
+      };
+    }
+  });
+  setServerProducts(next);
+}, [items]);
 
   /** ===================== TÍNH TOÁN GIÁ ===================== */
   const { total, discountAmount, finalTotal, totalWithShipping } = useMemo(() => {
@@ -521,6 +621,35 @@ export default function CheckoutPage() {
     setFormErrors(errors);
     return isValid;
   }, [isAuthenticated, guestName, guestPhone, guestEmail, address, city]);
+  /** ===================== SYNC GUEST CART FROM CONTEXT ===================== */
+    useEffect(() => {
+      // ✅ KHÔNG sync nếu đã có checkout_items từ cart (sản phẩm đã được chọn)
+      if (hasCheckoutItems) {
+        // Đã load sản phẩm được chọn từ cart, không sync từ context
+        return;
+      }
+      
+      if (!isAuthenticated && items.length > 0) {
+        const mapped = items.map((i, idx) => ({
+          id: `guest-${idx}`,
+          product_id: Number(i.product?.id),
+          quantity: i.quantity,
+          store_id: Number(i.product?.store?.id || 1),
+          price: i.price || i.product.price,
+          classificationId: i.classificationId || undefined, // null → undefined
+          classifications: i.classifications
+            ? {
+                attribute1_id: i.classifications.attribute1_id ?? undefined,
+                attribute2_id: i.classifications.attribute2_id ?? undefined,
+                attribute1_name: i.classifications.attribute1_name ?? undefined,
+                attribute2_name: i.classifications.attribute2_name ?? undefined,
+              }
+            : undefined,
+        }));
+        setServerItems(mapped);
+      }
+    }, [isAuthenticated, items, hasCheckoutItems]);
+
   /** ===================== TẠO ĐƠN HÀNG ===================== */
   const handleCreate = async () => {
   if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
@@ -846,9 +975,8 @@ export default function CheckoutPage() {
                 <div className="text-center text-gray-400 py-6 text-sm">Giỏ hàng trống</div>
               ) : (
                 <div className="divide-y divide-[#F5F3EF]">
-                  {(serverItems.length > 0 ?
-                    serverItems :
-                    items.map((i, idx) => ({
+                  {(() => {
+                    const itemsToDisplay = serverItems.length > 0 ? serverItems : items.map((i, idx) => ({
                       id: `guest-${idx}`,
                       product_id: Number(i.product.id),
                       quantity: i.quantity,
@@ -856,10 +984,15 @@ export default function CheckoutPage() {
                       classifications: i.classifications,
                       classificationId: i.classificationId,
                       price: i.price || i.product.price
-                    }))
-                  ).map((ci) => {
+                    }));
+                    console.log('🛒 Rendering checkout items. serverItems.length:', serverItems.length, 'itemsToDisplay.length:', itemsToDisplay.length);
+                    return itemsToDisplay;
+                  })().map((ci) => {
                     const p = serverProducts[ci.product_id] || contextProducts[ci.product_id];
-                    if (!p) return null;
+                    if (!p) {
+                      console.warn('⚠️ Product not found for product_id:', ci.product_id);
+                      return null;
+                    }
                     const actualPrice = ci.price || p.price;
 
                     // Debug log
