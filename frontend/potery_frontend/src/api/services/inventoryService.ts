@@ -122,6 +122,10 @@ export interface ProductClassification {
     attribute1_name: string;
     attribute2_name: string;
 }
+export const getProductDetail = async (productId: number): Promise<Product> => {
+    const res = await axios.get(`${API_URL_PRODUCTS}/productdetail/${productId}`);
+    return res.data?.data;
+};
 const bufferToBase64 = (buffer: { data: number[] }): string | null => {
     try {
         const binary = new Uint8Array(buffer.data).reduce(
