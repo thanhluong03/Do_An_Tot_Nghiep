@@ -4,27 +4,60 @@ const API_URL_IMPORT_REQUEST = "http://localhost:3000/importrequests";
 
 /* ---------------------------------- TYPES ---------------------------------- */
 
+export interface Store {
+    id: number;
+    store_name: string;
+    // ... các trường khác
+}
+
+export interface Attribute {
+    id: number;
+    name: string; // <--- Cần lấy tên này
+    // ...
+}
+
+export interface ClassificationAttributeRelationship {
+    id: number;
+    product_attribute_id_1: number;
+    product_attribute_id_2?: number;
+    price: string;
+    quantity: number;
+    attribute1: Attribute; // <--- Thêm đối tượng Attribute
+    attribute2?: Attribute; // <--- Thêm đối tượng Attribute
+    // ...
+}
+
+export interface Product {
+    id: number;
+    name: string; // <--- Cần lấy tên này
+    // ...
+}
+
 export interface ImportRequest {
-  id: number;
-  store_id: number;
-  note?: string;
-  import_request_status: "PENDING" | "ACCEPTED";
-  created_at: string;
-  updated_at: string;
-  store_name?: string;
-  importRequestDetails?: ImportRequestDetail[];
-  
+    id: number;
+    store_id: number;
+    note?: string;
+    import_request_status: "PENDING" | "ACCEPTED";
+    created_at: string;
+    updated_at: string;
+    store_name?: string;
+    // Thêm trường store và đảm bảo importRequestDetails có cấu trúc chi tiết
+    store?: Store; 
+    importRequestDetails?: ImportRequestDetail[];
 }
 
 export interface ImportRequestDetail {
-  id?: number;
-  import_request_id?: number;
-  product_id: number;
-  classification_attribute_relationship_id?: number;
-  requested_quantity: number;
-  created_at?: string;
-  updated_at?: string;
-  product_name?: string;
+    id?: number;
+    import_request_id?: number;
+    product_id: number;
+    classification_attribute_relationship_id?: number | null;
+    requested_quantity: number;
+    created_at?: string;
+    updated_at?: string;
+    // Thêm các trường lồng nhau từ response API
+    product?: Product; // <--- Thông tin sản phẩm
+    classificationAttributeRelationship?: ClassificationAttributeRelationship | null; // <--- Thông tin phân loại
+    accept_quantity?: number | null; // <--- Thêm trường này nếu có
 }
 
 export interface CreateImportRequestDto {
