@@ -18,9 +18,9 @@ export const getStores = async (): Promise<Store[]> => {
 };
 export const getStoreById = async (id: number): Promise<Store> => {
   const res = await axios.get(`${API_URL}/storedetail/${id}`);
-  // Giả định API trả về object Store
-  return res.data; 
+  return res.data[0]; // lấy phần tử đầu tiên của mảng
 };
+
 // Thêm mới (backend nhận array)
 export const addStore = async (store: Store): Promise<Store> => {
   const res = await axios.post(`${API_URL}/createstore`, [store], {

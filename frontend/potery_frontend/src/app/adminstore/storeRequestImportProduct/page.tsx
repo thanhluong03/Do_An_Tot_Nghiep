@@ -12,10 +12,10 @@ import { getUserDetail } from "@/api/services/userService";
 
 import toast from "react-hot-toast";
 import CheckboxList from "@/components/common/CheckBoxList";
-import { Category } from "@/api/services/categoryService";
 
 import ImportRequestList from "@/components/adminStore/ImportRequestList";
 import { getStoreById, Store } from "@/api/services/storeService";
+import { Category, getCategories } from "@/api/services/categoryService";
 
 interface SelectedProduct {
   product_id: number;
@@ -26,12 +26,13 @@ interface SelectedProduct {
 export default function CreateImportRequestPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [note, setNote] = useState("");
   const [storeId, setStoreId] = useState<number | null>(null);
   const [storeName, setStoreName] = useState("...");
   const [isLoading, setIsLoading] = useState(false);
-const [dataVersion, setDataVersion] = useState(0);
+  const [dataVersion, setDataVersion] = useState(0);
   // 👇 NEW: ẨN/HIỆN FORM
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -41,39 +42,50 @@ const [dataVersion, setDataVersion] = useState(0);
     const product = findProduct(id, list);
     return product ? getProductImageUrl(product) : "/no-image.jpg";
   };
-
-  // Load dữ liệu ban đầu
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
 
-      const adminId = Number(localStorage.getItem("adminID"));
-      const fetchedStoreId: number | null = null;
-      if (adminId) {
-        try {
-          const user = await getUserDetail(adminId);
-          setStoreId(user.store_id);
-        } catch {
-          setStoreId(2);
-        }
-      }
-      if (fetchedStoreId) {
-        try {
-          const store = await getStoreById(fetchedStoreId);
-          setStoreName(store.store_name);
-        } catch (e) {
-          console.error("Lỗi lấy tên cửa hàng", e);
-          setStoreName(`Cửa hàng ID ${fetchedStoreId} (Không tải được tên)`);
-        }
-      }
       try {
-        const res = await getProducts();
-        setProducts(res);
-      } catch {
-        toast.error("Không tải được danh sách sản phẩm");
-      }
+        // 1️⃣ Lấy adminID
+        const adminId = Number(localStorage.getItem("adminID"));
+        if (!adminId) throw new Error("Không tìm thấy adminID trong localStorage");
 
-      setIsLoading(false);
+        // 2️⃣ Lấy thông tin user → storeId
+        const user = await getUserDetail(adminId);
+        const currentStoreId = user.store_id ?? 2; // fallback 2 nếu không có
+        if (!user.store_id) toast.error("User không có store, dùng store mặc định ID = 2");
+        setStoreId(currentStoreId);
+
+        // 3️⃣ Lấy thông tin store → storeName
+        try {
+          const store = await getStoreById(currentStoreId); // nhớ sửa getStoreById trả về res.data[0]
+          setStoreName(store.store_name);
+        } catch (err) {
+          console.error(err);
+          setStoreName(`Cửa hàng ID ${currentStoreId} (Không tải được tên)`);
+          toast.error(`Không tải được tên cửa hàng ID ${currentStoreId}`);
+        }
+
+        // 4️⃣ Lấy danh sách sản phẩm
+        try {
+          const res = await getProducts();
+          setProducts(res);
+        } catch {
+          toast.error("Không tải được danh sách sản phẩm");
+        }
+        try {
+            const catRes = await getCategories(); // GỌI API LẤY DANH MỤC
+            setCategories(catRes);
+        } catch {
+            toast.error("Không tải được danh sách danh mục");
+        }
+
+      } catch (err: any) {
+        toast.error(err.message || "Lỗi khi khởi tạo dữ liệu");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     init();
@@ -123,50 +135,50 @@ const [dataVersion, setDataVersion] = useState(0);
       )
     );
   };
-const handleRemoveSelection = (
+  const handleRemoveSelection = (
     productId: number,
     classificationId: number | undefined
-) => {
+  ) => {
     setSelectedProducts(prev =>
-        prev.filter(
-            p => !(p.product_id === productId && p.classification_id === classificationId)
-        )
+      prev.filter(
+        p => !(p.product_id === productId && p.classification_id === classificationId)
+      )
     );
-};
+  };
   const handleSubmit = async () => {
     const valid = selectedProducts.filter(p => p.quantity > 0);
 
     if (!storeId || valid.length === 0)
       return toast.error("Chọn sản phẩm và nhập số lượng hợp lệ");
     for (const selection of valid) {
-        const product = products.find(p => p.id === selection.product_id);
-        if (!product) continue;
+      const product = products.find(p => p.id === selection.product_id);
+      if (!product) continue;
 
-        let stock = product.quantity || 0;
-        let variantName = "Không phân loại";
-        
-        // Nếu có phân loại, lấy tồn kho của phân loại đó
-        if (selection.classification_id) {
-            const rel = product.relationships?.find(r => r.id === selection.classification_id);
-            if (rel) {
-                stock = rel.quantity || 0;
-                // Tạo tên biến thể để hiển thị lỗi
-                const attr1 = rel.attribute1_name ? rel.attribute1_name.trim() : "";
-                const attr2 = rel.attribute2_name ? rel.attribute2_name.trim() : "";
-                if (attr1 && attr2) variantName = `${attr1} | ${attr2}`;
-                else if (attr1) variantName = attr1;
-            }
-        } else {
-             // Sản phẩm không có biến thể, lấy tồn kho tổng của sản phẩm
-             stock = product.total_quantity_divided || 0;
-        }
+      let stock = product.quantity || 0;
+      let variantName = "Không phân loại";
 
-        if (selection.quantity > stock) {
-            const displayVariant = variantName !== "Không phân loại" ? ` (${variantName})` : '';
-            return toast.error(
-                `Số lượng yêu cầu cho sản phẩm "${product.name}${displayVariant}" (${selection.quantity}) không được lớn hơn tồn kho hiện tại (${stock.toLocaleString("vi-VN")}).`
-            );
+      // Nếu có phân loại, lấy tồn kho của phân loại đó
+      if (selection.classification_id) {
+        const rel = product.relationships?.find(r => r.id === selection.classification_id);
+        if (rel) {
+          stock = rel.quantity || 0;
+          // Tạo tên biến thể để hiển thị lỗi
+          const attr1 = rel.attribute1_name ? rel.attribute1_name.trim() : "";
+          const attr2 = rel.attribute2_name ? rel.attribute2_name.trim() : "";
+          if (attr1 && attr2) variantName = `${attr1} | ${attr2}`;
+          else if (attr1) variantName = attr1;
         }
+      } else {
+        // Sản phẩm không có biến thể, lấy tồn kho tổng của sản phẩm
+        stock = product.total_quantity_divided || 0;
+      }
+
+      if (selection.quantity > stock) {
+        const displayVariant = variantName !== "Không phân loại" ? ` (${variantName})` : '';
+        return toast.error(
+          `Số lượng yêu cầu cho sản phẩm "${product.name}${displayVariant}" (${selection.quantity}) không được lớn hơn tồn kho hiện tại (${stock.toLocaleString("vi-VN")}).`
+        );
+      }
     }
     const payload: CreateImportRequestDto = {
       store_id: storeId,
@@ -208,7 +220,7 @@ const handleRemoveSelection = (
   if (isLoading) return <p className="text-center p-6">Đang tải dữ liệu...</p>;
 
   return (
-    <div className="p-6 max-w-6xl bg-white rounded-xl shadow-md mt-1">
+    <div className="p-6 max-w-full bg-white rounded-xl shadow-md mt-1">
 
       {/* BUTTON SHOW FORM */}
       {!showCreateForm && (
@@ -227,8 +239,11 @@ const handleRemoveSelection = (
           <h1 className="text-3xl font-bold mb-6 text-gray-800">
             Tạo yêu cầu nhập hàng
           </h1>
-          <p className="text-xl font-semibold text-blue-600 mb-6 border-b pb-3">
-            Cửa hàng: **{storeName}** ({storeId ? `ID: ${storeId}` : 'Đang tải...'})
+          <p className="text-xl font-semibold text-orange-600 mb-6 border-b pb-3">
+            Chi nhánh cửa hàng:
+            <span className="font-bold ml-1">
+              {storeName}
+            </span>
           </p>
           {/* GHI CHÚ + CHỌN SP */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

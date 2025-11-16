@@ -30,6 +30,8 @@ export interface ClassificationAttributeRelationship {
 export interface Product {
     id: number;
     name: string; // <--- Cần lấy tên này
+    total_quantity_divided: number;
+    main_image?: string;
     // ...
 }
 

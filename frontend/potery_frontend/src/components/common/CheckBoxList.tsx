@@ -52,7 +52,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
       const lower = searchTerm.toLowerCase();
       result = result.filter((opt) => opt.name.toLowerCase().includes(lower));
     }
-
+    
     if (isProductList && selectedCategory !== "all") {
       result = result.filter((opt) => {
         const product = findProduct(opt.id, allProducts);
