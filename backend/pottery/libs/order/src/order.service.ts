@@ -413,4 +413,16 @@ export class OrderService {
       throw new BadRequestException('Không thể lấy danh sách đơn hàng');
     }
   }
+
+  async getOrdersByStore(store_id: number, page = 1, size = 10): Promise<OrdersWithTotal> {
+    // Lấy tất cả orders, lọc theo store_id trong current_order.items
+    const { orders, total } = await this.orderRepository.findAll({ page, size });
+    // Lọc các order có ít nhất một item thuộc store_id
+    const filteredOrders = orders.filter(order => {
+      const currentOrder: any = order.current_order || {};
+      const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+      return items.some((item: any) => item.store_id === store_id);
+    });
+    return { orders: filteredOrders, total: filteredOrders.length };
+  }
 }

@@ -4,6 +4,8 @@ import {
     ImportRequestDetailRepository,
     ProductRepository,
     ClassificationAttributeRelationshipRepository,
+    InventoryRepository,
+    InventoryDetailRepository,
 } from '@app/database';
 import { ImportRequestEntity, importRequestStatus } from '@app/database';
 import { CreateImportRequestInput, UpdateImportRequestInput, AcceptImportRequestInput } from './import_request.interface';
@@ -14,6 +16,8 @@ export class ImportRequestService {
         private readonly importRequestDetailRepository: ImportRequestDetailRepository,
         private readonly productRepository: ProductRepository,
         private readonly classificationRepository: ClassificationAttributeRelationshipRepository,
+        private readonly inventoryRepository: InventoryRepository,
+        private readonly inventoryDetailRepository: InventoryDetailRepository,
     ) { }
 
     async createImportRequest(data: CreateImportRequestInput): Promise<ImportRequestEntity> {
@@ -200,6 +204,45 @@ export class ImportRequestService {
             await this.importRequestDetailRepository.update(acceptDetail.detail_id, {
                 accept_quantity: acceptDetail.accept_quantity,
             });
+
+            // Cộng vào inventory của cửa hàng
+            // Tìm inventory theo store và product
+            let inventory = await this.inventoryRepository.findByProductAndStore(acceptDetail.product_id, importRequest.store_id);
+            if (!inventory) {
+                // Nếu chưa có thì tạo mới
+                inventory = await this.inventoryRepository.create({
+                    product_id: acceptDetail.product_id,
+                    store_id: importRequest.store_id,
+                    quantity_stock: 0,
+                    quantity_sold: 0,
+                });
+            }
+            if (acceptDetail.classification_attribute_relationship_id) {
+                // Có phân loại: cộng vào inventory_detail
+                let inventoryDetail = await this.inventoryDetailRepository.findByInventoryAndClassification(
+                    inventory.id,
+                    acceptDetail.classification_attribute_relationship_id
+                );
+                if (inventoryDetail) {
+                    // Nếu đã có thì cộng thêm số lượng
+                    await this.inventoryDetailRepository.update(inventoryDetail.id, {
+                        quantity_stock: (inventoryDetail.quantity_stock || 0) + acceptDetail.accept_quantity,
+                    });
+                } else {
+                    // Nếu chưa có thì tạo mới
+                    await this.inventoryDetailRepository.create({
+                        inventory_id: inventory.id,
+                        classification_attribute_relationship_id: acceptDetail.classification_attribute_relationship_id,
+                        quantity_stock: acceptDetail.accept_quantity,
+                        quantity_sold: 0,
+                    });
+                }
+            } else {
+                // Không phân loại: cộng vào quantity_stock của inventory
+                await this.inventoryRepository.update(inventory.id, {
+                    quantity_stock: (inventory.quantity_stock || 0) + acceptDetail.accept_quantity,
+                });
+            }
         }
 
         // Đổi status thành ACCEPTED

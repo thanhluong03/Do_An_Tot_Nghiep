@@ -155,4 +155,22 @@ export class OrderController {
     async exportOrdersToExcel(@Res() res: Response) {
         await this.orderService.exportOrdersToExcel(res);
     }
+
+    @Get('store/:store_id')
+    async getOrdersByStore(@Param('store_id') store_id: number, @Query('page') page = 1, @Query('size') size = 10) {
+        try {
+            const { orders, total } = await this.orderService.getOrdersByStore(Number(store_id), Number(page), Number(size));
+            return new SuccessResponseDto('Orders fetched successfully', {
+                data: Array.isArray(orders) ? orders : [],
+                total: total,
+            });
+        } catch (error: any) {
+            return new ErrorResponseDto(
+                'Failed to fetch orders',
+                error && typeof error === 'object' && 'message' in error
+                    ? error.message
+                    : error,
+            );
+        }
+    }
 }
