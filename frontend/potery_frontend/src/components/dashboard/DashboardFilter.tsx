@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Calendar, ChevronDown } from "lucide-react";
 
 interface DashboardFilterProps {
   onFilterChange: (filters: { storeId: string; startDate: string; endDate: string }) => void;
@@ -9,7 +8,7 @@ interface DashboardFilterProps {
 const DashboardFilter: React.FC<DashboardFilterProps> = ({ onFilterChange }) => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [storeId, setStoreId] = useState<string>("");
+  const [storeId] = useState<string>("");
 
   const handleFilterChange = useCallback(() => {
     onFilterChange({ storeId, startDate, endDate });

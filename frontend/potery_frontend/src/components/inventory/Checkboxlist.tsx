@@ -3,6 +3,7 @@ import React from "react";
 import { SelectOption, Product, getProductImageUrl } from "@/api/services/inventoryService";
 import { Category } from "@/api/services/categoryService";
 import { Search } from "lucide-react";
+import Image from "next/image";
 
 interface CheckboxListProps {
     name: "product_id" | "store_id";
@@ -214,7 +215,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                         >
                                             <div className="flex items-center flex-1 min-w-0">
                                                 {isProductList && (
-                                                    <img
+                                                    <Image
                                                         src={findProductImage(opt.id, allProducts)}
                                                         alt={opt.name}
                                                         className="w-10 h-10 object-cover rounded-full border border-gray-200 shadow-sm mr-3"

@@ -8,9 +8,6 @@ import {
     faHome,
     faBox,
     faShoppingCart,
-    faStar,
-    faChartLine,
-    faChartBar,
     faStore,
     faWarehouse,
     faList,
@@ -31,6 +28,7 @@ import {
     faRobot, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import Image from "next/image";
 
 interface MenuItem {
     name: string;
@@ -207,10 +205,12 @@ export default function AdminSidebar() {
 
             <div className="p-4 flex flex-col items-center justify-center border-b border-gray-100 mb-4">
                 <Link href="/admin/dashboard" passHref>
-                    <img
+                    <Image
                         src="/logoADmin.jpg"
                         alt="Tiệm Gốm Nhà Gạo Admin Logo"
-                        className="w-40 h-auto object-contain cursor-pointer hover:scale-[1.02]"
+                        width={800}  // <-- THÊM VÀO: Kích thước thật (chiều rộng) của file ảnh
+                        height={250} // <-- THÊM VÀO: Kích thước thật (chiều cao) của file ảnh
+                        className=" object-contain cursor-pointer hover:scale-[1.02]"
                     />
                 </Link>
             </div>

@@ -5,7 +5,7 @@ import { FlashSale } from '../../types';
 import { ProductGrid } from './ProductGrid';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { formatTimeRemaining } from '../../utils/format';
-import { cn } from '../../utils/cn';
+
 
 interface FlashSaleSectionProps {
   flashSales: FlashSale[];

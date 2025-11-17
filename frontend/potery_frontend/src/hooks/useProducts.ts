@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { productApi } from '../api/modules/products';
-import { Product, ProductCategory, FlashSale } from '../types';
+import { Product, ProductCategory } from '../types';
 
 export const useProducts = (params?: {
   page?: number;

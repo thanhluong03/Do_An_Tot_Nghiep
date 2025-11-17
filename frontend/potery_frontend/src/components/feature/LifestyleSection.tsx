@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Button } from '../common/Button';
+import { Button} from '../common/Button';
+import  Image from 'next/image';
+import { Link } from 'lucide-react';
 // Giả sử bạn đang dùng Next.js, nên giữ lại ghi chú về Image component
 // import Image from 'next/image'; 
 
@@ -67,7 +69,7 @@ export const LifestyleSection: React.FC = () => {
                             <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 shadow-xl">
                                 
                                 {/* Hình ảnh */}
-                                <img 
+                                <Image 
                                     src={item.image} 
                                     alt={item.alt} 
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -96,10 +98,10 @@ export const LifestyleSection: React.FC = () => {
                         size="lg"
                         className="px-8 py-3 text-lg font-semibold bg-white text-[#65604E] hover:bg-[#F5F1EB] shadow-lg transition-all duration-300 flex items-center justify-center mx-auto space-x-2 rounded-lg" // Thêm rounded-lg cho nút
                     >
-                        <a href='/products'>Khám Phá Bộ Sưu Tập Lifestyle
+                        <Link href='/products'>Khám Phá Bộ Sưu Tập Lifestyle
                         {/* Icon mũi tên phải */}
                         <span className="ml-2 text-xl">→</span> 
-                        </a>
+                        </Link>
                     </Button>
                 </div>
                 
