@@ -5,6 +5,7 @@ import { productApi } from '@/api/modules/products';
 import { Product } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
+import Image from 'next/image';
 
 const formatPrice = (price: number) => {
   return price.toLocaleString('vi-VN') + '₫';
@@ -82,7 +83,7 @@ export const FeaturedProductSection: React.FC = () => {
             {/* Left - Hình ảnh */}
             <div className="relative p-2 h-full">
               <div className="relative h-full rounded-xl overflow-hidden shadow-md bg-white">
-                <img
+                <Image
                   src={product.images?.[0] || '/placeholder.png'}
                   alt={product.name}
                   className="w-full h-full object-cover object-center aspect-[4/3]"

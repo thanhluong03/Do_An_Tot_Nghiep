@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React from 'react';
 
 interface AuthLayoutProps {
@@ -14,7 +15,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
         <div className="absolute -top-14 left-1/2 transform -translate-x-1/2">
           <div className="flex flex-col items-center">
             <div className="w-20 h-20 bg-[#65604E] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-              <img
+              <Image
                 src="/logo.png"
                 alt="Tiệm Gốm Nhà Gạo Logo"
                 className="w-full h-full object-cover rounded-full"

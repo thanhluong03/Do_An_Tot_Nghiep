@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { voucherApi, Voucher } from '../../api/modules/voucher';
+import { voucherApi, Voucher } from '../../api/modules/voucher'; // Assuming Voucher has id/_id as string | undefined
 import { formatPrice } from '../../utils/format';
-import { X, Gift, AlertTriangle, Info, CheckCircle, Loader2, Tag, ShoppingCart, DollarSign, Clock, Zap, Code } from 'lucide-react';
+import { X, Gift, AlertTriangle, Info, CheckCircle, Loader2, Tag, DollarSign, Clock, Zap, Code } from 'lucide-react';
 
 interface VoucherModalProps {
   customerId: string | number | undefined;
@@ -11,11 +11,60 @@ interface VoucherModalProps {
   onClose: () => void;
 }
 
+// Define the raw API type based on your normalization logic
+type RawApiVoucher = {
+  id?: string | number;
+  _id?: string | number;
+  name?: string;
+  title?: string;
+  code?: string;
+  description?: string;
+  desc?: string;
+  voucher_percentage?: number | string;
+  discount?: number | string;
+  discount_value?: number | string;
+  discount_type?: string;
+  quantity?: number | string;
+  remaining_quantity?: number | string;
+  order_conditions?: number | string;
+  min_order_value?: number | string;
+  start_time?: string;
+  end_time?: string;
+  effective_period_begins?: string;
+  effective_period_ends?: string;
+  is_active?: boolean;
+};
+
 export function VoucherModal({ customerId, isOpen, onClose }: VoucherModalProps) {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loadingList, setLoadingList] = useState(false);
-  const [loadingClaimId, setLoadingClaimId] = useState<string | number | null>(null);
+  const [loadingClaimId, setLoadingClaimId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // --- 1. Create a reusable normalization function ---
+  const normalizeVoucher = (v: RawApiVoucher): Voucher => {
+    const voucherId = v.id || v._id;
+    return {
+      id: voucherId?.toString(), // FIX: Convert to string
+      _id: v._id?.toString(),    // FIX: Convert to string
+      name: v.name || v.title || '',
+      code: v.code || '',
+      description: v.description || v.desc || '',
+      voucher_percentage: Number(v.voucher_percentage || v.discount || v.discount_value || 0),
+      discount_value: Number(v.discount_value || v.voucher_percentage || v.discount || 0),
+      discount_type: (v.discount_type || 'PERCENTAGE').toUpperCase() as 'FIXED_AMOUNT' | 'PERCENTAGE',
+      quantity: Number(v.quantity || 0),
+      remaining_quantity: Number(v.remaining_quantity ?? v.quantity ?? 0),
+      order_conditions: Number(v.order_conditions || v.min_order_value || 0),
+      min_order_value: Number(v.min_order_value || v.order_conditions || 0),
+      start_time: v.start_time,
+      end_time: v.end_time,
+      effective_period_begins: v.effective_period_begins || v.start_time,
+      effective_period_ends: v.effective_period_ends || v.end_time,
+      is_active: v.is_active !== false,
+      isClaimed: false, // Default isClaimed
+    };
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -24,37 +73,16 @@ export function VoucherModal({ customerId, isOpen, onClose }: VoucherModalProps)
       setLoadingList(true);
       setMessage(null);
       try {
-        const data = await voucherApi.fetchAvailableVouchers();
+        const data: RawApiVoucher[] = await voucherApi.fetchAvailableVouchers();
         console.log('📦 Raw vouchers:', data);
         
         const list = Array.isArray(data) ? data : [];
         
-        // Chuẩn hóa dữ liệu voucher
-        const normalized = list.map((v: any) => {
-          const voucherId = v.id || v._id;
-          return {
-            id: voucherId,
-            _id: v._id,
-            name: v.name || v.title || '',
-            code: v.code || '',
-            description: v.description || v.desc || '',
-            voucher_percentage: Number(v.voucher_percentage || v.discount || v.discount_value || 0),
-            discount_value: Number(v.discount_value || v.voucher_percentage || v.discount || 0),
-            discount_type: (v.discount_type || 'PERCENT').toUpperCase() as 'FIXED' | 'PERCENT',
-            quantity: Number(v.quantity || 0),
-            remaining_quantity: Number(v.remaining_quantity ?? v.quantity ?? 0),
-            order_conditions: Number(v.order_conditions || v.min_order_value || 0),
-            min_order_value: Number(v.min_order_value || v.order_conditions || 0),
-            start_time: v.start_time,
-            end_time: v.end_time,
-            effective_period_begins: v.effective_period_begins || v.start_time,
-            effective_period_ends: v.effective_period_ends || v.end_time,
-            is_active: v.is_active !== false,
-            isClaimed: false,
-          };
-        });
+        // --- 2. Use the helper function here ---
+        const normalized = list.map(normalizeVoucher);
         
         // Lọc voucher còn số lượng và đang hoạt động
+        // This filter will now work perfectly
         const available = normalized.filter((v: Voucher) => {
           const hasStock = (v.remaining_quantity ?? v.quantity ?? 0) > 0;
           const isActive = v.is_active !== false;
@@ -71,9 +99,12 @@ export function VoucherModal({ customerId, isOpen, onClose }: VoucherModalProps)
         if (available.length === 0) {
           setMessage('ℹ️ Hiện tại không có voucher khả dụng.');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('❌ Lỗi tải voucher:', error);
-        setMessage(`❌ ${error.message || 'Không thể tải danh sách voucher.'}`);
+        const message = (error instanceof Error)
+          ? error.message
+          : 'Không thể tải danh sách voucher.';
+        setMessage(`❌ ${message}`);
       } finally {
         setLoadingList(false);
       }
@@ -82,49 +113,56 @@ export function VoucherModal({ customerId, isOpen, onClose }: VoucherModalProps)
     loadVouchers();
   }, [isOpen]);
 
-  const handleClaim = async (voucherId: string | number) => {
-  if (!customerId) {
-    setMessage('❌ Vui lòng đăng nhập để nhận voucher.');
-    return;
-  }
+  // --- 3. Update handleClaim signature to 'string' ---
+  const handleClaim = async (voucherId: string) => {
+    if (!customerId) {
+      setMessage('❌ Vui lòng đăng nhập để nhận voucher.');
+      return;
+    }
 
-  setLoadingClaimId(voucherId);
-  setMessage(null);
+    setLoadingClaimId(voucherId);
+    setMessage(null);
 
-  try {
-    // Gọi API claim voucher
-    await voucherApi.claimVoucher(customerId, voucherId);
+    try {
+      // Gọi API claim voucher
+      await voucherApi.claimVoucher(customerId, voucherId);
+      // Fetch lại danh sách voucher từ server để đồng bộ
+      const updatedVouchers: RawApiVoucher[] = await voucherApi.fetchAvailableVouchers();
 
-    // Fetch lại danh sách voucher từ server để đồng bộ
-    const updatedVouchers = await voucherApi.fetchAvailableVouchers();
+      // --- 4. Use the helper function again here ---
+      const normalized = updatedVouchers.map((v: RawApiVoucher) => {
+        const normalizedVoucher = normalizeVoucher(v);
+        // Đánh dấu voucher vừa claim
+        if (normalizedVoucher.id === voucherId) {
+          return { ...normalizedVoucher, isClaimed: true };
+        }
+        return normalizedVoucher;
+      });
 
-    // Chuẩn hóa danh sách voucher, đánh dấu voucher vừa claim là isClaimed
-    const normalized = updatedVouchers.map(v => ({
-      ...v,
-      isClaimed: v.id === voucherId ? true : false
-    }));
+      // Cập nhật state
+      setVouchers(normalized);
 
-    // Cập nhật state
-    setVouchers(normalized);
+      // Lấy tên voucher để hiển thị message
+      const claimedVoucher = normalized.find(v => v.id === voucherId);
+      setMessage(`✅ Đã lưu voucher "${claimedVoucher?.name || ''}" thành công!`);
 
-    // Lấy tên voucher để hiển thị message
-    const claimedVoucher = normalized.find(v => v.id === voucherId);
-    setMessage(`✅ Đã lưu voucher "${claimedVoucher?.name || ''}" thành công!`);
+      // Tự động đóng modal sau 2 giâycl
+      setTimeout(() => onClose(), 2000);
 
-    // Tự động đóng modal sau 2 giây
-    setTimeout(() => onClose(), 2000);
-
-  } catch (error: any) {
-    console.error('❌ Lỗi khi nhận voucher:', error);
-    setMessage(`❌ ${error.message || 'Không thể nhận voucher.'}`);
-  } finally {
-    setLoadingClaimId(null);
-  }
-};
+    } catch (error: unknown) {
+        console.error('❌ Lỗi khi nhận voucher:', error);
+        const message = (error instanceof Error)
+          ? error.message
+          : 'Không thể nhận voucher.';
+        setMessage(`❌ ${message}`);
+    } finally {
+      setLoadingClaimId(null);
+    }
+  };
 
   if (!isOpen) return null;
 
- return (
+  return (
     <div 
       className="fixed inset-0 flex items-center justify-center z-[1000] p-4 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
       onClick={onClose} // Đóng khi click ra ngoài
@@ -229,7 +267,8 @@ export function VoucherModal({ customerId, isOpen, onClose }: VoucherModalProps)
                           <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
                           <span className="text-gray-500">Giảm:</span>
                           <span className="font-bold text-green-600">
-                            {voucher.discount_type === 'PERCENT' 
+                            {/* --- 5. FIX: Check for 'PERCENT' --- */}
+                            {voucher.discount_type === 'PERCENTAGE' 
                               ? `${voucher.discount_value}%`
                               : formatPrice(voucher.discount_value ?? 0)
                             }
@@ -277,7 +316,7 @@ export function VoucherModal({ customerId, isOpen, onClose }: VoucherModalProps)
 
                     {/* Action Button */}
                     <button
-                      onClick={() => handleClaim(voucher.id!)}
+                      onClick={() => handleClaim(voucher.id!)} // voucher.id is now a string
                       disabled={
                         voucher.isClaimed || 
                         isOutOfStock || 

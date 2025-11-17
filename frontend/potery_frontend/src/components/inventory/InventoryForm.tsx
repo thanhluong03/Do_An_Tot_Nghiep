@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { SelectOption, Product, getProductClassifications, ProductClassification, getProductImageUrl } from "@/api/services/inventoryService";
 import { InventoryFormState, FormName } from "@/app/admin/inventory/page";
 import CheckboxList from "./Checkboxlist";
-import { Package, Store, Box, MinusCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
+import { Package, Store, Box, Zap } from 'lucide-react';
 import { getCategories, Category } from "@/api/services/categoryService";
 interface InventoryFormProps {
     form: InventoryFormState;
@@ -18,16 +18,11 @@ interface InventoryFormProps {
     getDisplayName: (list: SelectOption[], id: number | string | undefined) => string;
     handleValueChange: (name: "product_id" | "store_id", value: string | string[] | undefined) => void;
     handleNumberChange: (name: FormName, value: number) => void;
-    handleSubmit: () => Promise<void>;
-    handleSubmitWithClassifications?: (classificationData: { [classificationId: number]: number }) => Promise<void>;
+
     handleCancelEdit: () => void;
     editClassificationData?: { [classificationId: number]: number };
 }
 
-interface ClassificationQuantity {
-    classificationId: number;
-    quantity: number;
-}
 
 const InventoryForm: React.FC<InventoryFormProps> = ({
     form,
@@ -39,15 +34,13 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     getDisplayName,
     handleValueChange,
     handleNumberChange,
-    handleSubmit,
-    handleSubmitWithClassifications,
     handleCancelEdit,
     editClassificationData
 }) => {
     // State để quản lý phân loại sản phẩm
     const [productClassifications, setProductClassifications] = useState<{ [productId: number]: ProductClassification[] }>({});
     const [classificationQuantities, setClassificationQuantities] = useState<{ [classificationId: number]: number }>({});
-    const [showClassifications, setShowClassifications] = useState(false);
+    const [,setShowClassifications] = useState(false);
 
 
     // Load classifications khi sản phẩm được chọn
@@ -206,10 +199,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     }, []);
 
     // Đổi màu sắc: Primary (Thêm mới) là Orange, Accent (Sửa) là Red-Orange/Red
-    const PRIMARY_COLOR_CLASS = 'orange'; // Dùng orange-600
-    const ACCENT_COLOR_CLASS = 'red'; // Dùng red-600
-
-    const colorClass = editingId ? ACCENT_COLOR_CLASS : PRIMARY_COLOR_CLASS;
 
     // Class CSS cho container dựa trên chế độ
     const modeClass = editingId

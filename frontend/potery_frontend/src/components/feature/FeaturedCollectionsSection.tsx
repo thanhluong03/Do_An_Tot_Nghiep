@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React from 'react';
 // Nếu bạn có component Button, bạn có thể cân nhắc dùng nó, nhưng ở đây tôi dùng thẻ <a> để đơn giản hóa CTA
 // import { Button } from '../common/Button'; 
@@ -57,7 +58,7 @@ export const FeaturedCollectionsSection: React.FC = () => {
                         <div key={index} className="group relative rounded-2xl overflow-hidden min-h-[400px]">
                             
                             {/* Hình ảnh (Toàn bộ thẻ là hình ảnh) */}
-                            <img
+                            <Image
                                 src={collection.image}
                                 alt={collection.alt}
                                 // Sử dụng h-full object-cover để lấp đầy toàn bộ thẻ
