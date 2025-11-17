@@ -11,6 +11,7 @@ import { Response } from 'express';
 interface OrdersWithTotal {
   orders: OrderEntity[];
   total: number;
+  totalByStatus?: Record<string, number>;
 }
 @Injectable()
 export class OrderService {
@@ -280,6 +281,8 @@ export class OrderService {
 
   async getOrders(params: IListOrder): Promise<OrdersWithTotal> {
     const { orders, total } = await this.orderRepository.findAll(params);
+    // Tính tổng tiền theo trạng thái
+    const totalByStatus: Record<string, number> = {};
     for (const order of orders) {
       let customerName = '';
       let customerEmail = '';
@@ -294,8 +297,13 @@ export class OrderService {
       const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
       const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
       (order as any).product_count = totalQuantity;
+
+      // Tính tổng tiền theo trạng thái
+      const status = order.status || 'unknown';
+      if (!totalByStatus[status]) totalByStatus[status] = 0;
+      totalByStatus[status] += Number(order.total_amount) || 0;
     }
-    return { orders, total };
+    return { orders, total, totalByStatus };
   }
 
   async updateOrder(id: number, data: IUpdateOrder, user_id?: number, customer_id?: number, actor_type?: string): Promise<void> {
@@ -403,10 +411,18 @@ export class OrderService {
         };
       }));
 
+      // Tính tổng tiền theo trạng thái cho orders
+      const totalByStatus: Record<string, number> = {};
+      for (const order of orders) {
+        const status = order.status || 'unknown';
+        if (!totalByStatus[status]) totalByStatus[status] = 0;
+        totalByStatus[status] += Number(order.total_amount) || 0;
+      }
       return {
         success: true,
         message: 'Lấy danh sách đơn hàng cho admin thành công',
         data: formattedOrders,
+        totalByStatus: Object.keys(totalByStatus).length ? totalByStatus : {},
       };
     } catch (error) {
       console.error('Error getting orders for admin:', error);
@@ -416,13 +432,25 @@ export class OrderService {
 
   async getOrdersByStore(store_id: number, page = 1, size = 10): Promise<OrdersWithTotal> {
     // Lấy tất cả orders, lọc theo store_id trong current_order.items
-    const { orders, total } = await this.orderRepository.findAll({ page, size });
+    const result = await this.orderRepository.findAll({ page, size });
+    const orders = Array.isArray(result.orders) ? result.orders : [];
     // Lọc các order có ít nhất một item thuộc store_id
     const filteredOrders = orders.filter(order => {
       const currentOrder: any = order.current_order || {};
       const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
       return items.some((item: any) => item.store_id === store_id);
     });
-    return { orders: filteredOrders, total: filteredOrders.length };
+    // Tính tổng tiền theo trạng thái cho filteredOrders
+    const totalByStatus: Record<string, number> = {};
+    for (const order of filteredOrders) {
+      const status = order.status || 'unknown';
+      if (!totalByStatus[status]) totalByStatus[status] = 0;
+      totalByStatus[status] += Number(order.total_amount) || 0;
+    }
+    return {
+      orders: filteredOrders,
+      total: filteredOrders.length,
+      totalByStatus: Object.keys(totalByStatus).length ? totalByStatus : {},
+    };
   }
 }

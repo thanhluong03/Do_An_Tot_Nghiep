@@ -14,6 +14,8 @@ export enum OrderStatus {
     DELIVERED = 'DELIVERED',
     CANCELLED = 'CANCELLED',
     REJECTED = 'REJECTED',
+    RETURN_REQUESTED = 'RETURN_REQUESTED',
+    EXCHANGED = 'EXCHANGED',
 }
 
 export enum PaymentStatus {

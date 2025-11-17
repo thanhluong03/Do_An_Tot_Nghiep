@@ -69,7 +69,7 @@ export class OrderController {
         @Query('end_date') end_date?: string
     ) {
         try {
-            const { orders, total } = await this.orderService.getOrders({
+            const { orders, total, totalByStatus } = await this.orderService.getOrders({
                 page: Number(page),
                 size: Number(size),
                 key,
@@ -82,6 +82,7 @@ export class OrderController {
             return new SuccessResponseDto('Orders fetched successfully', {
                 data: Array.isArray(orders) ? orders : [],
                 total: total,
+                totalByStatus,
             });
         } catch (error: any) {
             return new ErrorResponseDto(
@@ -159,10 +160,11 @@ export class OrderController {
     @Get('store/:store_id')
     async getOrdersByStore(@Param('store_id') store_id: number, @Query('page') page = 1, @Query('size') size = 10) {
         try {
-            const { orders, total } = await this.orderService.getOrdersByStore(Number(store_id), Number(page), Number(size));
+            const { orders, total, totalByStatus } = await this.orderService.getOrdersByStore(Number(store_id), Number(page), Number(size));
             return new SuccessResponseDto('Orders fetched successfully', {
                 data: Array.isArray(orders) ? orders : [],
                 total: total,
+                totalByStatus,
             });
         } catch (error: any) {
             return new ErrorResponseDto(
