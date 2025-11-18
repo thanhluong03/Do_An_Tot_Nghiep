@@ -28,6 +28,8 @@ const translateStatus = (status: string | undefined): string => {
     case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
+    case 'RETURN_REQUESTED':
+      return 'Đang yêu cầu hoàn trả';
     case 'COMPLETED':
       return 'Đã giao thành công';
     case 'CANCELLED':
@@ -107,6 +109,28 @@ export default function MyOrdersPage() {
       } catch (error) {
         console.error('Lỗi hủy đơn hàng:', error);
         toast.error('Không thể hủy đơn hàng. Vui lòng thử lại.');
+      }
+    }
+  };
+  const handleReturnOrder = async (orderId: any) => {
+    // TODO: Implement return logic
+    if (window.confirm('Bạn có chắc chắn muốn hoàn đơn hàng này không?')) {
+      try {
+        await orderApi.updateOrder(Number(orderId), {
+          status: 'RETURN_REQUESTED',
+          actorType: 'CUSTOMER',
+        });
+        setOrders(prevOrders =>
+          prevOrders.map(order =>
+            (order.id ?? order._id) == orderId
+              ? { ...order, status: 'RETURN_REQUESTED' }
+              : order
+          )
+        );
+        toast.success('Đã hoàn đơn hàng thành công.');
+      } catch (error) {
+        console.error('Lỗi hoàn đơn hàng:', error);
+        toast.error('Không thể hoàn đơn hàng. Vui lòng thử lại.');
       }
     }
   };
@@ -544,6 +568,14 @@ export default function MyOrdersPage() {
                           className="px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md"
                         >
                           Hủy đơn hàng
+                        </button>
+                      )}
+                      {order.status?.toUpperCase() === 'DELIVERED' && (
+                        <button
+                          onClick={() => handleReturnOrder(id)}
+                          className="px-6 py-2 text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md"
+                        >
+                          Đổi trả đơn hàng
                         </button>
                       )}
                       <Link
