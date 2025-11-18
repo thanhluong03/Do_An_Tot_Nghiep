@@ -161,6 +161,8 @@ export default function AdminSidebar() {
             <div className="p-4 flex flex-col items-center justify-center border-b border-gray-100 mb-4">
                 <Link href="/adminstore/dashboard" passHref>
                     <Image
+                        width={800}
+                        height={250}
                         src="/logoADmin.jpg"
                         alt="Tiệm Gốm Nhà Gạo Admin Logo"
                         className="w-40 h-auto object-contain cursor-pointer hover:scale-[1.02]"
