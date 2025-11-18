@@ -12,19 +12,19 @@ const lifestyleItems = [
     {
         title: 'Bữa Ăn Gia Đình',
         description: 'Tạo không gian ấm cúng cho những bữa cơm sum vầy',
-        image: './life/life1.png', 
+        image: '/life/life1.png', 
         alt: 'Bữa ăn gia đình'
     },
     {
         title: 'Trà đạo Thiền', // Đã sửa Title: "Trà đạo Thiền"
         description: 'Thưởng trà trong không gian tĩnh lặng, thanh tịnh',
-        image: './life/life2.png', 
+        image: '/life/life2.png', 
         alt: 'Trà đạo'
     },
     {
         title: 'Trang Trí Nhà', // Đã sửa Title: "Trang Trí Nhà"
         description: 'Điểm tô không gian sống với nghệ thuật gốm sứ',
-        image: './life/life3.png', 
+        image: '/life/life3.png', 
         alt: 'Trang trí nhà'
     }
 ];
@@ -72,7 +72,8 @@ export const LifestyleSection: React.FC = () => {
                                 <Image 
                                     src={item.image} 
                                     alt={item.alt} 
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    fill
+                                    className=" object-cover transition-transform duration-500 group-hover:scale-105"
                                 />
 
                                 {/* Lớp Overlay gradient mờ ở phía dưới để chữ dễ đọc */}
@@ -94,14 +95,13 @@ export const LifestyleSection: React.FC = () => {
 
                 {/* CTA Button */}
                 <div className="text-center">
+                    <Link href="/products">
+                    </Link>
                     <Button
                         size="lg"
                         className="px-8 py-3 text-lg font-semibold bg-white text-[#65604E] hover:bg-[#F5F1EB] shadow-lg transition-all duration-300 flex items-center justify-center mx-auto space-x-2 rounded-lg" // Thêm rounded-lg cho nút
-                    >
-                        <Link href='/products'>Khám Phá Bộ Sưu Tập Lifestyle
-                        {/* Icon mũi tên phải */}
-                        <span className="ml-2 text-xl">→</span> 
-                        </Link>
+                    >Khám Phá Bộ Sưu Tập Lifestyle
+                    <span className="ml-2 text-xl">→</span> 
                     </Button>
                 </div>
                 

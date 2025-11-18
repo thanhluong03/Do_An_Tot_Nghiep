@@ -86,7 +86,8 @@ export const FeaturedProductSection: React.FC = () => {
                 <Image
                   src={product.images?.[0] || '/placeholder.png'}
                   alt={product.name}
-                  className="w-full h-full object-cover object-center aspect-[4/3]"
+                  fill
+                  className=" object-cover object-center aspect-[4/3]"
                 />
 
                 <div className="absolute top-4 right-4 bg-[#8B7D6B] text-white px-3 py-1 rounded-md text-sm font-medium z-10">
