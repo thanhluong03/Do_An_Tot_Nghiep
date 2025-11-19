@@ -25,10 +25,12 @@ import {
     faClipboardList,
     faUserCheck,
     faMessage,
-    faRobot, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
+    faRobot,
+    faClipboardCheck, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import Image from "next/image";
+import { ClipboardCheck } from "lucide-react";
 
 interface MenuItem {
     name: string;
@@ -48,7 +50,7 @@ const salesOperationsItems: MenuItem[] = [
         name: "Kho hàng",
         icon: faWarehouse,
         children: [
-            { name: "Duyệt yêu cầu nhập kho cửa hàng", icon: faClipboardList, href: "/admin/adminImportrequests" },
+            { name: "Duyệt yêu cầu nhập kho cửa hàng", icon: faClipboardCheck, href: "/admin/adminImportrequests" },
             { name: "Nhập kho sản phẩm", icon: faTruckArrowRight, href: "/admin/importproduct" },
             { name: "Tồn kho cửa hàng", icon: faClipboardList, href: "/admin/inventory" },
         ],

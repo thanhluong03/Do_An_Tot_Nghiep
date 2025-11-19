@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { LockKeyhole, LogOut, User } from "lucide-react";
+import { getUserDetail } from "@/api/services/userService";
+import { getStoreById } from "@/api/services/storeService";
 
 interface HeaderInfo {
   title: string;
@@ -57,6 +59,8 @@ export default function AdminHeader() {
   const [adminRole, setAdminRole] = useState("Guest");
   const [showDropdown, setShowDropdown] = useState(false);
   const [adminAvatar, setAdminAvatar] = useState("/noAva.png")
+  const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeName, setStoreName] = useState<string>("Đang tải...");
 
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -83,6 +87,34 @@ export default function AdminHeader() {
       setAdminAvatar(storedAvatar);
     }
   }, []);
+  useEffect(() => {
+    const fetchStore = async () => {
+      try {
+        const adminId = Number(localStorage.getItem("adminID"));
+        if (!adminId) return;
+
+        const user = await getUserDetail(adminId);
+        const sid = user.store_id ?? null;
+        setStoreId(sid);
+
+        if (sid) {
+          try {
+            const store = await getStoreById(sid);
+            setStoreName(store.store_name);
+          } catch {
+            setStoreName(`Cửa hàng ID ${sid}`);
+          }
+        } else {
+          setStoreName("Không thuộc cửa hàng");
+        }
+      } catch {
+        setStoreName("Không tải được cửa hàng");
+      }
+    };
+
+    fetchStore();
+  }, []);
+
 
 
   const handleLogout = async () => {
@@ -102,7 +134,7 @@ export default function AdminHeader() {
     localStorage.removeItem("adminRole");
     localStorage.removeItem("adminName");
     localStorage.removeItem("adminAvatar");
-      localStorage.removeItem("storeId");
+    localStorage.removeItem("storeId");
     router.push("/admin/login");
 
 
@@ -156,10 +188,10 @@ export default function AdminHeader() {
           <div className="flex flex-col text-left leading-tight">
             <p className="text-sm font-semibold text-gray-800">{adminName}</p>
             <p className="text-xs text-gray-500">{adminRole}</p>
+            <p className="text-[12px] text-gray-500">
+              Nhân viên: {storeName}
+            </p>
           </div>
-          
-
-
           <svg
             className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showDropdown ? "rotate-180" : ""
               }`}
