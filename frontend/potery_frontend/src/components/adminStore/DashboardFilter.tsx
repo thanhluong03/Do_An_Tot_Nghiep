@@ -1,27 +1,23 @@
+// src/components/dashboard/DashboardFilter.tsx
+
 "use client";
-import { Store } from "@/api/services/orderService";
 import React, { useState, useEffect, useCallback } from "react";
 
-interface UIStore {
-  id: number | string;
-  name: string;
-}
-
+// ✅ CHỈNH SỬA: Loại bỏ storeId khỏi props và callback
 interface DashboardFilterProps {
-  stores?: UIStore[]; // Danh sách cửa hàng
-  onFilterChange: (filters: { storeId: string; startDate: string; endDate: string }) => void;
+  onFilterChange: (filters: { startDate: string; endDate: string }) => void;
 }
 
-const DashboardFilter: React.FC<DashboardFilterProps> = ({ stores = [], onFilterChange }) => {
+const DashboardFilter: React.FC<DashboardFilterProps> = ({ onFilterChange }) => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [storeId, setStoreId] = useState<string>("");
+  // const [storeId, setStoreId] = useState<string>(""); // LOẠI BỎ
 
   const handleFilterChange = useCallback(() => {
-    onFilterChange({ storeId, startDate, endDate });
-  }, [storeId, startDate, endDate, onFilterChange]);
+    // ✅ CHỈNH SỬA: Chỉ truyền startDate và endDate
+    onFilterChange({ startDate, endDate }); 
+  }, [startDate, endDate, onFilterChange]);
 
-  // Trigger filter khi thay đổi
   useEffect(() => {
     const timer = setTimeout(() => {
       handleFilterChange();
@@ -30,28 +26,8 @@ const DashboardFilter: React.FC<DashboardFilterProps> = ({ stores = [], onFilter
   }, [handleFilterChange]);
 
   return (
+    // ✅ LOẠI BỎ UI CHO VIỆC CHỌN CỬA HÀNG (SELECT DROPDOWN)
     <div className="w-full flex items-center bg-white p-4 gap-6 flex-wrap">
-
-      {/* Lọc theo cửa hàng */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm font-medium text-gray-500">Cửa hàng:</label>
-        <select
-          title="storeSelect"
-          value={storeId}
-          onChange={(e) => setStoreId(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 focus:outline-none focus:border-orange-500 transition"
-        >
-          <option value="">Tất cả</option>
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name} {/* dùng name đã map */}
-            </option>
-          ))}
-
-        </select>
-
-      </div>
-
       {/* Lọc theo khoảng thời gian */}
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-gray-500">Từ ngày:</label>

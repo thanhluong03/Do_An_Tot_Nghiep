@@ -13,7 +13,10 @@ interface RevenueData {
   month: string;
   revenue: number;
 }
-
+interface MappedStore {
+  id?: number; // Tùy thuộc vào kiểu dữ liệu chính xác của s.id
+  name: string;
+}
 // Minimal interfaces
 interface Order {
   status?: string;
@@ -33,6 +36,12 @@ interface Order {
 interface Customer { is_active?: boolean; active?: boolean; age?: number }
 interface Product { id?: number; stock?: number; quantity?: number; name?: string }
 
+import { getStores, Store } from "@/api/services/storeService";
+
+
+
+
+
 const DashboardPage = () => {
   // State cho tất cả dữ liệu dashboard
   const [loading, setLoading] = useState(true);
@@ -45,7 +54,7 @@ const DashboardPage = () => {
   const router = useRouter();
   const ORDERS_ROUTE = "/admin/orders";
   const INVENTORY_ROUTE = "/admin/inventory";
-
+  const [stores, setStores] = useState<MappedStore[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
     startDate: "",
@@ -53,7 +62,21 @@ const DashboardPage = () => {
   });
   const [isFiltering, setIsFiltering] = useState(false);
 
-  const handleFilterChange = useCallback(async (filters: { storeId: string; startDate: string; endDate: string }) => {
+  const fetchStores = async () => {
+    try {
+      const storeList = await getStores(); // từ storeService
+      const mappedStores = storeList.map(s => ({
+        id: s.id,
+        name: s.store_name // map store_name -> name
+      }));
+      setStores(mappedStores);
+    } catch (err) {
+      console.error("Lỗi khi lấy danh sách cửa hàng:", err);
+    }
+  };
+
+
+  const handleFilterChange = useCallback(async (filters: { storeId: number | string; startDate: string; endDate: string }) => {
     setSelectedStore(filters.storeId);
     setDateFilter({ startDate: filters.startDate, endDate: filters.endDate });
     console.log("Bộ lọc:", filters);
@@ -85,37 +108,42 @@ const DashboardPage = () => {
       setIsFiltering(false);
     }
   }, []);
+const loadData = async (filters?: { storeId: string; startDate: string; endDate: string }) => {
+  try {
+    const currentFilter = filters || { storeId: selectedStore, ...dateFilter };
 
-  const loadData = async (filters?: { storeId: string; startDate: string; endDate: string }) => {
-    try {
-      const currentFilter = filters || { storeId: selectedStore, ...dateFilter };
-      const [revenue, orderList, customerList, productList, inventoryList] = await Promise.all([
-        getRevenueData(),
-        (await import("@/api/services/orderService")).listOrderAll({
-          start_date: currentFilter.startDate,
-          end_date: currentFilter.endDate,
-          store_id: currentFilter.storeId ? Number(currentFilter.storeId) : undefined
-        }),
-        (await import("@/api/services/customerService")).getCustomers({
-          start_date: currentFilter.startDate,
-          end_date: currentFilter.endDate
-        }),
-        (await import("@/api/services/productApi")).getProducts({
-          start_date: currentFilter.startDate,
-          end_date: currentFilter.endDate
-        }),
-        listInventories({}),
-      ]);
+    const [revenue, orderList, customerList, productList, inventoryList] = await Promise.all([
+      getRevenueData({
+        start_date: currentFilter.startDate,
+        end_date: currentFilter.endDate,
+        store_id: currentFilter.storeId ? Number(currentFilter.storeId) : undefined
+      }),
+      (await import("@/api/services/orderService")).listOrderAll({
+        start_date: currentFilter.startDate,
+        end_date: currentFilter.endDate,
+        store_id: currentFilter.storeId ? Number(currentFilter.storeId) : undefined
+      }),
+      (await import("@/api/services/customerService")).getCustomers({
+        start_date: currentFilter.startDate,
+        end_date: currentFilter.endDate,
+      }),
+      (await import("@/api/services/productApi")).getProducts({
+        start_date: currentFilter.startDate,
+        end_date: currentFilter.endDate,
+      }),
+      listInventories({}),
+    ]);
 
-      setRevenueData(revenue);
-      setOrders(orderList.data);
-      setCustomers(customerList);
-      setProducts(productList);
-      setInventories(inventoryList.data || []);
-    } catch (err) {
-      console.error("Lỗi khi tải dữ liệu dashboard:", err);
-    }
-  };
+    setRevenueData(revenue);
+    setOrders(orderList.data);
+    setCustomers(customerList);
+    setProducts(productList);
+    setInventories(inventoryList.data || []);
+  } catch (err) {
+    console.error("Lỗi khi tải dữ liệu dashboard:", err);
+  }
+};
+
 
   // Fetch dữ liệu
   useEffect(() => {
@@ -133,6 +161,9 @@ const DashboardPage = () => {
 
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchStores();
+  }, []);
 
   if (loading) {
     return <div className="text-center text-gray-500 mt-10">Đang tải dữ liệu dashboard...</div>;
@@ -235,7 +266,7 @@ const DashboardPage = () => {
 
       {/* Bộ lọc */}
       <div className="bg-white rounded-2xl flex flex-wrap justify-center gap-2 p-2 mb-4">
-        <DashboardFilter onFilterChange={handleFilterChange} />
+        <DashboardFilter stores={stores} onFilterChange={handleFilterChange} />
         {isFiltering && (
           <div className="ml-2 text-sm text-blue-600">
             Đang lọc dữ liệu...

@@ -158,20 +158,50 @@ export async function deleteOrder(id: number): Promise<void> {
 }
 
 
-export async function getRevenueData(): Promise<{ month: string; revenue: number }[]> {
-  const response = await listOrders({});
+// export async function getRevenueData(): Promise<{ month: string; revenue: number }[]> {
+//   const response = await listOrders({});
+//   const map = new Map<string, number>();
+
+//   response.data.forEach(order => {
+//     if (order.status === 'DELIVERED' && order.total_amount) {
+//       const month = new Date(order.order_date).toLocaleString('en-US', { month: 'short' });
+//       const prev = map.get(month) || 0;
+//       map.set(month, prev + Number(order.total_amount));
+//     }
+//   });
+
+//   return Array.from(map.entries()).map(([month, revenue]) => ({ month, revenue }));
+// }
+
+export async function getRevenueData(params: {
+  start_date?: string;
+  end_date?: string;
+  store_id?: number;
+}): Promise<{ month: string; revenue: number }[]> {
+  const response = await listOrders({
+    start_date: params.start_date,
+    end_date: params.end_date,
+    store_id: params.store_id,
+  });
+
   const map = new Map<string, number>();
 
   response.data.forEach(order => {
     if (order.status === 'DELIVERED' && order.total_amount) {
-      const month = new Date(order.order_date).toLocaleString('en-US', { month: 'short' });
+      const month = new Date(order.order_date)
+        .toLocaleString('en-US', { month: 'short' });
+
       const prev = map.get(month) || 0;
       map.set(month, prev + Number(order.total_amount));
     }
   });
 
-  return Array.from(map.entries()).map(([month, revenue]) => ({ month, revenue }));
+  return Array.from(map.entries()).map(([month, revenue]) => ({
+    month,
+    revenue,
+  }));
 }
+
 export const sendOrderConfirmedMail = async (data: { orderId: number, to: string }) => {
   return axios.post(`${API_URLMail}/order-confirmed`, data);
 };

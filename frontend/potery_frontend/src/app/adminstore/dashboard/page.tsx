@@ -1,20 +1,25 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { getRevenueData } from "@/api/services/orderService";
-import DashboardFilter from "@/components/dashboard/DashboardFilter";
+import DashboardFilter from "@/components/adminStore/DashboardFilter";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import OrderStatusChart from "@/components/dashboard/OrderStatusChart";
 import BestSellerChart from "@/components/dashboard/BestSellerChart";
 import { listInventories, Inventory } from "@/api/services/inventoryService";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast"; // Cần thiết cho thông báo lỗi
+import { getUserDetail } from "@/api/services/userService"; // ✅ IMPORT BẮT BUỘC
+import { getStoreById } from "@/api/services/storeService"; // ✅ IMPORT BẮT BUỘC
+
 
 interface RevenueData {
   month: string;
   revenue: number;
 }
-
-// Minimal interfaces
+// Loại bỏ MappedStore vì chúng ta không cần danh sách stores nữa
+// interface MappedStore { id?: number; name: string; } 
+// Minimal interfaces (Giữ nguyên)
 interface Order {
   status?: string;
   current_order?: {
@@ -33,8 +38,12 @@ interface Order {
 interface Customer { is_active?: boolean; active?: boolean; age?: number }
 interface Product { id?: number; stock?: number; quantity?: number; name?: string }
 
+// Loại bỏ import { getStores, Store } từ đây
+// vì chúng ta chỉ cần getStoreById và không cần state stores[]
+
+
 const DashboardPage = () => {
-  // State cho tất cả dữ liệu dashboard
+  // State
   const [loading, setLoading] = useState(true);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -42,30 +51,78 @@ const DashboardPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [inventories, setInventories] = useState<Inventory[]>([]);
 
+  // ✅ NEW: Store ID đã lọc (cố định theo Admin)
+  const [filteredStoreId, setFilteredStoreId] = useState<number | undefined>(undefined); 
+  const [storeName, setStoreName] = useState<string>("Tất cả cửa hàng"); // Tên cửa hàng để hiển thị
+  
   const router = useRouter();
   const ORDERS_ROUTE = "/admin/orders";
   const INVENTORY_ROUTE = "/admin/inventory";
-
-  const [selectedStore, setSelectedStore] = useState<string>("");
+  
+  // ✅ LOẠI BỎ state stores và selectedStore (đã cố định)
+  // const [stores, setStores] = useState<MappedStore[]>([]); 
+  // const [selectedStore, setSelectedStore] = useState<string>(""); 
+  
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
     startDate: "",
     endDate: ""
   });
   const [isFiltering, setIsFiltering] = useState(false);
 
-  const handleFilterChange = useCallback(async (filters: { storeId: string; startDate: string; endDate: string }) => {
-    setSelectedStore(filters.storeId);
-    setDateFilter({ startDate: filters.startDate, endDate: filters.endDate });
-    console.log("Bộ lọc:", filters);
+  // ✅ HÀM LẤY STORE ID TỪ ADMIN LOGIN (giống logic CreateImportRequestPage)
+  const getAdminStoreContext = async () => {
+    try {
+      const adminId = Number(localStorage.getItem("adminID"));
+      if (!adminId) {
+        console.warn("Không tìm thấy adminID. Lọc toàn bộ.");
+        return { storeId: undefined, name: "Tất cả cửa hàng" };
+      }
+      
+      const user = await getUserDetail(adminId);
+      const currentStoreId = user.store_id ?? undefined; 
 
-    // Load order, customer và product với filter
+      let name: string;
+      if (currentStoreId) {
+        try {
+          // Lấy thông tin store → storeName
+          const store = await getStoreById(currentStoreId); 
+          name = store.store_name;
+        } catch (err) {
+          console.error(err);
+          name = `Cửa hàng ID ${currentStoreId} (Không tải được tên)`;
+          toast.error(`Không tải được tên cửa hàng ID ${currentStoreId}`);
+        }
+      } else {
+        name = "Tất cả cửa hàng (Admin chưa gán store)";
+        toast.error("Admin chưa được gán cửa hàng, đang lọc toàn bộ dữ liệu.");
+      }
+      
+      setFilteredStoreId(currentStoreId);
+      setStoreName(name);
+      return { storeId: currentStoreId, name };
+    } catch (err) {
+      console.error("Lỗi khi lấy Store Context:", err);
+      toast.error("Lỗi khi xác định cửa hàng Admin.");
+      return { storeId: undefined, name: "Tất cả cửa hàng" };
+    }
+  };
+
+
+  // ✅ CHỈNH SỬA: handleFilterChange giờ chỉ nhận ngày tháng, storeId là cố định
+  const handleFilterChange = useCallback(async (filters: { startDate: string; endDate: string }) => {
+    setDateFilter(filters);
+    
+    const storeIdToFilter = filteredStoreId;
+    console.log("Bộ lọc:", { ...filters, storeId: storeIdToFilter });
+
     setIsFiltering(true);
     try {
       const [orderList, customerList, productList] = await Promise.all([
         (await import("@/api/services/orderService")).listOrderAll({
           start_date: filters.startDate,
           end_date: filters.endDate,
-          store_id: filters.storeId ? Number(filters.storeId) : undefined
+          // ✅ SỬ DỤNG store ID đã được khởi tạo
+          store_id: storeIdToFilter 
         }),
         (await import("@/api/services/customerService")).getCustomers({
           start_date: filters.startDate,
@@ -84,25 +141,35 @@ const DashboardPage = () => {
     } finally {
       setIsFiltering(false);
     }
-  }, []);
+  }, [filteredStoreId]); // Thêm filteredStoreId vào dependency
 
-  const loadData = async (filters?: { storeId: string; startDate: string; endDate: string }) => {
+  // ✅ CHỈNH SỬA: loadData chỉ cần nhận ngày tháng và storeId từ state
+  const loadData = async (initialStoreId?: number) => {
+    const storeIdToUse = initialStoreId !== undefined ? initialStoreId : filteredStoreId;
+
     try {
-      const currentFilter = filters || { storeId: selectedStore, ...dateFilter };
+      const currentFilter = dateFilter; // Dùng state dateFilter
+      
       const [revenue, orderList, customerList, productList, inventoryList] = await Promise.all([
-        getRevenueData(),
+        // Truyền store_id và date vào getRevenueData
+        getRevenueData({
+          start_date: currentFilter.startDate,
+          end_date: currentFilter.endDate,
+          store_id: storeIdToUse
+        }),
         (await import("@/api/services/orderService")).listOrderAll({
           start_date: currentFilter.startDate,
           end_date: currentFilter.endDate,
-          store_id: currentFilter.storeId ? Number(currentFilter.storeId) : undefined
+          // ✅ SỬ DỤNG storeIdToUse
+          store_id: storeIdToUse 
         }),
         (await import("@/api/services/customerService")).getCustomers({
           start_date: currentFilter.startDate,
-          end_date: currentFilter.endDate
+          end_date: currentFilter.endDate,
         }),
         (await import("@/api/services/productApi")).getProducts({
           start_date: currentFilter.startDate,
-          end_date: currentFilter.endDate
+          end_date: currentFilter.endDate,
         }),
         listInventories({}),
       ]);
@@ -117,22 +184,26 @@ const DashboardPage = () => {
     }
   };
 
+
   // Fetch dữ liệu
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        await loadData();
-        // const allReviews = await (await import("@/api/modules/reviews")).reviewsApi.list("");
-        // setReviews(allReviews);
+        // ✅ Khởi tạo Store ID & Name
+        const { storeId: initialStoreId } = await getAdminStoreContext(); 
+        
+        await loadData(initialStoreId);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu dashboard:", err);
       } finally {
         setLoading(false);
       }
-
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // LOẠI BỎ useEffect gọi fetchStores()
+
 
   if (loading) {
     return <div className="text-center text-gray-500 mt-10">Đang tải dữ liệu dashboard...</div>;
@@ -147,12 +218,10 @@ const DashboardPage = () => {
   const totalProducts = products.length;
   const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
 
-  // 🏆 Tính sản phẩm bán chạy từ orders trong khoảng ngày
+  // 🏆 Tính sản phẩm bán chạy (Giữ nguyên)
   const bestSeller = (() => {
     const productSales: Record<string, { name: string; totalSold: number }> = {};
-
     orders.forEach(order => {
-      // Kiểm tra current_order.items hoặc items trực tiếp
       const items = order.current_order?.items || order.items || [];
       items.forEach((item) => {
         const productName = item.product_name || `Sản phẩm ${item.product_id}`;
@@ -167,14 +236,13 @@ const DashboardPage = () => {
       product.totalSold > max.totalSold ? product : max,
       { name: "Không có dữ liệu", totalSold: 0 }
     );
-
     return topProduct.totalSold > 0 ? topProduct : null;
   })();
 
-  // 📈 Biểu đồ doanh thu
+  // 📈 Biểu đồ doanh thu (Giữ nguyên)
   const revenueChartData = revenueData.map(d => ({ name: d.month, revenue: d.revenue }));
 
-  // 📦 Trạng thái đơn hàng
+  // 📦 Trạng thái đơn hàng (Giữ nguyên)
   const statusMap = orders.reduce((acc, o) => {
     const st = o.status || "UNKNOWN";
     acc[st] = (acc[st] || 0) + 1;
@@ -185,10 +253,9 @@ const DashboardPage = () => {
     count: Number(count),
   }));
 
-  // 🏆 Sản phẩm bán chạy từ orders trong khoảng ngày đã chọn
+  // 🏆 Sản phẩm bán chạy (Giữ nguyên)
   const bestSellerData = (() => {
     const productSales: Record<string, { name: string; value: number }> = {};
-
     orders.forEach(order => {
       const items = order.current_order?.items || order.items || [];
       items.forEach((item) => {
@@ -199,7 +266,6 @@ const DashboardPage = () => {
         productSales[productName].value += item.quantity || 0;
       });
     });
-
     return Object.values(productSales)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
@@ -234,13 +300,18 @@ const DashboardPage = () => {
       </div>
 
       {/* Bộ lọc */}
-      <div className="bg-white rounded-2xl flex flex-wrap justify-center gap-2 p-2 mb-4">
+      <div className="bg-white rounded-2xl flex flex-wrap justify-center items-center gap-2 p-2 mb-4">
+        {/* ✅ CHỈNH SỬA: DashboardFilter không cần stores props */}
         <DashboardFilter onFilterChange={handleFilterChange} />
         {isFiltering && (
           <div className="ml-2 text-sm text-blue-600">
             Đang lọc dữ liệu...
           </div>
         )}
+        {/* ✅ HIỂN THỊ CỬA HÀNG ĐANG LỌC */}
+        <div className="ml-2 text-sm font-semibold text-[#f97316]">
+            Dữ liệu đang lọc cho: {storeName}
+        </div>
       </div>
 
       {/* Tổng hợp thống kê */}
