@@ -144,6 +144,8 @@ export async function listOrderAll(params: ListOrderParams): Promise<ListOrdersR
 
   return { data: orders, total: total };
 }
+
+
 export async function getOrderDetail(id: number): Promise<Order> {
   const res = await axios.get(`${API_URL}/orderdetail/${id}`);
   return res.data.data;
@@ -156,22 +158,6 @@ export async function updateOrder(id: number, data: UpdateOrderPayload): Promise
 export async function deleteOrder(id: number): Promise<void> {
   await axios.delete(`${API_URL}/deleteorder/${id}`);
 }
-
-
-// export async function getRevenueData(): Promise<{ month: string; revenue: number }[]> {
-//   const response = await listOrders({});
-//   const map = new Map<string, number>();
-
-//   response.data.forEach(order => {
-//     if (order.status === 'DELIVERED' && order.total_amount) {
-//       const month = new Date(order.order_date).toLocaleString('en-US', { month: 'short' });
-//       const prev = map.get(month) || 0;
-//       map.set(month, prev + Number(order.total_amount));
-//     }
-//   });
-
-//   return Array.from(map.entries()).map(([month, revenue]) => ({ month, revenue }));
-// }
 
 export async function getRevenueData(params: {
   start_date?: string;
@@ -201,6 +187,20 @@ export async function getRevenueData(params: {
     revenue,
   }));
 }
+export const listOrdersByStore = async (
+  storeId: number,
+  page: number = 1,
+  size: number = 1000
+): Promise<Order[]> => {
+  const res = await axios.get(`${API_URL}/store/${storeId}`, {
+    params: { page, size }
+  });
+
+  // API: res.data.data = { data: [...], total: n }
+  return res.data?.data?.data || [];
+};
+
+
 
 export const sendOrderConfirmedMail = async (data: { orderId: number, to: string }) => {
   return axios.post(`${API_URLMail}/order-confirmed`, data);
