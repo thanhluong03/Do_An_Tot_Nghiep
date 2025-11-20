@@ -289,9 +289,6 @@ const inStockProducts = storeInventories.filter(inv => (inv.quantity_stock || 0)
       <div className="bg-white rounded-2xl flex flex-wrap justify-center items-center gap-2 p-2 mb-4">
         <DashboardFilter onFilterChange={handleFilterChange} />
         {isFiltering && <div className="text-blue-600 text-sm">Đang lọc...</div>}
-        <div className="text-[#f97316] ml-3 text-sm font-semibold">
-          Cửa hàng: {storeName}
-        </div>
       </div>
 
       {/* Summary */}
