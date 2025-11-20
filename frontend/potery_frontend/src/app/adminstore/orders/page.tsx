@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import {
   getOrderDetail,
   listOrders,
@@ -7,7 +7,6 @@ import {
   deleteOrder,
   Order,
   OrderItem,
-  listDropdownStores,
   OrderStatus,
   PaymentStatus,
   sendOrderRejectedMail,
@@ -16,7 +15,8 @@ import {
 import { getCustomers, Customer } from "@/api/services/customerService";
 import { getAvailableDrivers, assignDriverToOrder } from "@/api/services/deliveryService";
 import OrderTable from "@/components/adminOrder/OrderTable";
-import { User } from "@/api/services/userService";
+// Import thêm getUserDetail
+import { User, getUserDetail } from "@/api/services/userService";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
 import OrderTrackingModal from "@/components/adminOrder/OrderTrackingModal";
@@ -24,11 +24,14 @@ import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
 import { Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { getStoreById } from "@/api/services/storeService";
+
 interface PageButtonProps {
   page: number;
   isActive: boolean;
   onClick: (page: number) => void;
 }
+
 const PageButton: React.FC<PageButtonProps> = ({ page, isActive, onClick }) => {
   return (
     <button
@@ -44,10 +47,6 @@ const PageButton: React.FC<PageButtonProps> = ({ page, isActive, onClick }) => {
     </button>
   );
 };
-interface SelectOption {
-  id: number;
-  name: string;
-}
 
 interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
   total_amount: number;
@@ -61,8 +60,11 @@ export default function AdminOrderPage() {
   const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);
-  const [stores, setStores] = useState<SelectOption[]>([]);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | "">("");
+
+  // Logic Store: Không còn danh sách store, chỉ giữ storeId của user hiện tại
+  const [selectedStoreId, setSelectedStoreId] = useState<number | undefined>(undefined);
+  const [selectedStoreName, setSelectedStoreName] = useState<string>("Tất cả cửa hàng");
+
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatus | "">("");
   const [pagination, setPagination] = useState({ page: 1, size: 10 });
@@ -76,13 +78,46 @@ export default function AdminOrderPage() {
   const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
+
+  // useEffect 1: Lấy thông tin Admin và gán Store ID
+  useEffect(() => {
+    const fetchAdminContext = async () => {
+      try {
+        const adminId = Number(localStorage.getItem("adminID"));
+        if (adminId) {
+          const user = await getUserDetail(adminId);
+          // Nếu user có store_id thì set, nếu không (super admin) thì để undefined (xem tất cả)
+          if (user.store_id) {
+            setSelectedStoreId(user.store_id);
+          }
+          const storeId = user.store_id ?? undefined;
+
+          let storeName = "Tất cả cửa hàng";
+
+          if (storeId) {
+            try {
+              const store = await getStoreById(storeId);
+              storeName = store.store_name;
+            } catch {
+              storeName = `Cửa hàng ID ${storeId}`;
+            }
+          }
+          setSelectedStoreName(storeName);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin admin:", error);
+      }
+    };
+
+    fetchAdminContext();
+  }, []);
+
+  // useEffect 2: Lấy dữ liệu ban đầu (Khách hàng, Tài xế)
   useEffect(() => {
     getCustomers({})
       .then(setCustomers)
       .catch(() => toast.error("Không thể tải danh sách khách hàng!"));
-    listDropdownStores()
-      .then(setStores)
-      .catch(() => toast.error("Không thể tải danh sách cửa hàng!"));
+
     getAvailableDrivers()
       .then(setDrivers)
       .catch(() => toast.error("Không thể tải danh sách tài xế!"));
@@ -90,13 +125,16 @@ export default function AdminOrderPage() {
 
   async function fetchAllOrders() {
     try {
-      // ⭐️ CẬP NHẬT: Thay đổi cách nhận dữ liệu từ listOrders
-      
-      const response = await listOrders({ size: 10000, page: 1 }); // Lấy số lượng lớn để đếm cho tabs
+      // Tự động nhét store_id vào params
+      const params: any = { size: 10000, page: 1 };
+      if (selectedStoreId) {
+        params.store_id = selectedStoreId;
+      }
+
+      const response = await listOrders(params);
       const data = response.data;
 
       const ordersWithNames = data.map((order) => ({
-        // ... (logic mapping)
         ...order,
         customer_name:
           customers.find((u) => u.id === order.customer_id)?.full_name ||
@@ -111,6 +149,7 @@ export default function AdminOrderPage() {
       toast.error("Không thể tải thống kê đơn hàng!");
     }
   }
+
   async function fetchOrders() {
     setLoading(true);
     setError(null);
@@ -119,19 +158,14 @@ export default function AdminOrderPage() {
         page: pagination.page,
         size: pagination.size,
         key: "",
-        store_id: selectedStoreId || undefined,
+        store_id: selectedStoreId || undefined, // Filter theo store tự động
         status: orderStatusFilter || undefined,
         payment_status: paymentStatusFilter || undefined,
       };
-      const params = { ...rawParams };
 
-      // ⭐️ CẬP NHẬT: Nhận đối tượng response có data và total
-      // Lỗi "read-only" xảy ra do Axios cố gắng sửa đổi `params`
-      // Hãy đảm bảo `listOrders` KHÔNG cố gắng sửa đổi đối tượng `params` này.
-      const response = await listOrders(params);
-      
+      const response = await listOrders(rawParams);
+
       const ordersWithNames = response.data.map((order) => ({
-        // ... (logic mapping)
         ...order,
         customer_name:
           customers.find((u) => u.id === order.customer_id)?.full_name ||
@@ -143,7 +177,7 @@ export default function AdminOrderPage() {
       }));
 
       setOrders(ordersWithNames);
-      setTotalOrders(response.total); // <-- LƯU TỔNG SỐ ĐƠN HÀNG
+      setTotalOrders(response.total);
     } catch {
       setError("Không thể tải danh sách đơn hàng!");
     } finally {
@@ -151,6 +185,7 @@ export default function AdminOrderPage() {
     }
   }
 
+  // Khi customers hoặc selectedStoreId thay đổi thì load lại đơn hàng
   useEffect(() => {
     if (customers.length > 0) {
       fetchAllOrders();
@@ -161,9 +196,16 @@ export default function AdminOrderPage() {
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
+
   const handleExportExcel = async () => {
     try {
-      const response = await fetch("http://localhost:3000/orders/export-excel", {
+      let urlStr = "http://localhost:3000/orders/export-excel";
+      // Gắn store_id vào URL export nếu có
+      if (selectedStoreId) {
+        urlStr += `?store_id=${selectedStoreId}`;
+      }
+
+      const response = await fetch(urlStr, {
         method: "GET",
         credentials: "include",
       });
@@ -173,18 +215,13 @@ export default function AdminOrderPage() {
         return;
       }
 
-      // Tạo blob từ dữ liệu nhận về
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-
-      // Tạo thẻ <a> ẩn để tải file
       const link = document.createElement("a");
       link.href = url;
       link.download = "DanhSachDonHang.xlsx";
       document.body.appendChild(link);
       link.click();
-
-      // Dọn dẹp
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
@@ -194,6 +231,7 @@ export default function AdminOrderPage() {
       toast.error("Lỗi khi tải file Excel!");
     }
   };
+
   const handleDeleteOrder = (id: number) => {
     setOrderToDeleteId(id);
     setIsDeleteModalOpen(true);
@@ -254,17 +292,16 @@ export default function AdminOrderPage() {
       setEditingOrder({ ...order, items: order.items || [], total_amount: parseFloat(order.total_amount as string) });
     }
   };
+
   const handleOrderUpdated = async (orderId: number, updateData: any) => {
     setLoading(true);
     try {
       await updateOrder(orderId, updateData);
       toast.success("Cập nhật đơn hàng thành công!");
 
-      // Chỉ cập nhật state local để tránh gọi API toàn bộ
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
 
-      // Gửi mail nếu cần
       const order = orders.find(o => o.id === orderId);
       const customerEmail = order?.customer_email;
       if (customerEmail && order?.is_login_customer === false) {
@@ -279,9 +316,6 @@ export default function AdminOrderPage() {
       setLoading(false);
     }
   };
-
-
-
 
   const handleAssignDriver = async (orderId: number, driverId: number) => {
     if (!driverId) {
@@ -301,6 +335,7 @@ export default function AdminOrderPage() {
       setLoading(false);
     }
   };
+
   const renderPageNumbers = () => {
     const totalPages = Math.ceil(totalOrders / pagination.size);
     const currentPage = pagination.page;
@@ -338,34 +373,19 @@ export default function AdminOrderPage() {
 
     return pages;
   };
+
   return (
     <div className="p-6 bg-white min-h-screen shadow-md border border-gray-200">
       <Toaster position="top-right" />
       <div className=" mx-auto bg-white rounded-2x overflow-hidden">
         <div className="py-6 border-b border-gray-200 text-center bg-white">
           <h1 className="text-3xl font-bold text-[#B95D26] tracking-tight">
-            Quản lý đơn hàng
+            Quản lý đơn hàng cho cửa hàng : {selectedStoreName}
           </h1>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <select
-              title="store-filter"
-              value={selectedStoreId === "" ? "" : String(selectedStoreId)}
-              onChange={(e) =>
-                setSelectedStoreId(e.target.value ? Number(e.target.value) : "")
-              }
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 w-full md:w-auto"
-            >
-              <option value="">Tất cả cửa hàng</option>
-              {stores.map((store) => (
-                <option key={store.id} value={String(store.id)}>
-                  {store.name}
-                </option>
-              ))}
-            </select>
-          </div>
 
+        {/* Thanh công cụ: Đã xóa Select Store, chỉ còn nút Export */}
+        <div className="flex flex-wrap items-center justify-end gap-3 p-4 border-b border-gray-200">
           <button
             onClick={handleExportExcel}
             className="flex items-center justify-center space-x-2 px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition w-full md:w-auto"
@@ -474,4 +494,3 @@ export default function AdminOrderPage() {
     </div>
   );
 }
-

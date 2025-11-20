@@ -51,7 +51,7 @@ const DashboardSummary: React.FC<DashboardSummaryProps> = ({
       icon: <ShoppingCart className="text-blue-500 w-6 h-6" />,
     },
     {
-      title: "Tổng tk khách hàng hoạt động",
+      title: "Số khách hàng đã mua",
       value: customersLabel,
       icon: <Users className="text-purple-500 w-6 h-6" />,
     },
