@@ -90,6 +90,7 @@ const DashboardPage = () => {
       }
 
       setFilteredStoreId(storeId);
+
       setStoreName(storeName);
 
       return { storeId, name: storeName };
@@ -203,7 +204,7 @@ orders.forEach(order => {
 
 const totalCustomersForStore = uniqueCustomerIds.size;
 
-  const totalProducts = products.length;
+const totalProducts = products.length;
   //const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
   
 const storeInventories = inventories.filter(inv => inv.store_id === filteredStoreId);
