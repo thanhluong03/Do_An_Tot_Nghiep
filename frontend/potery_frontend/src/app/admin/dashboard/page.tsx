@@ -21,10 +21,13 @@ interface MappedStore {
 interface Order {
   status?: string;
   current_order?: {
+    customer_id?: number;
     items?: Array<{
       product_name?: string;
       product_id?: number;
       quantity?: number;
+      store_id?: number;
+
     }>;
   };
   items?: Array<{
@@ -75,39 +78,52 @@ const DashboardPage = () => {
     }
   };
 
+  // FILE 1: DashboardPage (Admin Tổng)
 
-  const handleFilterChange = useCallback(async (filters: { storeId: number | string; startDate: string; endDate: string }) => {
-    setSelectedStore(filters.storeId);
-    setDateFilter({ startDate: filters.startDate, endDate: filters.endDate });
-    console.log("Bộ lọc:", filters);
+const handleFilterChange = useCallback(async (filters: { storeId: number | string; startDate: string; endDate: string }) => {
+  setSelectedStore(filters.storeId);
+  setDateFilter({ startDate: filters.startDate, endDate: filters.endDate });
+  console.log("Bộ lọc:", filters);
 
-    // Load order, customer và product với filter
-    setIsFiltering(true);
-    try {
-      const [orderList, customerList, productList] = await Promise.all([
-        (await import("@/api/services/orderService")).listOrderAll({
-          start_date: filters.startDate,
-          end_date: filters.endDate,
-          store_id: filters.storeId ? Number(filters.storeId) : undefined
-        }),
-        (await import("@/api/services/customerService")).getCustomers({
-          start_date: filters.startDate,
-          end_date: filters.endDate
-        }),
-        (await import("@/api/services/productApi")).getProducts({
-          start_date: filters.startDate,
-          end_date: filters.endDate
-        })
-      ]);
-      setOrders(orderList.data);
-      setCustomers(customerList);
-      setProducts(productList);
-    } catch (err) {
-      console.error("Lỗi khi lọc dữ liệu:", err);
-    } finally {
-      setIsFiltering(false);
-    }
-  }, []);
+  setIsFiltering(true);
+  try {
+    // 👇 SỬA Ở ĐÂY: Thêm getRevenueData vào Promise.all
+    const [orderList, customerList, productList, revenueList, inventoryList] = await Promise.all([
+      (await import("@/api/services/orderService")).listOrderAll({
+        start_date: filters.startDate,
+        end_date: filters.endDate,
+        store_id: filters.storeId ? Number(filters.storeId) : undefined
+      }),
+      (await import("@/api/services/customerService")).getCustomers({
+        start_date: filters.startDate,
+        end_date: filters.endDate
+      }),
+      (await import("@/api/services/productApi")).getProducts({
+        start_date: filters.startDate,
+        end_date: filters.endDate
+      }),
+      getRevenueData({
+        start_date: filters.startDate,
+        end_date: filters.endDate,
+        store_id: filters.storeId ? Number(filters.storeId) : undefined
+      }),
+      listInventories({ 
+        store_id: filters.storeId ? Number(filters.storeId) : undefined
+      }),
+    ]);
+
+    setOrders(orderList.data);
+    setCustomers(customerList);
+    setProducts(productList);
+    setRevenueData(revenueList); 
+    setInventories(inventoryList.data || []);
+
+  } catch (err) {
+    console.error("Lỗi khi lọc dữ liệu:", err);
+  } finally {
+    setIsFiltering(false);
+  }
+}, []);
 const loadData = async (filters?: { storeId: string; startDate: string; endDate: string }) => {
   try {
     const currentFilter = filters || { storeId: selectedStore, ...dateFilter };
@@ -131,6 +147,7 @@ const loadData = async (filters?: { storeId: string; startDate: string; endDate:
         start_date: currentFilter.startDate,
         end_date: currentFilter.endDate,
       }),
+      
       listInventories({}),
     ]);
 
@@ -144,15 +161,11 @@ const loadData = async (filters?: { storeId: string; startDate: string; endDate:
   }
 };
 
-
-  // Fetch dữ liệu
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         await loadData();
-        // const allReviews = await (await import("@/api/modules/reviews")).reviewsApi.list("");
-        // setReviews(allReviews);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu dashboard:", err);
       } finally {
@@ -160,7 +173,7 @@ const loadData = async (filters?: { storeId: string; startDate: string; endDate:
       }
 
     })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     fetchStores();
   }, []);
@@ -168,15 +181,46 @@ const loadData = async (filters?: { storeId: string; startDate: string; endDate:
   if (loading) {
     return <div className="text-center text-gray-500 mt-10">Đang tải dữ liệu dashboard...</div>;
   }
-
-  // 📊 Tổng hợp dữ liệu cho DashboardSummary
   const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
   const totalOrders = orders.length;
   const deliveredOrders = orders.filter(o => o.status === "DELIVERED").length;
-  const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(u => u.is_active || u.active).length;
-  const totalProducts = products.length;
-  const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
+  // const totalCustomers = customers.length;
+  // const activeCustomers = customers.filter(u => u.is_active || u.active).length;
+let totalCustomersForStore = 0;
+
+  if (selectedStore) {
+    // TRƯỜNG HỢP 1: Đang chọn một cửa hàng cụ thể
+    // Logic: Chỉ đếm những khách đã mua hàng có chứa sản phẩm thuộc store_id đó
+    const uniqueCustomerIds = new Set<number>();
+    orders.forEach(order => {
+      const items = order.current_order?.items || [];
+      const hasStoreItem = items.some(item => item.store_id === Number(selectedStore));
+      
+      if (hasStoreItem && order.current_order?.customer_id) {
+        uniqueCustomerIds.add(order.current_order.customer_id);
+      }
+    });
+    totalCustomersForStore = uniqueCustomerIds.size;
+  } else {
+    // TRƯỜNG HỢP 2: Chọn "Tất cả cửa hàng"
+    // Logic: Lấy tổng số khách hàng mà API getCustomers trả về (đã được lọc theo ngày)
+    totalCustomersForStore = customers.length;
+  }
+
+  // 📦 TÍNH TOÁN SỐ SẢN PHẨM TỒN KHO (Tiện thể sửa luôn cho logic đồng bộ)
+  const totalProducts = products.length; // Tổng mẫu mã
+  let inStockProducts = 0;
+  
+  if (selectedStore) {
+     // Nếu chọn cửa hàng: Đếm dựa trên danh sách kho của cửa hàng đó
+     inStockProducts = inventories.filter(p => (p.quantity_stock || 0) > 0).length;
+  } else {
+     // Nếu chọn tất cả: Đếm dựa trên danh sách sản phẩm tổng
+     inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
+  }
+
+  // const totalProducts = products.length;
+  // const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
 
   // 🏆 Tính sản phẩm bán chạy từ orders trong khoảng ngày
   const bestSeller = (() => {
@@ -279,7 +323,7 @@ const loadData = async (filters?: { storeId: string; startDate: string; endDate:
         <DashboardSummary
           revenue={totalRevenue}
           ordersLabel={`${deliveredOrders}/${totalOrders}`}
-          customersLabel={`${activeCustomers}/${totalCustomers}`}
+          customersLabel={`${totalCustomersForStore}`}
           productsLabel={`${inStockProducts}/${totalProducts}`}
           bestSeller={bestSeller?.name || "Không có dữ liệu"}
         />
