@@ -8,7 +8,7 @@ import {
     Put,
     Query,
 } from '@nestjs/common';
-import { VoucherService } from 'libs/voucher/src';
+import { VoucherService } from '@app/voucher';
 import {
     CreateVoucherDto,
     UpdateVoucherDto,
