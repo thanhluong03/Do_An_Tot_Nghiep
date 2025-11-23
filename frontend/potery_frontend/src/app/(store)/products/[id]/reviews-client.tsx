@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
 import Image from 'next/image';
 import { reviewsApi, ReviewItem } from '../../../../api/modules/reviews';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -17,7 +19,13 @@ export function ReviewsClient({
   onStatsChange?: (average: number, count: number) => void;
 }) {
   const { user, isAuthenticated } = useAuth();
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  type ReviewDisplayItem = ReviewItem & {
+    customer_name?: string;
+    customer_avatar?: string;
+    images?: string[];
+    customer_id?: string | number;
+  };
+  const [reviews, setReviews] = useState<ReviewDisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +34,17 @@ export function ReviewsClient({
   const [rating, setRating] = useState<number>(5);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Modal xem ảnh lớn dạng slider
+  const [modalImages, setModalImages] = useState<string[]>([]);
+  const [modalIndex, setModalIndex] = useState<number>(0);
+  const handleOpenImage = (images: string[], idx: number) => {
+    setModalImages(images);
+    setModalIndex(idx);
+  };
+  const handleCloseModal = () => {
+    setModalImages([]);
+    setModalIndex(0);
+  };
   const Star = ({ filled, size = 20 }: { filled: boolean; size?: number }) => {
     const fillColor = filled ? '#ffdc7bff' : 'transparent';
     const strokeColor = filled ? '#ffdc7bff' : '#fbe3a2ff';
@@ -105,13 +124,15 @@ export function ReviewsClient({
 
         if (mounted) {
           // Chuẩn hóa dữ liệu để dễ render
-          const formatted = data.map((item: { review: ReviewItem; customer?: { name?: string } }) => ({
+          const formatted = data.map((item: { review: ReviewItem & { image_review?: { image: string }[] }; customer?: { name?: string; avatar_image?: string; id?: string | number } }) => ({
             id: item.review.id,
             rating: item.review.rating,
             comment: item.review.comment,
             customer_name: item.customer?.name || 'Khách hàng',
+            customer_avatar: item.customer?.avatar_image ? `data:image/jpeg;base64,${item.customer.avatar_image}` : '',
             created_at: item.review.created_at || new Date().toISOString(),
-            // Cần thêm: images: item.review.images || [],
+            images: Array.isArray(item.review.image_review) ? item.review.image_review.map((img) => `data:image/jpeg;base64,${img.image}`) : [],
+            customer_id: item.customer?.id,
           }));
 
           setReviews(formatted);
@@ -327,7 +348,7 @@ export function ReviewsClient({
                   {/* Phần thông tin user (flex-row) */}
                   <div className="flex items-start space-x-4">
                     <Image
-                      src="https://i.imgur.com/4Ym9kQj.png"
+                      src={r.customer_avatar || ''}
                       alt={r.customer_name || ''}
                       width={40}
                       height={40}
@@ -379,22 +400,65 @@ export function ReviewsClient({
                   )}
 
                   {/* Ảnh đính kèm (thụt lề bằng padding-left) */}
-                  <div className="mt-3 flex space-x-3 pl-14">
-                    <Image
-                      src="https://i.imgur.com/gA5g9Zz.png"
-                      alt="review image 1"
-                      width={96}
-                      height={96}
-                      className="w-24 h-24 rounded-lg object-cover"
-                    />
-                    <Image
-                      src="https://i.imgur.com/v8tq9fA.png"
-                      alt="review image 2"
-                      width={96}
-                      height={96}
-                      className="w-24 h-24 rounded-lg object-cover"
-                    />
-                  </div>
+                  {Array.isArray(r.images) && r.images.length > 0 && (
+                    <div className="mt-3 flex space-x-3 pl-14">
+                      {r.images.map((img: string, idx: number) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="focus:outline-none"
+                          onClick={() => handleOpenImage(r.images!, idx)}
+                        >
+                          <Image
+                            src={img}
+                            alt={`review image ${idx + 1}`}
+                            width={96}
+                            height={96}
+                            className="w-24 h-24 rounded-lg object-cover hover:ring-2 hover:ring-yellow-400"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Modal xem ảnh lớn dạng slider */}
+                  {modalImages.length > 0 && (
+                    <div
+                      className="fixed inset-0 z-50 flex items-center justify-center bg-white-500 bg-opacity-60 backdrop-blur"
+                      style={{ cursor: 'default' }}
+                    >
+                      <button
+                        className="absolute top-6 right-6 z-50 focus:outline-none group"
+                        onClick={handleCloseModal}
+                        type="button"
+                        aria-label="Đóng"
+                      >
+                        <svg width={40} height={40} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="20" cy="20" r="18" fill="#fff" fillOpacity="0.7" />
+                          <path d="M14 14L26 26M26 14L14 26" stroke="#616161ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:stroke-red-500 transition-colors duration-150" />
+                        </svg>
+                      </button>
+                      <div className="relative w-[90vw] max-w-[700px]">
+                        <Swiper
+                          initialSlide={modalIndex}
+                          spaceBetween={20}
+                          slidesPerView={1}
+                          style={{ width: '100%', height: '100%' }}
+                        >
+                          {modalImages.map((img, idx) => (
+                            <SwiperSlide key={idx}>
+                              <Image
+                                src={img}
+                                alt={`Ảnh đánh giá lớn ${idx + 1}`}
+                                width={700}
+                                height={700}
+                                className="max-w-[90vw] max-h-[80vh] rounded-xl shadow-lg mx-auto"
+                              />
+                            </SwiperSlide>
+                          ))}
+                        </Swiper>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -2,6 +2,7 @@ import { Entity, Column, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'type
 import { BaseEntity } from './base.entity'
 import { OrderItemEntity } from './order_item.entity'
 import { CustomerEntity } from './customer.entity'
+import { ReviewImageEntity } from './review_image.entity'
 
 @Entity('reviews')
 export class ReviewEntity extends BaseEntity {
@@ -25,4 +26,7 @@ export class ReviewEntity extends BaseEntity {
     @ManyToOne(() => CustomerEntity, (customer) => customer.reviews)
     @JoinColumn({ name: 'customer_id' })
     customer: CustomerEntity;
+
+    @OneToMany(() => ReviewImageEntity, (reviewImage) => reviewImage.review)
+    review_images: ReviewImageEntity[];
 }
