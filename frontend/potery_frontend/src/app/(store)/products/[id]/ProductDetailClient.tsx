@@ -57,6 +57,40 @@ interface ProductRelationship {
 }
 
 export function ProductDetailClient({ product }: { product: any }) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+    scrollRef.current.style.cursor = 'grabbing';
+  };
+
+  const handleMouseLeave = () => {
+    if (isDragging && scrollRef.current) {
+      setIsDragging(false);
+      scrollRef.current.style.cursor = 'grab';
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!scrollRef.current) return;
+    setIsDragging(false);
+    scrollRef.current.style.cursor = 'grab';
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // multiplier for scroll speed
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   const [showFullDescription, setShowFullDescription] = useState(false);
   const DESCRIPTION_MAX_LENGTH = 500;
   const descriptionText = product.description || '';
@@ -70,7 +104,7 @@ export function ProductDetailClient({ product }: { product: any }) {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(defaultStore?.store_id || null);
   const [mainImage, setMainImage] = useState(product.images?.[0] || '/placeholder-product.jpg');
 
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<number | ''>(1);
   const [loading, setLoading] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
@@ -317,7 +351,7 @@ export function ProductDetailClient({ product }: { product: any }) {
       setLoading(true);
       try {
         // Pass classification data to guest cart
-        addItem(product, quantity, {
+        addItem(product, Number(quantity) || 1, {
           storeId: selectedStoreId ?? undefined,
           classifications: selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id) ? {
             attribute1_id: selectedClassifications.attribute1_id,
@@ -365,7 +399,7 @@ export function ProductDetailClient({ product }: { product: any }) {
         customer_id: user.id,
         product_id: product.id,
         store_id: Number(selectedStoreId),
-        quantity,
+        quantity: Number(quantity) || 1,
         classification_attribute_relationship_id: classificationId,
       });
       if (window.reloadCartCount) {
@@ -461,6 +495,15 @@ export function ProductDetailClient({ product }: { product: any }) {
 
   return (
     <div className="product-detail-page relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+      `}</style>
       <button
         onClick={() => router.back()}
         aria-label="Quay lại"
@@ -480,23 +523,33 @@ export function ProductDetailClient({ product }: { product: any }) {
           </div>
 
           {product.images.length > 1 && (
-            <div className="mt-4 grid grid-cols-4 gap-3 w-full">
-              {product.images.slice(0, 4).map((img: string, idx: number) => (
-                <div
-                  key={idx}
-                  onClick={() => setMainImage(img)}
-                  className={`overflow-hidden cursor-pointer transition-all duration-200 rounded-lg ${mainImage === img
-                    ? 'border-2 border-[#D4A017] scale-105 shadow-md'
-                    : 'border border-transparent hover:border-gray-200'
-                    }`}
-                >
-                  <img
-                    src={img}
-                    alt={`${product.name}-${idx}`}
-                    className="w-full h-full object-cover rounded-md"
-                  />
-                </div>
-              ))}
+            <div className="mt-4 relative w-full">
+              <div
+                ref={scrollRef}
+                className="flex space-x-3 overflow-x-auto pb-2 hide-scrollbar select-none"
+                style={{ cursor: 'grab' }}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+              >
+                {product.images.map((img: string, idx: number) => (
+                  <div
+                    key={idx}
+                    onClick={() => setMainImage(img)}
+                    className={`flex-shrink-0 w-24 h-24 overflow-hidden cursor-pointer transition-all duration-200 rounded-lg ${mainImage === img
+                      ? 'border-2 border-[#D4A017] scale-105 shadow-md'
+                      : 'border border-transparent hover:border-gray-300'
+                      }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`${product.name}-${idx}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -676,7 +729,7 @@ export function ProductDetailClient({ product }: { product: any }) {
                 {/* Nút giảm */}
                 <button
                   title='minus'
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  onClick={() => setQuantity((q) => Math.max(1, Number(q || '1') - 1))}
                   className="px-4 py-3 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
                 >
                   <Minus className="w-5 h-5" />
@@ -705,7 +758,7 @@ export function ProductDetailClient({ product }: { product: any }) {
                 {/* Nút tăng */}
                 <button
                   title='plus'
-                  onClick={() => setQuantity((q) => q + 1)}
+                  onClick={() => setQuantity((q) => Number(q || '0') + 1)}
                   className="px-4 py-3 text-gray-600 hover:bg-gray-100 active:scale-95 transition"
                 >
                   <Plus className="w-5 h-5" />
@@ -738,7 +791,7 @@ export function ProductDetailClient({ product }: { product: any }) {
                 <AddToCartClient
                   product={product as any}
                   storeId={selectedStoreId ?? undefined}
-                  quantity={quantity}
+                  quantity={Number(quantity) || 1}
                   selectedClassifications={{
                     attribute1_id: selectedClassifications.attribute1_id,
                     attribute2_id: selectedClassifications.attribute2_id,
