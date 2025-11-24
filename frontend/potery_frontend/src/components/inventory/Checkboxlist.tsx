@@ -216,8 +216,8 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                             <div className="flex items-center flex-1 min-w-0">
                                                 {isProductList && (
                                                     <Image
-                                                        width={10}
-                                                        height={10}
+                                                        width={40}
+                                                        height={40}
                                                         src={findProductImage(opt.id, allProducts)}
                                                         alt={opt.name}
                                                         className= "object-cover rounded-full border border-gray-200 shadow-sm mr-3"
