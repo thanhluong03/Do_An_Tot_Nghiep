@@ -1049,6 +1049,7 @@ useEffect(() => {
             </div>
 
             {/* Voucher - Tiếp tục tinh chỉnh thẻ, sử dụng màu sắc tối giản */}
+            {isAuthenticated && (
             <div className="bg-[#EFE9DC] rounded-lg shadow-inner p-4 border border-[#D4C3A3]/50"> {/* Giảm padding, shadow */}
               <h2 className="text-lg font-semibold mb-3 text-[#2C2A24] flex items-center gap-2">
                 <Tag className="w-5 h-5 text-[#A38D64]" /> Mã ưu đãi
@@ -1096,6 +1097,7 @@ useEffect(() => {
                 <div className="text-center text-[#65604E] py-4 text-sm">Bạn chưa có mã ưu đãi nào.</div>
               )}
             </div>
+            )}
           </div>
 
           {/* Right: Summary + Form (2/5 width) */}
