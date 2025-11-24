@@ -27,14 +27,15 @@ export interface StoreInventory {
 }
 
 // Kiểu Product Detail chứa danh sách các Store Inventory với classification
-export interface ProductDetail extends Product {
-  stores: StoreInventory[]; // Mảng các cửa hàng phân phối với phân loại
-  promotion: any;           // Dữ liệu promotion (nếu có)
-  classifications?: any[];  // Thông tin phân loại sản phẩm
-  relationships?: any[];    // Ma trận giá phân loại
-  cheapestStore?: StoreInventory | null; // Cửa hàng có combo rẻ nhất
-  cheapestClassification?: any | null;   // Combo rẻ nhất
+export interface ProductDetail extends Omit<Product, "stores"> {
+  stores: StoreInventory[];
+  promotion: any;
+  classifications?: any[];
+  relationships?: any[];
+  cheapestStore?: StoreInventory | null;
+  cheapestClassification?: any | null;
 }
+
 const mapProductDetail = (p: any): ProductDetail => {
   const baseProduct = mapProduct(p);
 

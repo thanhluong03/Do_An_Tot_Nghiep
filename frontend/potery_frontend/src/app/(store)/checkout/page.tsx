@@ -15,1234 +15,1203 @@ import { voucherApi, Voucher } from '../../../api/modules/voucher';
 import { customersApi } from '../../../api/modules/customers';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
-import {
-  ShoppingBag,
-  Tag,
-  MapPin,
-  CreditCard,
-  Wallet,
-  User,
-  Phone,
-  Mail,
-  CheckCircle,
-  X,
-  Clock,
-  Bot,
-  Gift,
-  MessageSquare
-} from 'lucide-react';
+import { ShoppingBag, Tag, MapPin, CreditCard, Wallet, User, Phone, Mail, CheckCircle, X, Clock, Bot, Gift, MessageSquare } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
 
 export default function CheckoutPage() {
-  const { user, isAuthenticated } = useAuth();
-  const { items, clear: clearCart } = useCart();
+    const { user, isAuthenticated } = useAuth();
+    const { items, clear: clearCart } = useCart();
 
-  // Constants
-  const SHIPPING_FEE = 30000; // Phí vận chuyển cố định 30.000đ
-
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD')
+    // Constants
+    const SHIPPING_FEE = 30000; // Phí vận chuyển cố định 30.000đ
+    const [address, setAddress] = useState('');
+    const [city, setCity] = useState('');
+    const [creating, setCreating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD')
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [conversationId, setConversationId] = useState<number | null>(null);
     const [isAIChatOpen, setIsAIChatOpen] = useState(false);
     const [isChatDropdownOpen, setIsChatDropdownOpen] = useState(false);
     const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-  // Guest info
-  const [guestName, setGuestName] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const [guestPhone, setGuestPhone] = useState('');
 
-  const [serverItems, setServerItems] = useState<Array<{
-    id: string;
-    product_id: number;
-    quantity: number;
-    store_id: number;
-    price?: number;
-    classificationPrice?: number;
-    classifications?: {
-      attribute1_id?: number;
-      attribute2_id?: number;
-      attribute1_name?: string;
-      attribute2_name?: string;
-    };
-    classificationId?: number;
-  }>>([]);
-  const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }>>({});
-  const [loadingCart, setLoadingCart] = useState(false);
-  const [hasCheckoutItems, setHasCheckoutItems] = useState(false); // Đánh dấu đã load từ checkout_items
-
-  const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
-  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
-  const [loadingVouchers, setLoadingVouchers] = useState(false);
-
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const [formErrors, setFormErrors] = useState({
-    guestName: '',
-    guestPhone: '',
-    guestEmail: '',
-    address: '',
-    city: '',
-  });
-  // Build a fallback product map from context items for guest rendering
-  const contextProducts = useMemo(() => {
-    const map: Record<number, { id: number; name: string; price: number; images: string[] }> = {};
-    items.forEach(i => {
-      const pid = Number(i.product?.id ?? 0);
-      if (!pid) return;
-      if (!map[pid]) {
-        map[pid] = {
-          id: pid,
-          name: i.product?.name ?? 'Sản phẩm',
-          price: Number(i.product?.price ?? 0),
-          images: i.product?.images ?? [],
-        };
-      }
-    });
-    return map;
-  }, [items]);
-
-  // 🧹 Function để xóa sạch thông tin guest
-  const clearGuestData = useCallback(() => {
-    console.log('🧹 Xóa sạch thông tin guest...');
-    localStorage.removeItem('guest_id');
-    localStorage.removeItem('guest_name');
-    localStorage.removeItem('guest_phone');
-    localStorage.removeItem('guest_email');
-    localStorage.removeItem('auth_type');
-
-    // Reset state về rỗng
-    setGuestName('');
-    setGuestEmail('');
-    setGuestPhone('');
-
-    console.log('✅ Đã xóa sạch thông tin guest');
-  }, []);
-
-  // Function để gửi email xác nhận đơn hàng
-  const sendOrderConfirmationEmail = useCallback(async (orderId: number) => {
-    try {
-      // Lấy email khách hàng
-      let customerEmail = '';
-
-      if (isAuthenticated && user?.email) {
-        customerEmail = user.email;
-      } else {
-        // Với khách hàng guest, lấy email từ localStorage hoặc state hiện tại
-        const storedEmail = localStorage.getItem('guest_email');
-        customerEmail = storedEmail || guestEmail.trim() || `guest_${Date.now()}@example.com`;
-      }
-
-      console.log('🔄 Đang gửi email xác nhận đơn hàng tới:', customerEmail);
-
-      // Gửi email xác nhận đơn hàng
-      await mailApi.sendOrderMail({
-        to: customerEmail,
-        orderId: orderId,
-      });
-
-      console.log('✅ Email xác nhận đơn hàng đã được gửi thành công tới:', customerEmail);
-      toast.success('📧 Email xác nhận đơn hàng đã được gửi!');
-    } catch (error) {
-      console.error('❌ Lỗi gửi email:', error);
-      console.error('❌ Chi tiết lỗi:', error);
-      toast.error(' Có lỗi khi gửi email xác nhận');
-    }
-  }, [isAuthenticated, user?.email, guestEmail]);
-
-  async function handleGuestCheckout(customerInfo: any) {
-    const savedCart = Cookies.get('cart_session');
-    if (!savedCart) {
-      toast.error('Giỏ hàng trống!');
-      return;
-    }
-
-    const cartItems = JSON.parse(savedCart);
-
-    const payload = {
-      customer_info: customerInfo,
-      items: cartItems.map((item: any) => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-        price_at_order: item.product.price,
-      })),
-    };
-
-    const res = await fetch('/api/orders/guest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    // Guest info
+    const [guestName, setGuestName] = useState('');
+    const [guestEmail, setGuestEmail] = useState('');
+    const [guestPhone, setGuestPhone] = useState('');
+    const [serverItems, setServerItems] = useState<Array<{ 
+        id: string; 
+        product_id: number; 
+        quantity: number; 
+        store_id: number; 
+        price?: number; 
+        classificationPrice?: number; 
+        classifications?: { 
+            attribute1_id?: number; 
+            attribute2_id?: number; 
+            attribute1_name?: string; 
+            attribute2_name?: string; 
+        }; 
+        classificationId?: number; 
+    }>>([]);
+    const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }>>({});
+    const [loadingCart, setLoadingCart] = useState(false);
+    const [hasCheckoutItems, setHasCheckoutItems] = useState(false); // Đánh dấu đã load từ checkout_items
+    const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
+    const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+    const [loadingVouchers, setLoadingVouchers] = useState(false);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [formErrors, setFormErrors] = useState({
+        guestName: '',
+        guestPhone: '',
+        guestEmail: '',
+        address: '',
+        city: '',
     });
 
-    if (res.ok) {
-      Cookies.remove('cart_session'); // clear cart sau khi đặt
-      toast.success('Đặt hàng thành công!');
-    } else {
-      toast.error('Đặt hàng thất bại!');
-    }
-  }
-
-  /** ===================== LOAD CART & VOUCHERS ===================== */
-  useEffect(() => {
-    let mounted = true;
-    let loadedFromCheckout = false; // Flag local để track xem đã load từ checkout_items chưa
-    
-    (async () => {
-      // ✅ ƯU TIÊN: Kiểm tra sessionStorage cho các sản phẩm được chọn từ cart TRƯỚC
-      // Đọc ngay đầu tiên, không phụ thuộc vào flag
-      if (typeof window !== 'undefined') {
-        const checkoutItemsStr = sessionStorage.getItem('checkout_items');
-        console.log('🔍 Reading from sessionStorage:', checkoutItemsStr ? `Found ${JSON.parse(checkoutItemsStr).length} items` : 'Not found');
-        
-        if (checkoutItemsStr) {
-          try {
-            const checkoutItems = JSON.parse(checkoutItemsStr);
-            console.log('🛒 Checkout items from sessionStorage (chỉ sản phẩm đã chọn):', checkoutItems);
-            console.log('🛒 Is array?', Array.isArray(checkoutItems));
-            console.log('🛒 Length:', checkoutItems?.length);
-            
-            if (Array.isArray(checkoutItems) && checkoutItems.length > 0) {
-              // Chỉ sử dụng các sản phẩm được chọn từ cart
-              // Đảm bảo format đúng - chuyển null thành undefined để match với type
-              const formattedItems = checkoutItems.map(item => ({
-                id: String(item.id),
-                product_id: Number(item.product_id),
-                quantity: Number(item.quantity),
-                store_id: Number(item.store_id),
-                price: item.price ? Number(item.price) : undefined,
-                classificationPrice: item.classificationPrice ? Number(item.classificationPrice) : undefined,
-                classificationId: item.classificationId ? Number(item.classificationId) : undefined,
-                classifications: item.classifications || undefined
-              }));
-              
-              console.log('✅ Formatted checkout items:', formattedItems);
-              
-              if (mounted) {
-                setServerItems(formattedItems);
-                setHasCheckoutItems(true); // Đánh dấu đã load từ checkout_items
-                console.log('✅ Set serverItems to checkout items:', formattedItems.length, 'items');
-                loadedFromCheckout = true; // Set flag local
-                // ✅ KHÔNG xóa sessionStorage ngay - để tránh bị override khi re-render
-                // Sẽ xóa khi tạo đơn hàng thành công hoặc khi unmount
-              }
-              if (mounted) setLoadingCart(false);
-              // Load product details sẽ được xử lý ở useEffect khác
-              // Load vouchers trước khi return
-              setLoadingVouchers(true);
-              let vouchers: Voucher[] = [];
-              if (isAuthenticated && user?.id) {
-                try {
-                  vouchers = await voucherApi.fetchCustomerVouchers(user.id);
-                } catch (err) {
-                  console.error('❌ Lỗi khi tải voucher người dùng:', err);
-                }
-              } else {
-                try {
-                  vouchers = await voucherApi.fetchAvailableVouchers();
-                } catch { }
-              }
-              if (mounted) {
-                setAvailableVouchers(vouchers);
-                setLoadingVouchers(false);
-              }
-              return; // Return ngay sau khi load từ checkout_items
-            } else {
-              console.warn('⚠️ Checkout items is not a valid array or is empty');
-            }
-          } catch (e) {
-            console.error('❌ Lỗi parse checkout_items:', e);
-            console.error('❌ Raw string:', checkoutItemsStr);
-          }
-        }
-      }
-      
-      // ✅ Nếu đã load từ checkout_items, không chạy phần dưới
-      if (loadedFromCheckout) {
-        console.log('⏭️ Already loaded from checkout_items, skipping cart load');
-        return;
-      }
-      
-      setLoadingCart(true);
-      try {
-        // 🔥 NẾU NGƯỜI DÙNG THẬT ĐĂNG NHẬP → XÓA THÔNG TIN GUEST CŨ
-        if (isAuthenticated && user?.id) {
-          const authType = localStorage.getItem('auth_type');
-          if (authType !== 'user') {
-            console.log('🧹 Phát hiện user thật đăng nhập → Xóa thông tin guest cũ');
-            clearGuestData();
-            localStorage.setItem('auth_type', 'user');
-          }
-        }
-
-        const params = new URLSearchParams(window.location.search);
-        const productId = params.get('productId');
-        const storeId = params.get('storeId');
-        const quantity = params.get('quantity');
-        const price = params.get('price');
-        const attribute1_id = params.get('attribute1_id');
-        const attribute2_id = params.get('attribute2_id');
-        const attribute1_name = decodeURIComponent(params.get('attribute1_name') || '');
-        const attribute2_name = decodeURIComponent(params.get('attribute2_name') || '');
-        const classificationId = params.get('classificationId');
-
-        console.log('🔍 URL Params:', {
-          productId, storeId, quantity, price,
-          attribute1_id, attribute2_id, attribute1_name, attribute2_name, classificationId
-        });
-
-        // Nếu có đủ 3 param → ưu tiên hiển thị đơn hàng mua ngay
-        if (productId && storeId && quantity) {
-          const detail = await productApi.getProductById(productId);
-
-          // Build server item with classification info if available
-          const serverItem: any = {
-            id: 'buy-now',
-            product_id: Number(productId),
-            quantity: Number(quantity),
-            store_id: Number(storeId),
-            price: price ? Number(price) : Number(detail.price), // Use combo price if available
-          };
-
-          // Add classification info if available
-          if (attribute1_id && attribute2_id) {
-            serverItem.classificationId = classificationId ? Number(classificationId) : undefined;
-            serverItem.classifications = {
-              attribute1_id: Number(attribute1_id),
-              attribute2_id: Number(attribute2_id),
-              attribute1_name: attribute1_name || '',
-              attribute2_name: attribute2_name || '',
-            };
-            console.log('🏷️ Classifications added to serverItem:', serverItem.classifications);
-          } else {
-            console.log('⚠️ No classification data found in URL params');
-          }
-
-          setServerItems([serverItem]);
-          setServerProducts({
-            [Number(productId)]: {
-              id: Number(detail.id),
-              name: detail.name,
-              price: Number(detail.price),
-              images: detail.images || [],
-            },
-          });
-          setLoadingCart(false);
-          return;
-        }
-
-        // Load cart cho user đã đăng nhập (fallback nếu không có checkout_items)
-        // ⚠️ CHỈ chạy nếu KHÔNG load từ checkout_items (loadedFromCheckout = false)
-        // ✅ KIỂM TRA: Nếu đã load từ checkout_items, KHÔNG load cart nữa
-        if (!loadedFromCheckout && isAuthenticated && user?.id) {
-          const data = await cartApi.getByCustomer(user.id as string);
-          const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
-            id: String(ci.id ?? ci._id ?? ''),
-            product_id: Number(ci.product_id),
-            quantity: Number(ci.quantity ?? 1),
-            store_id: Number(ci.store?.id ?? ci.store_id ?? 0),
-            // Add classification info from server cart
-            classificationId: ci.classification_attribute_relationship_id,
-            classifications: ci.classification_attribute_relationship_id ? {
-              attribute1_id: ci.attribute1_id,
-              attribute2_id: ci.attribute2_id,
-              attribute1_name: ci.attribute1_name || '',
-              attribute2_name: ci.attribute2_name || ''
-            } : undefined,
-            // Use classification price from the classification relationship
-            price: ci.classificationRelationship?.price || null,
-            classificationPrice: ci.classificationPrice || null
-          }));
-
-          console.log('🛒 Server cart items with classifications (FALLBACK - không có checkout_items):', mapped);
-          if (mounted && !loadedFromCheckout) {
-            setServerItems(mapped);
-          }
-        } else if (!loadedFromCheckout) {
-          // Load cart cho guest (fallback nếu không có checkout_items)
-          let localItems: any[] | null = null;
-          try {
-            if (typeof window !== 'undefined') {
-              const ss = sessionStorage.getItem('cart_session');
-              if (ss) localItems = JSON.parse(ss);
-            }
-          } catch { }
-
-          if (!localItems) {
-            const saved = Cookies.get('cart_session');
-            if (saved) localItems = JSON.parse(saved);
-          }
-
-          if (localItems) {
-            const mapped = await Promise.all(
-              localItems.map(async (i: any, idx: number) => {
-                const pid = Number(i.product?.id ?? i.product_id);
-                let storeId = Number(i.product?.store?.id ?? i.store_id ?? 0);
-                if (!storeId) {
-                  try {
-                    const detail = await productApi.getProductById(String(pid));
-                    const fallback = detail?.stores?.[0]?.store_id;
-                    if (fallback) storeId = Number(fallback);
-                  } catch { }
-                }
-                let classificationId = null;
-                if (i.classificationId) classificationId = i.classificationId;
-                else if (i.classifications && i.classifications.attribute1_id && i.classifications.attribute2_id) {
-                  classificationId = i.classifications.classificationId || null;
-                }
-                return {
-                  id: `guest-${idx}`,
-                  product_id: pid,
-                  quantity: Number(i.quantity ?? 1),
-                  store_id: storeId || 1,
-                  classifications: i.classifications ? {
-                    attribute1_id: i.classifications.attribute1_id,
-                    attribute2_id: i.classifications.attribute2_id,
-                    attribute1_name: i.classifications.attribute1_name || '',
-                    attribute2_name: i.classifications.attribute2_name || ''
-                  } : undefined,
-                  classificationId,
-                  price: i.price, // Keep the classification price from guest cart
+    // Build a fallback product map from context items for guest rendering
+    const contextProducts = useMemo(() => {
+        const map: Record<number, { id: number; name: string; price: number; images: string[] }> = {};
+        items.forEach(i => {
+            const pid = Number(i.product?.id ?? 0);
+            if (!pid) return;
+            if (!map[pid]) {
+                map[pid] = { 
+                    id: pid, 
+                    name: i.product?.name ?? 'Sản phẩm', 
+                    price: Number(i.product?.price ?? 0), 
+                    images: i.product?.images ?? [], 
                 };
-              })
-            );
-            console.log('🛒 Guest cart items with classifications (FALLBACK - không có checkout_items):', mapped);
-            if (mounted && !hasCheckoutItems) {
-              setServerItems(mapped);
             }
-          }
+        });
+        return map;
+    }, [items]);
+
+    // 🧹 Function để xóa sạch thông tin guest
+    const clearGuestData = useCallback(() => {
+        console.log('🧹 Xóa sạch thông tin guest...');
+        localStorage.removeItem('guest_id');
+        localStorage.removeItem('guest_name');
+        localStorage.removeItem('guest_phone');
+        localStorage.removeItem('guest_email');
+        localStorage.removeItem('auth_type');
+        // Reset state về rỗng
+        setGuestName('');
+        setGuestEmail('');
+        setGuestPhone('');
+        console.log('✅ Đã xóa sạch thông tin guest');
+    }, []);
+
+    // Function để gửi email xác nhận đơn hàng
+    const sendOrderConfirmationEmail = useCallback(async (orderId: number) => {
+        try {
+            // Lấy email khách hàng
+            let customerEmail = '';
+            if (isAuthenticated && user?.email) {
+                customerEmail = user.email;
+            } else {
+                // Với khách hàng guest, lấy email từ localStorage hoặc state hiện tại
+                const storedEmail = localStorage.getItem('guest_email');
+                customerEmail = storedEmail || guestEmail.trim() || `guest_${Date.now()}@example.com`;
+            }
+            console.log('🔄 Đang gửi email xác nhận đơn hàng tới:', customerEmail);
+            
+            // Gửi email xác nhận đơn hàng
+            await mailApi.sendOrderMail({
+                to: customerEmail,
+                orderId: orderId,
+            });
+            console.log('✅ Email xác nhận đơn hàng đã được gửi thành công tới:', customerEmail);
+            toast.success('📧 Email xác nhận đơn hàng đã được gửi!');
+        } catch (error) {
+            console.error('❌ Lỗi gửi email:', error);
+            console.error('❌ Chi tiết lỗi:', error);
+            toast.error(' Có lỗi khi gửi email xác nhận');
         }
+    }, [isAuthenticated, user?.email, guestEmail]);
 
-        /** 🔥 TẢI DANH SÁCH VOUCHER */
-        setLoadingVouchers(true);
-        let vouchers: Voucher[] = [];
+    async function handleGuestCheckout(customerInfo: any) {
+        const savedCart = Cookies.get('cart_session');
+        if (!savedCart) {
+            toast.error('Giỏ hàng trống!');
+            return;
+        }
+        const cartItems = JSON.parse(savedCart);
+        const payload = {
+            customer_info: customerInfo,
+            items: cartItems.map((item: any) => ({
+                product_id: item.product.id,
+                quantity: item.quantity,
+                price_at_order: item.product.price,
+            })),
+        };
 
-        if (isAuthenticated && user?.id) {
-          try {
-            vouchers = await voucherApi.fetchCustomerVouchers(user.id);
-          } catch (err) {
-            console.error('❌ Lỗi khi tải voucher người dùng:', err);
-          }
+        const res = await fetch('/api/orders/guest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+            Cookies.remove('cart_session'); // clear cart sau khi đặt
+            toast.success('Đặt hàng thành công!');
         } else {
-          // Nếu khách, có thể hiển thị danh sách chung (nếu cần)
-          try {
-            vouchers = await voucherApi.fetchAvailableVouchers();
-          } catch { }
+            toast.error('Đặt hàng thất bại!');
         }
-
-        if (mounted) setAvailableVouchers(vouchers);
-      } catch (e) {
-        console.error('Lỗi tải giỏ hàng:', e);
-      } finally {
-        if (mounted) {
-          setLoadingCart(false);
-          setLoadingVouchers(false);
-        }
-      }
-    })();
-
-    return () => { mounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.id]); // ✅ Chỉ chạy khi isAuthenticated hoặc user.id thay đổi
-
-  /** ===================== LOAD PRODUCTS ===================== */
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const missing = serverItems.map(ci => ci.product_id).filter(pid => !serverProducts[pid]);
-      if (missing.length === 0) return;
-
-      const results = await Promise.allSettled(missing.map(pid => productApi.getProductById(String(pid))));
-      if (!mounted) return;
-
-      const next: Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }> = { ...serverProducts };
-      results.forEach((r, idx) => {
-        const pid = missing[idx];
-        if (r.status === 'fulfilled' && r.value) {
-          next[pid] = {
-            id: Number(r.value.id),
-            name: r.value.name,
-            price: Number(r.value.price),
-            images: r.value.images || [],
-            promotion: r.value.promotion, // Include promotion data
-          };
-        }
-      });
-      setServerProducts(next);
-    })();
-    return () => { mounted = false; };
-  }, [serverItems, serverProducts]);
-  /** ===================== SYNC SERVER PRODUCTS FROM CONTEXT ===================== */
-useEffect(() => {
-  const next: Record<number, any> = { ...serverProducts };
-  items.forEach(i => {
-    const pid = Number(i.product?.id);
-    if (pid && !next[pid]) {
-      next[pid] = {
-        id: pid,
-        name: i.product?.name || 'Sản phẩm',
-        price: i.product?.price || 0,
-        images: i.product?.images || [],
-      };
-    }
-  });
-  setServerProducts(next);
-}, [items]);
-
-  /** ===================== TÍNH TOÁN GIÁ ===================== */
-  const { total, discountAmount, finalTotal, totalWithShipping } = useMemo(() => {
-    const initialTotal = serverItems.length > 0
-      ? serverItems.reduce((acc, ci) => {
-        const product = serverProducts[ci.product_id];
-        if (!product) return acc;
-
-        // Calculate actual price with promotion discount
-        let actualPrice = ci.classificationPrice || ci.price || product.price;
-
-        // Apply promotion discount if exists
-        if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
-          const discountValue = Number(product.promotion.discount_value);
-          if (product.promotion.discount_type === 'PERCENTAGE') {
-            actualPrice = actualPrice * (1 - discountValue / 100);
-          } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
-            actualPrice = Math.max(0, actualPrice - discountValue);
-          }
-        }
-
-        console.log('🔍 Server cart item price calculation:', {
-          product: product.name,
-          basePrice: product.price,
-          classificationPrice: ci.classificationPrice,
-          fallbackPrice: ci.price,
-          actualPrice: actualPrice,
-          promotion: product.promotion,
-          classification: ci.classifications
-        });
-
-        return acc + actualPrice * ci.quantity;
-      }, 0)
-      : items.reduce((acc, cur) => {
-        // For guest items, use classification price if available
-        const actualPrice = cur.price || cur.product.price;
-        console.log('🔍 Guest cart item price calculation:', {
-          product: cur.product.name,
-          basePrice: cur.product.price,
-          classificationPrice: cur.price,
-          actualPrice: actualPrice,
-          classification: cur.classifications
-        });
-        return acc + actualPrice * cur.quantity;
-      }, 0);
-
-    let discount = 0;
-    if (selectedVoucher) {
-      const minOrder = Number(selectedVoucher.min_order_value ?? selectedVoucher.order_conditions ?? 0);
-      if (initialTotal >= minOrder) {
-        const discountValue = Number(selectedVoucher.discount_value ?? selectedVoucher.voucher_percentage ?? 0);
-        const type = String(selectedVoucher.discount_type ?? 'PERCENT').toUpperCase();
-        if (type === 'PERCENT' || type === 'PERCENTAGE') discount = Math.round(initialTotal * (discountValue / 100));
-        else discount = discountValue;
-      }
     }
 
-    const afterDiscount = Math.max(0, initialTotal - discount);
-    const withShipping = afterDiscount + SHIPPING_FEE;
-
-    return {
-      total: initialTotal,
-      discountAmount: discount,
-      finalTotal: afterDiscount,
-      totalWithShipping: withShipping
-    };
-  }, [items, serverItems, serverProducts, selectedVoucher, SHIPPING_FEE]);  /** ===================== CHỌN VOUCHER ===================== */
-  const handleSelectVoucher = (voucher: Voucher) => {
-    const minOrder = Number(voucher.min_order_value ?? voucher.order_conditions ?? 0);
-    if (total < minOrder) {
-      setError(`❌ Đơn hàng phải đạt ${formatPrice(minOrder)} để áp dụng mã này.`);
-      setSelectedVoucher(null);
-      return;
-    }
-    setError(null);
-    setSelectedVoucher(selectedVoucher?.id === voucher.id ? null : voucher);
-  };
-
-  const handlePayment = async (orderId: number, amount: number) => {
-    const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${orderId}`;
-
-    try {
-      console.log('💳 Khởi tạo thanh toán VNPay với số tiền:', formatPrice(amount));
-      const pay = await paymentApi.createVnPayPayment(orderId, amount, returnUrl);
-      const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
-      console.log('✅ Response từ API thanh toán:', pay);
-      if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
-      window.location.href = paymentUrl;
-    } catch (error) {
-      console.error('❌ Lỗi khi tạo thanh toán VNPay:', error);
-      toast.error('Không thể khởi tạo thanh toán VNPay');
-    }
-  };
-
-  const validateForm = useCallback(() => {
-    const errors = { guestName: '', guestPhone: '', guestEmail: '', address: '', city: '' };
-    let isValid = true;
-
-    if (!isAuthenticated) {
-      if (!guestName.trim()) {
-        errors.guestName = 'Vui lòng nhập họ và tên.';
-        isValid = false;
-      }
-      if (!guestPhone.trim()) {
-        errors.guestPhone = 'Vui lòng nhập số điện thoại.';
-        isValid = false;
-      } else if (!/^(0[3|5|7|8|9])+([0-9]{8})\b/.test(guestPhone)) {
-        errors.guestPhone = 'Số điện thoại không hợp lệ.';
-        isValid = false;
-      }
-      if (guestEmail.trim() && !/\S+@\S+\.\S+/.test(guestEmail)) {
-        errors.guestEmail = 'Địa chỉ email không hợp lệ.';
-        isValid = false;
-      }
-    }
-
-    if (!address.trim()) {
-      errors.address = 'Vui lòng nhập địa chỉ giao hàng.';
-      isValid = false;
-    }
-
-    if (!city.trim()) {
-      errors.city = 'Vui lòng nhập tỉnh/thành phố.';
-      isValid = false;
-    }
-
-    setFormErrors(errors);
-    return isValid;
-  }, [isAuthenticated, guestName, guestPhone, guestEmail, address, city]);
-  /** ===================== SYNC GUEST CART FROM CONTEXT ===================== */
+    /** ===================== LOAD CART & VOUCHERS ===================== */
     useEffect(() => {
-      // ✅ KHÔNG sync nếu đã có checkout_items từ cart (sản phẩm đã được chọn)
-      if (hasCheckoutItems) {
-        // Đã load sản phẩm được chọn từ cart, không sync từ context
-        return;
-      }
-      
-      if (!isAuthenticated && items.length > 0) {
-        const mapped = items.map((i, idx) => ({
-          id: `guest-${idx}`,
-          product_id: Number(i.product?.id),
-          quantity: i.quantity,
-          store_id: Number(i.product?.store?.id || 1),
-          price: i.price || i.product.price,
-          classificationId: i.classificationId || undefined, // null → undefined
-          classifications: i.classifications
-            ? {
-                attribute1_id: i.classifications.attribute1_id ?? undefined,
-                attribute2_id: i.classifications.attribute2_id ?? undefined,
-                attribute1_name: i.classifications.attribute1_name ?? undefined,
-                attribute2_name: i.classifications.attribute2_name ?? undefined,
-              }
-            : undefined,
-        }));
-        setServerItems(mapped);
-      }
+        let mounted = true;
+        let loadedFromCheckout = false; // Flag local để track xem đã load từ checkout_items chưa
+
+        (async () => {
+            // ✅ ƯU TIÊN: Kiểm tra sessionStorage cho các sản phẩm được chọn từ cart TRƯỚC
+            // Đọc ngay đầu tiên, không phụ thuộc vào flag
+            if (typeof window !== 'undefined') {
+                const checkoutItemsStr = sessionStorage.getItem('checkout_items');
+                console.log('🔍 Reading from sessionStorage:', checkoutItemsStr ? `Found ${JSON.parse(checkoutItemsStr).length} items` : 'Not found');
+                if (checkoutItemsStr) {
+                    try {
+                        const checkoutItems = JSON.parse(checkoutItemsStr);
+                        console.log('🛒 Checkout items from sessionStorage (chỉ sản phẩm đã chọn):', checkoutItems);
+                        console.log('🛒 Is array?', Array.isArray(checkoutItems));
+                        console.log('🛒 Length:', checkoutItems?.length);
+
+                        if (Array.isArray(checkoutItems) && checkoutItems.length > 0) {
+                            // Chỉ sử dụng các sản phẩm được chọn từ cart
+                            // Đảm bảo format đúng - chuyển null thành undefined để match với type
+                            const formattedItems = checkoutItems.map((item: any) => ({
+                                id: String(item.id),
+                                product_id: Number(item.product_id),
+                                quantity: Number(item.quantity),
+                                store_id: Number(item.store_id),
+                                price: item.price ? Number(item.price) : undefined,
+                                classificationPrice: item.classificationPrice ? Number(item.classificationPrice) : undefined,
+                                classificationId: item.classificationId ? Number(item.classificationId) : undefined,
+                                classifications: item.classifications || undefined
+                            }));
+
+                            console.log('✅ Formatted checkout items:', formattedItems);
+                            if (mounted) {
+                                setServerItems(formattedItems);
+                                setHasCheckoutItems(true); // Đánh dấu đã load từ checkout_items
+                                console.log('✅ Set serverItems to checkout items:', formattedItems.length, 'items');
+                                loadedFromCheckout = true; // Set flag local
+                                // ✅ KHÔNG xóa sessionStorage ngay - để tránh bị override khi re-render
+                                // Sẽ xóa khi tạo đơn hàng thành công hoặc khi unmount
+                            }
+
+                            if (mounted) setLoadingCart(false); // Load product details sẽ được xử lý ở useEffect khác
+
+                            // Load vouchers trước khi return
+                            setLoadingVouchers(true);
+                            let vouchers: Voucher[] = [];
+                            if (isAuthenticated && user?.id) {
+                                try {
+                                    vouchers = await voucherApi.fetchCustomerVouchers(user.id);
+                                } catch (err) {
+                                    console.error('❌ Lỗi khi tải voucher người dùng:', err);
+                                }
+                            } else {
+                                try {
+                                    vouchers = await voucherApi.fetchAvailableVouchers();
+                                } catch { }
+                            }
+                            if (mounted) {
+                                setAvailableVouchers(vouchers);
+                                setLoadingVouchers(false);
+                            }
+
+                            return; // Return ngay sau khi load từ checkout_items
+                        } else {
+                            console.warn('⚠️ Checkout items is not a valid array or is empty');
+                        }
+                    } catch (e) {
+                        console.error('❌ Lỗi parse checkout_items:', e);
+                        console.error('❌ Raw string:', checkoutItemsStr);
+                    }
+                }
+            }
+
+            // ✅ Nếu đã load từ checkout_items, không chạy phần dưới
+            if (loadedFromCheckout) {
+                console.log('⏭️ Already loaded from checkout_items, skipping cart load');
+                return;
+            }
+
+            setLoadingCart(true);
+            try {
+                // 🔥 NẾU NGƯỜI DÙNG THẬT ĐĂNG NHẬP → XÓA THÔNG TIN GUEST CŨ
+                if (isAuthenticated && user?.id) {
+                    const authType = localStorage.getItem('auth_type');
+                    if (authType !== 'user') {
+                        console.log('🧹 Phát hiện user thật đăng nhập → Xóa thông tin guest cũ');
+                        clearGuestData();
+                        localStorage.setItem('auth_type', 'user');
+                    }
+                }
+
+                const params = new URLSearchParams(window.location.search);
+                const productId = params.get('productId');
+                const storeId = params.get('storeId');
+                const quantity = params.get('quantity');
+                const price = params.get('price');
+                const attribute1_id = params.get('attribute1_id');
+                const attribute2_id = params.get('attribute2_id');
+                const attribute1_name = decodeURIComponent(params.get('attribute1_name') || '');
+                const attribute2_name = decodeURIComponent(params.get('attribute2_name') || '');
+                const classificationId = params.get('classificationId');
+
+                console.log('🔍 URL Params:', { productId, storeId, quantity, price, attribute1_id, attribute2_id, attribute1_name, attribute2_name, classificationId });
+
+                // Nếu có đủ 3 param → ưu tiên hiển thị đơn hàng mua ngay
+                if (productId && storeId && quantity) {
+                    const detail = await productApi.getProductById(productId);
+
+                    // Build server item with classification info if available
+                    const serverItem: any = {
+                        id: 'buy-now',
+                        product_id: Number(productId),
+                        quantity: Number(quantity),
+                        store_id: Number(storeId),
+                        price: price ? Number(price) : Number(detail.price), // Use combo price if available
+                    };
+
+                    // Add classification info if available
+                    if (attribute1_id && attribute2_id) {
+                        serverItem.classificationId = classificationId ? Number(classificationId) : undefined;
+                        serverItem.classifications = {
+                            attribute1_id: Number(attribute1_id),
+                            attribute2_id: Number(attribute2_id),
+                            attribute1_name: attribute1_name || '',
+                            attribute2_name: attribute2_name || '',
+                        };
+                        console.log('🏷️ Classifications added to serverItem:', serverItem.classifications);
+                    } else {
+                        console.log('⚠️ No classification data found in URL params');
+                    }
+
+                    setServerItems([serverItem]);
+                    setServerProducts({
+                        [Number(productId)]: {
+                            id: Number(detail.id),
+                            name: detail.name,
+                            price: Number(detail.price),
+                            images: detail.images || [],
+                        },
+                    });
+                    setLoadingCart(false);
+                    return;
+                }
+
+                // Load cart cho user đã đăng nhập (fallback nếu không có checkout_items)
+                // ⚠️ CHỈ chạy nếu KHÔNG load từ checkout_items (loadedFromCheckout = false)
+                // ✅ KIỂM TRA: Nếu đã load từ checkout_items, KHÔNG load cart nữa
+                if (!loadedFromCheckout && isAuthenticated && user?.id) {
+                    const data = await cartApi.getByCustomer(user.id as string);
+                    const mapped = (Array.isArray(data) ? data : []).map((ci: any) => ({
+                        id: String(ci.id ?? ci._id ?? ''),
+                        product_id: Number(ci.product_id),
+                        quantity: Number(ci.quantity ?? 1),
+                        store_id: Number(ci.store?.id ?? ci.store_id ?? 0),
+                        // Add classification info from server cart
+                        classificationId: ci.classification_attribute_relationship_id,
+                        classifications: ci.classification_attribute_relationship_id ? {
+                            attribute1_id: ci.attribute1_id,
+                            attribute2_id: ci.attribute2_id,
+                            attribute1_name: ci.attribute1_name || '',
+                            attribute2_name: ci.attribute2_name || ''
+                        } : undefined,
+                        // Use classification price from the classification relationship
+                        price: ci.classificationRelationship?.price || null,
+                        classificationPrice: ci.classificationPrice || null
+                    }));
+                    console.log('🛒 Server cart items with classifications (FALLBACK - không có checkout_items):', mapped);
+                    if (mounted && !loadedFromCheckout) {
+                        setServerItems(mapped);
+                    }
+                } else if (!loadedFromCheckout) {
+                    // Load cart cho guest (fallback nếu không có checkout_items)
+                    let localItems: any[] | null = null;
+                    try {
+                        if (typeof window !== 'undefined') {
+                            const ss = sessionStorage.getItem('cart_session');
+                            if (ss) localItems = JSON.parse(ss);
+                        }
+                    } catch { }
+                    
+                    if (!localItems) {
+                        const saved = Cookies.get('cart_session');
+                        if (saved) localItems = JSON.parse(saved);
+                    }
+
+                    if (localItems) {
+                        const mapped = await Promise.all(
+                            localItems.map(async (i: any, idx: number) => {
+                                const pid = Number(i.product?.id ?? i.product_id);
+                                let storeId = Number(i.product?.store?.id ?? i.store_id ?? 0);
+                                if (!storeId) {
+                                    try {
+                                        const detail = await productApi.getProductById(String(pid));
+                                        const fallback = detail?.stores?.[0]?.store_id;
+                                        if (fallback) storeId = Number(fallback);
+                                    } catch { }
+                                }
+
+                                let classificationId = null;
+                                if (i.classificationId) classificationId = i.classificationId;
+                                else if (i.classifications && i.classifications.attribute1_id && i.classifications.attribute2_id) {
+                                    classificationId = i.classifications.classificationId || null;
+                                }
+
+                                return {
+                                    id: `guest-${idx}`,
+                                    product_id: pid,
+                                    quantity: Number(i.quantity ?? 1),
+                                    store_id: storeId || 1,
+                                    classifications: i.classifications ? {
+                                        attribute1_id: i.classifications.attribute1_id,
+                                        attribute2_id: i.classifications.attribute2_id,
+                                        attribute1_name: i.classifications.attribute1_name || '',
+                                        attribute2_name: i.classifications.attribute2_name || ''
+                                    } : undefined,
+                                    classificationId,
+                                    price: i.price, // Keep the classification price from guest cart
+                                };
+                            })
+                        );
+                        console.log('🛒 Guest cart items with classifications (FALLBACK - không có checkout_items):', mapped);
+                        if (mounted && !hasCheckoutItems) {
+                            setServerItems(mapped);
+                        }
+                    }
+                }
+
+                /** 🔥 TẢI DANH SÁCH VOUCHER */
+                setLoadingVouchers(true);
+                let vouchers: Voucher[] = [];
+                if (isAuthenticated && user?.id) {
+                    try {
+                        vouchers = await voucherApi.fetchCustomerVouchers(user.id);
+                    } catch (err) {
+                        console.error('❌ Lỗi khi tải voucher người dùng:', err);
+                    }
+                } else {
+                    // Nếu khách, có thể hiển thị danh sách chung (nếu cần)
+                    try {
+                        vouchers = await voucherApi.fetchAvailableVouchers();
+                    } catch { }
+                }
+                if (mounted) setAvailableVouchers(vouchers);
+
+            } catch (e) {
+                console.error('Lỗi tải giỏ hàng:', e);
+            } finally {
+                if (mounted) {
+                    setLoadingCart(false);
+                    setLoadingVouchers(false);
+                }
+            }
+        })();
+        return () => { mounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated, user?.id]); // ✅ Chỉ chạy khi isAuthenticated hoặc user.id thay đổi
+
+    /** ===================== LOAD PRODUCTS ===================== */
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            const missing = serverItems.map(ci => ci.product_id).filter(pid => !serverProducts[pid]);
+            if (missing.length === 0) return;
+
+            const results = await Promise.allSettled(missing.map(pid => productApi.getProductById(String(pid))));
+            if (!mounted) return;
+
+            const next: Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }> = { ...serverProducts };
+            results.forEach((r, idx) => {
+                const pid = missing[idx];
+                if (r.status === 'fulfilled' && r.value) {
+                    next[pid] = {
+                        id: Number(r.value.id),
+                        name: r.value.name,
+                        price: Number(r.value.price),
+                        images: r.value.images || [],
+                        promotion: r.value.promotion, // Include promotion data
+                    };
+                }
+            });
+            setServerProducts(next);
+        })();
+        return () => { mounted = false; };
+    }, [serverItems, serverProducts]);
+
+    /** ===================== SYNC SERVER PRODUCTS FROM CONTEXT ===================== */
+    useEffect(() => {
+        const next: Record<number, any> = { ...serverProducts };
+        items.forEach(i => {
+            const pid = Number(i.product?.id);
+            if (pid && !next[pid]) {
+                next[pid] = {
+                    id: pid,
+                    name: i.product?.name || 'Sản phẩm',
+                    price: i.product?.price || 0,
+                    images: i.product?.images || [],
+                };
+            }
+        });
+        setServerProducts(next);
+    }, [items]);
+
+    /** ===================== TÍNH TOÁN GIÁ ===================== */
+    const { total, discountAmount, finalTotal, totalWithShipping } = useMemo(() => {
+        const initialTotal = serverItems.length > 0 ? serverItems.reduce((acc, ci) => {
+            const product = serverProducts[ci.product_id];
+            if (!product) return acc;
+
+            // Calculate actual price with promotion discount
+            let actualPrice = ci.classificationPrice || ci.price || product.price;
+
+            // Apply promotion discount if exists
+            if (product.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+                const discountValue = Number(product.promotion.discount_value);
+                if (product.promotion.discount_type === 'PERCENTAGE') {
+                    actualPrice = actualPrice * (1 - discountValue / 100);
+                } else if (product.promotion.discount_type === 'FIXED_AMOUNT') {
+                    actualPrice = Math.max(0, actualPrice - discountValue);
+                }
+            }
+
+            console.log('🔍 Server cart item price calculation:', { product: product.name, basePrice: product.price, classificationPrice: ci.classificationPrice, fallbackPrice: ci.price, actualPrice: actualPrice, promotion: product.promotion, classification: ci.classifications });
+            return acc + actualPrice * ci.quantity;
+        }, 0) : items.reduce((acc, cur) => {
+            // For guest items, use classification price if available
+            const actualPrice = cur.price || cur.product.price;
+            console.log('🔍 Guest cart item price calculation:', { product: cur.product.name, basePrice: cur.product.price, classificationPrice: cur.price, actualPrice: actualPrice, classification: cur.classifications });
+            return acc + actualPrice * cur.quantity;
+        }, 0);
+
+        let discount = 0;
+        if (selectedVoucher) {
+            const minOrder = Number(selectedVoucher.min_order_value ?? selectedVoucher.order_conditions ?? 0);
+            if (initialTotal >= minOrder) {
+                const discountValue = Number(selectedVoucher.discount_value ?? selectedVoucher.voucher_percentage ?? 0);
+                const type = String(selectedVoucher.discount_type ?? 'PERCENT').toUpperCase();
+
+                if (type === 'PERCENT' || type === 'PERCENTAGE') discount = Math.round(initialTotal * (discountValue / 100));
+                else discount = discountValue;
+            }
+        }
+
+        const afterDiscount = Math.max(0, initialTotal - discount);
+        const withShipping = afterDiscount + SHIPPING_FEE;
+
+        return { total: initialTotal, discountAmount: discount, finalTotal: afterDiscount, totalWithShipping: withShipping };
+    }, [items, serverItems, serverProducts, selectedVoucher, SHIPPING_FEE]);
+
+    /** ===================== CHỌN VOUCHER ===================== */
+    const handleSelectVoucher = (voucher: Voucher) => {
+        const minOrder = Number(voucher.min_order_value ?? voucher.order_conditions ?? 0);
+        if (total < minOrder) {
+            setError(`❌ Đơn hàng phải đạt ${formatPrice(minOrder)} để áp dụng mã này.`);
+            setSelectedVoucher(null);
+            return;
+        }
+        setError(null);
+        setSelectedVoucher(selectedVoucher?.id === voucher.id ? null : voucher);
+    };
+
+    const handlePayment = async (orderId: number, amount: number) => {
+        const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${orderId}`;
+        try {
+            console.log('💳 Khởi tạo thanh toán VNPay với số tiền:', formatPrice(amount));
+            const pay = await paymentApi.createVnPayPayment(orderId, amount, returnUrl);
+            const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
+
+            console.log('✅ Response từ API thanh toán:', pay);
+
+            if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
+
+            window.location.href = paymentUrl;
+
+        } catch (error) {
+            console.error('❌ Lỗi khi tạo thanh toán VNPay:', error);
+            toast.error('Không thể khởi tạo thanh toán VNPay');
+        }
+    };
+
+    const validateForm = useCallback(() => {
+        const errors = { guestName: '', guestPhone: '', guestEmail: '', address: '', city: '' };
+        let isValid = true;
+
+        if (!isAuthenticated) {
+            if (!guestName.trim()) { errors.guestName = 'Vui lòng nhập họ và tên.'; isValid = false; }
+            if (!guestPhone.trim()) { errors.guestPhone = 'Vui lòng nhập số điện thoại.'; isValid = false; }
+            else if (!/^(0[3|5|7|8|9])+([0-9]{8})\b/.test(guestPhone)) { errors.guestPhone = 'Số điện thoại không hợp lệ.'; isValid = false; }
+            if (guestEmail.trim() && !/\S+@\S+\.\S+/.test(guestEmail)) { errors.guestEmail = 'Địa chỉ email không hợp lệ.'; isValid = false; }
+        }
+
+        if (!address.trim()) { errors.address = 'Vui lòng nhập địa chỉ giao hàng.'; isValid = false; }
+        if (!city.trim()) { errors.city = 'Vui lòng nhập tỉnh/thành phố.'; isValid = false; }
+
+        setFormErrors(errors);
+        return isValid;
+    }, [isAuthenticated, guestName, guestPhone, guestEmail, address, city]);
+
+    /** ===================== SYNC GUEST CART FROM CONTEXT ===================== */
+    useEffect(() => {
+        // ✅ KHÔNG sync nếu đã có checkout_items từ cart (sản phẩm đã được chọn)
+        if (hasCheckoutItems) {
+            // Đã load sản phẩm được chọn từ cart, không sync từ context
+            return;
+        }
+
+        if (!isAuthenticated && items.length > 0) {
+            const mapped = items.map((i, idx) => ({
+                id: `guest-${idx}`,
+                product_id: Number(i.product?.id),
+                quantity: i.quantity,
+                store_id: Number(i.product?.store?.id || 1),
+                price: i.price || i.product.price,
+                classificationId: i.classificationId || undefined, // null → undefined
+                classifications: i.classifications ? {
+                    attribute1_id: i.classifications.attribute1_id ?? undefined,
+                    attribute2_id: i.classifications.attribute2_id ?? undefined,
+                    attribute1_name: i.classifications.attribute1_name ?? undefined,
+                    attribute2_name: i.classifications.attribute2_name ?? undefined,
+                } : undefined,
+            }));
+            setServerItems(mapped);
+        }
     }, [isAuthenticated, items, hasCheckoutItems]);
 
-  /** ===================== TẠO ĐƠN HÀNG ===================== */
-  const handleCreate = async () => {
-  if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
-  const cartItems = serverItems.length > 0 ? serverItems : items;
-  console.log('🛒 Using cart items for checkout:', cartItems);
+    /** ===================== TẠO ĐƠN HÀNG VÀ XÓA SẢN PHẨM ĐÃ CHỌN ===================== */
+    const handleCreate = async () => {
+        if (loadingCart) return setError('⏳ Đang tải giỏ hàng, vui lòng thử lại sau');
+        const cartItems = serverItems.length > 0 ? serverItems : items;
+        console.log('🛒 Using cart items for checkout:', cartItems);
 
-  if (!cartItems.length) return setError('❌ Giỏ hàng trống');
+        if (!cartItems.length) return setError('❌ Giỏ hàng trống');
 
-  if (!validateForm()) return;
+        if (!validateForm()) return;
 
-  setCreating(true);
-  setError(null);
+        setCreating(true);
+        setError(null);
 
-  try {
-    let customerId: number | null = null;
-    const authType = localStorage.getItem('auth_type');
-    const storedGuestId = localStorage.getItem('guest_id');
-
-    // ✅ Nếu user thật (đã đăng nhập)
-    if (isAuthenticated && authType === 'user') {
-      const storedCustomerId = localStorage.getItem('customerId');
-      if (storedCustomerId) {
-        customerId = Number(storedCustomerId);
-      } else throw new Error('Không tìm thấy customerId. Vui lòng đăng xuất và đăng nhập lại.');
-    } 
-    // ✅ Nếu là guest
-    else {
-      if (storedGuestId) {
-        customerId = Number(storedGuestId);
-      } else {
-        if (!guestName.trim() || !guestPhone.trim()) {
-          throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
+        // Lấy danh sách ID của các mục cần xóa khỏi Server Cart
+        // Chỉ áp dụng cho User đã đăng nhập và không phải là item 'buy-now'
+        const serverCartItemIdsToDelete: string[] = isAuthenticated
+            ? serverItems
+                .filter(ci => ci.id && String(ci.id).startsWith('buy-now') === false)
+                .map(ci => String(ci.id))
+            : [];
+        
+        if (isAuthenticated) {
+            console.log('✅ Identified Server Cart Item IDs to delete:', serverCartItemIdsToDelete);
+        } else {
+            console.log('✅ Guest checkout detected.');
         }
 
-        const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
-        const created = await customersApi.createCustomer({
-          username: `guest_${Date.now()}`,
-          password: `guest-${Math.random().toString(36).slice(2)}`,
-          full_name: guestName.trim(),
-          email: fallbackEmail,
-          phone_number: guestPhone.trim(),
-          address: `${address.trim()}, ${city.trim()}`,
-        });
+        try {
+            let customerId: number | null = null;
+            const authType = localStorage.getItem('auth_type');
+            const storedGuestId = localStorage.getItem('guest_id');
 
-        customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
-        if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
-
-        // Lưu guest info
-        localStorage.setItem('guest_id', String(customerId));
-        localStorage.setItem('guest_name', guestName.trim());
-        localStorage.setItem('guest_phone', guestPhone.trim());
-        localStorage.setItem('guest_email', fallbackEmail);
-        localStorage.setItem('auth_type', 'guest');
-      }
-    }
-
-    // Build payload items
-    const payloadItems = cartItems.map(ci => {
-      const isServerItem = 'product_id' in ci;
-      const pid = isServerItem ? Number(ci.product_id) : Number(ci.product?.id ?? 0);
-      const quantity = ci.quantity;
-      const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
-
-      let actualPrice: number;
-      if (isServerItem) {
-        const serverItem = ci as typeof serverItems[0];
-        actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
-
-        // Apply promotion
-        const product = serverProducts[pid];
-        if (product?.promotion && product.promotion.discount_type && product.promotion.discount_value) {
-          const discountValue = Number(product.promotion.discount_value);
-          if (product.promotion.discount_type === 'PERCENTAGE') actualPrice *= 1 - discountValue / 100;
-          else if (product.promotion.discount_type === 'FIXED_AMOUNT') actualPrice = Math.max(0, actualPrice - discountValue);
-        }
-      } else {
-        const guestItem = ci as CartItem;
-        actualPrice = guestItem.price || guestItem.product.price;
-      }
-
-      const share = total > 0 ? (actualPrice * quantity) / total : 0;
-      const discountedPrice = actualPrice - (share * discountAmount) / quantity;
-
-      let classificationId = null, attribute1Name = '', attribute2Name = '';
-      if (isServerItem) {
-        const serverItem = ci as typeof serverItems[0];
-        classificationId = serverItem.classificationId || null;
-        attribute1Name = serverItem.classifications?.attribute1_name || '';
-        attribute2Name = serverItem.classifications?.attribute2_name || '';
-      } else {
-        const guestItem = ci as CartItem;
-        classificationId = guestItem.classificationId || null;
-        attribute1Name = guestItem.classifications?.attribute1_name || '';
-        attribute2Name = guestItem.classifications?.attribute2_name || '';
-      }
-
-      return {
-        product_id: pid,
-        quantity,
-        price_at_order: Math.round(discountedPrice),
-        store_id: storeId,
-        classification_attribute_relationship_id: classificationId,
-        attribute1_name: attribute1Name,
-        attribute2_name: attribute2Name,
-      };
-    });
-    
-    // Nhóm items theo store_id
-    const itemsByStore: Record<number, typeof payloadItems> = {};
-    payloadItems.forEach(item => {
-      if (!itemsByStore[item.store_id]) itemsByStore[item.store_id] = [];
-      itemsByStore[item.store_id].push(item);
-    });
-
-    // Tạo đơn cho từng cửa hàng
-    const storeIds = Object.keys(itemsByStore).map(Number);
-    for (const [index, storeId] of storeIds.entries()) {
-      const storeItems = itemsByStore[storeId];
-      const storeTotalBeforeDiscount = storeItems.reduce((sum, i) => sum + i.price_at_order * i.quantity, 0);
-      const storeDiscount = total > 0 ? storeItems.reduce((sum, i) => sum + ((i.price_at_order * i.quantity) / total) * discountAmount, 0) : 0;
-      const storeFinalTotal = Math.max(0, storeTotalBeforeDiscount - storeDiscount);
-      const storeFinalTotalWithShipping = storeFinalTotal + SHIPPING_FEE;
-
-      const payloadPerStore = {
-        customer_id: customerId,
-        shipping_address: `${address.trim()}, ${city.trim()}`,
-        voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
-        payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
-        items: storeItems,
-      };
-
-      console.log(`📦 Tạo đơn cho cửa hàng ${storeId}`, payloadPerStore);
-
-      const res = await orderApi.createOrder(payloadPerStore);
-      const createdId = Number(res?.data?.id ?? res?.id);
-      if (!createdId) throw new Error(`Không thể tạo đơn cho cửa hàng ${storeId}`);
-
-      // COD email cho guest
-      if (paymentMethod === 'COD' && !isAuthenticated) {
-        await sendOrderConfirmationEmail(createdId);
-      }
-
-      // VNPay: redirect đơn đầu tiên
-      if (paymentMethod === 'VNPAY' && index === 0) {
-        if (!isAuthenticated) clearGuestData();
-        await handlePayment(createdId, storeFinalTotalWithShipping);
-        return;
-      }
-    }
-
-    // Nếu COD + user đã login
-    if (paymentMethod === 'COD') {
-      clearCart();
-      try { sessionStorage.removeItem('cart_session'); Cookies.remove('cart_session'); } catch {}
-      if (!isAuthenticated) clearGuestData();
-      window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderId=${storeIds[0]}`;
-    }
-
-  } catch (e: unknown) {
-    const error = e as Error & { response?: { data?: { error?: string; message?: string } }; message?: string };
-    const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Không thể tạo đơn hàng';
-    setError(msg);
-    toast.error(msg);
-  } finally {
-    setCreating(false);
-  }
-};
-
-
-  /** ===================== LOAD ORDERS ===================== */
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await orderApi.getOrdersByCustomer(user.id as string);
-        setOrders(res?.data || []);
-      } catch (err) {
-        console.error('Lỗi khi tải đơn hàng:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (guestName) setFormErrors(prev => ({ ...prev, guestName: '' }));
-    if (guestPhone) setFormErrors(prev => ({ ...prev, guestPhone: '' }));
-    if (guestEmail) setFormErrors(prev => ({ ...prev, guestEmail: '' }));
-    if (address) setFormErrors(prev => ({ ...prev, address: '' }));
-    if (city) setFormErrors(prev => ({ ...prev, city: '' }));
-  }, [guestName, guestPhone, guestEmail, address, city]);
-  return (
-    <BaseLayout>
-      {isAuthenticated && user?.id && (
-        <>
-          {/* Voucher Modal */}
-          {isVoucherModalOpen && (
-            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-white/10">
-              <VoucherModal
-                customerId={user.id}
-                isOpen={isVoucherModalOpen}
-                onClose={() => setIsVoucherModalOpen(false)}
-              />
-            </div>
-          )}
-
-          {/* Chat Modal */}
-          {isChatOpen && (
-            <ChatModal
-              isOpen={isChatOpen}
-              onClose={() => setIsChatOpen(false)}
-              userId={Number(user.id)}
-              storeId={0}
-              conversationId={conversationId} // ✅ truyền id xuống
-            />
-          )}
-
-          {/* AI Chat Modal */}
-          <AIChatModal
-            isOpen={isAIChatOpen}
-            onClose={() => setIsAIChatOpen(false)}
-          />
-
-          {/* Floating Buttons */}
-          <div
-            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
-              isChatDropdownOpen ? 'right-1' : 'right-1'
-            }`}
-          >
-            {/* Voucher Button */}
-            <button
-              onClick={() => setIsVoucherModalOpen(true)}
-              className="bg-yellow-400 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
-              title="Nhận Voucher Giảm Giá!"
-            >
-              <Gift className="w-6 h-6" />
-            </button>
-
-            {/* Chat Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsChatDropdownOpen(prev => !prev)}
-                className="bg-[#8B7D6B] text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                title="Bắt đầu trò chuyện"
-              >
-                <MessageSquare className="w-6 h-6" />
-              </button>
-
-              {isChatDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 flex flex-col gap-3 transition-all duration-300 ease-out transform origin-top-right">
-                  {/* Nút Chat với Admin */}
-                  <div className="relative group">
-                    <button
-                      onClick={async () => {
-                        if (!isAuthenticated || !user?.id) return;
-                        try {
-                          const created = await conversationApi.createConversation({
-                            sender_id: Number(user.id),
-                            sender_type: 'USER',
-                            content: '',
-                            user_id: Number(user.id),
-                            store_id: 1,
-                          });
-                          const conv = created?.conversation || created?.data || created;
-                          setConversationId(conv?.id || null);
-                          setIsChatOpen(true);
-                          setIsChatDropdownOpen(false);
-                        } catch (err) {
-                          console.error('❌ Lỗi tạo conversation:', err);
-                        }
-                      }}
-                      className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                      title="Chat với Admin"
-                    >
-                      <User className="w-5 h-5" />
-                    </button>
-                  </div>
-                  {/* Nút Chat với AI */}
-                  <div className="relative group">
-                    <button
-                      onClick={() => {
-                        setIsAIChatOpen(true); // 2. Mở popup AI chat
-                        setIsChatDropdownOpen(false);
-                      }}
-                      className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
-                      title="Chat với AI"
-                    >
-                      <Bot className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-      {/* Container chính: Thu hẹp tối đa (max-w-3xl) và màu nền tinh tế */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white min-h-screen shadow-sm rounded-lg">
-
-        {/* Tiêu đề: Đơn giản, font serif */}
-        <h1 className="text-3xl font-serif font-bold mb-8 text-[#8B7D6B] text-center tracking-wide relative pb-2 border-b border-[#D4C3A3]/50">
-          Xác nhận Thanh toán
-        </h1>
-
-        {/* Cấu trúc Layout: Đổi sang 2 cột cho màn hình lớn hơn */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-          {/* Left: Cart Items + Voucher (3/5 width) */}
-          <div className="lg:col-span-3 space-y-5">
-
-            {/* Giỏ hàng */}
-            <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5"> {/* Giảm padding, border, shadow */}
-              <h2 className="text-lg font-semibold mb-4 text-[#2C2A24] flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-[#A38D64]" /> Chi tiết đơn hàng
-              </h2>
-
-              {loadingCart ? (
-                <div className="text-center text-[#65604E] py-6 text-sm flex items-center justify-center gap-2">
-                  <Clock className="w-4 h-4 animate-spin text-[#A38D64]" /> Đang tải giỏ hàng...
-                </div>
-              ) : (serverItems.length === 0 && items.length === 0) ? (
-                <div className="text-center text-gray-400 py-6 text-sm">Giỏ hàng trống</div>
-              ) : (
-                <div className="divide-y divide-[#F5F3EF]">
-                  {(() => {
-                    const itemsToDisplay = serverItems.length > 0 ? serverItems : items.map((i, idx) => ({
-                      id: `guest-${idx}`,
-                      product_id: Number(i.product.id),
-                      quantity: i.quantity,
-                      store_id: Number(i.product.store?.id || 0),
-                      classifications: i.classifications,
-                      classificationId: i.classificationId,
-                      price: i.price || i.product.price
-                    }));
-                    console.log('🛒 Rendering checkout items. serverItems.length:', serverItems.length, 'itemsToDisplay.length:', itemsToDisplay.length);
-                    return itemsToDisplay;
-                  })().map((ci) => {
-                    const p = serverProducts[ci.product_id] || contextProducts[ci.product_id];
-                    if (!p) {
-                      console.warn('⚠️ Product not found for product_id:', ci.product_id);
-                      return null;
+            // ✅ Nếu user thật (đã đăng nhập)
+            if (isAuthenticated && authType === 'user') {
+                const storedCustomerId = localStorage.getItem('customerId');
+                if (storedCustomerId) {
+                    customerId = Number(storedCustomerId);
+                } else throw new Error('Không tìm thấy customerId. Vui lòng đăng xuất và đăng nhập lại.');
+            } 
+            // ✅ Nếu là guest
+            else {
+                if (storedGuestId) {
+                    customerId = Number(storedGuestId);
+                } else {
+                    if (!guestName.trim() || !guestPhone.trim()) {
+                        throw new Error('Vui lòng nhập họ tên và số điện thoại để đặt hàng.');
                     }
-                    const actualPrice = ci.price || p.price;
 
-                    // Debug log
-                    console.log('🔍 Checkout item:', {
-                      id: ci.id,
-                      product: p.name,
-                      classifications: ci.classifications,
-                      classificationId: ci.classificationId,
-                      price: actualPrice,
-                      originalPrice: p.price
+                    const fallbackEmail = guestEmail.trim() || `guest_${Date.now()}@example.com`;
+                    const created = await customersApi.createCustomer({
+                        username: `guest_${Date.now()}`,
+                        password: `guest-${Math.random().toString(36).slice(2)}`,
+                        full_name: guestName.trim(),
+                        email: fallbackEmail,
+                        phone_number: guestPhone.trim(),
+                        address: `${address.trim()}, ${city.trim()}`,
                     });
 
-                    return (
-                      <div key={ci.id} className="flex justify-between py-3 items-center">
-                        <div className="flex items-center gap-3">
-                          {p.images?.[0] && (
-                            <Image
-                              src={p.images[0]}
-                              alt={p.name}
-                              width={48}
-                              height={48}
-                              className="w-12 h-12 object-cover rounded-md border border-[#F1F0E8]"
-                            />
-                          )}
-                          <div>
-                            <div className="font-medium text-sm text-[#2C2A24]">{p.name}</div>
-                            <div className="text-xs text-[#7C7768]">SL: {ci.quantity}</div>
+                    customerId = Number(created?.id ?? created?.data?.id ?? created?.customer?.id);
+                    if (!customerId) throw new Error('Không thể tạo khách hàng tạm thời.');
 
-                            {/* Show classification info if available - Updated condition */}
-                            {ci.classifications && (
-                              <div className="flex gap-1 mt-1">
-                                {ci.classifications.attribute1_name && (
-                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
-                                    {ci.classifications.attribute1_name}
-                                  </span>
-                                )}
-                                {ci.classifications.attribute2_name && (
-                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
-                                    {ci.classifications.attribute2_name}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="font-semibold text-sm text-[#2C2A24]">
-                          {formatPrice(actualPrice * ci.quantity)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                    // Lưu guest info
+                    localStorage.setItem('guest_id', String(customerId));
+                    localStorage.setItem('guest_name', guestName.trim());
+                    localStorage.setItem('guest_phone', guestPhone.trim());
+                    localStorage.setItem('guest_email', fallbackEmail);
+                    localStorage.setItem('auth_type', 'guest');
+                }
+            }
 
-            {/* Voucher - Tiếp tục tinh chỉnh thẻ, sử dụng màu sắc tối giản */}
-            <div className="bg-[#EFE9DC] rounded-lg shadow-inner p-4 border border-[#D4C3A3]/50"> {/* Giảm padding, shadow */}
-              <h2 className="text-lg font-semibold mb-3 text-[#2C2A24] flex items-center gap-2">
-                <Tag className="w-5 h-5 text-[#A38D64]" /> Mã ưu đãi
-              </h2>
-              {loadingVouchers ? (
-                <div className="text-center text-[#65604E] py-4 text-sm">Đang tải...</div>
-              ) : availableVouchers.length > 0 ? (
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {availableVouchers.map(v => {
-                    const minOrder = Number(v.min_order_value ?? v.order_conditions ?? 0);
-                    const eligible = total >= minOrder;
-                    const selected = selectedVoucher?.id === v.id;
-                    const discountVal = Number(v.discount_value ?? v.voucher_percentage ?? 0);
-                    const type = String(v.discount_type ?? 'PERCENT').toUpperCase();
+            // Build payload items
+            const payloadItems = cartItems.map(ci => {
+                const isServerItem = 'product_id' in ci;
+                const pid = isServerItem ? Number(ci.product_id) : Number(ci.product?.id ?? 0);
+                const quantity = ci.quantity;
+                const storeId = isServerItem ? Number(ci.store_id) : Number(ci.product?.store?.id || 1);
 
-                    return (
-                      <div
-                        key={v.id}
-                        onClick={() => eligible && handleSelectVoucher(v)}
-                        className={`p-3 rounded-md transition border-2 ${selected ? 'bg-[#D6C5A9] border-[#A38D64] shadow-md' : eligible ? 'bg-white border-[#D4C3A3]/50 hover:bg-[#F9F7F3]' : 'bg-[#F3F1ED] border-[#E0DCCA] cursor-not-allowed opacity-70'}`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1">
-                            <div className="font-bold text-sm text-[#2C2A24] truncate">
-                              {v.code}
-                            </div>
-                            <p className="text-xs text-[#7C7768] mt-0.5 truncate">{v.description || 'Ưu đãi đặc biệt'}</p>
-                          </div>
-                          <div className="text-right flex flex-col items-end pl-2">
-                            <p className="font-bold text-base text-[#A38D64]">
-                              {type === 'PERCENT' || type === 'PERCENTAGE' ? `${discountVal}%` : formatPrice(discountVal)}
-                            </p>
-                            <p className={`text-xs mt-0.5 ${eligible ? 'text-[#3D6647]' : 'text-red-600'}`}>
-                              {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5' /> : <X className='w-3 h-3 inline-block mr-0.5' />}
-                              {eligible ? 'Đủ ĐK' : `Min: ${formatPrice(minOrder)}`}
-                            </p>
-                          </div>
+                let actualPrice: number;
+                if (isServerItem) {
+                    const serverItem = ci as typeof serverItems[0];
+                    actualPrice = serverItem.classificationPrice || serverItem.price || Number(serverProducts[pid]?.price ?? 0);
 
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center text-[#65604E] py-4 text-sm">Bạn chưa có mã ưu đãi nào.</div>
-              )}
-            </div>
-          </div>
+                    // Apply promotion
+                    const product = serverProducts[pid];
+                    if (product?.promotion && product.promotion.discount_type && product.promotion.discount_value) {
+                        const discountValue = Number(product.promotion.discount_value);
+                        if (product.promotion.discount_type === 'PERCENTAGE') actualPrice *= 1 - discountValue / 100;
+                        else if (product.promotion.discount_type === 'FIXED_AMOUNT') actualPrice = Math.max(0, actualPrice - discountValue);
+                    }
+                } else {
+                    const guestItem = ci as CartItem;
+                    actualPrice = guestItem.price || guestItem.product.price;
+                }
 
-          {/* Right: Summary + Form (2/5 width) */}
-          <div className="lg:col-span-2 space-y-5">
+                const share = total > 0 ? (actualPrice * quantity) / total : 0;
+                const discountedPrice = actualPrice - (share * discountAmount) / quantity;
 
-            {/* Tổng cộng */}
-            <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 sticky top-4"> {/* Giảm padding, border, shadow */}
-              <h2 className="text-lg font-semibold mb-4 text-[#2C2A24]">💰 Tóm tắt đơn hàng</h2>
-              <div className="space-y-2"> {/* Giảm khoảng cách */}
-                <div className="flex justify-between text-sm text-[#5A5547]">
-                  <span>Tổng tiền hàng</span>
-                  <span className="font-medium">{formatPrice(total)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-[#5A5547]">
-                  <span>Phí vận chuyển</span>
-                  <span className="font-medium">{formatPrice(SHIPPING_FEE)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-[#3D6647] text-sm font-semibold border-t border-dashed border-gray-200 pt-2">
-                    <span>Mã giảm giá</span>
-                    <span>-{formatPrice(discountAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-gray-300 pt-3 items-center">
-                  <span className="text-base font-bold text-[#2C2A24]">Thành tiền</span>
-                  <div className="text-right">
-                    {discountAmount > 0 && <div className="text-xs text-gray-400 line-through">{formatPrice(total + SHIPPING_FEE)}</div>}
-                    <span className="text-xl font-bold text-[#A38D64]">{formatPrice(totalWithShipping)}</span> {/* Font 2xl -> xl */}
-                  </div>
-                </div>
-              </div>
-            </div>
+                let classificationId = null, attribute1Name = '', attribute2Name = '';
+                if (isServerItem) {
+                    const serverItem = ci as typeof serverItems[0];
+                    classificationId = serverItem.classificationId || null;
+                    attribute1Name = serverItem.classifications?.attribute1_name || '';
+                    attribute2Name = serverItem.classifications?.attribute2_name || '';
+                } else {
+                    const guestItem = ci as CartItem;
+                    classificationId = guestItem.classificationId || null;
+                    attribute1Name = guestItem.classifications?.attribute1_name || '';
+                    attribute2Name = guestItem.classifications?.attribute2_name || '';
+                }
 
-            {/* Form */}
-            <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 space-y-4"> {/* Giảm padding, border, shadow */}
-              <h2 className="text-lg font-semibold text-[#2C2A24] flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#A38D64]" /> Thông tin giao nhận
-              </h2>
+                return {
+                    product_id: pid,
+                    quantity,
+                    price_at_order: Math.round(discountedPrice),
+                    store_id: storeId,
+                    classification_attribute_relationship_id: classificationId,
+                    attribute1_name: attribute1Name,
+                    attribute2_name: attribute2Name,
+                };
+            });
+            
+            // Nhóm items theo store_id
+            const itemsByStore: Record<number, typeof payloadItems> = {};
+            payloadItems.forEach(item => {
+                if (!itemsByStore[item.store_id]) itemsByStore[item.store_id] = [];
+                itemsByStore[item.store_id].push(item);
+            });
 
-              {/* Guest Info */}
-              {!isAuthenticated && (
+            // Tạo đơn cho từng cửa hàng
+            const storeIds = Object.keys(itemsByStore).map(Number);
+            for (const [index, storeId] of storeIds.entries()) {
+                const storeItems = itemsByStore[storeId];
+                const storeTotalBeforeDiscount = storeItems.reduce((sum, i) => sum + i.price_at_order * i.quantity, 0);
+                const storeDiscount = total > 0 ? storeItems.reduce((sum, i) => sum + ((i.price_at_order * i.quantity) / total) * discountAmount, 0) : 0;
+                const storeFinalTotal = Math.max(0, storeTotalBeforeDiscount - storeDiscount);
+                const storeFinalTotalWithShipping = storeFinalTotal + SHIPPING_FEE;
+
+                const payloadPerStore = {
+                    customer_id: customerId,
+                    shipping_address: `${address.trim()}, ${city.trim()}`,
+                    voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
+                    payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
+                    items: storeItems,
+                };
+
+                console.log(`📦 Tạo đơn cho cửa hàng ${storeId}`, payloadPerStore);
+
+                const res = await orderApi.createOrder(payloadPerStore);
+                const createdId = Number(res?.data?.id ?? res?.id);
+                if (!createdId) throw new Error(`Không thể tạo đơn cho cửa hàng ${storeId}`);
+
+                // COD email cho guest
+                if (paymentMethod === 'COD' && !isAuthenticated) {
+                    await sendOrderConfirmationEmail(createdId);
+                }
+
+                // VNPay: redirect đơn đầu tiên (Xóa Server Cart Item và Session trước khi redirect)
+                if (paymentMethod === 'VNPAY' && index === 0) {
+                    if (!isAuthenticated) clearGuestData();
+                    
+                    // 🔥 Xóa Server Cart Item cho user đã login
+                    if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
+                        console.log('🗑️ Deleting server cart items before VNPAY redirect...');
+                        await Promise.all(serverCartItemIdsToDelete.map(id => cartApi.remove(id)));
+                    }
+
+                    // Xóa Session Checkout
+                    sessionStorage.removeItem('checkout_items');
+                    
+                    await handlePayment(createdId, storeFinalTotalWithShipping);
+                    return;
+                }
+            }
+            
+            // Nếu COD (Tất cả đơn hàng đã được tạo thành công)
+            if (paymentMethod === 'COD') {
+                
+                // 🔥 Xóa Server Cart Item cho user đã login
+                if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
+                    console.log('🗑️ Deleting server cart items after successful COD orders...');
+                    await Promise.all(serverCartItemIdsToDelete.map(id => cartApi.remove(id)));
+                }
+
+                // Client/Guest Cleanup
+                clearCart(); // Xóa context và local storage/cookie cho Guest (hoặc User)
+                try { 
+                    sessionStorage.removeItem('cart_session'); 
+                    Cookies.remove('cart_session');
+                    // 👇 Xóa Session lưu trữ các sản phẩm được chọn
+                    sessionStorage.removeItem('checkout_items');
+                    console.log('🗑️ Client storage cleared.');
+                } catch {}
+
+                if (!isAuthenticated) clearGuestData();
+                window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderId=${storeIds[0]}`;
+            }
+
+        } catch (e: unknown) {
+            const error = e as Error & { response?: { data?: { error?: string; message?: string } }; message?: string };
+            const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Không thể tạo đơn hàng';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    /** ===================== LOAD ORDERS ===================== */
+    useEffect(() => {
+        if (!isAuthenticated || !user?.id) return;
+        (async () => {
+            try {
+                setLoading(true);
+                const res = await orderApi.getOrdersByCustomer(user.id as string);
+                setOrders(res?.data || []);
+            } catch (err) {
+                console.error('Lỗi khi tải đơn hàng:', err);
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [isAuthenticated, user?.id]);
+
+    useEffect(() => {
+        if (guestName) setFormErrors(prev => ({ ...prev, guestName: '' }));
+        if (guestPhone) setFormErrors(prev => ({ ...prev, guestPhone: '' }));
+        if (guestEmail) setFormErrors(prev => ({ ...prev, guestEmail: '' }));
+        if (address) setFormErrors(prev => ({ ...prev, address: '' }));
+        if (city) setFormErrors(prev => ({ ...prev, city: '' }));
+    }, [guestName, guestPhone, guestEmail, address, city]);
+
+    return (
+        <BaseLayout>
+            {isAuthenticated && user?.id && (
                 <>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                      <User className='w-3 h-3' /> Họ và tên *
-                    </label>
-                    <input
-                      className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
-                      value={guestName}
-                      onChange={e => setGuestName(e.target.value)}
-                      placeholder="Nguyễn Văn A"
+                    {/* Voucher Modal */}
+                    {isVoucherModalOpen && (
+                        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-white/10">
+                            <VoucherModal
+                                customerId={user.id}
+                                isOpen={isVoucherModalOpen}
+                                onClose={() => setIsVoucherModalOpen(false)}
+                            />
+                        </div>
+                    )}
+
+                    {/* Chat Modal */}
+                    {isChatOpen && (
+                        <ChatModal
+                            isOpen={isChatOpen}
+                            onClose={() => setIsChatOpen(false)}
+                            userId={Number(user.id)}
+                            storeId={0}
+                            conversationId={conversationId} // ✅ truyền id xuống
+                        />
+                    )}
+
+                    {/* AI Chat Modal */}
+                    <AIChatModal
+                        isOpen={isAIChatOpen}
+                        onClose={() => setIsAIChatOpen(false)}
                     />
-                    {formErrors.guestName && <p className="text-red-500 text-xs mt-1">{formErrors.guestName}</p>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                        <Phone className='w-3 h-3' /> SĐT *
-                      </label>
-                      <input
-                        className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
-                        value={guestPhone}
-                        onChange={e => setGuestPhone(e.target.value)}
-                        placeholder="090xxxxxxx"
-                      />
-                      {formErrors.guestPhone && <p className="text-red-500 text-xs mt-1">{formErrors.guestPhone}</p>}
+
+                    {/* Floating Buttons */}
+                    <div
+                        className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
+                            isChatDropdownOpen ? 'right-1' : 'right-1'
+                        }`}
+                    >
+                        {/* Voucher Button */}
+                        <button
+                            onClick={() => setIsVoucherModalOpen(true)}
+                            className="bg-yellow-400 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform animate-bounce"
+                            title="Nhận Voucher Giảm Giá!"
+                        >
+                            <Gift className="w-6 h-6" />
+                        </button>
+
+                        {/* Chat Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsChatDropdownOpen(prev => !prev)}
+                                className="bg-[#8B7D6B] text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                                title="Bắt đầu trò chuyện"
+                            >
+                                <MessageSquare className="w-6 h-6" />
+                            </button>
+
+                            {isChatDropdownOpen && (
+                                <div className="absolute top-full right-0 mt-2 flex flex-col gap-3 transition-all duration-300 ease-out transform origin-top-right">
+                                    {/* Nút Chat với Admin */}
+                                    <div className="relative group">
+                                        <button
+                                            onClick={async () => {
+                                                if (!isAuthenticated || !user?.id) return;
+                                                try {
+                                                    const created = await conversationApi.createConversation({
+                                                        sender_id: Number(user.id),
+                                                        sender_type: 'USER',
+                                                        content: '',
+                                                        user_id: Number(user.id),
+                                                        store_id: 1,
+                                                    });
+                                                    const conv = created?.conversation || created?.data || created;
+                                                    setConversationId(conv?.id || null);
+                                                    setIsChatOpen(true);
+                                                    setIsChatDropdownOpen(false);
+                                                } catch (err) {
+                                                    console.error('❌ Lỗi tạo conversation:', err);
+                                                }
+                                            }}
+                                            className="bg-blue-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                                            title="Chat với Admin"
+                                        >
+                                            <User className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    {/* Nút Chat với AI */}
+                                    <div className="relative group">
+                                        <button
+                                            onClick={() => {
+                                                setIsAIChatOpen(true); // 2. Mở popup AI chat
+                                                setIsChatDropdownOpen(false);
+                                            }}
+                                            className="bg-purple-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:scale-110 transition-transform"
+                                            title="Chat với AI"
+                                        >
+                                            <Bot className="w-6 h-6" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                        <Mail className='w-3 h-3' /> Email (Không bắt buộc)
-                      </label>
-                      <input
-                        className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
-                        value={guestEmail}
-                        onChange={e => setGuestEmail(e.target.value)}
-                        placeholder="example@email.com"
-                      />
-                      {formErrors.guestEmail && <p className="text-red-500 text-xs mt-1">{formErrors.guestEmail}</p>}
-                    </div>
-                  </div>
                 </>
-              )}
+            )}
 
-              {/* Address */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                  <MapPin className='w-3 h-3' /> Địa chỉ giao hàng *
-                </label>
-                <textarea
-                  className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
-                  rows={3}
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  placeholder="Số nhà, đường, phường, quận"
-                />
-                {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
-              </div>
+            {/* Container chính: Thu hẹp tối đa (max-w-3xl) và màu nền tinh tế */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white min-h-screen shadow-sm rounded-lg">
 
-              {/* City */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                  <MapPin className='w-3 h-3' /> Tỉnh/Thành phố *
-                </label>
-                <input
-                  className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                  placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
-                />
-                {formErrors.city && <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>}
-              </div>
+                {/* Tiêu đề: Đơn giản, font serif */}
+                <h1 className="text-3xl font-serif font-bold mb-8 text-[#8B7D6B] text-center tracking-wide relative pb-2 border-b border-[#D4C3A3]/50">
+                    Xác nhận Thanh toán
+                </h1>
 
-              {/* Payment Method */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                  <CreditCard className='w-3 h-3' /> Phương thức thanh toán
-                </label>
-                <select
-                  title='payment'
-                  className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition bg-white"
-                  value={paymentMethod}
-                  onChange={e => setPaymentMethod(e.target.value as 'COD' | 'VNPAY')}
-                >
-                  <option value="COD">🏠 Thanh toán khi nhận hàng (COD)</option>
-                  <option value="VNPAY">💳 Thanh toán qua VNPay</option>
-                </select>
-              </div>
+                {/* Cấu trúc Layout: Đổi sang 2 cột cho màn hình lớn hơn */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-              {error && <div className="bg-red-50 border border-red-300 text-red-700 text-xs px-3 py-2 rounded-md">{error}</div>}
+                    {/* Left: Cart Items + Voucher (3/5 width) */}
+                    <div className="lg:col-span-3 space-y-5">
+                        
+                        {/* Giỏ hàng */}
+                        <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5"> 
+                            {/* Giảm padding, border, shadow */}
+                            <h2 className="text-lg font-semibold mb-4 text-[#2C2A24] flex items-center gap-2">
+                                <ShoppingBag className="w-5 h-5 text-[#A38D64]" /> Chi tiết đơn hàng
+                            </h2>
 
-              {/* Submit Button */}
-              <button
-                disabled={creating || loadingCart || totalWithShipping === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
-                onClick={handleCreate}
-                className="w-full bg-[#A38D64] text-white px-6 py-3 rounded-md text-base font-bold disabled:opacity-50 hover:bg-[#8D7A58] transition shadow-md hover:shadow-lg"
-              >
-                {creating ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span> : paymentMethod === 'VNPAY' ? `THANH TOÁN ${formatPrice(totalWithShipping)}` : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
-              </button>
+                            {loadingCart ? (
+                                <div className="text-center text-[#65604E] py-6 text-sm flex items-center justify-center gap-2">
+                                    <Clock className="w-4 h-4 animate-spin text-[#A38D64]" /> Đang tải giỏ hàng...
+                                </div>
+                            ) : (serverItems.length === 0 && items.length === 0) ? (
+                                <div className="text-center text-gray-400 py-6 text-sm">Giỏ hàng trống</div>
+                            ) : (
+                                <div className="divide-y divide-[#F5F3EF]">
+                                    {(() => {
+                                        const itemsToDisplay = serverItems.length > 0 ? serverItems : items.map((i, idx) => ({ id: `guest-${idx}`, product_id: Number(i.product.id), quantity: i.quantity, store_id: Number(i.product.store?.id || 0), classifications: i.classifications, classificationId: i.classificationId, price: i.price || i.product.price }));
+                                        console.log('🛒 Rendering checkout items. serverItems.length:', serverItems.length, 'itemsToDisplay.length:', itemsToDisplay.length);
+                                        return itemsToDisplay;
+                                    })().map((ci) => {
+                                        const p = serverProducts[ci.product_id] || contextProducts[ci.product_id];
+                                        if (!p) {
+                                            console.warn('⚠️ Product not found for product_id:', ci.product_id);
+                                            return null;
+                                        }
 
-              <p className="text-center text-xs text-gray-500 pt-1">
-                *Bằng việc đặt hàng, bạn đồng ý với Điều khoản và Điều kiện của chúng tôi.
-              </p>
+                                        const actualPrice = ci.price || p.price;
 
+                                        // Debug log
+                                        console.log('🔍 Checkout item:', { id: ci.id, product: p.name, classifications: ci.classifications, classificationId: ci.classificationId, price: actualPrice, originalPrice: p.price });
+                                        
+                                        return (
+                                            <div key={ci.id} className="flex justify-between py-3 items-center">
+                                                <div className="flex items-center gap-3">
+                                                    {p.images?.[0] && (
+                                                        <Image src={p.images[0]} alt={p.name} width={48} height={48} className="w-12 h-12 object-cover rounded-md border border-[#F1F0E8]" />
+                                                    )}
+                                                    <div>
+                                                        <div className="font-medium text-sm text-[#2C2A24]">{p.name}</div>
+                                                        <div className="text-xs text-[#7C7768]">SL: {ci.quantity}</div>
+                                                        {/* Show classification info if available - Updated condition */}
+                                                        {ci.classifications && (
+                                                            <div className="flex gap-1 mt-1">
+                                                                {ci.classifications.attribute1_name && (
+                                                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                                                        {ci.classifications.attribute1_name}
+                                                                    </span>
+                                                                )}
+                                                                {ci.classifications.attribute2_name && (
+                                                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                                                        {ci.classifications.attribute2_name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="font-semibold text-sm text-[#2C2A24]">
+                                                    {formatPrice(actualPrice * ci.quantity)}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Voucher - Tiếp tục tinh chỉnh thẻ, sử dụng màu sắc tối giản */}
+                        {isAuthenticated && (
+                            <div className="bg-[#EFE9DC] rounded-lg shadow-inner p-4 border border-[#D4C3A3]/50">
+                                {/* Giảm padding, shadow */}
+                                <h2 className="text-lg font-semibold mb-3 text-[#2C2A24] flex items-center gap-2">
+                                    <Tag className="w-5 h-5 text-[#A38D64]" /> Mã ưu đãi
+                                </h2>
+                                {loadingVouchers ? (
+                                    <div className="text-center text-[#65604E] py-4 text-sm">Đang tải...</div>
+                                ) : availableVouchers.length > 0 ? (
+                                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                        {availableVouchers.map(v => {
+                                            const minOrder = Number(v.min_order_value ?? v.order_conditions ?? 0);
+                                            const eligible = total >= minOrder;
+                                            const selected = selectedVoucher?.id === v.id;
+                                            const discountVal = Number(v.discount_value ?? v.voucher_percentage ?? 0);
+                                            const type = String(v.discount_type ?? 'PERCENT').toUpperCase();
+
+                                            return (
+                                                <div
+                                                    key={v.id}
+                                                    onClick={() => eligible && handleSelectVoucher(v)}
+                                                    className={`p-3 rounded-md transition border-2 ${selected ? 'bg-[#D6C5A9] border-[#A38D64] shadow-md' : eligible ? 'bg-white border-[#D4C3A3]/50 hover:bg-[#F9F7F3]' : 'bg-[#F3F1ED] border-[#E0DCCA] cursor-not-allowed opacity-70'}`}
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex-1">
+                                                            <div className="font-bold text-sm text-[#2C2A24] truncate">
+                                                                {v.code}
+                                                            </div>
+                                                            <p className="text-xs text-[#7C7768] mt-0.5 truncate">{v.description || 'Ưu đãi đặc biệt'}</p>
+                                                        </div>
+                                                        <div className="text-right flex flex-col items-end pl-2">
+                                                            <p className="font-bold text-base text-[#A38D64]">
+                                                                {type === 'PERCENT' || type === 'PERCENTAGE' ? `${discountVal}%` : formatPrice(discountVal)}
+                                                            </p>
+                                                            <p className={`text-xs mt-0.5 ${eligible ? 'text-[#3D6647]' : 'text-red-600'}`}>
+                                                                {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5' /> : <X className='w-3 h-3 inline-block mr-0.5' />}
+                                                                {eligible ? 'Đủ ĐK' : `Min: ${formatPrice(minOrder)}`}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-[#65604E] py-4 text-sm">Bạn chưa có mã ưu đãi nào.</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right: Summary + Form (2/5 width) */}
+                    <div className="lg:col-span-2 space-y-5">
+                        
+                        {/* Tổng cộng */}
+                        <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 sticky top-4">
+                            {/* Giảm padding, border, shadow */}
+                            <h2 className="text-lg font-semibold mb-4 text-[#2C2A24]">💰 Tóm tắt đơn hàng</h2>
+                            <div className="space-y-2">
+                                {/* Giảm khoảng cách */}
+                                <div className="flex justify-between text-sm text-[#5A5547]">
+                                    <span>Tổng tiền hàng</span>
+                                    <span className="font-medium">{formatPrice(total)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm text-[#5A5547]">
+                                    <span>Phí vận chuyển</span>
+                                    <span className="font-medium">{formatPrice(SHIPPING_FEE)}</span>
+                                </div>
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-[#3D6647] text-sm font-semibold border-t border-dashed border-gray-200 pt-2">
+                                        <span>Mã giảm giá</span>
+                                        <span>-{formatPrice(discountAmount)}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between border-t border-gray-300 pt-3 items-center">
+                                    <span className="text-base font-bold text-[#2C2A24]">Thành tiền</span>
+                                    <div className="text-right">
+                                        {discountAmount > 0 && <div className="text-xs text-gray-400 line-through">{formatPrice(total + SHIPPING_FEE)}</div>}
+                                        <span className="text-xl font-bold text-[#A38D64]">{formatPrice(totalWithShipping)}</span>
+                                        {/* Font 2xl -> xl */}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Form */}
+                        <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 space-y-4">
+                            {/* Giảm padding, border, shadow */}
+                            <h2 className="text-lg font-semibold text-[#2C2A24] flex items-center gap-2">
+                                <MapPin className="w-5 h-5 text-[#A38D64]" /> Thông tin giao nhận
+                            </h2>
+
+                            {/* Guest Info */}
+                            {!isAuthenticated && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                            <User className='w-3 h-3' /> Họ và tên *
+                                        </label>
+                                        <input
+                                            className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                                            value={guestName}
+                                            onChange={e => setGuestName(e.target.value)}
+                                            placeholder="Nguyễn Văn A"
+                                        />
+                                        {formErrors.guestName && <p className="text-red-500 text-xs mt-1">{formErrors.guestName}</p>}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                                <Phone className='w-3 h-3' /> SĐT *
+                                            </label>
+                                            <input
+                                                className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                                                value={guestPhone}
+                                                onChange={e => setGuestPhone(e.target.value)}
+                                                placeholder="090xxxxxxx"
+                                            />
+                                            {formErrors.guestPhone && <p className="text-red-500 text-xs mt-1">{formErrors.guestPhone}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                                <Mail className='w-3 h-3' /> Email (Không bắt buộc)
+                                            </label>
+                                            <input
+                                                className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                                                value={guestEmail}
+                                                onChange={e => setGuestEmail(e.target.value)}
+                                                placeholder="example@email.com"
+                                            />
+                                            {formErrors.guestEmail && <p className="text-red-500 text-xs mt-1">{formErrors.guestEmail}</p>}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Address */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                    <MapPin className='w-3 h-3' /> Địa chỉ giao hàng *
+                                </label>
+                                <textarea
+                                    className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                                    rows={3}
+                                    value={address}
+                                    onChange={e => setAddress(e.target.value)}
+                                    placeholder="Số nhà, đường, phường, quận"
+                                />
+                                {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
+                            </div>
+
+                            {/* City */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                    <MapPin className='w-3 h-3' /> Tỉnh/Thành phố *
+                                </label>
+                                <input
+                                    className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                                    value={city}
+                                    onChange={e => setCity(e.target.value)}
+                                    placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
+                                />
+                                {formErrors.city && <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>}
+                            </div>
+
+                            {/* Payment Method */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                    <CreditCard className='w-3 h-3' /> Phương thức thanh toán
+                                </label>
+                                <select
+                                    title='payment'
+                                    className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition bg-white"
+                                    value={paymentMethod}
+                                    onChange={e => setPaymentMethod(e.target.value as 'COD' | 'VNPAY')}
+                                >
+                                    <option value="COD">🏠 Thanh toán khi nhận hàng (COD)</option>
+                                    <option value="VNPAY">💳 Thanh toán qua VNPay</option>
+                                </select>
+                            </div>
+
+                            {error && <div className="bg-red-50 border border-red-300 text-red-700 text-xs px-3 py-2 rounded-md">{error}</div>}
+
+                            {/* Submit Button */}
+                            <button
+                                disabled={creating || loadingCart || totalWithShipping === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
+                                onClick={handleCreate}
+                                className="w-full bg-[#A38D64] text-white px-6 py-3 rounded-md text-base font-bold disabled:opacity-50 hover:bg-[#8D7A58] transition shadow-md hover:shadow-lg"
+                            >
+                                {creating 
+                                    ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span> 
+                                    : paymentMethod === 'VNPAY' 
+                                        ? `THANH TOÁN ${formatPrice(totalWithShipping)}` 
+                                        : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
+                            </button>
+
+                            <p className="text-center text-xs text-gray-500 pt-1">
+                                *Bằng việc đặt hàng, bạn đồng ý với Điều khoản và Điều kiện của chúng tôi.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </BaseLayout>
-  );
+        </BaseLayout>
+    );
 }

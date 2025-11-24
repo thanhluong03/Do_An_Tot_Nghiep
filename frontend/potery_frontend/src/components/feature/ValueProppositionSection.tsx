@@ -1,15 +1,11 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element */
-
-import React, { useEffect } from 'react';
 import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
+// Import newsApi và FeaturedNewsItem interface
+import { newsApi, NewsItem } from '../../api/modules/news'; // Đảm bảo đường dẫn đúng
 
-/**
- * Inline reveal-on-scroll hook.
- * Observes elements with `data-reveal` and toggles inline styles so they animate
- * when entering and leaving the viewport (allows repeated reveals).
- */
 function useRevealOnScroll() {
     useEffect(() => {
         const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
@@ -317,9 +313,57 @@ const featuredPosts = [
     }
 ];
 // Journal Section
-export function JournalSection() {
-    useRevealOnScroll();
+// Journal Section
 
+
+
+
+export function JournalSection() {
+    useRevealOnScroll(); 
+    // SỬA: Cập nhật kiểu dữ liệu từ FeaturedNewsItem[] thành NewsItem[]
+    const [featuredPosts, setFeaturedPosts] = useState<NewsItem[]>([]); 
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPosts = async () => {
+            try {
+                // newsApi.listFeatured(3) đã được cập nhật để trả về NewsItem[]
+                const data = await newsApi.listFeatured(3);
+                setFeaturedPosts(data);
+            } catch (error) {
+                console.error("Lỗi khi tải bài viết nổi bật:", error);
+                setFeaturedPosts([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPosts();
+    }, []);
+
+    // Hiển thị loading state
+    if (loading) {
+        return (
+            <section className="py-24 bg-[#FBFBFB] text-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <p className="text-xl text-[#65604E] italic">Đang tải bài viết...</p>
+                </div>
+            </section>
+        );
+    }
+    
+    // Hiển thị nếu không có bài viết
+    if (featuredPosts.length === 0 && !loading) {
+        return (
+            <section className="py-24 bg-[#FBFBFB] text-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <p className="text-xl text-[#65604E]">Hiện chưa có bài viết nào được đăng.</p>
+                </div>
+            </section>
+        );
+    }
+
+    // Logic hiển thị chính (dữ liệu đã được lấy)
     return (
         <section className="py-24 bg-[#FBFBFB]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -339,22 +383,19 @@ export function JournalSection() {
                         Khám phá những câu chuyện thú vị về nghệ thuật gốm sứ, kỹ thuật chế tác và xu hướng thiết kế
                     </p>
                 </div>
+                
                 {/* Blog Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-                    {featuredPosts.map((post, index) => (
-                        // Card container: Nền trắng, bo tròn nhẹ, không shadow mạnh
-                        <div key={index} data-reveal className="bg-white rounded-xl overflow-hidden border border-gray-100 flex flex-col">
-                            {/* Image with Tag Overlay - cropped to fixed height with rounded corners */}
+                    {featuredPosts.map((post) => (
+                        <div key={post.id} data-reveal className="bg-white rounded-xl overflow-hidden border border-gray-100 flex flex-col">
+                            {/* Image with Tag Overlay */}
                             <div className="relative w-full h-48 overflow-hidden bg-[#FFFFFF]">
                                 <img
-                                    src={post.image}
+                                    src={post.image || '/journal/placeholder.png'} 
                                     alt={post.title}
                                     className="w-full h-full object-cover object-center"
                                 />
-                                {/* Tag (Kỹ Thuật, Xu Hướng, Hướng Dẫn) */}
-                                <div className={`absolute top-4 left-4 ${post.tagColor} text-white px-3 py-1 rounded text-sm font-medium`}>
-                                    {post.tag}
-                                </div>
+                                
                             </div>
                             {/* Content Block */}
                             <div className="p-6 flex flex-col flex-grow">
@@ -363,12 +404,10 @@ export function JournalSection() {
                                 <div className="flex items-center text-sm text-[#8B7D6B] mb-2 space-x-3">
                                     <div className="flex items-center space-x-1">
                                         <span>🗓️</span>
-                                        <span>{post.date}</span>
+                                        {/* Định dạng ngày */}
+                                        <span>{new Date(post.published_at).toLocaleDateString('vi-VN')}</span>
                                     </div>
-                                    <div className="flex items-center space-x-1">
-                                        <span>⏱️</span>
-                                        <span>{post.readTime}</span>
-                                    </div>
+                                
                                 </div>
 
                                 {/* Title */}
@@ -377,18 +416,20 @@ export function JournalSection() {
                                 </h3>
 
                                 {/* Description */}
-                                <p className="text-[#65604E] text-base mb-6 flex-grow">
-                                    {post.description}
-                                </p>
+                                <div 
+                                    className="text-[#65604E] text-base mb-6 flex-grow line-clamp-3"
+                                    // SỬ DỤNG dangerouslySetInnerHTML để render chuỗi HTML
+                                    dangerouslySetInnerHTML={{ __html: post.content }}
+                                />
 
                                 {/* Read More Link */}
-                                <a
-                                    href="#"
+                                <Link
+                                    href={`/news/${post.id}`} 
                                     className="mt-auto text-base font-semibold text-[#8B7D6B] flex items-center space-x-1 hover:text-[#65604E] transition"
                                 >
                                     <span>Đọc Tiếp</span>
                                     <span className="ml-2 text-xl">→</span>
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     ))}
@@ -396,14 +437,18 @@ export function JournalSection() {
 
                 {/* CTA Button (Xem Tất Cả Bài Viết) */}
                 <div className="text-center" data-reveal>
-                    <button
-                        className="px-8 py-3 text-lg font-semibold bg-[#8B7D6B] text-white hover:bg-[#65604E] transition-colors rounded-lg shadow-md"
+                    <Link
+                        href="/news"
+                        className="px-8 py-3 text-lg font-semibold bg-[#8B7D6B] text-white hover:bg-[#65604E] transition-colors rounded-lg shadow-md inline-block"
                     >
-                        <Link href="/news">Xem Tất Cả Bài Viết</Link>
-                    </button>
+                        Xem Tất Cả Bài Viết
+                    </Link>
                 </div>
 
             </div>
         </section>
     );
 }
+// Giữ nguyên đoạn code dưới để tránh lỗi:
+// const featuredPosts = [...] // Xóa đoạn này
+// export function JournalSection() {...} // Component mới

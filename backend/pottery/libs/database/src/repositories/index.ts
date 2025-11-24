@@ -28,3 +28,4 @@ export * from './classification-attribute-relationship.repository';
 export * from './import_product_detail.repository';
 export * from './import_request.repository';
 export * from './import_request_detail.repository';
+export * from './review_image.repository';

@@ -13,6 +13,7 @@ import {
   StoreEntity,
   UserEntity,
   ReviewEntity,
+  ReviewImageEntity,
   PromotionEntity,
   ProductPromotionEntity,
   VoucherEntity,
@@ -70,6 +71,7 @@ import {
   ClassificationAttributeRelationshipRepository,
   ImportRequestRepository,
   ImportRequestDetailRepository,
+  ReviewImageRepository,
 } from './repositories';
 
 const postgresRepositories = [
@@ -103,6 +105,7 @@ const postgresRepositories = [
   ClassificationAttributeRelationshipRepository,
   ImportRequestRepository,
   ImportRequestDetailRepository,
+  ReviewImageRepository,
 ];
 const postgresEntities = [
   ProductEntity,
@@ -113,6 +116,7 @@ const postgresEntities = [
   StoreEntity,
   UserEntity,
   ReviewEntity,
+  ReviewImageEntity,
   PromotionEntity,
   ProductPromotionEntity,
   VoucherEntity,
