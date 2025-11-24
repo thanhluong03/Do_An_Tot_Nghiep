@@ -15,7 +15,11 @@ export interface NewsItem {
   is_published?: number | boolean;
   user?: { id: string; name: string; logo?: string };
 }
-
+export interface FeaturedNewsItem extends NewsItem {
+    tag: string;
+    readTime: string;
+    tagColor: string;
+}
 const mapNews = (n: any): NewsItem => {
   const imageFromDb = n?.image_data ? `data:image/jpeg;base64,${n.image_data}` : undefined;
   return {
@@ -28,7 +32,6 @@ const mapNews = (n: any): NewsItem => {
     user: n?.user ? { id: String(n.user.id ?? ''), name: n.user.name ?? 'Tác giả' } : undefined,
   };
 };
-
 export const newsApi = {
   async list(page = 1, limit = 6): Promise<{ items: NewsItem[]; total: number }> {
     const res = await api.get(`/news/listnews?page=${page}&limit=${limit}`);
@@ -41,4 +44,10 @@ export const newsApi = {
     const payload = Array.isArray(res.data) ? res.data[0] : res.data;
     return mapNews(payload || {});
   },
+  async listFeatured(limit = 3): Promise<NewsItem[]> {
+      const res = await api.get(`/news/listnews?page=1&limit=${limit}`);
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        // Chỉ cần dùng mapNews, không cần mapFeaturedNews
+      return data.slice(0, limit).map(mapNews);
+ },
 };
