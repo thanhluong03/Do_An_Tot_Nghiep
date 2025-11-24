@@ -6,7 +6,24 @@ interface OrderDetailModalProps {
   order: Order;
   onClose: () => void;
 }
-
+const statusToVietnamese = (status: string) => {
+  switch (status) {
+    case "PENDING":
+      return "Đang xử lý";
+    case "CONFIRMED":
+      return "Đã xác nhận";
+    case "SHIPPING":
+      return "Đang giao hàng";
+    case "DELIVERED":
+      return "Đã giao";
+    case "CANCELLED":
+      return "Đã hủy";
+    case "REJECTED":
+      return "Bị từ chối";
+    default:
+      return status;
+  }
+};
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
@@ -91,7 +108,8 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                         : "bg-yellow-100 text-yellow-700"
                       }`}
                   >
-                    {order.status}
+                    {statusToVietnamese(order.status)}
+
                   </span>
                 }
               />

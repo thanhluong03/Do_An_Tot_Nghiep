@@ -283,7 +283,7 @@ export default function ImportRequestListAdmin() {
     if (isLoading) return <p className="text-center p-6">Đang tải dữ liệu...</p>;
 
     return (
-        <div className="p-6 max-w-7xl bg-white rounded-xl shadow-lg mx-auto mt-4">
+        <div className="p-6 max-w-full bg-white rounded-xl shadow-lg mx-auto mt-4">
             <h1 className="text-2xl font-bold mb-7 text-gray-800 text-center pb-3">
                 Danh sách yêu cầu nhập hàng từ kho tổng
             </h1>

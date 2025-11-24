@@ -10,7 +10,7 @@ import { getProductImageUrl, Product, ProductRelationship } from "@/api/services
 import { getProducts } from "@/api/services/productApi";
 import { getUserDetail } from "@/api/services/userService";
 
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import CheckboxList from "@/components/common/CheckBoxList";
 
 import ImportRequestList from "@/components/adminStore/ImportRequestList";
@@ -179,7 +179,9 @@ export default function CreateImportRequestPage() {
           `Số lượng yêu cầu cho sản phẩm "${product.name}${displayVariant}" (${selection.quantity}) không được lớn hơn tồn kho hiện tại (${stock.toLocaleString("vi-VN")}).`
         );
       }
+      
     }
+    
     const payload: CreateImportRequestDto = {
       store_id: storeId,
       note,
@@ -221,7 +223,7 @@ export default function CreateImportRequestPage() {
 
   return (
     <div className="p-6 max-w-full bg-white rounded-xl shadow-md mt-1">
-
+        <Toaster position="top-right" />
       {/* BUTTON SHOW FORM */}
       {!showCreateForm && (
         <button
