@@ -7,7 +7,7 @@ import { ProductGrid } from '../../../components/feature/ProductGrid';
 import { useProducts, useCategories } from '../../../hooks/useProducts';
 import { useAuth } from '@/contexts/AuthContext';
 import { conversationApi } from '@/api/modules/conversation';
-import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal } from '@/components/feature';
+import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal, BestSellingProducts } from '@/components/feature';
 import { Bot, Gift, MessageSquare, User } from 'lucide-react';
 
 export default function ProductsPage() {
@@ -222,14 +222,19 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Sản phẩm bán chạy nhất */}
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+        <BestSellingProducts limit={5} />
+      </div>
+
       {/* Layout chính (Giữ nguyên) */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-10 flex flex-col lg:flex-row gap-4 overflow-x-hidden">
         {/* === Sidebar trái (Giữ nguyên logic Danh mục) === */}
         <div className="w-full lg:w-1/5 lg:min-w-[240px] bg-white p-6 rounded-lg shadow-md h-fit">
-          <h3 className="text-xl font-bold mb-4">Danh mục</h3>
+          <h3 className="text-base font-bold mb-4">Danh mục</h3>
           <ul className="space-y-2 mb-6">
             <li
-              className={`cursor-pointer px-3 py-2 rounded-lg transition ${!filters.category
+              className={`text-sm cursor-pointer px-3 py-2 rounded-lg transition ${!filters.category
                 ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
                 : 'hover:bg-[#f7f4ef]'
                 }`}
@@ -241,7 +246,7 @@ export default function ProductsPage() {
               <li
                 key={c.id}
                 onClick={() => handleCategoryChange(c.id.toString())}
-                className={`cursor-pointer px-3 py-2 rounded-lg transition ${filters.category === c.id.toString()
+                className={`text-sm cursor-pointer px-3 py-2 rounded-lg transition ${filters.category === c.id.toString()
                   ? 'bg-[#f7f4ef] border-l-4 border-[#b47d32] font-semibold'
                   : 'hover:bg-[#f7f4ef]'
                   }`}
@@ -266,8 +271,8 @@ export default function ProductsPage() {
               <button
                 onClick={handleBestSellingClick}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeSortType === 'banchay'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                   }`}
               >
                 Bán chạy
@@ -280,8 +285,8 @@ export default function ProductsPage() {
                   value={filters.sortOrder || ''}
                   onChange={handlePriceSortChange}
                   className={`appearance-none px-4 py-2 pr-8 rounded-md text-sm font-medium focus:outline-none cursor-pointer ${activeSortType === 'gia'
-                      ? 'bg-orange-500 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                     }`}
                 >
                   {/* Đổi "Thứ tự mặc định" thành "Giá" cho giống ảnh */}
@@ -321,12 +326,6 @@ export default function ProductsPage() {
           </div>
           {/* === Hết Thanh Filter & Tìm kiếm === */}
           <span></span>
-
-
-          {/* Kết quả hiển thị (Giữ nguyên) */}
-          <div className="mb-4 text-gray-600">
-            Hiển thị {filteredProducts.length} sản phẩm
-          </div>
 
           {/* Grid sản phẩm (Giữ nguyên) */}
           <div className="transition-opacity duration-200 ease-in-out">

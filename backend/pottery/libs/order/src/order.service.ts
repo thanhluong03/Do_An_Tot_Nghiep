@@ -157,9 +157,18 @@ export class OrderService {
             quantity_sold: (inventoryDetail.quantity_sold || 0) + item.quantity,
           });
         }
+      } else {
+        // Sản phẩm không có phân loại: cập nhật inventory
+        if (inventory.quantity_stock < item.quantity) {
+          throw new NotFoundException(
+            `Số lượng tồn kho không đủ cho sản phẩm ${item.product_id} tại cửa hàng ${item.store_id}`
+          );
+        }
+        await this.inventoryRepository.update(inventory.id, {
+          quantity_stock: inventory.quantity_stock - item.quantity,
+          quantity_sold: (inventory.quantity_sold || 0) + item.quantity,
+        });
       }
-
-      await this.inventoryRepository.create(inventory);
     }
 
     const current_order = {
