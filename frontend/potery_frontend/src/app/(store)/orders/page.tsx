@@ -28,6 +28,7 @@ const translateStatus = (status: string | undefined): string => {
     case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
+      return 'Đã giao thành công';
     case 'RETURN_REQUESTED':
       return 'Đang yêu cầu hoàn trả';
     case 'COMPLETED':

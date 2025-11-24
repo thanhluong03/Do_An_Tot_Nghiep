@@ -116,10 +116,10 @@ export const reviewsApi = {
       console.warn('⚠️ API không trả về dữ liệu hợp lệ, tạo review giả định cục bộ.');
       return {
         id: String(Date.now()),
-        product_id: payloads[0]?.orderitem_id,
-        customer_id: payloads[0]?.customer_id,
-        rating: payloads[0]?.rating,
-        comment: payloads[0]?.comment,
+        product_id: payload[0]?.orderitem_id,
+        customer_id: payload[0]?.customer_id,
+        rating: payload[0]?.rating,
+        comment: payload[0]?.comment,
         created_at: new Date().toISOString(),
         images: [],
       };
