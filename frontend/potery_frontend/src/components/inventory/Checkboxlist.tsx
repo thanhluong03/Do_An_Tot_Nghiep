@@ -217,7 +217,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                                 {isProductList && (
                                                     <Image
                                                         width={40}
-                                                        height={480}
+                                                        height={40}
                                                         src={findProductImage(opt.id, allProducts)}
                                                         alt={opt.name}
                                                         className="w-10 h-10 object-cover rounded-full border border-gray-200 shadow-sm mr-3"

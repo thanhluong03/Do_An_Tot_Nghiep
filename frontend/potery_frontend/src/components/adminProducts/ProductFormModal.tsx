@@ -211,13 +211,24 @@ export default function ProductFormModal({
         const productClassifications = editingProduct.classifications || [];
         console.log('Product classifications:', productClassifications);
         // If editing but there are no classifications, still show one empty classification
-        if (!productClassifications || productClassifications.length === 0) {
-          setClassifications([{ name: "", attributes: [{ name: "" }] }]);
-        } else {
-          setClassifications(productClassifications);
-        }
-        // Always show classification inputs
-        setShowClassifications(true);
+        // if (!productClassifications || productClassifications.length === 0) {
+        //   setClassifications([{ name: "", attributes: [{ name: "" }] }]);
+        // } else {
+        //   setClassifications(productClassifications);
+        // }
+        // // Always show classification inputs
+        // setShowClassifications(true);
+        const hasClassifications = productClassifications.length > 0;
+
+        // If editing but there are no classifications, still show one empty classification
+        if (!hasClassifications) { // Dùng hasClassifications
+          setClassifications([{ name: "", attributes: [{ name: "" }] }]);
+        } else {
+          setClassifications(productClassifications);
+        }
+        
+        // 🚀 BƯỚC SỬA: Chỉ tick checkbox nếu có phân loại
+        setShowClassifications(hasClassifications);
 
         // Load price matrix từ relationships
         if (editingProduct.relationships && productClassifications.length > 0) {
@@ -528,6 +539,7 @@ export default function ProductFormModal({
         }
       }
     }
+    form.append("hasClassification", showClassifications ? "1" : "0");
 
     await handleSave(form);
   };
@@ -543,7 +555,6 @@ export default function ProductFormModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div
         className="absolute inset-0"
-        onClick={() => setIsModalOpen(false)}
       />
 
       {/* --- MAIN MODAL --- */}
@@ -584,26 +595,38 @@ export default function ProductFormModal({
             )}
           </div>
 
-          
-          <div>
-            <label className="block text-base font-semibold text-gray-800 mb-1">
-              Giá (VNĐ)
-            </label>
-            <input
-              type="number"
-              value={formData.price ?? ''} 
-              onChange={(e) => handleChange(e, 'price')}
-              className={getInputClassName('price')}
-              placeholder="Nhập giá..."
-              
-            />
-            {validationErrors.price && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
-            )}
-          </div> 
+          <div className=""> 
+           <label className="inline-flex items-center gap-1 text-gray-600 font-medium pt-8">
+              <input
+                type="checkbox"
+                checked={showClassifications}
+                onChange={(e) => setShowClassifications(e.target.checked)}
+                className="h-7 w-7 rounded border-gray-300 focus:ring-orange-500"
+              />Chọn nếu sản phẩm có phân loại !
+            </label>
+          </div>
+
+          {!showClassifications && (
+            <div>
+              <label className="block text-base font-semibold text-gray-800 mb-1">
+                Giá (VNĐ)
+              </label>
+              <input
+                type="number"
+                value={formData.price ?? ''}
+                onChange={(e) => handleChange(e, 'price')}
+                className={getInputClassName('price')}
+                placeholder="Nhập giá..."
+              />
+              {validationErrors.price && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
+              )}
+            </div>
+          )}
+
 
           {/* Danh mục */}
-          <div>
+          <div className="">
             <label className="block text-base font-semibold text-gray-800 mb-1">
               Danh mục
             </label>
@@ -626,7 +649,7 @@ export default function ProductFormModal({
           </div>
 
           {/* Nhà cung cấp */}
-          <div className="">
+          <div className={showClassifications ? "" : "md:col-span-2"}>
             <label className="block text-base font-semibold text-gray-800 mb-1">
               Nhà cung cấp
             </label>
@@ -809,23 +832,15 @@ export default function ProductFormModal({
 
         {/* Phân loại sản phẩm */}
         <div className="mt-8 pt-2">
-          <div className="flex items-center justify-between">
-            <label className="block text-xl font-bold text-gray-800 mb-4">
-              Thêm thông tin bán hàng nếu có phân loại sản phẩm
-            </label>
-            <label className="inline-flex items-center gap-2 text-gray-600 font-medium">
-              <input
-                type="checkbox"
-                checked={showClassifications}
-                onChange={(e) => setShowClassifications(e.target.checked)}
-                className="h-5 w-5 rounded border-gray-300 focus:ring-orange-500"
-              />
-              Chọn nếu có phân loại sản phẩm
-            </label>
-          </div>
 
           {showClassifications && (
+
             <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <label className="block text-xl font-bold text-gray-800 mb-4">
+                  Thêm thông tin bán hàng nếu có phân loại sản phẩm
+                </label>
+              </div>
               <p className="text-sm text-gray-500">Giá của sản phẩm sẽ theo phân loại</p>
               {classifications.map((classification, classIndex) => (
                 <div key={classIndex} className="border border-gray-200 rounded-xl p-4">

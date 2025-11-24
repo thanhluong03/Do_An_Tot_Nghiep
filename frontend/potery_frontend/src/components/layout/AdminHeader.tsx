@@ -18,7 +18,7 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
   const parts = pathname.split("/").filter((p) => p && p !== "admin");
 
   const nameMap: Record<string, string> = {
-    dashboard: "Tổng quan Dashboard",
+    dashboard: "Tổng quan hệ thống",
     products: "Quản lý sản phẩm",
     inventory: "Tồn kho",
     stores: "Cửa hàng",

@@ -124,7 +124,7 @@ export default function CustomerPage() {
                       {c.is_active ? (
                         <span className="text-green-600 font-semibold">Hoạt động</span>
                       ) : (
-                        <span className="text-red-500 font-semibold">Khóa</span>
+                        <span className="text-red-500 font-semibold">Khách</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">

@@ -183,7 +183,7 @@ export default function ProductsPage() {
       toast.error("Không thể tải chi tiết sản phẩm!");
     }
   };
-  const validateForm = (data: Product): boolean => {
+  const validateForm = (data: Product, hasClassification: boolean = false): boolean => {
     const errors: ProductFormErrors = {};
 
     if (!data.name || data.name.trim() === "") {
@@ -192,10 +192,14 @@ export default function ProductsPage() {
       errors.name = "Tên sản phẩm phải từ 3 đến 150 ký tự.";
     }
 
-    if (data.price === undefined || data.price <= 0) {
-      errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
-    } else if (isNaN(data.price)) {
-      errors.price = "Giá sản phẩm không hợp lệ.";
+    if (!hasClassification) {
+      if (data.price === undefined || data.price <= 0) {
+        errors.price = "Giá sản phẩm phải là số dương lớn hơn 0.";
+      } else if (isNaN(data.price)) {
+        errors.price = "Giá sản phẩm không hợp lệ.";
+      }
+    } else {
+      delete errors.price;
     }
 
     if (!data.description || data.description.trim() === "") {
@@ -220,7 +224,9 @@ export default function ProductsPage() {
     return true;
   };
   const handleSave = async (form: FormData) => {
+     const hasClassification = form.get("hasClassification") === "1";
     const productDataForValidation: Product = {
+
       name: form.get('name') as string,
       price: Number(form.get('price')),
       description: form.get('description') as string,
@@ -230,7 +236,7 @@ export default function ProductsPage() {
       images: [],
     } as Product;
 
-    if (!validateForm(productDataForValidation)) {
+    if (!validateForm(productDataForValidation, hasClassification)) {
       return;
     }
     try {

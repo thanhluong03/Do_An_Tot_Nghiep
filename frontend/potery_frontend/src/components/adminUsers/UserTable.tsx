@@ -101,7 +101,7 @@ export default function UserTable({
                         : "bg-red-100 text-red-700"
                         }`}
                     >
-                      {u.is_active ? "Active" : "Bị khóa"}
+                      {u.is_active ? "Hoạt động" : "Khóa"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center space-x-2">
