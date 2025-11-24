@@ -12,6 +12,11 @@ interface UserTableProps {
   onEdit: (user: User) => void;
   onDelete: (id: number) => void;
 }
+const roleLabels: Record<string, string> = {
+  DRIVER: "Tài xế",
+  ADMIN: "Nhân viên quản lý cửa hàng",
+  SUPER_ADMIN: "Quản lý chuỗi cửa hàng",
+};
 
 export default function UserTable({
   users,
@@ -20,10 +25,11 @@ export default function UserTable({
   roles,
   stores,
 }: UserTableProps) {
-  const getRoleName = (roleId: number): string => {
-    const role = roles.find((r) => r.id === roleId);
-    return role ? role.name : `#${roleId}`;
-  };
+ const getRoleName = (roleId: number): string => {
+  const role = roles.find((r) => r.id === roleId);
+  return role ? roleLabels[role.name] || role.name : `#${roleId}`;
+};
+
   const getStoreName = (storeId: number | string): string => {
     const store = stores.find((s) => Number(s.id) === Number(storeId));
     return store ? store.store_name : `#${storeId}`;
@@ -35,7 +41,7 @@ export default function UserTable({
       <table className="min-w-full bg-white text-sm">
         <thead className="bg-indigo-50 border-b border-indigo-200 text-left font-semibold text-indigo-800"><tr>
           <th className="px-4 py-3 text-center w-12">STT</th>
-          <th className="px-4 py-3">Ảnh đại diện</th>
+          <th className="px-4 py-3">Ảnh</th>
           <th className="px-4 py-3">Tên đăng nhập</th>
           <th className="px-4 py-3">Họ và Tên</th>
           <th className="px-4 py-3">Email</th>
@@ -50,9 +56,7 @@ export default function UserTable({
           {users.length > 0 ? (
             users.map((u, index) => {
               const avatarSrc = getUserAvatarUrl(u);
-
               const isBase64Image = avatarSrc && avatarSrc !== "/noAva.png" && avatarSrc.length > 50;
-
               return (
                 <tr
                   key={u.id}

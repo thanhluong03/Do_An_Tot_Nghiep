@@ -13,7 +13,11 @@ interface UserFormModalProps {
     onUpdate: (id: number, formData: FormData) => void;
     existingUsers?: User[];
 }
-
+const roleLabels: Record<string, string> = {
+    DRIVER: "Tài xế",
+    ADMIN: "Nhân viên quản lý cửa hàng",
+    SUPER_ADMIN: "Quản lý chuỗi cửa hàng",
+};
 export default function UserFormModal({
     user,
     onClose,
@@ -296,8 +300,9 @@ export default function UserFormModal({
                             ) : (
                                 roles.map((r) => (
                                     <option key={r.id} value={r.id}>
-                                        {r.name}
+                                        {roleLabels[r.name] || r.name}
                                     </option>
+
                                 ))
                             )}
                         </select>
