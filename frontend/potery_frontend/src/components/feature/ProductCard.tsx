@@ -12,6 +12,7 @@ import { useCart } from '../../contexts/CartContext';
 import { productApi } from '../../api/modules/products';
 import { Modal } from '../common/Modal';
 import toast from 'react-hot-toast';
+import { reviewsApi } from '../../api/modules/reviews';
 
 export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Product) => void }> = ({
   product,
@@ -24,6 +25,9 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   const [showOrderNow, setShowOrderNow] = useState(false);
   const [showAddCart, setShowAddCart] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  // State for actual rating from reviews
+  const [actualRating, setActualRating] = useState<number>(0);
+  const [ratingLoaded, setRatingLoaded] = useState(false);
   // State for product detail (for popup)
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -41,6 +45,31 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
     }];
 
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+
+  // Load actual rating from reviews
+  React.useEffect(() => {
+    let mounted = true;
+    const loadActualRating = async () => {
+      try {
+        const reviews = await reviewsApi.list(String(product.id));
+        if (mounted && Array.isArray(reviews) && reviews.length > 0) {
+          const totalRating = reviews.reduce((sum: number, review) => sum + (review.rating || 0), 0);
+          const averageRating = totalRating / reviews.length;
+          setActualRating(averageRating);
+        } else if (mounted) {
+          setActualRating(0);
+        }
+        if (mounted) setRatingLoaded(true);
+      } catch {
+        if (mounted) {
+          setActualRating(0);
+          setRatingLoaded(true);
+        }
+      }
+    };
+    loadActualRating();
+    return () => { mounted = false; };
+  }, [product.id]);
 
   // Classification state for popup
   const [selectedClassifications, setSelectedClassifications] = useState<{
@@ -453,35 +482,34 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-all">
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-all h-fit">
       <div
-        className="relative aspect-square cursor-pointer" // Gần với ảnh hơn
+        className="relative aspect-[3/3] cursor-pointer"
         onClick={() => onViewDetails?.(product)}
       >
         <Image
           src={product.images[0] || '/placeholder-product.jpg'}
           alt={product.name}
           className="object-cover w-full h-full"
-          width={400}
-          height={400} // Cập nhật để khớp aspect-square
+          width={250}
+          height={280}
           priority
         />
-        {/* Đã xóa nút checkmark/trái tim ở góc trên bên phải để khớp với ảnh */}
       </div>
 
-      <div className="p-4 text-left">
+      <div className="pt-3 pb-3 px-2 text-left">
 
         {/* 1. Category */}
-        <p className="text-sm text-gray-500 mb-1">{product.category_name || 'Ly, Cốc'}</p>
+        <p className="text-xs text-gray-500 mb-0.5">{product.category_name || 'Ly, Cốc'}</p>
 
         {/* 2. Product Name */}
-        <h3 className="font-bold text-lg text-gray-900 mb-2 truncate">
+        <p className="text-sm text-gray-900 mb-1 line-clamp-2 leading-tight h-9">
           {product.name}
-        </h3>
+        </p>
 
         {/* 3. Price Line */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
-          <span className="text-xl font-bold text-red-600">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 mb-1">
+          <span className="text-sm font-bold text-red-600">
             {formatPrice(product.price)}
           </span>
           {/* Giá gốc thực tế: nếu có discount thì tính ngược lại từ giá khuyến mãi */}
@@ -499,29 +527,31 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         </div>
 
         {/* 4. Rating/Sales Line (MỚI) */}
-        <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-400">★</span>
-            <span className="font-medium text-gray-800">{product.rating || '5.0'}</span>
+        <div className="flex justify-between items-center text-xs text-gray-600 mb-1">
+          <div className="flex items-center gap-0.5">
+            <span className="text-yellow-400 text-xs">★</span>
+            <span className="font-medium text-gray-800">
+              {ratingLoaded ? actualRating.toFixed(1) : (product.rating || 0).toFixed(1)}
+            </span>
           </div>
-          <span>Đã bán {product.total_quantity_sold ?? 0}</span>
+          <span className="text-xs">Đã bán {product.total_quantity_sold ?? 0}</span>
         </div>
 
         {/* 5. Button Line */}
-        <div className="flex gap-3">
+        <div className="flex gap-1">
           {/* === NÚT GIỎ HÀNG (ĐÃ SỬA) === */}
           <button
             onClick={handleAddCartPopup}
-            className="flex items-center justify-center p-3 h-12 w-12 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition"
+            className="flex items-center justify-center p-1.5 h-8 w-8 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition cursor-pointer"
             title="Thêm vào giỏ hàng"
           >
-            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            <svg className="w-3.5 h-3.5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
           </button>
 
           {/* === NÚT MUA NGAY (ĐÃ SỬA) === */}
           <button
             onClick={handleOrderNow}
-            className="flex-1 h-12 bg-[#8D806F] hover:bg-[#7a6f61] text-white rounded-lg text-base font-semibold shadow transition-all"
+            className="flex-1 h-8 bg-[#8D806F] hover:bg-[#7a6f61] text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer"
           >
             Mua Ngay
           </button>

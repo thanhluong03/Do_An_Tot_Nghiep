@@ -248,4 +248,10 @@ export class ProductController {
     async getProductClassifications(@Param('productId') productId: number) {
         return await this.productService.getProductClassifications(productId);
     }
+
+    @Get('best-selling')
+    async getBestSellingProducts(@Query('limit') limit?: number) {
+        const topProducts = await this.productService.getBestSellingProducts(limit ? Number(limit) : 5);
+        return topProducts;
+    }
 }

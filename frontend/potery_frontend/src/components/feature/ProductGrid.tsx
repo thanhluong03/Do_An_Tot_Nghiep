@@ -9,7 +9,7 @@ interface ProductGridProps {
   loading?: boolean;
   error?: string | null;
   onViewDetails?: (product: Product) => void;
-  columns?: 2 | 3 | 4;
+  columns?: 2 | 3 | 4 | 5;
 }
 
 export const ProductGrid: React.FC<ProductGridProps> = ({
@@ -21,27 +21,27 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   const gridCols =
     columns === 3
-      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
       : columns === 2
         ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
-        : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5';
+        : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
   // Show loading skeleton to prevent layout shift
   if (loading)
     return (
       <div className="w-full max-w-none">
-        <div className={`grid ${gridCols} gap-6 lg:gap-8 auto-rows-fr`}>
+        <div className={`grid ${gridCols} gap-2 lg:gap-3 auto-rows-fr`}>
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex justify-center">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden w-full max-w-[320px] animate-pulse">
+            <div key={i}>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden w-full animate-pulse">
                 <div className="aspect-[4/3] bg-gray-200"></div>
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-5 bg-gray-200 rounded w-1/2"></div>
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                   <div className="flex gap-2">
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                    <div className="flex-1 h-12 bg-gray-200 rounded-lg"></div>
+                    <div className="w-9 h-9 bg-gray-200 rounded-lg"></div>
+                    <div className="flex-1 h-9 bg-gray-200 rounded-lg"></div>
                   </div>
                 </div>
               </div>
@@ -63,9 +63,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
   return (
     <div className="w-full max-w-none">
-      <div className={`grid ${gridCols} gap-4 lg:gap-6 auto-rows-fr`}>
+      <div className={`grid ${gridCols} gap-2 lg:gap-3 auto-rows-fr`}>
         {products.map((p) => (
-          <div key={p.id} className="flex justify-center">
+          <div key={p.id}>
             <ProductCard product={p} onViewDetails={onViewDetails} />
           </div>
         ))}

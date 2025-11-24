@@ -403,5 +403,26 @@ export const productApi = {
       console.error('Failed to search products:', error);
       throw new Error('Failed to search products');
     }
+  },
+
+  // Lấy sản phẩm bán chạy nhất
+  getBestSellingProducts: async (limit: number = 5): Promise<Product[]> => {
+    try {
+      const response = await api.get('/products/best-selling', {
+        params: { limit }
+      });
+      
+      const rawData = response.data;
+      const productsArray = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.products) ? rawData.products
+          : Array.isArray(rawData?.data) ? rawData.data
+            : [];
+
+      return productsArray.map(mapProduct);
+    } catch (error) {
+      console.error('Failed to fetch best selling products:', error);
+      throw new Error('Failed to fetch best selling products');
+    }
   }
 };

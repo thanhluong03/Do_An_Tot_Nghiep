@@ -15,3 +15,4 @@ export { ScrollToTopButton } from './ScrollToTopButton';
 export { ValuePropositionSection } from './ValueProppositionSection';
 export { AIChatPage } from './AIPage';
 export { AIChatModal } from './AIChatModal';
+export { BestSellingProducts } from './BestSellingProducts';
