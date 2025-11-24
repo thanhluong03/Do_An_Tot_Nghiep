@@ -11,7 +11,11 @@ interface HeaderInfo {
   title: string;
   breadcrumb: string;
 }
-
+const roleLabels: Record<string, string> = {
+  DRIVER: "Tài xế",
+  ADMIN: "Nhân viên quản lý cửa hàng",
+  SUPER_ADMIN: "Quản lý chuỗi cửa hàng",
+};
 const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
   const parts = pathname.split("/").filter((p) => p && p !== "admin");
 
@@ -187,7 +191,9 @@ export default function AdminHeader() {
           </div>
           <div className="flex flex-col text-left leading-tight">
             <p className="text-sm font-semibold text-gray-800">{adminName}</p>
-            <p className="text-xs text-gray-500">{adminRole}</p>
+            <p className="text-xs text-gray-500">
+              {roleLabels[adminRole] ?? adminRole}
+            </p>
             <p className="text-[12px] text-gray-500">
               Nhân viên: {storeName}
             </p>

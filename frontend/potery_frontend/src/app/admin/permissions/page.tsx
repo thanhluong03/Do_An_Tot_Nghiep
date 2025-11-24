@@ -13,6 +13,11 @@ import PermissionTable from "@/components/adminPermissions/PermissionTable";
 import { PermissionItem } from "@/api/services/permissionApi";
 import PermissionCreateModal from "@/components/adminPermissions/PermissionCreateModal";
 import { RoleEntity } from "@/api/services/permissionApi";
+const roleLabels: Record<string, string> = {
+    DRIVER: "Tài xế",
+    ADMIN: "Nhân viên quản lý cửa hàng",
+    SUPER_ADMIN: "Quản lý chuỗi cửa hàng",
+};
 
 export default function PermissionsPage() {
     const [roles, setRoles] = useState<RoleEntity[]>([]);
@@ -76,20 +81,20 @@ export default function PermissionsPage() {
         });
     }
     function onSelectAll(select: boolean) {
-        const allAvailableKeys = Object.values(availablePermissions)
-            .flat()
-            .map((p) => p.key);
+        const allAvailableKeys = Object.values(availablePermissions)
+            .flat()
+            .map((p) => p.key);
 
-        setRolePermissions((prev) => {
-            const next = new Set(prev);
-            if (select) {
-                allAvailableKeys.forEach((key) => next.add(key));
-            } else {
-                allAvailableKeys.forEach((key) => next.delete(key));
-            }
-            return next;
-        });
-    }
+        setRolePermissions((prev) => {
+            const next = new Set(prev);
+            if (select) {
+                allAvailableKeys.forEach((key) => next.add(key));
+            } else {
+                allAvailableKeys.forEach((key) => next.delete(key));
+            }
+            return next;
+        });
+    }
     async function onSave() {
         if (!selectedRoleId) return setError("Vui lòng chọn một vai trò để lưu.");
         setError(null);
@@ -98,7 +103,7 @@ export default function PermissionsPage() {
             await updatePermissionsForRole(Number(selectedRoleId), Array.from(rolePermissions));
             // fetch again to refresh state from server
             await fetchRolePermissions(Number(selectedRoleId));
-            toast.success("Phân quyền đã được cập nhật thành công."); 
+            toast.success("Phân quyền đã được cập nhật thành công.");
         } catch (err) {
             console.error(err);
             toast.error("Cập nhật phân quyền thất bại.");
@@ -130,6 +135,7 @@ export default function PermissionsPage() {
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
                 <h1 className="text-3xl font-bold text-[#B95D26]">Quản lý Phân quyền</h1>
                 <div className="flex items-center gap-3">
+                    <label htmlFor="selectRole">Chọn Vai trò:</label>
                     <select
                         title="luachon"
                         value={selectedRoleId}
@@ -139,23 +145,25 @@ export default function PermissionsPage() {
                         <option value="">-- Chọn Vai trò --</option>
                         {roles.map((r) => (
                             <option key={r.id} value={r.id}>
-                                {r.name}
+                                {roleLabels[r.name] ?? r.name}
                             </option>
+
                         ))}
                     </select>
-                  
-                    <button
+
+                    {/* <button
                         onClick={() => setModalOpen(true)}
                         className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-150 shadow-md font-medium"
                     >
                         + Tạo Permission
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
             <div className="mb-6 p-4 bg-indigo-50 border-l-4 border-indigo-600 rounded-lg shadow-sm">
                 <div className="text-sm text-indigo-800">
-                    <span className="font-semibold">Vai trò đang chọn:</span> <span className="font-bold">{selectedRole?.name || "Chưa chọn"}</span>
+                   <span className="font-bold">{selectedRole ? roleLabels[selectedRole.name] : "Chưa chọn"}</span>
+
                 </div>
                 {error && <div className="mt-2 text-sm text-red-600 font-medium">{error}</div>}
             </div>
