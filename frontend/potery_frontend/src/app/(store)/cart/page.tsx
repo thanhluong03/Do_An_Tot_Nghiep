@@ -37,6 +37,7 @@ export default function CartPage() {
       product_id: string | number;
       quantity: number;
       store_id: number | string;
+      store_name?: string;
       classifications?: {
         attribute1_id?: number;
         attribute2_id?: number;
@@ -95,6 +96,7 @@ const [selectedStores, setSelectedStores] = useState<Record<string, boolean>>({}
               product_id: ci.product_id,
               quantity: Number(ci.quantity ?? 1),
               store_id: ci.store?.id || ci.store_id || '',
+              store_name: ci.store?.store_name || ci.store?.name || ci.store_name || (ci.store_id ? `Cửa hàng #${ci.store_id}` : undefined),
               // Add classification info from server cart
               classificationId: ci.classification_attribute_relationship_id,
               classifications: ci.classification_attribute_relationship_id ? {
@@ -530,7 +532,9 @@ const handleCheckout = async () => {
                             acc[storeId].push(ci);
                             return acc;
                           }, {} as Record<string, typeof serverItems>)
-                        ).map(([storeId, items]) => (
+                        ).map(([storeId, items]) => {
+                          const storeDisplayName = items[0]?.store_name || `Cửa hàng #${storeId}`;
+                          return (
                           <div key={storeId} className="mb-10 rounded-xl p-5 md:p-6 shadow-sm bg-white">
                             {/* Header cửa hàng với checkbox */}
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -547,7 +551,7 @@ const handleCheckout = async () => {
                                   setSelectedItems(newSelected);
                                 }}
                               />
-                              🏪 Cửa hàng #{storeId}
+                              {storeDisplayName}
                             </h2>
 
                             {items.map((ci) => {
@@ -630,7 +634,8 @@ const handleCheckout = async () => {
                               );
                             })}
                           </div>
-                        ))}
+                        );
+                        })}
                       </div>
 
                     {/* Bên phải: Tóm tắt đơn hàng */}

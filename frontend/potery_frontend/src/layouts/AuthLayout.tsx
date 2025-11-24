@@ -16,9 +16,11 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
           <div className="flex flex-col items-center">
             <div className="w-20 h-20 bg-[#65604E] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
               <Image
+                width={250}
+                height={800}
                 src="/logo.png"
                 alt="Tiệm Gốm Nhà Gạo Logo"
-                className="w-full h-full object-cover rounded-full"
+                className=" object-cover rounded-full"
               />
             </div>
             <div className="text-center mt-3">

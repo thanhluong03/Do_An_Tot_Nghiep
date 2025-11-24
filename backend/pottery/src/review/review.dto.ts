@@ -27,6 +27,12 @@ export class CreateReviewDto {
     @IsNumber()
     @IsPositive()
     orderitem_id: number;
+
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @Type(() => Buffer)
+    images?: Buffer[];
 }
 
 export class UpdateReviewDto {
@@ -48,14 +54,20 @@ export class UpdateReviewDto {
     @IsPositive()
     @IsNumber()
     orderitem_id?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @Type(() => Buffer)
+    images?: Buffer[];
 }
 
 export class ReviewResponseDto {
     @Expose()
-    id: number;
+    id?: number;
 
     @Expose()
-    rating: number;
+    rating?: number;
 
     @Expose()
     comment?: string;
@@ -67,10 +79,26 @@ export class ReviewResponseDto {
     orderitem_id?: number;
 
     @Expose()
-    created_at: Date;
+    created_at?: Date;
 
     @Expose()
-    updated_at: Date | null;
+    updated_at?: Date | null;
+
+    @Expose()
+    @Type(() => Buffer)
+    images?: Buffer[];
+
+    @Expose()
+    image_review?: { id: number, image_review: Buffer }[];
+
+    @Expose()
+    success?: boolean;
+
+    @Expose()
+    message?: string;
+
+    @Expose()
+    error?: string;
 }
 
 export class ListReviewRequestDto {

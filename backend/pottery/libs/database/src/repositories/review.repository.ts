@@ -33,6 +33,7 @@ export class ReviewRepository {
             .select([
                 'customer.id AS customer_id',
                 'customer.full_name AS customer_name',
+                'customer.avatar_image AS avatar_image',
                 'order_items.id AS order_items_id',
                 'order_items.product_id AS product_id',
                 'order_items.order_id AS order_id',
@@ -52,7 +53,8 @@ export class ReviewRepository {
                 grouped[key] = {
                     customer: {
                         id: item.customer_id,
-                        name: item.customer_name
+                        name: item.customer_name,
+                        avatar_image: item.avatar_image
                     },
                     product: {
                         id: item.product_id,
@@ -82,6 +84,7 @@ export class ReviewRepository {
             .select([
                 'customer.id AS customer_id',
                 'customer.full_name AS customer_name',
+                'customer.avatar_image AS avatar_image',
                 'order_items.id AS order_items_id',
                 'order_items.product_id AS product_id',
                 'order_items.order_id AS order_id',
@@ -97,7 +100,8 @@ export class ReviewRepository {
         return raw.map(item => ({
             customer: {
                 id: item.customer_id,
-                name: item.customer_name
+                name: item.customer_name,
+                avatar_image: item.avatar_image
             },
             product: {
                 id: item.product_id,

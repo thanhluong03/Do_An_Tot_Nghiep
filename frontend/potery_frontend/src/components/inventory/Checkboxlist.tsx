@@ -220,7 +220,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                                         height={40}
                                                         src={findProductImage(opt.id, allProducts)}
                                                         alt={opt.name}
-                                                        className="w-10 h-10 object-cover rounded-full border border-gray-200 shadow-sm mr-3"
+                                                        className= "object-cover rounded-full border border-gray-200 shadow-sm mr-3"
                                                         onError={(e) => {
                                                             e.currentTarget.onerror = null;
                                                             e.currentTarget.src = "/no-image.jpg";
