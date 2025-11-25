@@ -1292,18 +1292,29 @@ export class ProductService {
   }
 
   async getBestSellingProducts(limit: number = 5) {
-    // Truy vấn trực tiếp bảng order_items để lấy tổng số lượng bán theo product_id
-    const qb = this.orderRepository["orderItemRepository"].createQueryBuilder("order_item")
-      .select("order_item.product_id", "product_id")
-      .addSelect("SUM(order_item.quantity)", "total_sold")
-      .groupBy("order_item.product_id")
-      .orderBy("total_sold", "DESC")
-      .limit(limit);
+    // Lấy tất cả sản phẩm có inventory
+    const inventories = await this.inventoryRepository.findAll();
+    const inventoryMap = new Map<number, number>(); // product_id -> total_quantity_sold
+    inventories.forEach((inv: any) => {
+      if (!inv.product_id) return;
+      let total = inv.quantity_sold || 0;
+      if (Array.isArray(inv.inventory_details) && inv.inventory_details.length > 0) {
+        total = inv.inventory_details.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+      }
+      if (inventoryMap.has(inv.product_id)) {
+        inventoryMap.set(inv.product_id, inventoryMap.get(inv.product_id)! + total);
+      } else {
+        inventoryMap.set(inv.product_id, total);
+      }
+    });
 
-    const result = await qb.getRawMany();
-    const productIds = result.map((row: any) => row.product_id);
+    // Sắp xếp product_id theo tổng quantity_sold giảm dần
+    const sortedProductIds = Array.from(inventoryMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([productId]) => productId)
+      .slice(0, limit);
 
-    if (productIds.length === 0) {
+    if (sortedProductIds.length === 0) {
       return {
         message: 'Không tìm thấy sản phẩm bán chạy nào!',
         products: [],
@@ -1311,14 +1322,20 @@ export class ProductService {
     }
 
     // Lấy chi tiết sản phẩm
-    const products = await Promise.all(productIds.map((id: number) => this.findInventoryDetailByProductId(id)));
-    // Gắn thêm trường total_sold cho từng sản phẩm
+    const products = await Promise.all(sortedProductIds.map((id: number) => this.findInventoryDetailByProductId(id)));
+
+    // Gắn thêm trường total_quantity_sold cho từng sản phẩm và đảm bảo thứ tự
+    const productsWithSold = products.map((product, idx) => ({
+      ...product,
+      total_quantity_sold: inventoryMap.get(sortedProductIds[idx]) || 0,
+    }));
+
+    // Sắp xếp lại cho chắc chắn (nếu cần)
+    productsWithSold.sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
+
     return {
-      message: `Tìm thấy ${products.length} sản phẩm bán chạy nhất!`,
-      products: products.map((product, idx) => ({
-        ...product,
-        total_sold: Number(result[idx].total_sold),
-      })),
+      message: `Tìm thấy ${productsWithSold.length} sản phẩm bán chạy nhất!`,
+      products: productsWithSold,
     };
   }
 }
