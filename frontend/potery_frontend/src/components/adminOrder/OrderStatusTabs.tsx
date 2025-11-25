@@ -12,14 +12,14 @@ interface Props {
 
 const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
   { value: "", label: "Tất cả" },
-  { value: "CREATED", label: "Chờ duyệt" },
-  { value: "CONFIRMED", label: "Chờ lấy hàng" },
-  { value: "SHIPPING", label: "Chờ giao hàng" },
-  { value: "DELIVERED", label: "Hoàn thành" },
+  { value: "CREATED", label: "Chờ xác nhận" },
+  { value: "CONFIRMED", label: "Đã xác nhận" },
+  { value: "SHIPPING", label: "Đang vận chuyển" },
+  { value: "DELIVERED", label: "Đã giao thành công" },
   { value: "REJECTED", label: "Từ chối" },
   { value: "CANCELLED", label: "Đã hủy" },
-  { value: "RETURN_REQUESTED", label: "Yêu cầu trả hàng" },
- 
+  { value: "RETURN_REQUESTED", label: "Đang yêu cầu hoàn trả" },
+  { value: "EXCHANGED", label: "Đã hoàn trả" },
 ];
 
 const PAYMENT_OPTIONS: { value: PaymentStatus | ""; label: string }[] = [
@@ -62,11 +62,10 @@ export default function OrderStatusTabs({
             <button
               key={tab.value}
               onClick={() => onSelectOrderStatus(tab.value)}
-              className={`relative px-4 py-3 transition-all ${
-                isActive
-                  ? "text-orange-600 font-semibold"
-                  : "text-gray-600 hover:text-orange-600"
-              }`}
+              className={`relative px-4 py-3 transition-all ${isActive
+                ? "text-orange-600 font-semibold"
+                : "text-gray-600 hover:text-orange-600"
+                }`}
             >
               {tab.label}
               <span className="ml-1 text-xs text-gray-500">
