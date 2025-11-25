@@ -345,7 +345,7 @@ export default function AdminOrderPage() {
     return pages;
   };
   return (
-    <div className="p-6 bg-white min-h-screen shadow-md border border-gray-200">
+    <div className="bg-white min-h-screen shadow-md border border-gray-200">
       <Toaster position="top-right" />
       <div className=" mx-auto bg-white rounded-2x overflow-hidden">
         <div className="py-6 border-b border-gray-200 text-center bg-white">

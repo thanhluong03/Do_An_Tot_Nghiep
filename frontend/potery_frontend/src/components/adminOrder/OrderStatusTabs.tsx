@@ -18,8 +18,9 @@ const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
   { value: "DELIVERED", label: "Đã giao thành công" },
   { value: "REJECTED", label: "Từ chối" },
   { value: "CANCELLED", label: "Đã hủy" },
-  { value: "RETURN_REQUESTED", label: "Đang yêu cầu hoàn trả" },
-  { value: "EXCHANGED", label: "Đã hoàn trả" },
+  { value: "RETURN_REQUESTED", label: "Yêu cầu trả hàng" }, 
+  { value: "EXCHANGED", label: "Đã đổi trả" },
+ 
 ];
 
 const PAYMENT_OPTIONS: { value: PaymentStatus | ""; label: string }[] = [
@@ -53,9 +54,9 @@ export default function OrderStatusTabs({
   }, [allOrders]);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between">
       {/* Tab trạng thái đơn */}
-      <div className="flex flex-wrap items-center border-b border-gray-200 text-sm font-medium">
+      <div className="flex flex-wrap items-center border-b border-gray-200 text-sm font-xs">
         {ORDER_TABS.map((tab) => {
           const isActive = currentOrderStatus === tab.value;
           return (
