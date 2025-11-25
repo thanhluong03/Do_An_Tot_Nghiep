@@ -44,8 +44,45 @@ export const BestSellingProducts: React.FC<BestSellingProductsProps> = ({ limit 
 
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6 mt-5 max-w-[1200px] mx-auto">
+            {/* Hiệu ứng lửa nhấp nháy quanh viền chữ */}
+            <style>{`
+                .fire-glow {
+                    font-weight: bold;
+                    font-size: 1.5rem;
+                    color: #ff9800;
+                    text-shadow:
+                        0 0 12px #ffd54f,
+                        0 0 24px #ff9800,
+                        0 0 36px #fff176,
+                        0 0 48px #ffecb3;
+                    animation: fireGlow 1s infinite alternate;
+                }
+                @keyframes fireGlow {
+                    0% {
+                        text-shadow:
+                            0 0 12px #ffd54f,
+                            0 0 24px #ff9800,
+                            0 0 36px #fff176,
+                            0 0 48px #ffecb3;
+                    }
+                    50% {
+                        text-shadow:
+                            0 0 24px #fff176,
+                            0 0 36px #ffd54f,
+                            0 0 48px #ff9800,
+                            0 0 60px #fff176;
+                    }
+                    100% {
+                        text-shadow:
+                            0 0 12px #ffd54f,
+                            0 0 24px #ff9800,
+                            0 0 36px #fff176,
+                            0 0 48px #ffecb3;
+                    }
+                }
+            `}</style>
             <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-xl font-bold text-gray-500">Sản phẩm bán chạy</h2>
+                <h2 className="fire-glow">Sản phẩm bán chạy</h2>
             </div>
             <ProductGrid
                 products={products}

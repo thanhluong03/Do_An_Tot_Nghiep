@@ -16,3 +16,4 @@ export { ValuePropositionSection } from './ValueProppositionSection';
 export { AIChatPage } from './AIPage';
 export { AIChatModal } from './AIChatModal';
 export { BestSellingProducts } from './BestSellingProducts';
+export { default as Banner } from './Banner';

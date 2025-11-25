@@ -7,7 +7,7 @@ import { ProductGrid } from '../../../components/feature/ProductGrid';
 import { useProducts, useCategories } from '../../../hooks/useProducts';
 import { useAuth } from '@/contexts/AuthContext';
 import { conversationApi } from '@/api/modules/conversation';
-import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal, BestSellingProducts } from '@/components/feature';
+import { VoucherModal, ChatModal, ScrollToTopButton, AIChatModal, BestSellingProducts, Banner } from '@/components/feature';
 import { Bot, Gift, MessageSquare, User } from 'lucide-react';
 
 export default function ProductsPage() {
@@ -18,7 +18,11 @@ export default function ProductsPage() {
   const { categories } = useCategories();
 
   const categoryFromUrl = searchParams.get('category') || undefined;
-  const [filters, setFilters] = useState<{ category?: string; sortOrder?: 'asc' | 'desc' }>({
+  const [filters, setFilters] = useState<{
+    category?: string;
+    sortOrder?: 'asc' | 'desc';
+    sortBy?: 'price' | 'bestselling'
+  }>({
     category: categoryFromUrl,
   });
   // State mới để theo dõi nút sort nào đang active (cho UI)
@@ -58,13 +62,16 @@ export default function ProductsPage() {
           (p.description && p.description.toLowerCase().includes(q))
       );
     }
-    // Logic sort giá vẫn được giữ nguyên
-    if (filters.sortOrder) {
+    // Logic sort theo loại được chọn
+    if (filters.sortBy === 'bestselling') {
+      // Sắp xếp theo số lượng bán (giảm dần - bán chạy nhất trước)
+      result = result.sort((a, b) => (b.total_quantity_sold || 0) - (a.total_quantity_sold || 0));
+    } else if (filters.sortOrder && filters.sortBy === 'price') {
+      // Sắp xếp theo giá
       result = result.sort((a, b) =>
         filters.sortOrder === 'asc' ? a.price - b.price : b.price - a.price
       );
     }
-    // TODO: Thêm logic sort "banchay" ở đây nếu cần
     return result;
   }, [products, filters, search]);
 
@@ -86,6 +93,7 @@ export default function ProductsPage() {
     setFilters((f) => ({
       ...f,
       sortOrder: value ? (value as 'asc' | 'desc') : undefined,
+      sortBy: value ? 'price' : undefined,
     }));
     // Cập nhật UI
     setActiveSortType(value ? 'gia' : 'default');
@@ -94,10 +102,12 @@ export default function ProductsPage() {
   // Xử lý khi bấm "Bán chạy"
   const handleBestSellingClick = () => {
     setActiveSortType('banchay');
-    // Reset sort giá, vì logic 'banchay' chưa có trong useMemo
-    setFilters(f => ({ ...f, sortOrder: undefined }));
-    // GHI CHÚ: Logic sort 'banchay' gốc không có trong useMemo.
-    // Nếu cần, bạn phải thêm vào useMemo.
+    // Thiết lập sắp xếp theo bán chạy
+    setFilters(f => ({
+      ...f,
+      sortOrder: undefined,
+      sortBy: 'bestselling'
+    }));
   };
 
   return (
@@ -225,6 +235,11 @@ export default function ProductsPage() {
       {/* Sản phẩm bán chạy nhất */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
         <BestSellingProducts limit={5} />
+
+        {/* Banner carousel */}
+        <div className="max-w-[1200px] mx-auto">
+          <Banner />
+        </div>
       </div>
 
       {/* Layout chính (Giữ nguyên) */}
@@ -260,9 +275,9 @@ export default function ProductsPage() {
         </div>
 
         {/* === Nội dung phải (Đã cập nhật) === */}
-        <div className="flex-1 lg:w-4/5 min-w-0 bg-white p-6 rounded-lg shadow-md">
+        <div className="flex-1 lg:w-4/5 min-w-0 bg-white rounded-lg shadow-md">
           {/* === Thanh Filter & Tìm kiếm mới === */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pr-5 pl-5 pt-3">
             {/* Cụm Sắp xếp (Thêm w-full md:w-auto) */}
             <div className="w-full md:w-auto flex items-center gap-3 flex-wrap">
               <span className="text-sm font-medium text-gray-700">
@@ -270,7 +285,7 @@ export default function ProductsPage() {
               </span>
               <button
                 onClick={handleBestSellingClick}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeSortType === 'banchay'
+                className={`px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition ${activeSortType === 'banchay'
                   ? 'bg-orange-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                   }`}
@@ -328,7 +343,7 @@ export default function ProductsPage() {
           <span></span>
 
           {/* Grid sản phẩm (Giữ nguyên) */}
-          <div className="transition-opacity duration-200 ease-in-out">
+          <div className="transition-opacity duration-200 ease-in-out pr-5 pl-5 pb-5">
             <ProductGrid
               products={filteredProducts}
               loading={loading}
