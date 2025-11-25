@@ -27,7 +27,7 @@ export interface OrderItem {
 
 }
 
-export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REJECTED';
+export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REJECTED' | 'EXCHANGED' | 'RETURN_REQUESTED';
 export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED';
 export type PaymentMethod = 'COD' | 'VNPAY';
 

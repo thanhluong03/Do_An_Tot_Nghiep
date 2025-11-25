@@ -85,7 +85,7 @@ export default function ProductsTable({
                         <th className="p-3 text-left text-xs ">STT</th>
                         <th className="p-3 text-left text-xs ">Ảnh</th>
                         <th className="p-3 text-left text-xs">Tên sản phẩm</th>
-                        <th className="p-3 text-left text-xs">Giá</th>
+                        <th className="p-3 text-left text-xs">Giá bán</th>
                         <th className="p-3 text-left text-xs">Số lượng kho tổng</th>
                         <th className="p-3 text-left text-xs">Trạng thái</th>
                         <th className="p-3 text-left text-xs">Danh mục</th>
@@ -291,7 +291,7 @@ export default function ProductsTable({
                                                                                 <tr>
                                                                                     <th className="px-2 py-2 border border-gray-200 text-left">Phân loại 1</th>
                                                                                     <th className="px-2 py-2 border border-gray-200 text-left">Phân loại 2</th>
-                                                                                    <th className="px-2 py-2 border border-gray-200 text-right">Giá (₫)</th>
+                                                                                    <th className="px-2 py-2 border border-gray-200 text-right">Giá bán (₫)</th>
                                                                                     <th className="px-2 py-2 border border-gray-200 text-right">Số lượng</th>
                                                                                 </tr>
                                                                             </thead>

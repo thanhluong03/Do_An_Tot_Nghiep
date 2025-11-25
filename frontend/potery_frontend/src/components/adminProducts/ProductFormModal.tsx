@@ -609,7 +609,7 @@ export default function ProductFormModal({
           {!showClassifications && (
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-1">
-                Giá (VNĐ)
+                Giá bán(VNĐ)
               </label>
               <input
                 type="number"
@@ -1006,7 +1006,7 @@ export default function ProductFormModal({
                                     value={priceMatrix[createMatrixKey(attr1.name, attr2.name)] || ''}
                                     onChange={(e) => updateMatrixPrice(attr1.name, attr2.name, Number(e.target.value))}
                                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                    placeholder="Nhập giá..."
+                                    placeholder="Nhập giá bán..."
                                   />
                                 </td>
                               </tr>
