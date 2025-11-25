@@ -19,12 +19,9 @@ const translateStatus = (status: string | undefined): string => {
   const s = status.toUpperCase();
   switch (s) {
     case 'CREATED':
-    case 'PENDING':
-      return 'Đang chờ xử lý';
+      return 'Chờ xác nhận';
     case 'CONFIRMED':
       return 'Đã xác nhận';
-    case 'PROCESSING':
-      return 'Đang đóng gói';
     case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
@@ -33,12 +30,8 @@ const translateStatus = (status: string | undefined): string => {
       return 'Đang yêu cầu hoàn trả';
     case 'EXCHANGED':
       return 'Đã đổi trả';
-    case 'COMPLETED':
-      return 'Đã giao thành công';
     case 'CANCELLED':
       return 'Đã hủy';
-    case 'FAILED':
-      return 'Thất bại';
     default:
       return status;
   }

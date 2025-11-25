@@ -55,11 +55,11 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
     // Trạng thái đơn hàng
     CREATED: "Chờ xác nhận",
     CONFIRMED: "Đã xác nhận",
-    SHIPPING: "Đang giao",
-    DELIVERED: "Đã giao",
+    SHIPPING: "Đang vận chuyển",
+    DELIVERED: "Đã giao thành công",
     REJECTED: "Bị từ chối",
     EXCHANGED: "Đã đổi trả",
-    RETURN_REQUESTED: "Yêu cầu trả hàng",
+    RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
     CANCELLED: "Đã hủy",
 
     // Trạng thái thanh toán

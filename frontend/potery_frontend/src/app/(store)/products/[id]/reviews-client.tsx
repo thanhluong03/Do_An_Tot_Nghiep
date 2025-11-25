@@ -348,7 +348,7 @@ export function ReviewsClient({
                   {/* Phần thông tin user (flex-row) */}
                   <div className="flex items-start space-x-4">
                     <Image
-                      src={r.customer_avatar || ''}
+                      src={r.customer_avatar || '/images/default-avatar.jpg'}
                       alt={r.customer_name || ''}
                       width={40}
                       height={40}
