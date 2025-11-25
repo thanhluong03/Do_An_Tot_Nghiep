@@ -421,12 +421,12 @@ export default function MyOrdersPage() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`
-                  px-2 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-200 flex gap-2
-                  ${activeTab === tab.key
+                px-2 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition-all duration-200 flex gap-2
+                ${activeTab === tab.key
                     ? 'bg-[#C4975A] text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }
-                `}
+                `}
               >
                 {tab.name}
                 <span className={`
@@ -571,14 +571,29 @@ export default function MyOrdersPage() {
                           Hủy đơn hàng
                         </button>
                       )}
-                      {order.status?.toUpperCase() === 'DELIVERED' && (
-                        <button
-                          onClick={() => handleReturnOrder(id)}
-                          className="px-6 py-2 text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md"
-                        >
-                          Đổi trả đơn hàng
-                        </button>
-                      )}
+                      {(() => {
+                        const isDelivered = order.status?.toUpperCase() === 'DELIVERED';
+
+                        // Lấy ngày giao hàng (tùy API bạn)
+                        const deliveredAt = order.delivery_date || order.delivered_at || order.updated_at;
+
+                        if (!deliveredAt) return null;
+
+                        const diffDays =
+                          (new Date().getTime() - new Date(deliveredAt).getTime()) /
+                          (1000 * 60 * 60 * 24);
+
+                        const within7Days = diffDays <= 7;
+
+                        return isDelivered && within7Days ? (
+                          <button
+                            onClick={() => handleReturnOrder(id)}
+                            className="px-6 py-2 text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md"
+                          >
+                            Đổi trả đơn hàng
+                          </button>
+                        ) : null;
+                      })()}
                       <Link
                         href={`/orders/${id}`}
                         className="px-6 py-2 text-sm font-semibold border border-[#C4975A] rounded-full
