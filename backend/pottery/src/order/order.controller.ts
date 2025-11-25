@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { OrderService } from '../../libs/order/src/order.service';
 import { CreateOrderDto, UpdateOrderDto, SuccessResponseDto, ErrorResponseDto } from './order.dto';
 import { OrderStatus, PaymentStatus } from '../../libs/database/src/entities/order.entity';
@@ -117,11 +118,22 @@ export class OrderController {
     }
 
     @Put('updateorder/:id')
-    async updateOrder(@Param('id') id: number, @Body() body: UpdateOrderDto) {
+    @UseInterceptors(FilesInterceptor('reason_change_images'))
+    async updateOrder(
+        @Param('id') id: number,
+        @Body() body: UpdateOrderDto,
+        @UploadedFiles() files?: Express.Multer.File[]
+    ) {
         try {
+            // Xử lý file upload thành Buffer array
+            const reasonChangeImages = files?.map(file => file.buffer) || [];
+
             await this.orderService.updateOrder(
                 Number(id),
-                body,
+                {
+                    ...body,
+                    reason_change_images: reasonChangeImages.length > 0 ? reasonChangeImages : undefined,
+                },
                 body.user_id,
                 body.customer_id,
                 body.actor_type

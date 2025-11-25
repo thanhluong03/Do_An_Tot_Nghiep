@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, forwardRef } from '@nestjs/common';
-import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository } from '@app/database';
+import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository, ReasonChangeImageRepository } from '@app/database';
 import { ProductRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
@@ -26,11 +26,12 @@ export class OrderService {
     private readonly productRepository: ProductRepository,
     private readonly inventoryDetailRepository: InventoryDetailRepository,
     private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
+    private readonly reasonChangeImageRepository: ReasonChangeImageRepository,
   ) { }
 
   async createOrder(data: ICreateOrder): Promise<OrderEntity> {
     // ✅ Thêm xử lý phân biệt guest / user và gán is_login_customer đúng chuẩn
-    const { items, status, payment_status, payment_method, guest_id, customer_id, ...orderData } = data;
+    const { items, status, payment_status, payment_method, guest_id, customer_id, note, ...orderData } = data;
 
     // Nếu là khách vãng lai (guest)
     if (guest_id) {
@@ -180,6 +181,7 @@ export class OrderService {
       payment_method: payment_method ?? PaymentMethod.ONSITE,
       order_date: new Date(),
       customer_info: customerInfo,
+      note: note ?? '',
     };
 
     const order = await this.orderRepository.createOrder(
@@ -190,6 +192,7 @@ export class OrderService {
         payment_status: payment_status ?? PaymentStatus.UNPAID,
         payment_method: payment_method ?? PaymentMethod.ONSITE,
         current_order,
+        note: note ?? '',
       },
       items,
     );
@@ -239,6 +242,17 @@ export class OrderService {
         };
       }));
     }
+
+    // Lấy lý do hoàn trả và các ảnh hoàn trả
+    const returnReason = order.reason_change || null;
+    const reasonChangeImages = await this.reasonChangeImageRepository.findByOrderId(id);
+    const returnReasonImage = reasonChangeImages
+      .filter(img => img.reason_change_image)
+      .map(img => ({
+        id: img.id,
+        image: img.reason_change_image.toString('base64'),
+      }));
+
     const statusHistoryRaw = await this.orderStatusHistoryRepository.getHistoryByOrderId(id);
     const statusHistory: any[] = [];
     for (const history of statusHistoryRaw) {
@@ -285,6 +299,8 @@ export class OrderService {
         items: itemsWithImages,
       },
       statusHistory,
+      returnReason,
+      returnReasonImage,
     };
   }
 
@@ -329,7 +345,25 @@ export class OrderService {
     if (data.payment_status !== undefined) updateData.payment_status = data.payment_status;
     if (data.shipping_address !== undefined) updateData.shipping_address = data.shipping_address;
     if (data.payment_method !== undefined) updateData.payment_method = data.payment_method;
+    if (data.reason_change !== undefined) updateData.reason_change = data.reason_change;
+    if (typeof data.note === 'string') updateData.note = data.note;
+
     await this.orderRepository.update(id, updateData);
+
+    // Xử lý reason_change_images nếu có
+    if (data.reason_change_images && data.reason_change_images.length > 0) {
+      // Xóa các ảnh cũ trước khi thêm ảnh mới
+      await this.reasonChangeImageRepository.deleteByOrderId(id);
+
+      // Thêm các ảnh mới
+      for (const imageBuffer of data.reason_change_images) {
+        await this.reasonChangeImageRepository.create({
+          order_id: id,
+          reason_change_image: imageBuffer,
+        });
+      }
+    }
+
     if (statusChanged && updateData.status) {
       await this.orderStatusHistoryRepository.logStatusChange(
         id,

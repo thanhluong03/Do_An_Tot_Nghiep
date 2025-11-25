@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/dist/client/components/navigation';
 import { ArrowLeft, Bot, Gift, MessageSquare, Search, User } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
-import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
+import { VoucherModal, ChatModal, AIChatModal, ReturnOrderModal } from '@/components/feature';
 
 const translateStatus = (status: string | undefined): string => {
   if (!status) return 'Không rõ';
@@ -31,6 +31,8 @@ const translateStatus = (status: string | undefined): string => {
       return 'Đã giao thành công';
     case 'RETURN_REQUESTED':
       return 'Đang yêu cầu hoàn trả';
+    case 'EXCHANGED':
+      return 'Đã đổi trả';
     case 'COMPLETED':
       return 'Đã giao thành công';
     case 'CANCELLED':
@@ -47,6 +49,7 @@ const statusTabs = [
   { key: 'PROCESSING', name: 'Đang giao hàng', statuses: ['CONFIRMED', 'PROCESSING', 'SHIPPING'] },
   { key: 'COMPLETED', name: 'Đã hoàn thành', statuses: ['DELIVERED', 'COMPLETED'] },
   { key: 'CANCELLED', name: 'Đã hủy', statuses: ['CANCELLED', 'FAILED'] },
+  { key: 'RETURN_REQUESTED', name: 'Yêu cầu đổi trả', statuses: ['RETURN_REQUESTED'] },
 ];
 const translatePaymentStatus = (status: string | undefined): string => {
   if (!status) return 'Chờ thanh toán';
@@ -91,6 +94,10 @@ export default function MyOrdersPage() {
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("ALL");
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnOrderId, setReturnOrderId] = useState<number | null>(null);
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [processingOrderId, setProcessingOrderId] = useState<number | null>(null);
 
   const handleCancelOrder = async (orderId: any) => {
     if (window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
@@ -114,25 +121,47 @@ export default function MyOrdersPage() {
     }
   };
   const handleReturnOrder = async (orderId: any) => {
-    // TODO: Implement return logic
-    if (window.confirm('Bạn có chắc chắn muốn hoàn đơn hàng này không?')) {
-      try {
-        await orderApi.updateOrder(Number(orderId), {
+    setReturnOrderId(orderId);
+    setIsReturnModalOpen(true);
+  };
+
+  const handleReturnSubmit = async (reason: string, images: File[]) => {
+    if (!returnOrderId) return;
+
+    setReturnLoading(true);
+    setProcessingOrderId(returnOrderId);
+
+    // Đóng modal ngay lập tức
+    setIsReturnModalOpen(false);
+    setReturnOrderId(null);
+
+    try {
+      await orderApi.updateOrder(
+        returnOrderId,
+        {
           status: 'RETURN_REQUESTED',
-          actorType: 'CUSTOMER',
-        });
-        setOrders(prevOrders =>
-          prevOrders.map(order =>
-            (order.id ?? order._id) == orderId
-              ? { ...order, status: 'RETURN_REQUESTED' }
-              : order
-          )
-        );
-        toast.success('Đã hoàn đơn hàng thành công.');
-      } catch (error) {
-        console.error('Lỗi hoàn đơn hàng:', error);
-        toast.error('Không thể hoàn đơn hàng. Vui lòng thử lại.');
-      }
+          reason_change: reason,
+        },
+        images
+      );
+
+      toast.success('Yêu cầu đổi trả đã được gửi thành công');
+
+      // Cập nhật trạng thái đơn hàng ngay lập tức mà không cần reload
+      setOrders(prevOrders =>
+        (Array.isArray(prevOrders) ? prevOrders : []).map(order =>
+          (order.id ?? order._id) == returnOrderId
+            ? { ...order, status: 'RETURN_REQUESTED', reason_change: reason }
+            : order
+        )
+      );
+
+    } catch (error) {
+      console.error('Error submitting return request:', error);
+      toast.error('Có lỗi xảy ra khi gửi yêu cầu đổi trả');
+    } finally {
+      setReturnLoading(false);
+      setProcessingOrderId(null);
     }
   };
   useEffect(() => {
@@ -162,7 +191,7 @@ export default function MyOrdersPage() {
   }, []);
   useEffect(() => {
     const fetchProducts = async () => {
-      const productIds = orders.flatMap(o => o.items?.map((i: any) => i.product_id)).filter(Boolean);
+      const productIds = (Array.isArray(orders) ? orders : []).flatMap(o => o.items?.map((i: any) => i.product_id)).filter(Boolean);
       const uniqueIds = [...new Set(productIds)];
       const result: Record<number, any> = {};
 
@@ -175,17 +204,24 @@ export default function MyOrdersPage() {
       setProductMap(result);
     };
 
-    if (orders.length > 0) fetchProducts();
+    if ((Array.isArray(orders) ? orders : []).length > 0) fetchProducts();
   }, [orders]);
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
+
+    let isMounted = true; // Prevent state update if component unmounted
+
     (async () => {
       try {
         setLoading(true);
         setError(null);
+
         const res = await orderApi.getOrdersByCustomer(user.id as string, 1, 50);
+
+        if (!isMounted) return; // Component unmounted, don't update state
+
         const data = res?.data || res;
-        const list = Array.isArray(data) ? data : data?.data || [];
+        const list = Array.isArray(data) ? data : data?.data || data?.orders || [];
         const seen = new Set();
         const unique = list.filter((o: any) => {
           const id = o?.id ?? o?._id;
@@ -193,20 +229,28 @@ export default function MyOrdersPage() {
           seen.add(id);
           return true;
         });
-        setOrders(unique);
+        setOrders(Array.isArray(unique) ? unique : []);
       } catch (e: any) {
-        setError(e?.message || 'Không thể tải đơn hàng');
+        if (isMounted) {
+          setError(e?.message || 'Không thể tải đơn hàng');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      isMounted = false; // Cleanup function
+    };
   }, [isAuthenticated, user?.id]);
 
   const formatPrice = (price: number | string) => {
     const num = Number(price) || 0;
     return num.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
     const normalizedStatus = order.status?.toUpperCase();
 
     // 1. Lọc theo Tab Trạng thái
@@ -235,7 +279,7 @@ export default function MyOrdersPage() {
     return false;
   });
   const tabCounts = statusTabs.reduce((acc, tab) => {
-    const count = orders.filter((order) => {
+    const count = (Array.isArray(orders) ? orders : []).filter((order) => {
       const normalizedStatus = order.status?.toUpperCase();
 
       // 1. Check Status Match (sử dụng tiêu chí của tab hiện tại)
@@ -271,6 +315,10 @@ export default function MyOrdersPage() {
         return 'text-green-700 bg-green-100';
       case 'cancelled':
         return 'text-red-700 bg-red-100';
+      case 'return_requested':
+        return 'text-orange-700 bg-orange-100';
+      case 'exchanged':
+        return 'text-sky-700 bg-sky-100';
       default:
         return 'text-gray-700 bg-gray-100';
     }
@@ -307,6 +355,19 @@ export default function MyOrdersPage() {
             isOpen={isAIChatOpen}
             onClose={() => setIsAIChatOpen(false)}
           />
+
+          {/* Return Order Modal */}
+          {isReturnModalOpen && (
+            <ReturnOrderModal
+              isOpen={isReturnModalOpen}
+              onClose={() => {
+                setIsReturnModalOpen(false);
+                setReturnOrderId(null);
+              }}
+              onSubmit={handleReturnSubmit}
+              loading={returnLoading}
+            />
+          )}
 
           {/* Floating Buttons */}
           <div
@@ -467,12 +528,13 @@ export default function MyOrdersPage() {
                 const id = order.id ?? order._id;
                 const info = order.current_order || order;
                 const items = info.items || [];
-                const total = info.total_amount ?? info.total ?? order.total_amount ?? 0;
+                const isProcessing = processingOrderId === id;
                 console.log(`Order ID: ${id}, Status: ${order.status}`);
                 return (
                   <div
                     key={id}
-                    className="bg-white rounded-xl border border-[#E5E2D8] shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl"
+                    className={`bg-white rounded-xl border border-[#E5E2D8] shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl ${isProcessing ? 'opacity-75 pointer-events-none' : ''
+                      }`}
                   >
 
                     {/* Header */}
@@ -555,7 +617,7 @@ export default function MyOrdersPage() {
                       </div>
 
                       <div className="text-right flex items-center gap-4">
-                        <div> 
+                        <div>
                           <div className="text-sm font-semibold  text-gray-600">Tổng tiền hàng: <span>{formatPrice(info.total_amount)}</span></div>
                           <div className="text-sm font-semibold  text-gray-600">Tổng thanh toán: <span className="font-bold text-[#A38D64]">{formatPrice(info.total_amount + 30000)}</span></div>
                         </div>
@@ -566,7 +628,7 @@ export default function MyOrdersPage() {
                       {['CREATED', 'PENDING', 'CONFIRMED', 'SHIPPING'].includes(order.status?.toUpperCase()) && (
                         <button
                           onClick={() => handleCancelOrder(id)}
-                          className="px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md"
+                          className="px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md cursor-pointer"
                         >
                           Hủy đơn hàng
                         </button>
@@ -588,9 +650,14 @@ export default function MyOrdersPage() {
                         return isDelivered && within7Days ? (
                           <button
                             onClick={() => handleReturnOrder(id)}
-                            className="px-6 py-2 text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md"
+                            disabled={processingOrderId === id}
+                            className={`px-6 py-2 cursor-pointer text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md flex items-center gap-2 ${processingOrderId === id ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
                           >
-                            Đổi trả đơn hàng
+                            {processingOrderId === id && (
+                              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            )}
+                            {processingOrderId === id ? 'Đang xử lý...' : 'Đổi trả đơn hàng'}
                           </button>
                         ) : null;
                       })()}
