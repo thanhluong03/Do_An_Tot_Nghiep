@@ -1165,14 +1165,61 @@ export default function CheckoutPage() {
                                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                                     <MapPin className='w-3 h-3' /> Tỉnh/Thành phố *
                                 </label>
-                                <input
+
+                                <select
                                     className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
                                     value={city}
                                     onChange={e => setCity(e.target.value)}
-                                    placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
-                                />
-                                {formErrors.city && <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>}
-                            </div>
+                                >
+                                    <option value="">-- Chọn Tỉnh/Thành phố --</option>
+
+                                    {[
+                                    "Hà Nội",
+                                    "TP. Hồ Chí Minh",
+                                    "Hải Phòng",
+                                    "Đà Nẵng",
+                                    "Cần Thơ",
+                                    "Thái Nguyên",
+                                    "Hà Giang",
+                                    "Lào Cai",
+                                    "Cao Bằng",
+                                    "Lạng Sơn",
+                                    "Quảng Ninh",
+                                    "Bắc Giang",
+                                    "Vĩnh Phúc",
+                                    "Bắc Ninh",
+                                    "Phú Thọ",
+                                    "Hòa Bình",
+                                    "Sơn La",
+                                    "Điện Biên",
+                                    "Lai Châu",
+                                    "Thanh Hóa",
+                                    "Nghệ An",
+                                    "Hà Tĩnh",
+                                    "Quảng Bình",
+                                    "Quảng Trị",
+                                    "Thừa Thiên Huế",
+                                    "Đắk Lắk",
+                                    "Đắk Nông",
+                                    "Gia Lai",
+                                    "Kon Tum",
+                                    "Khánh Hòa",
+                                    "Bình Thuận",
+                                    "Bà Rịa – Vũng Tàu",
+                                    "Long An",
+                                    "Kiên Giang"
+                                    ].map((province) => (
+                                    <option key={province} value={province}>
+                                        {province}
+                                    </option>
+                                    ))}
+
+                                </select>
+
+                                {formErrors.city && (
+                                    <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>
+                                )}
+                                </div>
 
                             {/* Payment Method */}
                             <div>

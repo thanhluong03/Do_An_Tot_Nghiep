@@ -101,7 +101,7 @@ export const LifestyleSection: React.FC = () => {
                     className="px-8 py-3 text-lg font-semibold bg-white text-[#65604E] hover:bg-[#F5F1EB] shadow-lg transition-all duration-300 inline-flex items-center justify-center mx-auto space-x-2 rounded-lg"
                 >
                     {/* Nút Button có thể chỉ là một <span> hoặc không cần thiết nếu <a> đã đủ style */}
-                    <span>Bộ Sưu Tập</span>
+                    <span>Khám Phá Bộ Sưu Tập</span>
                     <span className="ml-2 text-xl">→</span> 
                 </a>
             </div>
