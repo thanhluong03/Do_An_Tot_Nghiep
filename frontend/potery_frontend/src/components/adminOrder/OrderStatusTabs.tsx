@@ -16,8 +16,9 @@ const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
   { value: "CONFIRMED", label: "Chờ lấy hàng" },
   { value: "SHIPPING", label: "Chờ giao hàng" },
   { value: "DELIVERED", label: "Hoàn thành" },
-   { value: "REJECTED", label: "Từ chối" },
+  { value: "REJECTED", label: "Từ chối" },
   { value: "CANCELLED", label: "Đã hủy" },
+  { value: "RETURN_REQUESTED", label: "Yêu cầu trả hàng" },
  
 ];
 

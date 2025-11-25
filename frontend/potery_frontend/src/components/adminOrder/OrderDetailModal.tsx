@@ -20,6 +20,10 @@ const statusToVietnamese = (status: string) => {
       return "Đã hủy";
     case "REJECTED":
       return "Bị từ chối";
+    case "EXCHANGED":
+      return "Đã đổi trả";
+    case "RETURN_REQUESTED":
+      return "Yêu cầu trả hàng";
     default:
       return status;
   }

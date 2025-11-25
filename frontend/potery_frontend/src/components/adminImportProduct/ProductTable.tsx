@@ -69,7 +69,7 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                         <th className="px-1 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/4">TÊN SẢN PHẨM</th>
                         
                         {/* 1. BỎ COMMENT VÀ CHỈNH LẠI CỘT GIÁ BÁN */}
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">GIÁ BÁN</th>
+                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">GIÁ NHẬP</th>
                         
                         <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">SL TỒN KHO NHẬP</th>
                         <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/6">NHÀ CUNG CẤP</th>
@@ -195,7 +195,7 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                                                                             </div>
 
                                                                             <div className="md:flex-none text-right">
-                                                                                <div className="text-[9px] text-gray-500">Giá</div>
+                                                                                <div className="text-[9px] text-gray-500">Giá nhập</div>
                                                                                 <div className="text-green-700 font-bold text-[13px]">{formatCurrencyWithUnit(combo.price)}</div>
                                                                             </div>
                                                                         </div>
