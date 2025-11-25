@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
 
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 // Trạng thái đơn hàng: dịch sang tiếng Việt
 const translateStatus = (status: string | undefined): string => {
   if (!status) return 'Không rõ';
@@ -35,6 +37,10 @@ const translateStatus = (status: string | undefined): string => {
       return 'Đã hủy';
     case 'FAILED':
       return 'Thất bại';
+    case 'RETURN_REQUESTED':
+      return 'Đang yêu cầu hoàn trả';
+    case 'EXCHANGED':
+      return 'Đã đổi trả';
     default:
       return status;
   }
@@ -243,18 +249,28 @@ function OrderDetailClient({ id }: { id: string }) {
   );
 
   // ---------------- Helper ----------------
+  // Đồng bộ màu trạng thái với danh sách đơn hàng
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'created':
       case 'pending':
-        return 'text-yellow-700 bg-yellow-50';
+        return 'text-yellow-700 bg-yellow-100';
+      case 'confirmed':
+      case 'processing':
+      case 'shipping':
+        return 'text-blue-700 bg-blue-100';
       case 'completed':
       case 'delivered':
-        return 'text-green-700 bg-green-50';
+        return 'text-green-700 bg-green-100';
       case 'cancelled':
-        return 'text-red-700 bg-red-50';
+      case 'failed':
+        return 'text-red-700 bg-red-100';
+      case 'return_requested':
+        return 'text-orange-700 bg-orange-100';
+      case 'exchanged':
+        return 'text-sky-700 bg-sky-100';
       default:
-        return 'text-gray-700 bg-gray-50';
+        return 'text-gray-700 bg-gray-100';
     }
   };
 
@@ -282,6 +298,8 @@ function OrderDetailClient({ id }: { id: string }) {
   }
 
   // ---------------- UI render ----------------
+  const router = useRouter();
+
   if (loading)
     return (
       <BaseLayout>
@@ -304,6 +322,14 @@ function OrderDetailClient({ id }: { id: string }) {
 
   return (
     <BaseLayout>
+      {/* Nút quay lại */}
+      <button
+        onClick={() => router.push('/orders')}
+        className="flex items-center gap-2 p-3 ml-2 mb-4 rounded-xl text-gray-500 hover:bg-gray-100 active:scale-95 transition-all duration-200"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Trang trước đó</span>
+      </button>
       {isAuthenticated && user?.id && (
         <>
           {/* Voucher Modal */}
@@ -406,13 +432,13 @@ function OrderDetailClient({ id }: { id: string }) {
           </div>
         </>
       )}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-[#F5F1EB] min-h-[80vh]">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-12 bg-[#F5F1EB] min-h-[80vh]">
         <h1 className="text-3xl font-serif mb-8 text-[#2C2A24] text-center tracking-wider relative pb-2 border-b border-[#C4975A]/30">Chi tiết đơn hàng #{order.id}</h1>
-        <div className="flex flex-col lg:flex-row gap-8 justify-center items-start">
+        <div className="max-w-[1200px] mx-auto flex flex-col lg:flex-row gap-10 justify-center items-start">
           {/* Sản phẩm bên trái chiếm nhiều hơn */}
           <div className="lg:w-8/12 w-full">
-            <div className="bg-white rounded-xl border border-[#E5E2D8] shadow-lg p-10">
-              <h2 className="text-xl font-bold text-[#A38D64] mb-6 text-center">Sản phẩm</h2>
+            <div className="bg-white rounded-xl border border-[#E5E2D8] shadow-lg p-4">
+              <h2 className="text-xl font-bold text-[#A38D64] mb-1 text-center">Sản phẩm</h2>
               <div className="divide-y">
                 {items.map((it: any, idx: number) => (
                   <div key={idx} className="py-4 border-b last:border-none">
@@ -571,25 +597,31 @@ function OrderDetailClient({ id }: { id: string }) {
             </div>
           </div>
           {/* Thông tin đơn hàng bên phải: gộp vào một card */}
-          <div className="lg:w-5/12 w-full flex flex-col items-start">
-            <div className="bg-white rounded-xl border border-[#E5E2D8] shadow-lg p-8 flex flex-col gap-8">
+          <div className="lg:w-5/12 xl:w-4/12 w-full flex flex-col items-start min-w-[340px]">
+            <div className="bg-white rounded-xl border border-[#E5E2D8] shadow-lg p-4 flex flex-col gap-6 min-w-[320px]">
               {/* status */}
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <div className="text-gray-900 font-bold text-lg">Đơn hàng</div>
-                  <div className="inline-block px-4 py-2 rounded-full text-base font-bold bg-yellow-100 text-yellow-700 shadow border border-yellow-200">
+                <div className="flex justify-between items-center mb-3 whitespace-nowrap">
+                  <div className="text-gray-900 font-bold text-[17px]">Đơn hàng</div>
+                  <div className={`inline-block px-3 py-1 rounded-full text-[15px] font-bold shadow border ${getStatusColor(order.status)} whitespace-nowrap`}>
                     {translateStatus(order.status)}
                   </div>
                 </div>
-                <div>Trạng thái: <span className="font-bold text-gray-900">{translatePaymentStatus(order.payment_status)}</span></div>
-                <div className="text-gray-500 text-base font-medium">
+                <div className="text-[15px]">Trạng thái: <span className="font-bold text-gray-900">{translatePaymentStatus(order.payment_status)}</span></div>
+                <div className="text-gray-500 text-[15px] font-medium">
                   Ngày đặt: {new Date(order.order_date).toLocaleString('vi-VN')}
+                  {order.note && (
+                    <div className="text-gray-800 text-[15px] font-medium mt-2">
+                      <span className="text-[16px] font-bold text-[#A38D64]">Ghi chú:</span>
+                      <span className="block">{order.note}</span>
+                    </div>
+                  )}
                 </div>
                 {/* status history toggle */}
                 {statusHistory.length > 0 && (
                   <div>
                     <button
-                      className="text-sm font-bold text-[#A38D64] mb-4 underline hover:text-[#C4975A]"
+                      className="text-sm font-bold text-[#A38D64] mt-4 underline hover:text-[#C4975A]"
                       onClick={() => setShowStatusHistory((prev) => !prev)}
                     >
                       Lịch sử trạng thái
@@ -616,8 +648,8 @@ function OrderDetailClient({ id }: { id: string }) {
 
               {/* shipping */}
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-bold text-[#A38D64]">Địa chỉ giao hàng</h2>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-[16px] font-bold text-[#A38D64]">Địa chỉ giao hàng</h2>
                   {(trackingData?.driver_location || trackingData?.driver_start_coordinates) && trackingData?.customer_coordinates && (
                     <button
                       onClick={() => setShowMap(!showMap)}
@@ -627,8 +659,7 @@ function OrderDetailClient({ id }: { id: string }) {
                     </button>
                   )}
                 </div>
-                <div className="text-gray-800 text-base font-medium mb-2">{order.shipping_address || 'Chưa có địa chỉ'}</div>
-
+                <div className="text-gray-800 text-[15px] font-medium mb-2">{order.shipping_address || 'Chưa có địa chỉ'}</div>
                 {/* Tracking Map */}
                 {showMap && trackingData && (
                   <div className="mt-4">
@@ -644,7 +675,7 @@ function OrderDetailClient({ id }: { id: string }) {
                       height="400px"
                     />
                     {(trackingData.driver_location || trackingData.driver_start_coordinates) && (
-                      <div className="text-xs text-gray-500 mt-2">
+                      <div className="text-[14px] text-gray-500 mt-2">
                         {trackingData.driver_location
                           ? `Cập nhật lần cuối: ${new Date(trackingData.driver_location.timestamp).toLocaleString('vi-VN')}`
                           : `Điểm xuất phát (từ địa chỉ tài xế): ${trackingData.driver_start_coordinates?.display_name ?? ''}`}
@@ -656,8 +687,8 @@ function OrderDetailClient({ id }: { id: string }) {
 
               {/* payment */}
               <div>
-                <h2 className="text-lg font-bold text-[#A38D64] mb-4">Thanh toán</h2>
-                <div className="text-gray-700 space-y-2 text-base">
+                <h2 className="text-[16px] font-bold text-[#A38D64]">Thanh toán</h2>
+                <div className="text-gray-700 space-y-2 text-[15px]">
                   <div>Phương thức: <span className="font-bold text-gray-900">{
                     order.payment_method === 'ONSITE'
                       ? 'Thanh toán khi nhận hàng (COD)'
@@ -667,7 +698,7 @@ function OrderDetailClient({ id }: { id: string }) {
                   }</span></div>
                   <div>Tổng tiền hàng: <span className="font-bold">{formatPrice(order.total_amount)}</span></div>
                   <div>Phí vận chuyển: <span className="font-bold">{formatPrice(30000)}</span></div>
-                  <div className="font-bold text-base text-[#A38D64]">
+                  <div className="font-bold text-[16px] text-[#A38D64]">
                     Tổng thanh toán: {formatPrice(Number(order.total_amount || 0) + 30000)}
                   </div>
                 </div>
