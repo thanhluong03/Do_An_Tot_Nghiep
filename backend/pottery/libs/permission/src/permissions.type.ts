@@ -16,8 +16,8 @@ export const AVAILABLE_PERMISSIONS = {
     ],
     'admin/products': [
         { key: 'admin/products', name: 'Quản lý sản phẩm' },
-        { key: 'admin/products/add', name: 'Thêm sản phẩm' },
-        { key: 'admin/products/update', name: 'Cập nhật sản phẩm' },
+        // { key: 'admin/products/add', name: 'Thêm sản phẩm' },
+        // { key: 'admin/products/update', name: 'Cập nhật sản phẩm' },
     ],
     'admin/promotions': [
         { key: 'admin/promotions', name: 'Quản lý khuyến mãi' },
@@ -50,21 +50,39 @@ export const AVAILABLE_PERMISSIONS = {
         { key: 'admin/conversation', name: 'Quản lý hội thoại' },
     ],
     'admin/profileAdmin': [
-        { key: 'admin/profileAdmin', name: 'Quản lý thông tin cá nhân admin' },
+        { key: 'admin/profileAdmin', name: 'Quản lý thông tin cá nhân của quản trị' },
     ],
     'admin/ai': [
         { key: 'admin/ai', name: 'Quản lý AI' },
     ],
     'admin/changePassword': [
-        { key: 'admin/changePassword', name: 'Đổi mật khẩu' },
+        { key: 'admin/changePassword', name: 'Đổi mật khẩu tài khoản cá nhân của quản trị' },
     ],
     'admin/driver-order': [
-        { key: 'admin/driver-order', name: 'Quản lý đơn hàng tài xế' },
-    ],
-    'adminStore/storeRequestImportProduct': [
-        { key: 'adminStore/storeRequestImportProduct', name: 'Quản lý yêu cầu nhập kho' },
+        { key: 'admin/driver-order', name: 'Quản lý vận chuyển đơn hàng' },
     ],
     'admin/adminImportrequests': [
         { key: 'admin/adminImportrequests', name: 'Duyệt yêu cầu nhập kho cửa hàng' },
+    ],
+    'adminstore/dashboard': [
+        { key: 'adminstore/dashboard', name: 'Bảng điều khiển cửa hàng' },
+    ],
+    'adminStore/storeRequestImportProduct': [
+        { key: 'adminStore/storeRequestImportProduct', name: 'Quản lý yêu cầu nhập kho cửa hàng' },
+    ],
+    'adminstore/orders': [
+        { key: 'adminstore/orders', name: 'Quản lý đơn hàng cửa hàng' },
+    ],
+    'adminstore/customers': [
+        { key: 'adminstore/customers', name: 'Quản lý khách hàng cửa hàng' },
+    ],
+    'adminstore/inventory': [
+        { key: 'adminstore/inventory', name: 'Quản lý tồn kho cửa hàng' },
+    ],
+    'adminstore/profileAdmin': [
+        { key: 'adminstore/profileAdmin', name: 'Quản lý thông tin cá nhân của tài khoản cửa hàng' },
+    ],
+    'adminstore/changePassword': [
+        { key: 'adminstore/changePassword', name: 'Đổi mật khẩu cửa hàng' },
     ],
 };

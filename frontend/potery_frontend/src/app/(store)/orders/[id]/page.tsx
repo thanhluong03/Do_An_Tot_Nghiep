@@ -22,21 +22,15 @@ const translateStatus = (status: string | undefined): string => {
   const s = status.toUpperCase();
   switch (s) {
     case 'CREATED':
-    case 'PENDING':
-      return 'Đang chờ xử lý';
+      return 'Đang xác nhận';
     case 'CONFIRMED':
       return 'Đã xác nhận';
-    case 'PROCESSING':
-      return 'Đang đóng gói';
     case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
-    case 'COMPLETED':
       return 'Đã giao thành công';
     case 'CANCELLED':
       return 'Đã hủy';
-    case 'FAILED':
-      return 'Thất bại';
     case 'RETURN_REQUESTED':
       return 'Đang yêu cầu hoàn trả';
     case 'EXCHANGED':
@@ -252,25 +246,24 @@ function OrderDetailClient({ id }: { id: string }) {
   // Đồng bộ màu trạng thái với danh sách đơn hàng
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'created':
-      case 'pending':
-        return 'text-yellow-700 bg-yellow-100';
-      case 'confirmed':
-      case 'processing':
-      case 'shipping':
-        return 'text-blue-700 bg-blue-100';
-      case 'completed':
-      case 'delivered':
-        return 'text-green-700 bg-green-100';
-      case 'cancelled':
-      case 'failed':
-        return 'text-red-700 bg-red-100';
-      case 'return_requested':
-        return 'text-orange-700 bg-orange-100';
-      case 'exchanged':
-        return 'text-sky-700 bg-sky-100';
+      case "created":
+        return "text-orange-700 bg-orange-100";
+      case "confirmed":
+        return "bg-indigo-100 text-indigo-700";
+      case "shipping":
+        return "bg-yellow-100 text-yellow-700";
+      case "delivered":
+        return "bg-green-100 text-green-700";
+      case "cancelled":
+        return "bg-gray-100 text-gray-700";
+      case "rejected":
+        return "bg-gray-200 text-gray-700";
+      case "exchanged":
+        return "bg-purple-100 text-purple-700";
+      case "return_requested":
+        return "bg-pink-100 text-pink-700";
       default:
-        return 'text-gray-700 bg-gray-100';
+        return "bg-gray-100 text-gray-700";
     }
   };
 
