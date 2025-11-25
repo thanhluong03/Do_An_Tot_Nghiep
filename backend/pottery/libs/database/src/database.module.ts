@@ -39,6 +39,7 @@ import {
   ClassificationAttributeRelationshipEntity,
   ImportRequestDetailEntity,
   ImportRequestEntity,
+  ReasonChangeImageEntity
 } from './entities';
 import {
   ProductRepository,
@@ -72,6 +73,7 @@ import {
   ImportRequestRepository,
   ImportRequestDetailRepository,
   ReviewImageRepository,
+  ReasonChangeImageRepository,
 } from './repositories';
 
 const postgresRepositories = [
@@ -106,6 +108,7 @@ const postgresRepositories = [
   ImportRequestRepository,
   ImportRequestDetailRepository,
   ReviewImageRepository,
+  ReasonChangeImageRepository,
 ];
 const postgresEntities = [
   ProductEntity,
@@ -142,6 +145,7 @@ const postgresEntities = [
   ClassificationAttributeRelationshipEntity,
   ImportRequestEntity,
   ImportRequestDetailEntity,
+  ReasonChangeImageEntity,
 ];
 @Module({
   imports: [

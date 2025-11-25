@@ -63,6 +63,9 @@ export interface Order {
   items?: OrderItem[];
   customer_email?: string;
   is_login_customer?: boolean;
+  returnReason?: string;
+  returnReasonImage?: { id: number; image: string }[];
+  note?: string;
 }
 
 export interface ListOrderParams {

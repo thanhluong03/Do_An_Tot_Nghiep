@@ -15,7 +15,7 @@ import { voucherApi, Voucher } from '../../../api/modules/voucher';
 import { customersApi } from '../../../api/modules/customers';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
-import { ShoppingBag, Tag, MapPin, CreditCard, Wallet, User, Phone, Mail, CheckCircle, X, Clock, Bot, Gift, MessageSquare } from 'lucide-react';
+import { ShoppingBag, Tag, MapPin, CreditCard, Wallet, User, Phone, Mail, CheckCircle, X, Clock, Bot, Gift, MessageSquare, FileText } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
 
@@ -40,20 +40,20 @@ export default function CheckoutPage() {
     const [guestName, setGuestName] = useState('');
     const [guestEmail, setGuestEmail] = useState('');
     const [guestPhone, setGuestPhone] = useState('');
-    const [serverItems, setServerItems] = useState<Array<{ 
-        id: string; 
-        product_id: number; 
-        quantity: number; 
-        store_id: number; 
-        price?: number; 
-        classificationPrice?: number; 
-        classifications?: { 
-            attribute1_id?: number; 
-            attribute2_id?: number; 
-            attribute1_name?: string; 
-            attribute2_name?: string; 
-        }; 
-        classificationId?: number; 
+    const [serverItems, setServerItems] = useState<Array<{
+        id: string;
+        product_id: number;
+        quantity: number;
+        store_id: number;
+        price?: number;
+        classificationPrice?: number;
+        classifications?: {
+            attribute1_id?: number;
+            attribute2_id?: number;
+            attribute1_name?: string;
+            attribute2_name?: string;
+        };
+        classificationId?: number;
     }>>([]);
     const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }>>({});
     const [loadingCart, setLoadingCart] = useState(false);
@@ -70,6 +70,7 @@ export default function CheckoutPage() {
         address: '',
         city: '',
     });
+    const [note, setNote] = useState('');
 
     // Build a fallback product map from context items for guest rendering
     const contextProducts = useMemo(() => {
@@ -78,11 +79,11 @@ export default function CheckoutPage() {
             const pid = Number(i.product?.id ?? 0);
             if (!pid) return;
             if (!map[pid]) {
-                map[pid] = { 
-                    id: pid, 
-                    name: i.product?.name ?? 'Sản phẩm', 
-                    price: Number(i.product?.price ?? 0), 
-                    images: i.product?.images ?? [], 
+                map[pid] = {
+                    id: pid,
+                    name: i.product?.name ?? 'Sản phẩm',
+                    price: Number(i.product?.price ?? 0),
+                    images: i.product?.images ?? [],
                 };
             }
         });
@@ -117,7 +118,7 @@ export default function CheckoutPage() {
                 customerEmail = storedEmail || guestEmail.trim() || `guest_${Date.now()}@example.com`;
             }
             console.log('🔄 Đang gửi email xác nhận đơn hàng tới:', customerEmail);
-            
+
             // Gửi email xác nhận đơn hàng
             await mailApi.sendOrderMail({
                 to: customerEmail,
@@ -342,7 +343,7 @@ export default function CheckoutPage() {
                             if (ss) localItems = JSON.parse(ss);
                         }
                     } catch { }
-                    
+
                     if (!localItems) {
                         const saved = Cookies.get('cart_session');
                         if (saved) localItems = JSON.parse(saved);
@@ -607,7 +608,7 @@ export default function CheckoutPage() {
                 .filter(ci => ci.id && String(ci.id).startsWith('buy-now') === false)
                 .map(ci => String(ci.id))
             : [];
-        
+
         if (isAuthenticated) {
             console.log('✅ Identified Server Cart Item IDs to delete:', serverCartItemIdsToDelete);
         } else {
@@ -625,7 +626,7 @@ export default function CheckoutPage() {
                 if (storedCustomerId) {
                     customerId = Number(storedCustomerId);
                 } else throw new Error('Không tìm thấy customerId. Vui lòng đăng xuất và đăng nhập lại.');
-            } 
+            }
             // ✅ Nếu là guest
             else {
                 if (storedGuestId) {
@@ -707,7 +708,7 @@ export default function CheckoutPage() {
                     attribute2_name: attribute2Name,
                 };
             });
-            
+
             // Nhóm items theo store_id
             const itemsByStore: Record<number, typeof payloadItems> = {};
             payloadItems.forEach(item => {
@@ -730,6 +731,7 @@ export default function CheckoutPage() {
                     voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
                     payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
                     items: storeItems,
+                    note,
                 };
 
                 console.log(`📦 Tạo đơn cho cửa hàng ${storeId}`, payloadPerStore);
@@ -746,7 +748,7 @@ export default function CheckoutPage() {
                 // VNPay: redirect đơn đầu tiên (Xóa Server Cart Item và Session trước khi redirect)
                 if (paymentMethod === 'VNPAY' && index === 0) {
                     if (!isAuthenticated) clearGuestData();
-                    
+
                     // 🔥 Xóa Server Cart Item cho user đã login
                     if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
                         console.log('🗑️ Deleting server cart items before VNPAY redirect...');
@@ -755,15 +757,15 @@ export default function CheckoutPage() {
 
                     // Xóa Session Checkout
                     sessionStorage.removeItem('checkout_items');
-                    
+
                     await handlePayment(createdId, storeFinalTotalWithShipping);
                     return;
                 }
             }
-            
+
             // Nếu COD (Tất cả đơn hàng đã được tạo thành công)
             if (paymentMethod === 'COD') {
-                
+
                 // 🔥 Xóa Server Cart Item cho user đã login
                 if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
                     console.log('🗑️ Deleting server cart items after successful COD orders...');
@@ -772,13 +774,13 @@ export default function CheckoutPage() {
 
                 // Client/Guest Cleanup
                 clearCart(); // Xóa context và local storage/cookie cho Guest (hoặc User)
-                try { 
-                    sessionStorage.removeItem('cart_session'); 
+                try {
+                    sessionStorage.removeItem('cart_session');
                     Cookies.remove('cart_session');
                     // 👇 Xóa Session lưu trữ các sản phẩm được chọn
                     sessionStorage.removeItem('checkout_items');
                     console.log('🗑️ Client storage cleared.');
-                } catch {}
+                } catch { }
 
                 if (!isAuthenticated) clearGuestData();
                 window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderId=${storeIds[0]}`;
@@ -852,9 +854,8 @@ export default function CheckoutPage() {
 
                     {/* Floating Buttons */}
                     <div
-                        className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
-                            isChatDropdownOpen ? 'right-1' : 'right-1'
-                        }`}
+                        className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${isChatDropdownOpen ? 'right-1' : 'right-1'
+                            }`}
                     >
                         {/* Voucher Button */}
                         <button
@@ -938,9 +939,9 @@ export default function CheckoutPage() {
 
                     {/* Left: Cart Items + Voucher (3/5 width) */}
                     <div className="lg:col-span-3 space-y-5">
-                        
+
                         {/* Giỏ hàng */}
-                        <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5"> 
+                        <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5">
                             {/* Giảm padding, border, shadow */}
                             <h2 className="text-lg font-semibold mb-4 text-[#2C2A24] flex items-center gap-2">
                                 <ShoppingBag className="w-5 h-5 text-[#A38D64]" /> Chi tiết đơn hàng
@@ -969,7 +970,7 @@ export default function CheckoutPage() {
 
                                         // Debug log
                                         console.log('🔍 Checkout item:', { id: ci.id, product: p.name, classifications: ci.classifications, classificationId: ci.classificationId, price: actualPrice, originalPrice: p.price });
-                                        
+
                                         return (
                                             <div key={ci.id} className="flex justify-between py-3 items-center">
                                                 <div className="flex items-center gap-3">
@@ -1060,7 +1061,7 @@ export default function CheckoutPage() {
 
                     {/* Right: Summary + Form (2/5 width) */}
                     <div className="lg:col-span-2 space-y-5">
-                        
+
                         {/* Tổng cộng */}
                         <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 sticky top-4">
                             {/* Giảm padding, border, shadow */}
@@ -1095,6 +1096,21 @@ export default function CheckoutPage() {
 
                         {/* Form */}
                         <div className="bg-white border border-[#EBE8E0] shadow-sm rounded-lg p-5 space-y-4">
+                            <h2 className="text-lg font-semibold text-[#2C2A24] flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-[#A38D64]" /> Thông tin cơ bản
+                            </h2>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                                    <span className='w-3 h-3'>📝</span> Ghi chú đơn hàng
+                                </label>
+                                <textarea
+                                    className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
+                                    rows={2}
+                                    value={note}
+                                    onChange={e => setNote(e.target.value)}
+                                    placeholder="Nhập ghi chú cho đơn hàng (nếu có)"
+                                />
+                            </div>
                             {/* Giảm padding, border, shadow */}
                             <h2 className="text-lg font-semibold text-[#2C2A24] flex items-center gap-2">
                                 <MapPin className="w-5 h-5 text-[#A38D64]" /> Thông tin giao nhận
@@ -1165,13 +1181,60 @@ export default function CheckoutPage() {
                                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                                     <MapPin className='w-3 h-3' /> Tỉnh/Thành phố *
                                 </label>
-                                <input
+
+                                <select
                                     className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition"
                                     value={city}
                                     onChange={e => setCity(e.target.value)}
-                                    placeholder="TP. Hồ Chí Minh, Hà Nội, ..."
-                                />
-                                {formErrors.city && <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>}
+                                >
+                                    <option value="">-- Chọn Tỉnh/Thành phố --</option>
+
+                                    {[
+                                        "Hà Nội",
+                                        "TP. Hồ Chí Minh",
+                                        "Hải Phòng",
+                                        "Đà Nẵng",
+                                        "Cần Thơ",
+                                        "Thái Nguyên",
+                                        "Hà Giang",
+                                        "Lào Cai",
+                                        "Cao Bằng",
+                                        "Lạng Sơn",
+                                        "Quảng Ninh",
+                                        "Bắc Giang",
+                                        "Vĩnh Phúc",
+                                        "Bắc Ninh",
+                                        "Phú Thọ",
+                                        "Hòa Bình",
+                                        "Sơn La",
+                                        "Điện Biên",
+                                        "Lai Châu",
+                                        "Thanh Hóa",
+                                        "Nghệ An",
+                                        "Hà Tĩnh",
+                                        "Quảng Bình",
+                                        "Quảng Trị",
+                                        "Thừa Thiên Huế",
+                                        "Đắk Lắk",
+                                        "Đắk Nông",
+                                        "Gia Lai",
+                                        "Kon Tum",
+                                        "Khánh Hòa",
+                                        "Bình Thuận",
+                                        "Bà Rịa – Vũng Tàu",
+                                        "Long An",
+                                        "Kiên Giang"
+                                    ].map((province) => (
+                                        <option key={province} value={province}>
+                                            {province}
+                                        </option>
+                                    ))}
+
+                                </select>
+
+                                {formErrors.city && (
+                                    <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>
+                                )}
                             </div>
 
                             {/* Payment Method */}
@@ -1198,10 +1261,10 @@ export default function CheckoutPage() {
                                 onClick={handleCreate}
                                 className="w-full bg-[#A38D64] text-white px-6 py-3 rounded-md text-base font-bold disabled:opacity-50 hover:bg-[#8D7A58] transition shadow-md hover:shadow-lg"
                             >
-                                {creating 
-                                    ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span> 
-                                    : paymentMethod === 'VNPAY' 
-                                        ? `THANH TOÁN ${formatPrice(totalWithShipping)}` 
+                                {creating
+                                    ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span>
+                                    : paymentMethod === 'VNPAY'
+                                        ? `THANH TOÁN ${formatPrice(totalWithShipping)}`
                                         : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
                             </button>
 
