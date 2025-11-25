@@ -32,6 +32,29 @@ const statusToVietnamese = (status: string) => {
       return status;
   }
 };
+
+const getStatusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "created":
+      return "text-orange-700 bg-orange-100";
+    case "confirmed":
+      return "bg-indigo-100 text-indigo-700";
+    case "shipping":
+      return "bg-yellow-100 text-yellow-700";
+    case "delivered":
+      return "bg-green-100 text-green-700";
+    case "cancelled":
+      return "bg-gray-100 text-gray-700";
+    case "rejected":
+      return "bg-gray-200 text-gray-700";
+    case "exchanged":
+      return "bg-purple-100 text-purple-700";
+    case "return_requested":
+      return "bg-pink-100 text-pink-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
@@ -121,15 +144,9 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 label="Trạng thái đơn"
                 value={
                   <span
-                    className={`font-bold uppercase text-xs px-2 py-1 rounded-full ${order.status === "DELIVERED"
-                      ? "bg-green-100 text-green-700"
-                      : order.status === "CANCELLED"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-yellow-100 text-yellow-700"
-                      }`}
+                    className={`font-bold text-xs px-2 py-1 rounded-full ${getStatusColor(order.status)}`}
                   >
                     {statusToVietnamese(order.status)}
-
                   </span>
                 }
               />
@@ -233,7 +250,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   label="Trạng thái thanh toán"
                   value={
                     <span
-                      className={`font-bold uppercase text-xs px-2 py-1 rounded-full ${order.payment_status === "PAID"
+                      className={`font-bold text-xs px-2 py-1 rounded-full ${order.payment_status === "PAID"
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
                         }`}

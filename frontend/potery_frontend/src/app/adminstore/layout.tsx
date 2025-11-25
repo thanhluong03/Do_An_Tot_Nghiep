@@ -14,14 +14,14 @@ export default function AdminStoreLayout({ children }: { children: React.ReactNo
   const router = useRouter();
   const isLoginPage = pathname === '/admin/login';
 
-  // Chuyển path sang permission dạng 'admin/products', 'admin/dashboard', ...
+  // Chuyển path sang permission dạng 'adminstore/dashboard', 'adminstore/orders', ...
   const permissionPath = pathname.replace(/^\//, '');
   const [hasAccess, setHasAccess] = React.useState<boolean>(true);
   const [checked, setChecked] = React.useState<boolean>(false);
 
   const getFirstAvailablePage = (permissions: string[]) => {
-    return permissions.includes('admin/dashboard')
-      ? '/admin/dashboard'
+    return permissions.includes('adminstore/dashboard')
+      ? '/adminstore/dashboard'
       : `/${permissions[0]}`;
   };
 
@@ -29,10 +29,7 @@ export default function AdminStoreLayout({ children }: { children: React.ReactNo
     if (!isLoginPage) {
       const roleId = localStorage.getItem('adminRoleId');
       const permissions = JSON.parse(localStorage.getItem(`adminPermissions_${roleId}`) || '[]');
-      const access =
-    permissions.includes(permissionPath) ||
-    permissionPath.startsWith("adminstore/");
-
+      const access = permissions.includes(permissionPath);
       if (!access && permissions.length > 0) {
         const firstAvailablePage = getFirstAvailablePage(permissions);
         router.replace(firstAvailablePage);
@@ -49,10 +46,8 @@ export default function AdminStoreLayout({ children }: { children: React.ReactNo
       setChecked(true);
     }
   }, [isLoginPage, permissionPath, pathname, router]);
+
   React.useEffect(() => {
-    if (!isLoginPage && !hasAccess) {
-      toast.error("Bạn không có quyền truy cập trang này!");
-    }
   }, [isLoginPage, hasAccess]);
 
   if (!checked) return null;

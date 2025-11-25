@@ -16,9 +16,8 @@ const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
   { value: "CONFIRMED", label: "Đã xác nhận" },
   { value: "SHIPPING", label: "Đang vận chuyển" },
   { value: "DELIVERED", label: "Đã giao thành công" },
-  { value: "REJECTED", label: "Từ chối" },
   { value: "CANCELLED", label: "Đã hủy" },
-  { value: "RETURN_REQUESTED", label: "Yêu cầu trả hàng" }, 
+  { value: "RETURN_REQUESTED", label: "Đang yêu cầu hoàn trả" }, 
   { value: "EXCHANGED", label: "Đã đổi trả" },
  
 ];
@@ -26,7 +25,6 @@ const ORDER_TABS: { value: OrderStatus | ""; label: string }[] = [
 const PAYMENT_OPTIONS: { value: PaymentStatus | ""; label: string }[] = [
   { value: "", label: "Tất cả" },
   { value: "UNPAID", label: "Chưa thanh toán" },
-  { value: "PENDING", label: "Đang xử lý" },
   { value: "PAID", label: "Đã thanh toán" },
   { value: "REFUNDED", label: "Hoàn tiền" },
 

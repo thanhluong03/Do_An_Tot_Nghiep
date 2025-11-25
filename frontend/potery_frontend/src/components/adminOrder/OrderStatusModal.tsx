@@ -27,22 +27,22 @@ export default function OrderStatusModal({
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
-  setLoading(true);
-  try {
-    const updateData = {
-      status,
-      payment_status: paymentStatus,
-      payment_method: paymentMethod,
-    };
+    setLoading(true);
+    try {
+      const updateData = {
+        status,
+        payment_status: paymentStatus,
+        payment_method: paymentMethod,
+      };
 
-   await onUpdated(orderId, updateData);
-    onClose();
-  } catch (error) {
-    console.error("Error updating order:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+      await onUpdated(orderId, updateData);
+      onClose();
+    } catch (error) {
+      console.error("Error updating order:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -72,7 +72,7 @@ export default function OrderStatusModal({
               {/* <option value="SHIPPING">SHIPPING - Đang giao</option>
               <option value="DELIVERED">DELIVERED - Đã giao</option> */}
               <option value="EXCHANGED">Đã đổi trả</option>
-              <option value="REJECTED">Từ chối</option>
+              <option value="CANCELLED">Hủy</option>
               {/* <option value="CANCELLED">CANCELED - Đã hủy</option> */}
             </select>
           </div>
@@ -87,7 +87,7 @@ export default function OrderStatusModal({
             >
               <option value="UNPAID">Chưa thanh toán</option>
               {/* <option value="PENDING">PENDING - Đang xử lý</option> */}
-              {/* <option value="PAID">Đã thanh toán</option>
+          {/* <option value="PAID">Đã thanh toán</option>
               <option value="REFUNDED">Hoàn tiền</option>
             </select>
           </div>

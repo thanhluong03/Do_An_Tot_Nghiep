@@ -7,24 +7,28 @@ interface OrderStatusChartProps {
 
 // Map backend status keys to Vietnamese labels
 const STATUS_LABELS: Record<string, string> = {
-    CREATED: "Chờ duyệt",
-    CONFIRMED: "Chờ giao hàng",
-    SHIPPING: "Chờ lấy hàng",
-    DELIVERED: "Hoàn thành",
+    CREATED: "Chờ xác nhận",
+    CONFIRMED: "Đã xác nhận",
+    SHIPPING: "Đang vận chuyển",
+    DELIVERED: "Đã giao thành công",
     CANCELLED: "Đã hủy",
+    RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
+    EXCHANGED: "Đã đổi trả",
 };
 
 // Colors chosen to match the screenshot; CANCELLED uses a red color
 const STATUS_COLORS: Record<string, string> = {
-    SHIPPING: "#1bd5f6ff", // cyan / chờ lấy hàng
-    CREATED: "#a78bfa", // purple / chờ duyệt
-    CANCELLED: "#ef4444", // red / đã hủy
-    CONFIRMED: "#2084ffff", // blue / chờ giao hàng
-    DELIVERED: "#34d399", // green / hoàn thành
+    CREATED: "#ffba52ff", // text-orange-700 bg-orange-100
+    CONFIRMED: "#4649ffff", // bg-indigo-100 text-indigo-700
+    SHIPPING: "#ffd83dff", // bg-yellow-100 text-yellow-700
+    DELIVERED: "#26dc69ff", // bg-green-100 text-green-700
+    CANCELLED: "#d1d5db", // bg-gray-100 text-gray-700
+    EXCHANGED: "#a78bfa", // bg-purple-100 text-purple-700
+    RETURN_REQUESTED: "#f472b6", // bg-pink-100 text-pink-700
 };
 
 // Order to display legend so it matches the screenshot
-const STATUSES_ORDER = ["SHIPPING", "CREATED", "CANCELLED", "CONFIRMED", "DELIVERED"];
+const STATUSES_ORDER = ["SHIPPING", "CREATED", "CANCELLED", "CONFIRMED", "DELIVERED", "EXCHANGED", "RETURN_REQUESTED"];
 
 const OrderStatusChart: React.FC<OrderStatusChartProps> = ({ data }) => {
     const countsMap: Record<string, number> = {};

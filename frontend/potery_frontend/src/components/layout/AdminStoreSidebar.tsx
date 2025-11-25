@@ -99,8 +99,8 @@ const SidebarItem = ({
                                 key={child.name}
                                 href={child.href!}
                                 className={`flex items-center justify-between px-0 py-2 rounded-md text-sm transition-colors ${currentPath === child.href
-                                        ? "text-[#B95D26] font-semibold bg-orange-50"
-                                        : "text-gray-600 hover:bg-gray-100"
+                                    ? "text-[#B95D26] font-semibold bg-orange-50"
+                                    : "text-gray-600 hover:bg-gray-100"
                                     }`}
                             >
                                 <div className="flex items-center space-x-2">

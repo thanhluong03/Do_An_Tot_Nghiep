@@ -1,4 +1,5 @@
 import React from "react";
+import "./BestSellerChart.css";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 interface BestSellerChartProps {
     data: Array<{ name: string; value: number }>;
