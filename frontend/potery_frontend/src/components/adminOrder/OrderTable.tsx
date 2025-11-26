@@ -140,21 +140,34 @@ export default function OrderTable({
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                 {order.status === 'CONFIRMED' ? (
                   <div className="flex items-center space-x-2 min-w-[250px]">
-                    <select
-                      title="Chọn tài xế"
-                      value={selectedDriver[order.id] || ''}
-                      onChange={(e) => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
-                      className="block w-full pl-3 pr-10 py-2 text-xs border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md"
-                    >
-                      <option value="">Chọn tài xế</option>
-                      {drivers.map(driver => (
-                        <option key={driver.id} value={driver.id}>{driver.full_name || driver.username}</option>
-                      ))}
-                    </select>
+                    {order.driverLocations && order.driverLocations.length > 0 ? (
+                      <select
+                        title="Tài xế đã gán"
+                        value={order.driverLocations[0].driver.id}
+                        disabled
+                        className="block w-full pl-3 pr-10 py-2 text-xs border-gray-300 bg-gray-100 text-gray-700 rounded-md cursor-not-allowed"
+                      >
+                        {drivers.map(driver => (
+                          <option key={driver.id} value={driver.id}>{driver.full_name || driver.username}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        title="Chọn tài xế"
+                        value={selectedDriver[order.id] || ''}
+                        onChange={(e) => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
+                        className="block w-full pl-3 pr-10 py-2 text-xs border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md cursor-pointer"
+                      >
+                        <option value="">Chọn tài xế</option>
+                        {drivers.map(driver => (
+                          <option key={driver.id} value={driver.id}>{driver.full_name || driver.username}</option>
+                        ))}
+                      </select>
+                    )}
                     <button
                       onClick={() => onAssignDriver(order.id, Number(selectedDriver[order.id]))}
-                      disabled={!selectedDriver[order.id]}
-                      className="p-2 text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      disabled={order.driverLocations && order.driverLocations.length > 0 ? false : !selectedDriver[order.id]}
+                      className={`p-2 text-white bg-green-600 rounded-md hover:bg-green-700 ${order.driverLocations && order.driverLocations.length > 0 ? '' : 'disabled:bg-gray-400 disabled:cursor-not-allowed'}`}
                       title="Gán tài xế"
                     >
                       <Truck className="w-4 h-4" />
@@ -169,7 +182,7 @@ export default function OrderTable({
                 <button
                   title="Xem chi tiết"
                   onClick={() => onView(order)}
-                  className="p-2 rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
+                  className="p-2 rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 cursor-pointer"
                 >
                   <Eye className="w-4 h-4" />
                 </button>
@@ -177,7 +190,7 @@ export default function OrderTable({
                   <button
                     title="Chỉnh sửa trạng thái"
                     onClick={() => onEditStatus(order)}
-                    className="p-2 rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+                    className="p-2 rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200 cursor-pointer"
                   >
                     <Package className="w-4 h-4" />
                   </button>
@@ -187,7 +200,7 @@ export default function OrderTable({
                   <button
                     title="Xem tracking"
                     onClick={() => onViewTracking(order)}
-                    className="p-2 rounded-md text-green-600 bg-green-100 hover:bg-green-200"
+                    className="p-2 rounded-md text-green-600 bg-green-100 hover:bg-green-200 cursor-pointer"
                   >
                     <MapPin className="w-4 h-4" />
                   </button>
@@ -195,7 +208,7 @@ export default function OrderTable({
                 <button
                   title="Xóa đơn hàng"
                   onClick={() => onDelete(order.id)}
-                  className="p-2 rounded-md text-red-600 bg-red-100 hover:bg-red-200"
+                  className="p-2 rounded-md text-red-600 bg-red-100 hover:bg-red-200 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

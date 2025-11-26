@@ -109,6 +109,10 @@ export class OrderRepository {
         }
 
         query.orderBy('order.created_at', 'DESC');
+        // Join driverLocations và user để trả về mảng driverLocations cho mỗi đơn hàng
+        query.leftJoinAndSelect('order.driverLocations', 'driverLocations');
+        query.leftJoinAndSelect('driverLocations.user', 'driverUser');
+
         const [orders, total] = await query
             .skip((params.page - 1) * params.size)
             .take(params.size)

@@ -29,7 +29,7 @@ export interface OrderItem {
 
 export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REJECTED' | 'EXCHANGED' | 'RETURN_REQUESTED';
 export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED';
-export type PaymentMethod = 'COD' | 'VNPAY';
+export type PaymentMethod = 'COD' | 'MOMO';
 
 export interface CurrentOrderDetails {
   customer_id: number;
@@ -43,6 +43,13 @@ export interface CurrentOrderDetails {
   payment_status: PaymentStatus;
   payment_method: PaymentMethod;
   order_date: string;
+}
+export interface DriverLocation {
+  id: number;
+  driver: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface Order {
@@ -66,6 +73,7 @@ export interface Order {
   returnReason?: string;
   returnReasonImage?: { id: number; image: string }[];
   note?: string;
+  driverLocations?: DriverLocation[];
 }
 
 export interface ListOrderParams {
@@ -96,8 +104,8 @@ export const listDropdownStores = async (): Promise<Store[]> => {
   const res = await axios.get(`${API_URL_STORES}/liststore`);
   const storesData = res.data.stores || res.data;
   const stores: Store[] = Array.isArray(storesData) ? storesData : [];
-  return stores.map((s: any) => ({
-    id: s.id as number,
+  return stores.map((s: Store) => ({
+    id: s.id,
     name: s.name || s.store_name || s.storeName || "Không rõ tên"
   }));
 };
@@ -117,10 +125,21 @@ export async function listOrders(params: ListOrderParams): Promise<ListOrdersRes
     throw new Error("Invalid response format from server for listOrders");
   }
 
-  const orders: Order[] = responseData.data || []; // Lấy danh sách từ responseData.data
-  const total: number = responseData.total;      // Lấy total từ responseData.total
-
-  // Trả về object có cấu trúc phân trang
+  let orders: Order[] = responseData.data || [];
+  // Map driverLocations if present
+  orders = orders.map(order => {
+    if (order.driverLocations && Array.isArray(order.driverLocations)) {
+      order.driverLocations = order.driverLocations.map((loc: DriverLocation) => ({
+        id: loc.id,
+        driver: {
+          id: loc.driver?.id,
+          name: loc.driver?.name || ""
+        }
+      }));
+    }
+    return order;
+  });
+  const total: number = responseData.total;
   return { data: orders, total: total };
 }
 export async function listOrderAll(params: ListOrderParams): Promise<ListOrdersResponse> {

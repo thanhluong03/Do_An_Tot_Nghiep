@@ -29,7 +29,7 @@ export default function CheckoutPage() {
     const [city, setCity] = useState('');
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD')
+    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'MOMO'>('COD')
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [conversationId, setConversationId] = useState<number | null>(null);
     const [isAIChatOpen, setIsAIChatOpen] = useState(false);
@@ -525,21 +525,34 @@ export default function CheckoutPage() {
     };
 
     const handlePayment = async (orderId: number, amount: number) => {
-        const returnUrl = `${window.location.origin}/orders?payment=success&order_id=${orderId}`;
         try {
-            console.log('💳 Khởi tạo thanh toán VNPay với số tiền:', formatPrice(amount));
-            const pay = await paymentApi.createVnPayPayment(orderId, amount, returnUrl);
-            const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl;
+            console.log('💳 Khởi tạo thanh toán MoMo với:', { orderId, amount: formatPrice(amount) });
 
-            console.log('✅ Response từ API thanh toán:', pay);
+            const pay = await paymentApi.createMomoPayment(orderId, amount);
 
-            if (!paymentUrl) throw new Error('Không lấy được đường dẫn thanh toán');
+            console.log('🔍 Raw API Response:', pay);
+            console.log('🔍 Response type:', typeof pay);
+            console.log('🔍 Response keys:', Object.keys(pay || {}));
 
+            // Check multiple possible fields for payment URL
+            const paymentUrl = pay?.paymentUrl || pay?.data?.paymentUrl || pay?.url || pay?.redirectUrl || pay?.payUrl;
+
+            console.log('🔍 Extracted paymentUrl:', paymentUrl);
+
+            if (!paymentUrl) {
+                console.error('❌ Không tìm thấy paymentUrl trong response:', pay);
+                throw new Error('Không lấy được đường dẫn thanh toán từ MoMo');
+            }
+
+            console.log('✅ Redirecting to MoMo payment:', paymentUrl);
             window.location.href = paymentUrl;
 
         } catch (error) {
-            console.error('❌ Lỗi khi tạo thanh toán VNPay:', error);
-            toast.error('Không thể khởi tạo thanh toán VNPay');
+            console.error('❌ Chi tiết lỗi thanh toán MoMo:', error);
+            if (error.response) {
+                console.error('❌ API Response Error:', error.response.data);
+            }
+            toast.error('Không thể khởi tạo thanh toán MoMo: ' + (error.message || 'Lỗi không xác định'));
         }
     };
 
@@ -745,13 +758,13 @@ export default function CheckoutPage() {
                     await sendOrderConfirmationEmail(createdId);
                 }
 
-                // VNPay: redirect đơn đầu tiên (Xóa Server Cart Item và Session trước khi redirect)
-                if (paymentMethod === 'VNPAY' && index === 0) {
+                // MoMo: redirect đơn đầu tiên (Xóa Server Cart Item và Session trước khi redirect)
+                if (paymentMethod === 'MOMO' && index === 0) {
                     if (!isAuthenticated) clearGuestData();
 
                     // 🔥 Xóa Server Cart Item cho user đã login
                     if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
-                        console.log('🗑️ Deleting server cart items before VNPAY redirect...');
+                        console.log('🗑️ Deleting server cart items before MOMO redirect...');
                         await Promise.all(serverCartItemIdsToDelete.map(id => cartApi.remove(id)));
                     }
 
@@ -1246,10 +1259,10 @@ export default function CheckoutPage() {
                                     title='payment'
                                     className="w-full border border-[#EBE8E0] rounded-md px-3 py-2 text-sm focus:border-[#A38D64] focus:ring-1 focus:ring-[#A38D64]/30 transition bg-white"
                                     value={paymentMethod}
-                                    onChange={e => setPaymentMethod(e.target.value as 'COD' | 'VNPAY')}
+                                    onChange={e => setPaymentMethod(e.target.value as 'COD' | 'MOMO')}
                                 >
                                     <option value="COD">🏠 Thanh toán khi nhận hàng (COD)</option>
-                                    <option value="VNPAY">💳 Thanh toán qua VNPay</option>
+                                    <option value="MOMO">💳 Thanh toán qua MoMo</option>
                                 </select>
                             </div>
 
