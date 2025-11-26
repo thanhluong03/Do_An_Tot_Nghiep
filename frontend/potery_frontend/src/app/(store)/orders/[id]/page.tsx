@@ -312,6 +312,8 @@ function OrderDetailClient({ id }: { id: string }) {
   const current = order.current_order || {};
   const items = current.items || [];
   const statusHistory = order.statusHistory || [];
+  const paymentTransactions = order?.paymentTransactions || [];
+  const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
 
   return (
     <BaseLayout>
@@ -601,8 +603,11 @@ function OrderDetailClient({ id }: { id: string }) {
                   </div>
                 </div>
                 <div className="text-[15px]">Trạng thái: <span className="font-bold text-gray-900">{translatePaymentStatus(order.payment_status)}</span></div>
-                <div className="text-gray-500 text-[15px] font-medium">
+                <div className="text-gray-500 text-[14px] font-medium">
                   Ngày đặt: {new Date(order.order_date).toLocaleString('vi-VN')}
+                  {mainTxn && (
+                    <div className="text-[14px] text-gray-500">Thời gian thanh toán: {new Date(mainTxn.txn_time).toLocaleString('vi-VN')}</div>
+                  )}
                   {order.note && (
                     <div className="text-gray-800 text-[15px] font-medium mt-2">
                       <span className="text-[16px] font-bold text-[#A38D64]">Ghi chú:</span>
@@ -680,19 +685,25 @@ function OrderDetailClient({ id }: { id: string }) {
 
               {/* payment */}
               <div>
-                <h2 className="text-[16px] font-bold text-[#A38D64]">Thanh toán</h2>
+                <h2 className="text-[16px] font-bold text-[#A38D64] mb-2">Thanh toán</h2>
                 <div className="text-gray-700 space-y-2 text-[15px]">
+                  {mainTxn && (
+                    <span className="font-text text-gray-900 mb-2 block">Mã giao dịch: <span className="font-semibold">{mainTxn.gateway_txn_ref}</span></span>
+                  )}
                   <div>Phương thức: <span className="font-bold text-gray-900">{
                     order.payment_method === 'ONSITE'
                       ? 'Thanh toán khi nhận hàng (COD)'
                       : order.payment_method === 'CARD'
-                        ? 'Thẻ/VNPay'
+                        ? 'Thẻ/MoMo'
                         : order.payment_method
                   }</span></div>
                   <div>Tổng tiền hàng: <span className="font-bold">{formatPrice(order.total_amount)}</span></div>
                   <div>Phí vận chuyển: <span className="font-bold">{formatPrice(30000)}</span></div>
                   <div className="font-bold text-[16px] text-[#A38D64]">
                     Tổng thanh toán: {formatPrice(Number(order.total_amount || 0) + 30000)}
+                    {mainTxn && (
+                      <div className="font-bold text-[16px] text-[#A38D64] mt-1">Số tiền đã thanh toán: <span className="font-semibold">{Number(mainTxn.amount).toLocaleString('vi-VN')} đ</span></div>
+                    )}
                   </div>
                 </div>
               </div>

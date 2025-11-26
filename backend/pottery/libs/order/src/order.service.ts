@@ -5,7 +5,7 @@ import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.inte
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
 import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryRepository } from '@app/database';
 import { CategoryRepository } from '@app/database';
-import { InventoryDetailRepository, ClassificationAttributeRelationshipRepository } from '@app/database';
+import { InventoryDetailRepository, ClassificationAttributeRelationshipRepository, PaymentTransactionRepository } from '@app/database';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
 interface OrdersWithTotal {
@@ -27,6 +27,7 @@ export class OrderService {
     private readonly inventoryDetailRepository: InventoryDetailRepository,
     private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
     private readonly reasonChangeImageRepository: ReasonChangeImageRepository,
+    private readonly paymentTransactionRepository: PaymentTransactionRepository,
   ) { }
 
   async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -292,6 +293,10 @@ export class OrderService {
         actor: actorInfo,
       });
     }
+
+    // Lấy thông tin thanh toán
+    const paymentTransactions = await this.paymentTransactionRepository.findByOrderId(id);
+
     return {
       ...order,
       current_order: {
@@ -301,6 +306,7 @@ export class OrderService {
       statusHistory,
       returnReason,
       returnReasonImage,
+      paymentTransactions,
     };
   }
 
@@ -322,6 +328,19 @@ export class OrderService {
       const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
       const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
       (order as any).product_count = totalQuantity;
+
+      // Chỉ lấy driverLocations: mảng các object {id, driver: {id, name}}
+      if (order.driverLocations && Array.isArray(order.driverLocations)) {
+        (order as any).driverLocations = order.driverLocations.map((dl: any) => ({
+          id: dl.id,
+          driver: dl.user ? {
+            id: dl.user.id,
+            name: dl.user.full_name || dl.user.username || ''
+          } : null
+        }));
+      } else {
+        (order as any).driverLocations = [];
+      }
 
       // Tính tổng tiền theo trạng thái
       const status = order.status || 'unknown';

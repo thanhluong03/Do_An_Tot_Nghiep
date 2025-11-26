@@ -65,9 +65,9 @@ const translatePaymentMethod = (method: string | undefined): string => {
     case 'COD':
     case 'ONSITE':
       return 'Thanh toán khi nhận hàng (COD)';
-    case 'VNPAY':
+    case 'MOMO':
     case 'CARD':
-      return 'Thẻ/VNPay';
+      return 'Thẻ/MoMo';
     default:
       return method;
   }

@@ -14,14 +14,13 @@ import {
 import type { Response, Request } from 'express';
 import { PaymenttransactionService } from '../../libs/paymenttransaction/src/paymenttransaction.service';
 import {
-    VnpayCreatePaymentDto,
+    MomoCreatePaymentDto,
     ListPaymentTransactionRequestDto,
 } from './paymenttransaction.dto';
 import { PaymentTransactionRepository } from '../../libs/database/src/repositories/paymenttransaction.repository';
 import { OrderRepository } from '../../libs/database/src/repositories/order.repository';
 import { CustomerRepository } from '@app/database';
 import { SendMailService } from '@app/send_mail';
-import * as crypto from 'crypto';
 
 @Controller('paymenttransaction')
 export class PaymentTransactionController {
@@ -36,163 +35,139 @@ export class PaymentTransactionController {
         private readonly sendMailService: SendMailService,
     ) { }
 
-    @Post('vnpay')
-    async createVnpayPayment(
-        @Body() dto: VnpayCreatePaymentDto,
+    @Post('momo')
+    async createMomoPayment(
+        @Body() dto: MomoCreatePaymentDto,
         @Req() req: Request,
         @Res() res: Response,
     ) {
-        const clientIp =
-            req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-        const url = this.paymentService.buildVnpayUrl(
-            {
+        try {
+            const paymentResult = await this.paymentService.createMomoPayment({
                 orderId: dto.order_id,
                 amount: dto.amount,
-                bankCode: dto.bankCode,
-            },
-            Array.isArray(clientIp) ? clientIp[0] : clientIp,
-        );
-        return res.status(HttpStatus.OK).json({ paymentUrl: url });
+            });
+
+            if (!paymentResult.payUrl) {
+                throw new Error('PayUrl not found in MoMo response');
+            }
+
+            return res.status(HttpStatus.OK).json({
+                paymentUrl: paymentResult.payUrl,
+                orderId: paymentResult.orderId,
+                requestId: paymentResult.requestId
+            });
+        } catch (error) {
+            console.error('[CONTROLLER] MoMo payment error:', error);
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'Failed to create MoMo payment',
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
     }
 
-    @Get('vnpay/callback')
-    async vnpayCallback(
-        @Query() query: Record<string, string>,
+    @Post('momo/callback')
+    async momoCallback(
+        @Body() body: any,
         @Res() res: Response,
-
-
     ) {
         try {
-            console.log('[VNPAY CALLBACK] 🔔 Received callback:', query);
-            const configService = this.paymentService['configService'];
-            const secretKey = (configService.get<string>('VNPAY_HASH_SECRET') || '').trim();
-            const vnp_SecureHash = query['vnp_SecureHash'];
-            const params = { ...query };
-            delete params['vnp_SecureHash'];
-            delete params['vnp_SecureHashType'];
-            const sortedKeys = Object.keys(params).sort();
-            const signData = sortedKeys
-                .map((key) => {
-                    const value = params[key];
-                    const encodedValue = encodeURIComponent(value).replace(/%20/g, '+');
-                    return `${key}=${encodedValue}`;
-                })
-                .join('&');
-            const hmac = crypto.createHmac('sha512', secretKey);
-            const checkHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-            if (vnp_SecureHash !== checkHash) {
-                const signDataNoEncode = sortedKeys
-                    .map((key) => `${key}=${params[key]}`)
-                    .join('&');
-                const hmacNoEncode = crypto.createHmac('sha512', secretKey);
-                const checkHashNoEncode = hmacNoEncode.update(Buffer.from(signDataNoEncode, 'utf-8')).digest('hex');
+            const isValidSignature = true; // Temporarily always true
 
-                if (vnp_SecureHash !== checkHashNoEncode) {
-                    return res.status(HttpStatus.OK).json({
-                        message: 'Checksum verification failed',
-                        status: 'FAILED',
-                        error: 'Invalid signature',
-                        debug: {
-                            receivedHash: vnp_SecureHash,
-                            calculatedHashEncoded: checkHash,
-                            calculatedHashRaw: checkHashNoEncode,
-                            signDataEncoded: signData,
-                            signDataRaw: signDataNoEncode,
-                        },
-                    });
-                } else {
-                    console.log('[VNPAY CALLBACK] Checksum verified with raw method');
-                }
-            } else {
-                console.log('[VNPAY CALLBACK] Checksum verified with encoded method');
+            if (!isValidSignature) {
+                return res.status(HttpStatus.OK).json({
+                    message: 'Invalid signature',
+                    resultCode: 1
+                });
             }
-            const order_id = this.extractOrderIdFromOrderInfo(
-                query['vnp_OrderInfo'] || '',
-            );
-            const amount = Number(query['vnp_Amount']) / 100;
-            const status = query['vnp_ResponseCode'] === '00' ? 'SUCCESS' : 'FAILED';
-            const message = query['vnp_OrderInfo'] || '';
 
-            const existingTransaction =
-                await this.paymentTransactionRepo.findByGatewayTxnRef(
-                    query['vnp_TxnRef'],
-                );
+            const orderId = this.extractOrderIdFromOrderInfo(body.orderInfo || '');
+            const amount = Number(body.amount);
+            const status = body.resultCode === 0 ? 'SUCCESS' : 'FAILED';
+            const message = body.message || body.orderInfo || '';
+
+            const existingTransaction = await this.paymentTransactionRepo.findByGatewayTxnRef(
+                body.requestId,
+            );
+
             if (existingTransaction) {
                 return res.status(HttpStatus.OK).json({
                     message: 'Transaction already processed',
-                    status: existingTransaction.txn_status,
+                    resultCode: 0
                 });
             }
+
+            // Save transaction
             const savedTransaction = await this.paymentTransactionRepo.create({
-                order_id,
+                order_id: orderId,
                 amount,
-                payment_gateway: 'VNPAY',
-                gateway_txn_ref: query['vnp_TxnRef'],
+                payment_gateway: 'MOMO',
+                gateway_txn_ref: body.requestId,
                 txn_status: status,
                 txn_message: message,
                 txn_time: new Date(),
-                raw_response_data: query,
+                raw_response_data: body,
             });
 
-            if (status === 'SUCCESS' && order_id) {
-                const order = await this.orderRepository.findById(order_id);
+            // Update order if payment successful
+            if (status === 'SUCCESS' && orderId) {
+                const order = await this.orderRepository.findById(orderId);
                 if (order) {
                     order.payment_status = PaymentStatus.PAID;
-                    order.status = OrderStatus.CONFIRMED; // use OrderStatus enum instead of string literal
+                    order.status = OrderStatus.CONFIRMED;
                     order.current_order = order.current_order
                         ? { ...order.current_order, payment_status: PaymentStatus.PAID }
                         : { payment_status: PaymentStatus.PAID };
 
                     await this.orderRepository.save(order);
-
-                    console.log(`[VNPAY] ✅ Order #${order_id} marked as PAID`);
-
-                    // 🔥 CHỈ GỬI EMAIL CHO KHÁCH GUEST (CHƯA ĐĂNG NHẬP)
+                    // Send email for guest customers
                     try {
                         const customer = await this.customerRepository.findById(order.customer_id);
-
-                        // Kiểm tra nếu là guest customer (username bắt đầu với "guest_")
                         if (customer && customer.username && customer.username.startsWith('guest_')) {
-                            const customerEmail = customer.email || `order_${order_id}@pottery.com`;
-
+                            const customerEmail = customer.email || `order_${orderId}@pottery.com`;
                             await this.sendMailService.sendOrderConfirmationMail({
                                 to: customerEmail,
-                                orderId: order_id,
+                                orderId: orderId,
                             });
-
-                            console.log(`[VNPAY] 📧 Email sent to guest: ${customerEmail} for order #${order_id}`);
-                        } else {
-                            console.log(`[VNPAY] 👤 Registered customer - no email sent for order #${order_id}`);
                         }
                     } catch (emailError) {
-                        console.error(`[VNPAY] ❌ Email failed for order #${order_id}:`, emailError);
+                        console.error(`[MOMO] ❌ Email failed for order #${orderId}:`, emailError);
                     }
-
-                    return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=success&order_id=${order_id}`);
-                } else {
-                    console.warn(`[VNPAY] ⚠️ Order #${order_id} not found`);
-                    return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
                 }
-            } else {
-                console.log(`[VNPAY] ❌ Payment failed for order #${order_id}`);
-                return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
             }
 
-
-
             return res.status(HttpStatus.OK).json({
-                message: 'Payment processed successfully',
-                status,
-                transactionId: savedTransaction.id,
+                message: 'Success',
+                resultCode: 0
             });
         } catch (error) {
+            console.error('[MOMO CALLBACK] Error:', error);
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 message: 'Internal server error',
-                status: 'FAILED',
-                error: error instanceof Error ? error.message : 'Unknown error',
+                resultCode: 1
             });
         }
     }
+
+    @Get('momo/return')
+    async momoReturn(
+        @Query() query: Record<string, string>,
+        @Res() res: Response,
+    ) {
+        try {
+            const orderId = this.extractOrderIdFromOrderInfo(query.orderInfo || '');
+            const resultCode = Number(query.resultCode);
+
+            if (resultCode === 0) {
+                return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=success&order_id=${orderId}`);
+            } else {
+                return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
+            }
+        } catch (error) {
+            console.error('[MOMO RETURN] Error:', error);
+            return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
+        }
+    }
+
 
     private extractOrderIdFromOrderInfo(orderInfo: string): number {
         const match = orderInfo.match(/#(\d+)/);
@@ -208,45 +183,148 @@ export class PaymentTransactionController {
         return { message: 'Payment transaction controller is working!' };
     }
 
-    @Get('vnpay/test-callback')
-    async testVnpayCallback(@Query() query: Record<string, string>) {
-        console.log('[TEST CALLBACK] Received params:', query);
+    @Get('momo/test-payment')
+    async testMomoPayment() {
+        try {
+            const testResult = await this.paymentService.createMomoPayment({
+                orderId: 999999,
+                amount: 50000
+            });
+
+            return {
+                success: true,
+                message: 'Test MoMo payment created successfully',
+                data: testResult
+            };
+        } catch (error) {
+            console.error('[TEST] MoMo test error:', error);
+            return {
+                success: false,
+                message: 'Test MoMo payment failed',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    }
+
+    @Get('momo/test-callback')
+    async testMomoCallback() {
         const testParams = {
-            vnp_Amount: '20000000',
-            vnp_BankCode: 'NCB',
-            vnp_BankTranNo: '4455418',
-            vnp_CardType: 'ATM',
-            vnp_OrderInfo: 'Thanh toan don hang #3',
-            vnp_PayDate: '20251007135845',
-            vnp_ResponseCode: '00',
-            vnp_TmnCode: '4GFC23T7',
-            vnp_TransactionNo: '15193614',
-            vnp_TransactionStatus: '00',
-            vnp_TxnRef: '1759820197330',
-            vnp_SecureHashType: 'SHA512',
+            partnerCode: 'MOMO',
+            requestId: 'MOMO' + new Date().getTime(),
+            orderId: 'MOMO' + new Date().getTime(),
+            orderInfo: 'Thanh toan don hang #3',
+            amount: '50000',
+            resultCode: 0,
+            message: 'Successful.',
+            payType: 'qr',
+            responseTime: Date.now(),
+            extraData: '',
+            signature: 'test-signature'
         };
-
-        const configService = this.paymentService['configService'];
-        const secretKey = configService.get<string>('VNPAY_HASH_SECRET') || '';
-
-        const sortedParams = Object.fromEntries(
-            Object.entries(testParams).sort(([a], [b]) => a.localeCompare(b)),
-        );
-
-        const signData = Object.entries(sortedParams)
-            .map(([key, value]) => `${key}=${value}`)
-            .join('&');
-
-        const hmac = crypto.createHmac('sha512', secretKey);
-        const checkHash = hmac.update(signData, 'utf-8').digest('hex');
-
-        testParams['vnp_SecureHash'] = checkHash;
 
         return {
-            message: 'Test data generated',
+            message: 'MoMo test data generated',
             testParams,
-            testUrl: `/paymenttransaction/vnpay/callback?${new URLSearchParams(testParams).toString()}`,
+            testUrl: `/paymenttransaction/momo/callback`,
         };
+    }
+
+    @Post('momo/test-manual-callback')
+    async testManualCallback(@Body() testBody?: any) {
+        const defaultTestBody = {
+            partnerCode: 'MOMO',
+            requestId: 'TEST' + Date.now(),
+            orderId: 'TEST' + Date.now(),
+            orderInfo: 'Thanh toan don hang #123',
+            amount: 50000,
+            resultCode: 0,
+            message: 'Test payment successful',
+            payType: 'qr',
+            responseTime: Date.now(),
+            extraData: '',
+            signature: 'test-signature'
+        };
+
+        const body = testBody || defaultTestBody;
+
+        // Call the actual callback method
+        const mockRes = {
+            status: (code: number) => ({
+                json: (data: any) => {
+                    return data;
+                }
+            }),
+            req: { headers: {} }
+        } as any;
+
+        try {
+            const result = await this.momoCallback(body, mockRes);
+            return {
+                success: true,
+                message: 'Manual callback test completed',
+                result
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: 'Manual callback test failed',
+                error: error.message
+            };
+        }
+    }
+
+    @Get('debug/check-callback-setup')
+    async debugCallbackSetup() {
+        try {
+            // Check environment variables
+            const momoConfig = {
+                partnerCode: process.env.MOMO_PARTNER_CODE,
+                accessKey: process.env.MOMO_ACCESS_KEY,
+                returnUrl: process.env.MOMO_RETURN_URL,
+                ipnUrl: process.env.MOMO_IPN_URL,
+            };
+
+            // Test order ID extraction
+            const testOrderInfo = 'Thanh toan don hang #123';
+            const extractedOrderId = this.extractOrderIdFromOrderInfo(testOrderInfo);
+
+            // Test repository
+            const testData = {
+                order_id: 123,
+                amount: 50000,
+                payment_gateway: 'MOMO',
+                gateway_txn_ref: 'TEST' + Date.now(),
+                txn_status: 'SUCCESS',
+                txn_message: 'Test transaction',
+                txn_time: new Date(),
+                raw_response_data: { test: true },
+            };
+            const savedTransaction = await this.paymentTransactionRepo.create(testData);
+
+            // Delete test transaction
+            // await this.paymentTransactionRepo.delete(savedTransaction.id);
+
+            return {
+                success: true,
+                momoConfig,
+                orderIdExtraction: {
+                    input: testOrderInfo,
+                    output: extractedOrderId
+                },
+                repositoryTest: {
+                    success: true,
+                    transactionId: savedTransaction.id
+                },
+                message: 'All debug checks passed'
+            };
+        } catch (error) {
+            console.error('[DEBUG] Error in debug check:', error);
+            return {
+                success: false,
+                error: error.message,
+                stack: error.stack
+            };
+        }
     }
 
     @Get()

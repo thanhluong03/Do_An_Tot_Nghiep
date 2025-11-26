@@ -1,16 +1,12 @@
 import { Expose } from 'class-transformer';
 import { IsNumber, IsString, IsOptional, IsPositive } from 'class-validator';
 
-export class VnpayCreatePaymentDto {
+export class MomoCreatePaymentDto {
     @IsNumber()
     order_id: number;
 
     @IsNumber()
     amount: number;
-
-    @IsString()
-    @IsOptional()
-    bankCode?: string;
 }
 
 export class PaymentTransactionResponseDto {

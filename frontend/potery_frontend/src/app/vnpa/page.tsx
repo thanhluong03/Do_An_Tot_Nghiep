@@ -3,17 +3,19 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-export default function VnPayCallbackPage() {
+export default function MoMoCallbackPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-    // bạn có thể kiểm tra tham số VNPay trả về
-    const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
+    // Kiểm tra tham số MoMo trả về
+    const resultCode = searchParams.get('resultCode');
+    const orderId = searchParams.get('orderId');
 
-    if (vnp_ResponseCode === '00') {
+    if (resultCode === '0') {
       // thanh toán thành công
-      router.replace('/orders?payment=success');
+      const orderIdParam = orderId ? `&order_id=${orderId}` : '';
+      router.replace(`/orders?payment=success${orderIdParam}`);
     } else {
       // thất bại
       router.replace('/orders?payment=failed');
