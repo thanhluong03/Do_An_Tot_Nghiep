@@ -22,16 +22,19 @@ export class ListImportProductDto {
 
   @IsOptional()
   @IsInt()
-  product_id?: number;
+  supplier_id?: number;
 
   @IsOptional()
   @IsInt()
-  supplier_id?: number;
+  user_id?: number;
 }
 
 export class ImportProductClassificationDto {
   @IsNotEmpty()
-  classification_attribute_relationship_id: number | string;
+  product_id: number | string;
+
+  @IsOptional()
+  classification_attribute_relationship_id?: number | string;
 
   @IsInt()
   @IsNotEmpty()
@@ -44,7 +47,7 @@ export class ImportProductClassificationDto {
 
 export class CreateImportProductDto {
   @IsNotEmpty()
-  product_id: number | string;
+  user_id: number | string;
 
   @IsNotEmpty()
   supplier_id: number | string;
@@ -52,13 +55,7 @@ export class CreateImportProductDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ImportProductClassificationDto)
-  classifications: ImportProductClassificationDto[];
-
-  @IsOptional()
-  import_quantity?: number;
-
-  @IsOptional()
-  import_price?: number;
+  details: ImportProductClassificationDto[];
 }
 
 export class UpdateImportProductDto {
@@ -66,11 +63,5 @@ export class UpdateImportProductDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ImportProductClassificationDto)
-  classifications?: ImportProductClassificationDto[];
-
-  @IsOptional()
-  import_quantity?: number;
-
-  @IsOptional()
-  import_price?: number;
+  details?: ImportProductClassificationDto[];
 }

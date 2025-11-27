@@ -68,26 +68,34 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
     };
 
     const calculateTotals = (item: ImportProduct) => {
-        // 1. Trường hợp có Details (sản phẩm có phân loại)
-        if (item.details && item.details.length > 0) {
-            return item.details.reduce(
-                (acc, detail) => ({
-                    totalQuantity: acc.totalQuantity + (detail.import_quantity || 0),
-                    totalAmount: acc.totalAmount + ((detail.import_quantity || 0) * (detail.import_price || 0))
-                }),
+        if (item.products && item.products.length > 0) {
+            return item.products.reduce(
+                (acc, product) => {
+                    if (product.classifications && product.classifications.length > 0) {
+                        // Sản phẩm có phân loại
+                        const productTotals = product.classifications.reduce(
+                            (productAcc, classification) => ({
+                                totalQuantity: productAcc.totalQuantity + (classification.import_quantity || 0),
+                                totalAmount: productAcc.totalAmount + ((classification.import_quantity || 0) * (classification.import_price || 0))
+                            }),
+                            { totalQuantity: 0, totalAmount: 0 }
+                        );
+                        return {
+                            totalQuantity: acc.totalQuantity + productTotals.totalQuantity,
+                            totalAmount: acc.totalAmount + productTotals.totalAmount
+                        };
+                    } else {
+                        // Sản phẩm không có phân loại
+                        return {
+                            totalQuantity: acc.totalQuantity + (product.import_quantity || 0),
+                            totalAmount: acc.totalAmount + ((product.import_quantity || 0) * (product.import_price || 0))
+                        };
+                    }
+                },
                 { totalQuantity: 0, totalAmount: 0 }
             );
         }
-
-        // 2. Trường hợp KHÔNG có Details (sản phẩm không phân loại)
-        // Dữ liệu được lấy từ các trường cấp cao của ImportProduct (đã thêm ở bước 1)
-        const quantity = item.import_quantity || 0;
-        const price = item.import_price || 0;
-
-        return {
-            totalQuantity: quantity,
-            totalAmount: quantity * price,
-        };
+        return { totalQuantity: 0, totalAmount: 0 };
     };
 
     const totalPages = Math.ceil(totalItems / pageSize);
@@ -125,26 +133,22 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr>
-                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-16">STT</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">Ảnh</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-1/4">SẢN PHẨM</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-1/6">SỐ LƯỢNG NHẬP</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20">NHÀ CUNG CẤP</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-1/6">NGÀY TẠO</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24">TỔNG TIỀN</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-20">CHI TIẾT</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-16">XÓA</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold tracking-wider w-16">STT</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold tracking-wider w-32">Người nhập</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold tracking-wider w-1/6">Số lượng nhập</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold tracking-wider w-20">Nhà cung cấp</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold tracking-wider w-1/6">Ngày tạo</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold tracking-wider w-24">Tổng tiền</th>
+                            <th className="px-4 py-3 text-center text-sm font-semibold tracking-wider w-20">Chi tiết</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold tracking-wider w-16">Xóa</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
                         {importProducts.map((item, index) => {
-                            const productId = item.product_id;
                             const { totalQuantity, totalAmount } = calculateTotals(item);
-                            const imageUrl = getProductImage(productId);
-                            const productName = getProductName(productId);
                             const stt = startIndex + index;
                             const isExpanded = expandedRows.has(item.id);
-                            const hasDetails = item.details && item.details.length > 0;
+                            const hasProducts = item.products && item.products.length > 0;
 
                             return (
                                 <React.Fragment key={item.id}>
@@ -153,32 +157,16 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                         <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium text-gray-600">
                                             {stt}
                                         </td>
-                                        <td className="px-4 py-3 text-center text-sm">
-                                            <div className="w-10 h-10 mx-auto relative flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                                                {imageUrl && imageUrl !== "/no-image.jpg" ? (
-                                                    <img
-                                                        src={imageUrl}
-                                                        alt="Product"
-                                                        className="object-cover w-full h-full"
-                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                        <ImageIcon size={16} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-left text-sm text-gray-700 font-medium max-w-[250px]">
-                                            <div className="text-gray-800 break-words" title={productName}>{productName}</div>
-                                            {hasDetails && (
-                                                <div className="text-xs text-gray-500">
-                                                    {item.details?.length || 0} phân loại
-                                                </div>
-                                            )}
+                                        <td className="px-4 py-3 text-left text-sm text-gray-700 font-medium max-w-[120px]">
+                                            <div className="text-gray-800 break-words truncate" title={item.user_name || 'N/A'}>{item.user_name || 'N/A'}</div>
                                         </td>
                                         <td className="px-4 py-3 text-center text-sm font-bold text-blue-700">
                                             {formatCurrency(totalQuantity)}
+                                            {hasProducts && (
+                                                <div className="text-xs text-gray-500">
+                                                    {item.products?.length || 0} sản phẩm
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                                             <Tag size={14} className='inline text-orange-500 mr-1' />
@@ -192,17 +180,13 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                             {formatCurrencyWithUnit(totalAmount)}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
-                                            {hasDetails ? (
-                                                <button
-                                                    onClick={() => toggleRowExpansion(item.id)}
-                                                    className="text-blue-500 hover:text-blue-700 p-2 rounded-full transition duration-150 bg-blue-50 hover:bg-blue-100"
-                                                    title={isExpanded ? "Thu gọn chi tiết" : "Xem chi tiết"}
-                                                >
-                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                </button>
-                                            ) : (
-                                                <span className="text-gray-400 text-xs">Không có phân loại</span>
-                                            )}
+                                            <button
+                                                onClick={() => toggleRowExpansion(item.id)}
+                                                className="text-blue-500 hover:text-blue-700 p-2 rounded-full transition duration-150 bg-blue-50 hover:bg-blue-100"
+                                                title={isExpanded ? "Thu gọn chi tiết" : "Xem chi tiết"}
+                                            >
+                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                            </button>
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                                             <button
@@ -216,59 +200,133 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                     </tr>
 
                                     {/* Detail Rows */}
-                                    {isExpanded && hasDetails && (
+                                    {isExpanded && (
                                         <tr>
                                             <td colSpan={9} className="px-4 py-0 bg-gray-50">
                                                 <div className="py-4">
                                                     <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                                                         <Eye size={14} className="text-blue-500" />
-                                                        Chi tiết phân loại nhập hàng
+                                                        Chi tiết nhập hàng
                                                     </h5>
                                                     <div className="grid gap-3">
-                                                        {item.details?.map((detail, detailIndex) => {
-                                                            // Tạo combo phân loại từ classification_name hoặc attribute names
-                                                            const getClassificationDisplay = () => {
-                                                                if (detail.attribute1_name && detail.attribute2_name) {
-                                                                    return `${detail.attribute1_name} - ${detail.attribute2_name}`;
-                                                                }
-                                                                if (detail.classification_name) {
-                                                                    return detail.classification_name;
-                                                                }
-                                                                return `Phân loại ${detailIndex + 1}`;
-                                                            };
-
-                                                            return (
-                                                                <div key={detail.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                                                        <div className="md:col-span-2">
-                                                                            <div className="text-xs text-gray-500">
-                                                                                ID: {detail.classification_attribute_relationship_id}
-                                                                            </div>
-                                                                            <div className="text-sm font-medium text-gray-800">
-                                                                                {getClassificationDisplay()}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="text-center">
-                                                                            <div className="text-xs text-gray-500">Số lượng nhập</div>
-                                                                            <div className="text-sm font-semibold text-blue-700">
-                                                                                {formatCurrency(detail.import_quantity)}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="text-center">
-                                                                            <div className="text-xs text-gray-500">Giá nhập</div>
-                                                                            <div className="text-sm font-semibold text-green-700">
-                                                                                {formatCurrencyWithUnit(detail.import_price)}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="mt-3 pt-3 border-t border-gray-100 text-right">
-                                                                        <span className="text-sm font-bold text-purple-700">
-                                                                            Thành tiền: {formatCurrencyWithUnit(detail.import_quantity * detail.import_price)}
-                                                                        </span>
-                                                                    </div>
+                                                        {item.products?.map((product) => (
+                                                            <div key={product.product_id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                                                <div className="text-[15px] text-gray-800 mb-3">
+                                                                    Sản phẩm: {product.product_name}
                                                                 </div>
-                                                            );
-                                                        })}
+                                                                {product.classifications && product.classifications.length > 0 ? (
+                                                                    // Sản phẩm có phân loại
+                                                                    <div className="grid gap-2">
+                                                                        {/* Header cho sản phẩm có phân loại */}
+                                                                        <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+                                                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">STT</div>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div className="text-xs font-semibold text-blue-600">Phân loại</div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">Số lượng</div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">Giá nhập</div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">Thành tiền</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {/* Dữ liệu từng phân loại */}
+                                                                        {product.classifications.map((classification, index) => (
+                                                                            <div key={classification.id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                                                                    <div className="text-center">
+                                                                                        <div className="text-sm font-semibold text-gray-700">
+                                                                                            {index + 1}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <div className="text-sm font-medium text-gray-800">
+                                                                                            {classification.classification_name}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="text-center">
+                                                                                        <div className="text-sm font-semibold text-blue-700">
+                                                                                            {formatCurrency(classification.import_quantity)}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="text-center">
+                                                                                        <div className="text-sm font-semibold text-green-700">
+                                                                                            {formatCurrencyWithUnit(classification.import_price)}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="text-center">
+                                                                                        <div className="text-sm font-bold text-purple-700">
+                                                                                            {formatCurrencyWithUnit(classification.import_quantity * classification.import_price)}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    // Sản phẩm không có phân loại
+                                                                    <div className="grid gap-2">
+                                                                        {/* Header cho sản phẩm không có phân loại */}
+                                                                        <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+                                                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">STT</div>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div className="text-xs font-semibold text-blue-600">Phân loại</div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">Số lượng</div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">Giá nhập</div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-xs font-semibold text-blue-600">Thành tiền</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {/* Dữ liệu sản phẩm không có phân loại */}
+                                                                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                                                                <div className="text-center">
+                                                                                    <div className="text-sm font-semibold text-gray-700">
+                                                                                        1
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div className="text-sm font-medium text-gray-800">
+                                                                                        Không có phân loại
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-sm font-semibold text-blue-700">
+                                                                                        {formatCurrency(product.import_quantity)}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-sm font-semibold text-green-700">
+                                                                                        {formatCurrencyWithUnit(product.import_price)}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="text-center">
+                                                                                    <div className="text-sm font-bold text-purple-700">
+                                                                                        {formatCurrencyWithUnit((product.import_quantity || 0) * (product.import_price || 0))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             </td>

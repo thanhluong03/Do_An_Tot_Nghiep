@@ -20,6 +20,7 @@ export class ImportProductDetailRepository {
             },
             relations: [
                 'import_product',
+                'product',
                 'classification_attribute_relationship',
                 'classification_attribute_relationship.attribute1',
                 'classification_attribute_relationship.attribute2',
@@ -39,6 +40,7 @@ export class ImportProductDetailRepository {
             },
             relations: [
                 'import_product',
+                'product',
                 'classification_attribute_relationship',
                 'classification_attribute_relationship.attribute1',
                 'classification_attribute_relationship.attribute2',
@@ -54,11 +56,16 @@ export class ImportProductDetailRepository {
 
     async createDetail(data: {
         import_product_id: number;
-        classification_attribute_relationship_id: number;
+        product_id: number;
+        classification_attribute_relationship_id?: number | null;
         import_quantity: number;
         import_price: number;
     }): Promise<ImportProductDetailEntity> {
-        return this.repository.save(this.repository.create(data));
+        const entityData = {
+            ...data,
+            classification_attribute_relationship_id: data.classification_attribute_relationship_id || undefined,
+        };
+        return this.repository.save(this.repository.create(entityData));
     }
 
     async findById(id: number): Promise<ImportProductDetailEntity | null> {
@@ -66,6 +73,7 @@ export class ImportProductDetailRepository {
             where: { id, deleted_at: IsNull() },
             relations: [
                 'import_product',
+                'product',
                 'classification_attribute_relationship',
                 'classification_attribute_relationship.attribute1',
                 'classification_attribute_relationship.attribute2',
@@ -98,6 +106,7 @@ export class ImportProductDetailRepository {
             where: { deleted_at: IsNull() },
             relations: [
                 'import_product',
+                'product',
                 'classification_attribute_relationship',
                 'classification_attribute_relationship.attribute1',
                 'classification_attribute_relationship.attribute2',

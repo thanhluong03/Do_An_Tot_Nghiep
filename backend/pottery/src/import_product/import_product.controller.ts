@@ -21,21 +21,11 @@ export class ImportProductController {
 
   @Post('createimportproduct')
   async create(@Body() dto: CreateImportProductDto) {
-    let result;
-    if (Array.isArray(dto.classifications) && dto.classifications.length > 0) {
-      result = await this.importProductService.create({
-        product_id: dto.product_id,
-        supplier_id: dto.supplier_id,
-        classifications: dto.classifications,
-      });
-    } else {
-      result = await this.importProductService.create({
-        product_id: dto.product_id,
-        supplier_id: dto.supplier_id,
-        import_quantity: dto.import_quantity,
-        import_price: dto.import_price,
-      });
-    }
+    const result = await this.importProductService.create({
+      user_id: dto.user_id,
+      supplier_id: dto.supplier_id,
+      details: dto.details,
+    });
     return {
       success: result.success,
       message: result.message,
@@ -47,17 +37,9 @@ export class ImportProductController {
 
   @Put('updateimportproduct/:id')
   async update(@Param('id') id: string, @Body() dto: UpdateImportProductDto) {
-    // Truyền đúng dữ liệu cho cả hai trường hợp
-    if (Array.isArray(dto.classifications) && dto.classifications.length > 0) {
-      return await this.importProductService.update(Number(id), {
-        classifications: dto.classifications,
-      });
-    } else {
-      return await this.importProductService.update(Number(id), {
-        import_quantity: dto.import_quantity,
-        import_price: dto.import_price,
-      });
-    }
+    return await this.importProductService.update(Number(id), {
+      details: dto.details,
+    });
   }
 
   @Delete('deleteimportproduct/:id')

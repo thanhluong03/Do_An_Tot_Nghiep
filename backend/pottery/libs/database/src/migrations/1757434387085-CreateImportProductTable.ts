@@ -16,9 +16,8 @@ export class CreateImportProductTable1757434387085 implements MigrationInterface
                             isGenerated: true,
                             generationStrategy: 'increment',
                         },
-                        { name: 'product_id', type: 'int', isNullable: false },
+                        { name: 'user_id', type: 'int', isNullable: false },
                         { name: 'supplier_id', type: 'int', isNullable: false },
-                        { name: 'import_quantity', type: 'int', isNullable: true },
                         { name: 'created_at', type: 'timestamptz', default: 'CURRENT_TIMESTAMP' },
                         { name: 'updated_at', type: 'timestamptz', isNullable: true, default: 'CURRENT_TIMESTAMP' },
                         { name: 'deleted_at', type: 'timestamptz', isNullable: true },
@@ -28,8 +27,8 @@ export class CreateImportProductTable1757434387085 implements MigrationInterface
             await queryRunner.createForeignKey(
                 'import_products',
                 new TableForeignKey({
-                    columnNames: ['product_id'],
-                    referencedTableName: 'products',
+                    columnNames: ['user_id'],
+                    referencedTableName: 'users',
                     referencedColumnNames: ['id'],
                     onDelete: 'SET NULL',
                 }),

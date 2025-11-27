@@ -7,6 +7,7 @@ import { StoreEntity } from './store.entity';
 import { DeliveryProofEntity } from './delivery_proof.entity';
 import { DriverLocationEntity } from './driver_location.entity';
 import { OrderStatusHistoryEntity } from './order_status_history.entity';
+import { ImportProductEntity } from './import_product.entity';
 @Entity('users')
 export class UserEntity extends BaseEntity {
 
@@ -63,4 +64,7 @@ export class UserEntity extends BaseEntity {
 
     @OneToMany(() => OrderStatusHistoryEntity, (orderStatusHistory) => orderStatusHistory.user)
     orderStatusHistories: OrderStatusHistoryEntity[];
+
+    @OneToMany(() => ImportProductEntity, (importProduct) => importProduct.user)
+    importProducts: ImportProductEntity[];
 }

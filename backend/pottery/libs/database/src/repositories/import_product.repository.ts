@@ -32,10 +32,9 @@ export class ImportProductRepository {
 
     async findAll(): Promise<ImportProductEntity[]> {
         return this.repository.createQueryBuilder('import_product')
-            .leftJoinAndSelect('import_product.product', 'product')
             .leftJoinAndSelect('import_product.supplier', 'supplier')
+            .leftJoinAndSelect('import_product.user', 'user')
             .where('import_product.deleted_at IS NULL')
-            .andWhere('product.deleted_at IS NULL')
             .andWhere('supplier.deleted_at IS NULL')
             .orderBy('import_product.created_at', 'DESC')
             .getMany();
