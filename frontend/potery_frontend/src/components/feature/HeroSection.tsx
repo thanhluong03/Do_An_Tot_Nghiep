@@ -69,8 +69,7 @@ export const HeroSection: React.FC = () => {
                                 size="lg"
                                 className="px-6 py-3 text-base font-semibold border-2 border-[#DDD1C2] text-[#7B6E58] hover:bg-[#F7F4EF] transition-all duration-300 rounded-full flex items-center space-x-2"
                             >
-                                <span>Xem Video Giới Thiệu</span>
-                                <Image src="/play.png" alt="Play" width={16} height={16} className="w-4 h-4" />
+                                <Link href="/contact">Liên Hệ Với Chúng Tôi</Link>
                             </Button>
                         </div>
 

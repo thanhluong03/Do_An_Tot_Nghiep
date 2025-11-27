@@ -6,6 +6,7 @@ import { CustomerEntity } from './customer.entity'
 import { OrderStatusHistoryEntity } from './order_status_history.entity';
 import { DriverLocationEntity } from './driver_location.entity'
 import { DeliveryProofEntity } from './delivery_proof.entity';
+import { ReasonChangeImageEntity } from './reason_change_image.entity';
 
 export enum OrderStatus {
     CREATED = 'CREATED',
@@ -70,6 +71,12 @@ export class OrderEntity extends BaseEntity {
     @Column({ type: 'boolean', nullable: true })
     is_login_customer: boolean
 
+    @Column({ type: 'text', nullable: true })
+    note: string
+
+    @Column({ type: 'text', nullable: true })
+    reason_change: string
+
     @OneToMany(() => PaymentTransactionEntity, (paymentTransaction) => paymentTransaction.order)
     paymentTransactions: PaymentTransactionEntity[];
 
@@ -88,4 +95,7 @@ export class OrderEntity extends BaseEntity {
 
     @OneToMany(() => DeliveryProofEntity, (deliveryProof) => deliveryProof.order)
     deliveryProofs: DeliveryProofEntity[];
+
+    @OneToMany(() => ReasonChangeImageEntity, (reasonChangeImage) => reasonChangeImage.order)
+    reasonChangeImages: ReasonChangeImageEntity[];
 }

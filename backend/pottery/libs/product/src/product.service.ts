@@ -11,6 +11,8 @@ import {
   ProductClassificationRepository,
   ProductAttributeRepository,
   ClassificationAttributeRelationshipRepository,
+  OrderItemEntity,
+  OrderRepository,
 } from '@app/database';
 import { InventoryEntity } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -34,6 +36,7 @@ export class ProductService {
     private readonly productClassificationRepository: ProductClassificationRepository,
     private readonly productAttributeRepository: ProductAttributeRepository,
     private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
+    private readonly orderRepository: OrderRepository,
   ) { }
 
 
@@ -884,7 +887,20 @@ export class ProductService {
               classifications: storeClassifications,
             };
           }));
-          const total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+          // Sửa: Nếu có phân loại thì cộng từ inventoryDetails, nếu không thì lấy từ inventory
+          let total_quantity_sold = 0;
+          const hasClassification = stores.some(store => Array.isArray(store.classifications) && store.classifications.length > 0);
+          if (hasClassification) {
+            total_quantity_sold = stores.reduce((sum, store) => {
+              if (Array.isArray(store.classifications)) {
+                return sum + store.classifications.reduce((subSum, detail) => subSum + (detail.quantity_sold || 0), 0);
+              }
+              return sum;
+            }, 0);
+          } else {
+            total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+          }
+
           return {
             ...product,
             images: processedImages,
@@ -1033,7 +1049,20 @@ export class ProductService {
             classifications: storeClassifications,
           };
         }));
-        const total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+        // Sửa: Nếu có phân loại thì cộng từ inventoryDetails, nếu không thì lấy từ inventory
+        let total_quantity_sold = 0;
+        const hasClassification = stores.some(store => Array.isArray(store.classifications) && store.classifications.length > 0);
+        if (hasClassification) {
+          total_quantity_sold = stores.reduce((sum, store) => {
+            if (Array.isArray(store.classifications)) {
+              return sum + store.classifications.reduce((subSum, detail) => subSum + (detail.quantity_sold || 0), 0);
+            }
+            return sum;
+          }, 0);
+        } else {
+          total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+        }
+
         return {
           ...product,
           images: processedImages,
@@ -1179,8 +1208,19 @@ export class ProductService {
         classifications, // Available combinations for this store
       };
     }));
-
-    const total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+    // Sửa: Nếu có phân loại thì cộng từ inventoryDetails, nếu không thì lấy từ inventory
+    let total_quantity_sold = 0;
+    const hasClassification = stores.some(store => Array.isArray(store.classifications) && store.classifications.length > 0);
+    if (hasClassification) {
+      total_quantity_sold = stores.reduce((sum, store) => {
+        if (Array.isArray(store.classifications)) {
+          return sum + store.classifications.reduce((subSum, detail) => subSum + (detail.quantity_sold || 0), 0);
+        }
+        return sum;
+      }, 0);
+    } else {
+      total_quantity_sold = invList.reduce((sum, inv) => sum + (inv.quantity_sold || 0), 0);
+    }
 
     return {
       ...product,
@@ -1249,5 +1289,53 @@ export class ProductService {
       console.error('Error getting product classifications:', error);
       return [];
     }
+  }
+
+  async getBestSellingProducts(limit: number = 5) {
+    // Lấy tất cả sản phẩm có inventory
+    const inventories = await this.inventoryRepository.findAll();
+    const inventoryMap = new Map<number, number>(); // product_id -> total_quantity_sold
+    inventories.forEach((inv: any) => {
+      if (!inv.product_id) return;
+      let total = inv.quantity_sold || 0;
+      if (Array.isArray(inv.inventory_details) && inv.inventory_details.length > 0) {
+        total = inv.inventory_details.reduce((sum, detail) => sum + (detail.quantity_sold || 0), 0);
+      }
+      if (inventoryMap.has(inv.product_id)) {
+        inventoryMap.set(inv.product_id, inventoryMap.get(inv.product_id)! + total);
+      } else {
+        inventoryMap.set(inv.product_id, total);
+      }
+    });
+
+    // Sắp xếp product_id theo tổng quantity_sold giảm dần
+    const sortedProductIds = Array.from(inventoryMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([productId]) => productId)
+      .slice(0, limit);
+
+    if (sortedProductIds.length === 0) {
+      return {
+        message: 'Không tìm thấy sản phẩm bán chạy nào!',
+        products: [],
+      };
+    }
+
+    // Lấy chi tiết sản phẩm
+    const products = await Promise.all(sortedProductIds.map((id: number) => this.findInventoryDetailByProductId(id)));
+
+    // Gắn thêm trường total_quantity_sold cho từng sản phẩm và đảm bảo thứ tự
+    const productsWithSold = products.map((product, idx) => ({
+      ...product,
+      total_quantity_sold: inventoryMap.get(sortedProductIds[idx]) || 0,
+    }));
+
+    // Sắp xếp lại cho chắc chắn (nếu cần)
+    productsWithSold.sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
+
+    return {
+      message: `Tìm thấy ${productsWithSold.length} sản phẩm bán chạy nhất!`,
+      products: productsWithSold,
+    };
   }
 }

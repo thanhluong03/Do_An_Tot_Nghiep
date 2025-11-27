@@ -19,6 +19,7 @@ export interface CreateOrderPayload {
   shipping_address?: string;
   payment_method?: string; // backend enum, e.g. 'VNPAY'
   items: OrderItemPayload[];
+  note?: string;
 }
 
 export const orderApi = {
@@ -35,8 +36,28 @@ export const orderApi = {
     const res = await api.get(`/orders/customer/${customerId}`, { params: { page, size } });
     return res.data; // { success, data }
   },
-  async updateOrder(id: number | string, data: any) {
-    const res = await api.put(`/orders/updateorder/${id}`, data);
+  async updateOrder(id: number | string, data: any, files?: File[]) {
+    const formData = new FormData();
+
+    // Add JSON data
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined && data[key] !== null) {
+        formData.append(key, typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key]);
+      }
+    });
+
+    // Add files if provided
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        formData.append('reason_change_images', file);
+      });
+    }
+
+    const res = await api.put(`/orders/updateorder/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return res.data;
   },
 };

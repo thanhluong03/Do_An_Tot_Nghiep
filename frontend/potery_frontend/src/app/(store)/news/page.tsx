@@ -203,6 +203,11 @@ export default function NewsPage() {
                     <h3 className="text-lg font-serif font-semibold text-[#2C2A24] mb-2 line-clamp-2">
                       {n.title}
                     </h3>
+                    <div 
+                                    className="text-[#65604E] text-base mb-6 flex-grow line-clamp-3"
+                                    // SỬ DỤNG dangerouslySetInnerHTML để render chuỗi HTML
+                                    dangerouslySetInnerHTML={{ __html: n.content }}
+                                />
                     <Link
                       href={`/news/${n.id}`}
                       className="mt-auto text-[#A67C52] text-sm font-medium hover:underline"
@@ -223,7 +228,6 @@ export default function NewsPage() {
 
             {/* Phân trang */}
             <div className="flex justify-center items-center gap-3 mt-10">
-              <p className="text-sm text-[#7C7465]">Tổng: {total}</p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(page - 1)}

@@ -29,6 +29,7 @@ export interface ICreateOrder {
     payment_method?: PaymentMethod;
     status?: OrderStatus;
     payment_status?: PaymentStatus;
+    note?: string;
     items: IOrderItem[];
 }
 
@@ -38,6 +39,9 @@ export interface IUpdateOrder {
     shipping_address?: string;
     payment_method?: PaymentMethod;
     items?: IOrderItem[];
+    reason_change?: string;
+    reason_change_images?: Buffer[];
+    note?: string;
 }
 
 export interface IListOrder {

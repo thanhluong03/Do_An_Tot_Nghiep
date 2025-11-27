@@ -76,6 +76,7 @@ export default function AdminOrderPage() {
   const [orderToDeleteId, setOrderToDeleteId] = useState<number | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
+  // Chỉ gọi fetchAllOrders 1 lần khi khởi tạo hoặc khi danh sách khách hàng thay đổi
   useEffect(() => {
     getCustomers({})
       .then(setCustomers)
@@ -88,10 +89,15 @@ export default function AdminOrderPage() {
       .catch(() => toast.error("Không thể tải danh sách tài xế!"));
   }, []);
 
+  useEffect(() => {
+    if (customers.length > 0) {
+      fetchAllOrders();
+    }
+  }, [customers]);
   async function fetchAllOrders() {
     try {
       // ⭐️ CẬP NHẬT: Thay đổi cách nhận dữ liệu từ listOrders
-      
+
       const response = await listOrders({ size: 10000, page: 1 }); // Lấy số lượng lớn để đếm cho tabs
       const data = response.data;
 
@@ -129,7 +135,7 @@ export default function AdminOrderPage() {
       // Lỗi "read-only" xảy ra do Axios cố gắng sửa đổi `params`
       // Hãy đảm bảo `listOrders` KHÔNG cố gắng sửa đổi đối tượng `params` này.
       const response = await listOrders(params);
-      
+
       const ordersWithNames = response.data.map((order) => ({
         // ... (logic mapping)
         ...order,
@@ -151,9 +157,9 @@ export default function AdminOrderPage() {
     }
   }
 
+  // Chỉ gọi fetchOrders khi filter thay đổi
   useEffect(() => {
     if (customers.length > 0) {
-      fetchAllOrders();
       fetchOrders();
     }
   }, [customers, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
