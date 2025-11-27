@@ -3,7 +3,7 @@ import { ProductPromotionEntity } from './product_promotion.entity';
 import { BaseEntity } from './base.entity'
 import { ProductImageEntity } from './product_image.entity';
 import { InventoryEntity } from './inventory.entity';
-import { ImportProductEntity } from './import_product.entity';
+import { ImportProductDetailEntity } from './import_product_detail.entity';
 import { CategoryEntity } from './category.entity';
 import { SupplierEntity } from './supplier.entity';
 import { OrderItemEntity } from './order_item.entity';
@@ -44,8 +44,8 @@ export class ProductEntity extends BaseEntity {
   @OneToMany(() => InventoryEntity, (inventory) => inventory.product)
   inventories: InventoryEntity[];
 
-  @OneToMany(() => ImportProductEntity, (importProduct) => importProduct.product)
-  importProducts: ImportProductEntity[];
+  @OneToMany(() => ImportProductDetailEntity, (importProductDetail) => importProductDetail.product)
+  importProductDetails: ImportProductDetailEntity[];
 
   @ManyToOne(() => CategoryEntity, (category) => category.products)
   @JoinColumn({ name: 'category_id' })

@@ -18,41 +18,58 @@ export interface ListImportProductDto {
 }
 
 export interface ImportProductClassificationDto {
-    classification_attribute_relationship_id: number | string;
+    product_id: number | string;
+    classification_attribute_relationship_id?: number | string;
     import_quantity: number;
     import_price: number;
 }
 
 export interface CreateImportProductDto {
-    product_id: number | string;
+    user_id: number | string;
     supplier_id: number | string;
-    classifications: ImportProductClassificationDto[];
-    import_quantity?: number; // Dành cho sản phẩm không có phân loại
-    import_price?: number;
+    details: ImportProductClassificationDto[];
 }
 
 /**
  * Cập nhật: DTO cập nhật đơn nhập hàng. 
  */
 export interface UpdateImportProductDto {
-    classifications?: ImportProductClassificationDto[];
+    details?: ImportProductClassificationDto[];
+}
+
+export interface ImportProductClassification {
+    id: number;
+    classification_attribute_relationship_id: number;
+    classification_name: string;
+    attribute1_name?: string;
+    attribute2_name?: string;
+    import_quantity: number;
+    import_price: number;
+}
+
+export interface ImportProductItem {
+    product_id: number;
+    product_name?: string;
+    classifications?: ImportProductClassification[];
+    import_quantity?: number; // Cho sản phẩm không có phân loại
+    import_price?: number; // Cho sản phẩm không có phân loại
 }
 
 export interface ImportProduct {
     id: number;
     supplier_id: number;
-    product_id: number;
-    product_name?: string;
+    user_id?: number;
+    user_name?: string;
     supplier_name?: string;
-    details?: ImportProductDetail[];
+    products: ImportProductItem[];
     created_at?: string;
     updated_at?: string;
-    import_quantity?: number; // SỐ LƯỢNG NẾU KHÔNG CÓ DETAILS
-    import_price?: number;   
 }
 
 export interface ImportProductDetail {
     id: number;
+    product_id?: number;
+    product_name?: string;
     classification_attribute_relationship_id: number;
     classification_name: string;
     attribute1_name?: string;

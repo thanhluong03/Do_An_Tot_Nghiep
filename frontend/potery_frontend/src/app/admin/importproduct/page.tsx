@@ -338,77 +338,61 @@ export default function ImportProductPage() {
             return;
         }
 
-        // 1. Tách biệt hai loại payload (có phân loại và không có phân loại)
-        const productImportsWithClassifications: CreateImportProductDto[] = [];
-        const productImportsWithoutClassifications: CreateImportProductDto[] = [];
-
+        const details: any[] = [];
         const selectedProductsData = allProductsForForm.filter(p => selectedProducts[String(p.id)]?.checked);
 
         for (const product of selectedProductsData) {
             const productId = String(product.id);
             const productData = selectedProducts[productId];
-            const supplierId = Number(selectedSupplier);
 
             const productClassifications = selectedProductClassifications[productId] || [];
             const productClassificationSelections = classificationSelections[productId] || {};
 
             if (productClassifications.length > 0) {
-                // TRƯỜNG HỢP 1: SẢN PHẨM CÓ PHÂN LOẠI
+                // Sản phẩm có phân loại
                 const selectedClassifications = Object.entries(productClassificationSelections)
                     .filter(([_, classData]) => classData.checked && Number(classData.quantity) > 0)
                     .map(([classificationId, classData]) => ({
+                        product_id: Number(productId),
                         classification_attribute_relationship_id: Number(classificationId),
                         import_quantity: Number(classData.quantity),
                         import_price: Number(classData.price)
                     }));
 
-                if (selectedClassifications.length > 0) {
-                    // SỬ DỤNG DTO CHUẨN (với mảng classifications)
-                    productImportsWithClassifications.push({
-                        product_id: Number(productId),
-                        supplier_id: supplierId,
-                        classifications: selectedClassifications
-                    });
-                }
+                details.push(...selectedClassifications);
             } else {
-                // TRƯỜNG HỢP 2: SẢN PHẨM KHÔNG CÓ PHÂN LOẠI
+                // Sản phẩm không có phân loại
                 const quantity = Number(productData.quantity);
                 const price = Number(productData.price);
 
                 if (quantity > 0 && price > 0) {
-                    // SỬ DỤNG DTO CHO SẢN PHẨM KHÔNG PHÂN LOẠI (sử dụng trường import_quantity/import_price)
-                    productImportsWithoutClassifications.push({
+                    details.push({
                         product_id: Number(productId),
-                        supplier_id: supplierId,
-                        import_quantity: quantity, // THÊM TRƯỜNG NÀY
-                        import_price: price, // THÊM TRƯỜNG NÀY
-                        classifications: [] // Đảm bảo trường này là mảng rỗng nếu backend yêu cầu, hoặc có thể bỏ qua nếu API cho phép
+                        import_quantity: quantity,
+                        import_price: price
+                        // Không có classification_attribute_relationship_id
                     });
                 }
             }
         }
 
-        // Gộp tất cả dữ liệu cần gửi
-        const allImportData = [...productImportsWithClassifications, ...productImportsWithoutClassifications];
-
-        if (allImportData.length === 0) {
+        if (details.length === 0) {
             toast.error("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ!");
             return;
         }
 
         try {
-            // Gửi từng yêu cầu nhập kho
-            for (const productImportData of allImportData) {
-                await createImportProduct(productImportData);
-            }
+            // Gửi một request duy nhất với tất cả details
+            const importData: CreateImportProductDto = {
+                user_id: 1, // TODO: Lấy từ auth context
+                supplier_id: Number(selectedSupplier),
+                details: details
+            };
 
-            const totalProducts = allImportData.length;
-            const totalClassifications = allImportData.reduce(
-                (sum, item) => sum + (item.classifications?.length || 0), 0 // Tính tổng số phân loại
-            );
+            await createImportProduct(importData);
 
             toast.success(
-                `Tạo phiếu nhập kho thành công! ${totalProducts} sản phẩm, ${totalClassifications} phân loại`
+                `Tạo phiếu nhập kho thành công! ${details.length} chi tiết sản phẩm`
             );
             resetForm();
 
