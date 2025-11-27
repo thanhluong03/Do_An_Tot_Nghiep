@@ -22,6 +22,7 @@ export interface ImportProductClassificationDto {
     classification_attribute_relationship_id?: number | string;
     import_quantity: number;
     import_price: number;
+    selling_price?: number;
 }
 
 export interface CreateImportProductDto {
@@ -45,6 +46,7 @@ export interface ImportProductClassification {
     attribute2_name?: string;
     import_quantity: number;
     import_price: number;
+    selling_price?: number;
 }
 
 export interface ImportProductItem {
@@ -53,6 +55,7 @@ export interface ImportProductItem {
     classifications?: ImportProductClassification[];
     import_quantity?: number; // Cho sản phẩm không có phân loại
     import_price?: number; // Cho sản phẩm không có phân loại
+    selling_price?: number; // Cho sản phẩm không có phân loại
 }
 
 export interface ImportProduct {
@@ -244,5 +247,20 @@ export const listDropdownSuppliers = async (): Promise<SelectOption[]> => {
 
 export const getProductClassifications = async (productId: number): Promise<ProductClassification[]> => {
     const res = await axios.get(`${API_URL_PRODUCTS}/classifications/${productId}`);
-    return Array.isArray(res.data) ? res.data : [];
+    const classificationData = res.data.data || res.data;
+    return Array.isArray(classificationData) ? classificationData : [];
+};
+
+export const getProductSellingPrice = async (productId: number, classificationId?: number): Promise<{ success: boolean; selling_price: number; error?: string }> => {
+    try {
+        const params = classificationId ? { classificationId } : {};
+        const res = await axios.get(`${API_URL_IMPORTPRODUCT}/sellingprice/${productId}`, { params });
+        return res.data;
+    } catch (error: any) {
+        return {
+            success: false,
+            selling_price: 0,
+            error: error?.response?.data?.message || error?.message || 'Lỗi khi lấy giá bán',
+        };
+    }
 };

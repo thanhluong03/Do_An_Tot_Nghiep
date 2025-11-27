@@ -43,6 +43,10 @@ export class ImportProductClassificationDto {
   @IsNumber()
   @IsNotEmpty()
   import_price: number;
+
+  @IsOptional()
+  @IsNumber()
+  selling_price?: number;
 }
 
 export class CreateImportProductDto {

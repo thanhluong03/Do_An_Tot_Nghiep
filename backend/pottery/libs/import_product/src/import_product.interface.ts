@@ -11,6 +11,7 @@ export interface ImportProductClassificationInput {
   classification_attribute_relationship_id?: number | string;
   import_quantity: number;
   import_price: number;
+  selling_price?: number;
 }
 
 export interface CreateImportProductInput {

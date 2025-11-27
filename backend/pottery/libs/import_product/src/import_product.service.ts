@@ -66,6 +66,36 @@ export class ImportProductService {
                     ? Number(detail.classification_attribute_relationship_id)
                     : null;
 
+                // Validate và cập nhật giá bán
+                if (detail.selling_price !== undefined) {
+                    // Validate: giá bán phải >= giá nhập
+                    if (detail.selling_price < detail.import_price) {
+                        throw new Error(
+                            `Giá bán (${detail.selling_price}) phải lớn hơn hoặc bằng giá nhập (${detail.import_price}) cho sản phẩm ${productId}`,
+                        );
+                    }
+
+                    console.log(
+                        `Updating selling price to ${detail.selling_price} for product ${productId}`,
+                    );
+
+                    // Cập nhật giá bán cho sản phẩm
+                    if (classificationId) {
+                        // Sản phẩm có phân loại: cập nhật giá trong classification_attribute_relationships
+                        await this.classificationAttributeRelationshipRepository.update(
+                            classificationId,
+                            {
+                                price: detail.selling_price,
+                            },
+                        );
+                    } else {
+                        // Sản phẩm không có phân loại: cập nhật giá trong bảng product
+                        await this.productRepository.update(productId, {
+                            price: detail.selling_price,
+                        });
+                    }
+                }
+
                 // Tạo chi tiết nhập hàng
                 await this.importProductDetailRepository.createDetail({
                     import_product_id: importProduct.id,
@@ -327,11 +357,13 @@ export class ImportProductService {
                             attribute2_name: detail.classification_attribute_relationship?.attribute2?.name || '',
                             import_quantity: detail.import_quantity,
                             import_price: detail.import_price,
+                            selling_price: detail.classification_attribute_relationship?.price || 0,
                         });
                     } else {
                         // Không có phân loại
                         acc[productId].import_quantity = detail.import_quantity;
                         acc[productId].import_price = detail.import_price;
+                        acc[productId].selling_price = detail.product?.price || 0;
                     }
 
                     return acc;
@@ -348,6 +380,34 @@ export class ImportProductService {
                     updated_at: inv.updated_at,
                 };
             }),
-        ); return { data: dataWithDetails, total, page, size };
+        );
+
+        return { data: dataWithDetails, total, page, size };
+    }
+
+    async getProductSellingPrice(productId: number, classificationId?: number) {
+        try {
+            if (classificationId) {
+                // Sản phẩm có phân loại: lấy giá từ classification_attribute_relationships
+                const classification = await this.classificationAttributeRelationshipRepository.findById(classificationId);
+                return {
+                    success: true,
+                    selling_price: classification?.price || 0,
+                };
+            } else {
+                // Sản phẩm không có phân loại: lấy giá từ bảng product
+                const product = await this.productRepository.findById(productId);
+                return {
+                    success: true,
+                    selling_price: product?.price || 0,
+                };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                selling_price: 0,
+                error: error?.message || error,
+            };
+        }
     }
 }
