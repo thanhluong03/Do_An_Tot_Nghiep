@@ -64,16 +64,16 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-white border-b-2 border-gray-200">
                     <tr>
-                        <th className="px-1 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-2">STT</th>
-                        <th className="px-1 py-2 text-xs font-extrabold text-gray-700 uppercase tracking-wider w-10">Ảnh</th>
-                        <th className="px-1 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/4">TÊN SẢN PHẨM</th>
+                        <th className="px-1 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-2">STT</th>
+                        <th className="px-1 py-2 text-xs font-extrabold text-gray-700 tracking-wider w-10">Ảnh</th>
+                        <th className="px-1 py-2 text-left text-xs font-extrabold text-gray-700 tracking-wider w-1/4">Tên sản phẩm</th>
                         
                         {/* 1. BỎ COMMENT VÀ CHỈNH LẠI CỘT GIÁ BÁN */}
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">GIÁ NHẬP</th>
+                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-24">Giá bán</th>
                         
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-24">SL TỒN KHO NHẬP</th>
-                        <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 uppercase tracking-wider w-1/6">NHÀ CUNG CẤP</th>
-                        <th className="px-2 py-2 text-center text-xs font-extrabold text-gray-700 uppercase tracking-wider w-8">CHI TIẾT</th>
+                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-24">Tồn kho nhập</th>
+                        <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 tracking-wider w-1/6">Nhà cung cấp</th>
+                        <th className="px-2 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-8">Chi tiết</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
@@ -183,7 +183,7 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                                                                     >
                                                                         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                                                                             <div className="mb-0 md:mb-0">
-                                                                                <div className="text-[9px] text-gray-500">ID: {combo.id}</div>
+                                                                                <div className="text-[9px] text-gray-500">Mã: {combo.id}</div>
                                                                                 <div className="mt-0 font-medium text-gray-800 text-[11px]">{combo.attribute1_name}{combo.attribute2_name ? ` - ${combo.attribute2_name}` : ''}</div>
                                                                             </div>
 
@@ -195,7 +195,7 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
                                                                             </div>
 
                                                                             <div className="md:flex-none text-right">
-                                                                                <div className="text-[9px] text-gray-500">Giá nhập</div>
+                                                                                <div className="text-[9px] text-gray-500">Giá bán</div>
                                                                                 <div className="text-green-700 font-bold text-[13px]">{formatCurrencyWithUnit(combo.price)}</div>
                                                                             </div>
                                                                         </div>

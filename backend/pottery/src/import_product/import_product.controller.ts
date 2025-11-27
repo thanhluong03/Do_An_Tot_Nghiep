@@ -56,4 +56,13 @@ export class ImportProductController {
     };
     return await this.importProductService.list(input);
   }
+
+  @Get('sellingprice/:productId')
+  async getProductSellingPrice(
+    @Param('productId') productId: string,
+    @Query('classificationId') classificationId?: string
+  ) {
+    const classId = classificationId ? Number(classificationId) : undefined;
+    return await this.importProductService.getProductSellingPrice(Number(productId), classId);
+  }
 }

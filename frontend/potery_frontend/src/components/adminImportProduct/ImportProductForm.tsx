@@ -12,13 +12,15 @@ interface ImportProductFormProps {
     selectedProducts: ProductSelectionState;
     setSelectedSupplier: React.Dispatch<React.SetStateAction<string>>;
     handleCheckboxChange: (productId: string) => void;
-    handleInputChange: (productId: string, field: "quantity" | "price", value: string) => void;
+    handleInputChange: (productId: string, field: "quantity" | "price" | "selling_price", value: string) => void;
     handleSubmit: () => Promise<void>;
     // New props for classifications
     selectedProductClassifications: Record<string, ProductClassification[]>;
-    classificationSelections: Record<string, Record<number, { checked: boolean; quantity: string; price: string }>>;
+    classificationSelections: Record<string, Record<number, { checked: boolean; quantity: string; price: string; selling_price?: string; new_selling_price?: string }>>;
     handleClassificationCheckboxChange: (productId: string, classificationId: number) => void;
-    handleClassificationInputChange: (productId: string, classificationId: number, field: "quantity" | "price", value: string) => void;
+    handleClassificationInputChange: (productId: string, classificationId: number, field: "quantity" | "price" | "selling_price" | "new_selling_price", value: string) => void;
+    sellingPrices: Record<string, string>;
+    newSellingPrices: Record<string, string>;
 }
 
 const ImportProductForm: React.FC<ImportProductFormProps> = ({
@@ -35,19 +37,19 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
     classificationSelections,
     handleClassificationCheckboxChange,
     handleClassificationInputChange,
+    sellingPrices,
+    newSellingPrices,
 }) => {
 
-    // Utils: Định dạng số tiền, getNumericValue (Giữ nguyên)
+    // Utils: Định dạng số tiền để hiển thị (chỉ dùng để hiển thị trong label)
     const formatNumber = (num: string | number | undefined): string => {
         if (num === undefined || num === null || num === "") return '';
-        const cleanValue = String(num).replace(/[^0-9]/g, '');
+        // Chỉ làm sạch và format nếu giá trị chưa được format
+        const stringValue = String(num);
+        const cleanValue = stringValue.replace(/[^0-9]/g, '');
+        if (cleanValue === '') return '';
         const parsedValue = Number(cleanValue);
-        return isNaN(parsedValue) ? '' : parsedValue.toLocaleString('vi-VN');
-    };
-
-    const getNumericValue = (formattedValue: string | undefined): string => {
-        if (!formattedValue) return "";
-        return String(formattedValue).replace(/\./g, '');
+        return isNaN(parsedValue) || parsedValue === 0 ? '' : parsedValue.toLocaleString('vi-VN');
     };
 
     const selectedCount = products.filter((p) => selectedProducts[p.id]?.checked).length;
@@ -67,10 +69,10 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                 // Product has classifications - check if at least one classification is properly filled
                 const productClassificationSelections = classificationSelections[productId] || {};
                 const validClassifications = Object.entries(productClassificationSelections)
-                    .filter(([_, classData]) => classData.checked)
-                    .every(([_, classData]) => {
-                        const quantity = Number(getNumericValue(classData.quantity));
-                        const price = Number(getNumericValue(classData.price));
+                    .filter(([, classData]) => classData.checked)
+                    .every(([, classData]) => {
+                        const quantity = Number(classData.quantity || 0);
+                        const price = Number(classData.price || 0);
                         return quantity > 0 && price > 0;
                     });
 
@@ -81,8 +83,8 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                 return hasSelectedClassifications && validClassifications;
             } else {
                 // Product has no classifications - check direct product data
-                const quantity = Number(getNumericValue(selectedProducts[p.id]?.quantity));
-                const price = Number(getNumericValue(selectedProducts[p.id]?.price));
+                const quantity = Number(selectedProducts[p.id]?.quantity || 0);
+                const price = Number(selectedProducts[p.id]?.price || 0);
                 return quantity > 0 && price > 0;
             }
         });
@@ -95,7 +97,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
         <div className="p-8 mb-8 rounded-2xl bg-white border border-gray-100 shadow-2xl transition-all duration-300">
 
             <h3 className="text-2xl font-extrabold mb-6 text-gray-800 border-b-4 border-orange-500/50 pb-3 flex items-center gap-3">
-                <Package size={24} className="text-orange-600" /> TẠO PHIẾU NHẬP KHO
+                <Package size={24} className="text-orange-600" /> Tạo phiếu nhập kho
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-6">
@@ -106,7 +108,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                     {/* 1. PHẦN CHỌN NHÀ CUNG CẤP (Giữ nguyên) */}
                     <div className="p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-inner">
                         <label className="block text-base font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                            <Tag size={18} className="text-orange-500" /> NHÀ CUNG CẤP <span className="text-red-500 font-extrabold">*</span>
+                            <Tag size={18} className="text-orange-500" /> Nhà cung cấp <span className="text-red-500 font-extrabold">*</span>
                         </label>
                         <select
                             title='s'
@@ -128,8 +130,8 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                     {/* 2. CHI TIẾT NHẬP LIỆU (ĐÃ THÊM ẢNH) */}
                     <div className="p-5 border border-gray-200 rounded-xl bg-white shadow-lg">
                         <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between border-b border-gray-200 pb-2">
-                            <ShoppingBag size={20} className='text-blue-500' /> CHI TIẾT NHẬP LIỆU
-                            <span className={`text-md font-extrabold ${selectedCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <ShoppingBag size={20} className='text-blue-500' /> Chi tiết nhập kho
+                            <span className={`text-sm font-extrabold ${selectedCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
                                 ({selectedCount} đã chọn)
                             </span>
                         </h4>
@@ -190,7 +192,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                                     </div>
 
                                                                     {classSelection.checked && (
-                                                                        <div className="grid grid-cols-2 gap-2 ml-6">
+                                                                        <div className="grid grid-cols-3 gap-2 ml-6">
                                                                             <div>
                                                                                 <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
                                                                                     <Box size={12} className="text-gray-400" /> SL <span className="text-red-500">*</span>
@@ -199,22 +201,40 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                                                     type="text"
                                                                                     inputMode='numeric'
                                                                                     placeholder="0"
-                                                                                    value={formatNumber(classSelection.quantity)}
+                                                                                    value={classSelection.quantity || ""}
                                                                                     onChange={(e) => handleClassificationInputChange(productId, classification.id, "quantity", e.target.value)}
                                                                                     className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 text-right font-mono"
                                                                                 />
                                                                             </div>
                                                                             <div>
                                                                                 <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
-                                                                                    <DollarSign size={12} className="text-gray-400" /> GIÁ <span className="text-red-500">*</span>
+                                                                                    <DollarSign size={12} className="text-gray-400" /> GIÁ NHẬP <span className="text-red-500">*</span>
                                                                                 </label>
                                                                                 <input
                                                                                     type="text"
                                                                                     inputMode='numeric'
                                                                                     placeholder="0"
-                                                                                    value={formatNumber(classSelection.price)}
+                                                                                    value={classSelection.price || ""}
                                                                                     onChange={(e) => handleClassificationInputChange(productId, classification.id, "price", e.target.value)}
                                                                                     className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 text-right font-mono"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
+                                                                                    💰 GIÁ BÁN
+                                                                                    {classSelection.selling_price && (
+                                                                                        <span className="text-orange-600 font-bold">
+                                                                                            ({formatNumber(classSelection.selling_price)})
+                                                                                        </span>
+                                                                                    )}
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    inputMode='numeric'
+                                                                                    placeholder="Giá mới (không bắt buộc)"
+                                                                                    value={classSelection.new_selling_price || ""}
+                                                                                    onChange={(e) => handleClassificationInputChange(productId, classification.id, "new_selling_price", e.target.value)}
+                                                                                    className="w-full border border-orange-300 rounded-lg px-2 py-1 text-sm focus:ring-orange-500 focus:border-orange-500 text-right font-mono bg-orange-50"
                                                                                 />
                                                                             </div>
                                                                         </div>
@@ -226,9 +246,9 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                 ) : (
                                                     <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                                                         <p className="text-sm text-yellow-700 mb-2">
-                                                            ⚠️ Sản phẩm này không có phân loại. Nhập trực tiếp:
+                                                            Sản phẩm không có phân loại
                                                         </p>
-                                                        <div className="grid grid-cols-2 gap-2">
+                                                        <div className="grid grid-cols-3 gap-2">
                                                             <div>
                                                                 <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
                                                                     <Box size={12} className="text-gray-400" /> SL <span className="text-red-500">*</span>
@@ -237,22 +257,40 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                                     type="text"
                                                                     inputMode='numeric'
                                                                     placeholder="0"
-                                                                    value={formatNumber(selectedProducts[p.id]?.quantity)}
+                                                                    value={selectedProducts[p.id]?.quantity || ""}
                                                                     onChange={(e) => handleInputChange(String(p.id), "quantity", e.target.value)}
-                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm0 text-right"
+                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm text-right"
                                                                 />
                                                             </div>
                                                             <div>
                                                                 <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
-                                                                    <DollarSign size={12} className="text-gray-400" /> GIÁ <span className="text-red-500">*</span>
+                                                                    <DollarSign size={12} className="text-gray-400" /> GIÁ NHẬP <span className="text-red-500">*</span>
                                                                 </label>
                                                                 <input
                                                                     type="text"
                                                                     inputMode='numeric'
                                                                     placeholder="0"
-                                                                    value={formatNumber(selectedProducts[p.id]?.price)}
+                                                                    value={selectedProducts[p.id]?.price || ""}
                                                                     onChange={(e) => handleInputChange(String(p.id), "price", e.target.value)}
-                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm  text-right"
+                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm text-right"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
+                                                                    💰 GIÁ BÁN
+                                                                    {sellingPrices[String(p.id)] && (
+                                                                        <span className="text-orange-600 font-bold">
+                                                                            ({formatNumber(sellingPrices[String(p.id)])})
+                                                                        </span>
+                                                                    )}
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode='numeric'
+                                                                    placeholder="Giá mới(không bắt buộc)"
+                                                                    value={newSellingPrices[String(p.id)] || ""}
+                                                                    onChange={(e) => handleInputChange(String(p.id), "selling_price", e.target.value)}
+                                                                    className="w-full border border-orange-300 rounded-lg px-2 py-1 text-sm focus:ring-orange-500 focus:border-orange-500 text-right font-mono bg-orange-50"
                                                                 />
                                                             </div>
                                                         </div>
@@ -283,7 +321,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                 products.map((p) => (
                                     <div
                                         key={p.id}
-                                        onClick={() => handleCheckboxChange(p.id)}
+                                        onClick={() => handleCheckboxChange(String(p.id))}
                                         className={`
                                             flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer border
                                             ${selectedProducts[p.id]?.checked

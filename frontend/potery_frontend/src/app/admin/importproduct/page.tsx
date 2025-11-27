@@ -16,6 +16,7 @@ import {
     Product,
     getProductClassifications,
     ProductClassification,
+    getProductSellingPrice,
 } from "@/api/services/importProductsService";
 
 import ImportProductForm from "@/components/adminImportProduct/ImportProductForm";
@@ -29,6 +30,7 @@ export interface SelectedProductItem {
     checked: boolean;
     quantity: string;
     price: string;
+    selling_price?: string;
 }
 
 export type ProductSelectionState = Record<string, SelectedProductItem>;
@@ -62,7 +64,9 @@ export default function ImportProductPage() {
 
     // NEW: State for classifications
     const [selectedProductClassifications, setSelectedProductClassifications] = useState<Record<string, ProductClassification[]>>({});
-    const [classificationSelections, setClassificationSelections] = useState<Record<string, Record<number, { checked: boolean; quantity: string; price: string }>>>({});
+    const [classificationSelections, setClassificationSelections] = useState<Record<string, Record<number, { checked: boolean; quantity: string; price: string; selling_price?: string; new_selling_price?: string }>>>({});
+    const [sellingPrices, setSellingPrices] = useState<Record<string, string>>({});  // Giá bán hiện tại
+    const [newSellingPrices, setNewSellingPrices] = useState<Record<string, string>>({});  // Giá bán mới user nhập
 
     const [loadingImportHistory, setLoadingImportHistory] = useState(false);
     const [loadingProductList, setLoadingProductList] = useState(false);
@@ -250,58 +254,119 @@ export default function ImportProductPage() {
     }, [selectedProducts, selectedProductClassifications]);
 
 
-    const handleCheckboxChange = (productId: string) => {
+    const handleCheckboxChange = async (productId: string) => {
         setSelectedProducts((prev) => {
-            const currentItem = prev[productId] || { checked: false, quantity: "", price: "" };
+            const currentItem = prev[productId] || { checked: false, quantity: "", price: "", selling_price: "" };
+
+            const newChecked = !currentItem.checked;
+
+            // If checking the product, fetch selling price
+            if (newChecked) {
+                fetchSellingPrice(productId);
+            }
 
             return {
                 ...prev,
                 [productId]: {
                     ...currentItem,
-                    checked: !currentItem.checked,
+                    checked: newChecked,
                 },
             };
         });
+    };
+
+    const fetchSellingPrice = async (productId: string) => {
+        try {
+            const result = await getProductSellingPrice(Number(productId));
+            if (result.success) {
+                // Parse để lấy số nguyên từ giá dạng "25000.00"
+                const price = Math.floor(Number(result.selling_price));
+                setSellingPrices(prev => ({
+                    ...prev,
+                    [productId]: price.toString(),
+                }));
+            }
+        } catch (error) {
+            console.error("Error fetching selling price:", error);
+        }
     };
 
     const handleInputChange = (
         productId: string,
-        field: "quantity" | "price",
+        field: "quantity" | "price" | "selling_price",
         value: string
     ) => {
         const cleanedValue = value.replace(/[^0-9]/g, '');
 
-        setSelectedProducts((prev) => {
-            const currentItem = prev[productId] || { checked: false, quantity: "", price: "" };
+        if (field === "selling_price") {
+            setNewSellingPrices(prev => ({
+                ...prev,
+                [productId]: cleanedValue,
+            }));
+        } else {
+            setSelectedProducts((prev) => {
+                const currentItem = prev[productId] || { checked: false, quantity: "", price: "" };
+
+                return {
+                    ...prev,
+                    [productId]: {
+                        ...currentItem,
+                        [field]: cleanedValue,
+                    },
+                };
+            });
+        }
+    };
+
+    // Classification handlers
+    const handleClassificationCheckboxChange = async (productId: string, classificationId: number) => {
+        setClassificationSelections(prev => {
+            const newChecked = !prev[productId]?.[classificationId]?.checked;
+
+            // If checking the classification, fetch selling price
+            if (newChecked) {
+                fetchClassificationSellingPrice(productId, classificationId);
+            }
 
             return {
                 ...prev,
                 [productId]: {
-                    ...currentItem,
-                    [field]: cleanedValue,
-                },
+                    ...prev[productId],
+                    [classificationId]: {
+                        ...prev[productId]?.[classificationId],
+                        checked: newChecked
+                    }
+                }
             };
         });
     };
 
-    // Classification handlers
-    const handleClassificationCheckboxChange = (productId: string, classificationId: number) => {
-        setClassificationSelections(prev => ({
-            ...prev,
-            [productId]: {
-                ...prev[productId],
-                [classificationId]: {
-                    ...prev[productId]?.[classificationId],
-                    checked: !prev[productId]?.[classificationId]?.checked
-                }
+    const fetchClassificationSellingPrice = async (productId: string, classificationId: number) => {
+        try {
+            const result = await getProductSellingPrice(Number(productId), classificationId);
+            if (result.success) {
+                // Parse để lấy số nguyên từ giá dạng "25000.00"
+                const price = Math.floor(Number(result.selling_price));
+                setClassificationSelections(prev => ({
+                    ...prev,
+                    [productId]: {
+                        ...prev[productId],
+                        [classificationId]: {
+                            ...prev[productId]?.[classificationId],
+                            selling_price: price.toString(),
+                        }
+                    }
+                }));
             }
-        }));
+        } catch (error) {
+            console.error("Error fetching classification selling price:", error);
+        }
     };
 
     const handleClassificationInputChange = (
         productId: string,
         classificationId: number,
-        field: "quantity" | "price",
+        field: "quantity" | "price" | "selling_price" | "new_selling_price",
         value: string
     ) => {
         const cleanedValue = value.replace(/[^0-9]/g, '');
@@ -330,6 +395,8 @@ export default function ImportProductPage() {
         );
         setSelectedProductClassifications({});
         setClassificationSelections({});
+        setSellingPrices({});
+        setNewSellingPrices({});
         setEditingItem(null);
     }, [allProductsForForm]);
     const handleSubmit = async () => {
@@ -352,24 +419,58 @@ export default function ImportProductPage() {
                 // Sản phẩm có phân loại
                 const selectedClassifications = Object.entries(productClassificationSelections)
                     .filter(([_, classData]) => classData.checked && Number(classData.quantity) > 0)
-                    .map(([classificationId, classData]) => ({
-                        product_id: Number(productId),
-                        classification_attribute_relationship_id: Number(classificationId),
-                        import_quantity: Number(classData.quantity),
-                        import_price: Number(classData.price)
-                    }));
+                    .map(([classificationId, classData]) => {
+                        const new_selling_price = Number(classData.new_selling_price || 0);
+                        const import_price = Number(classData.price);
+                        const currentSellingPrice = Math.floor(Number(classData.selling_price || 0));
+
+                        // Validation 1: nếu có nhập giá bán mới, phải >= giá nhập
+                        if (new_selling_price > 0 && new_selling_price < import_price) {
+                            toast.error(`Giá bán mới (${new_selling_price.toLocaleString()}) phải lớn hơn hoặc bằng giá nhập (${import_price.toLocaleString()}) cho sản phẩm ${product.name}`);
+                            throw new Error("Invalid selling price");
+                        }
+
+                        // Validation 2: nếu giá nhập > giá bán hiện tại, bắt buộc phải nhập giá bán mới
+                        if (import_price > currentSellingPrice && new_selling_price === 0) {
+                            toast.error(`Giá nhập (${import_price.toLocaleString()}) cao hơn giá bán hiện tại (${currentSellingPrice.toLocaleString()}). Vui lòng nhập giá bán mới cho sản phẩm ${product.name}`);
+                            throw new Error("New selling price required");
+                        }
+
+                        return {
+                            product_id: Number(productId),
+                            classification_attribute_relationship_id: Number(classificationId),
+                            import_quantity: Number(classData.quantity),
+                            import_price: import_price,
+                            selling_price: new_selling_price > 0 ? new_selling_price : undefined,
+                        };
+                    });
 
                 details.push(...selectedClassifications);
             } else {
                 // Sản phẩm không có phân loại
                 const quantity = Number(productData.quantity);
                 const price = Number(productData.price);
+                const newSellingPrice = Number(newSellingPrices[productId] || 0);
+                const currentSellingPrice = Math.floor(Number(sellingPrices[productId] || 0));
+
+                // Validation 1: nếu có nhập giá bán mới, phải >= giá nhập
+                if (newSellingPrice > 0 && newSellingPrice < price) {
+                    toast.error(`Giá bán mới (${newSellingPrice.toLocaleString()}) phải lớn hơn hoặc bằng giá nhập (${price.toLocaleString()}) cho sản phẩm ${product.name}`);
+                    return;
+                }
+
+                // Validation 2: nếu giá nhập > giá bán hiện tại, bắt buộc phải nhập giá bán mới
+                if (price > currentSellingPrice && newSellingPrice === 0) {
+                    toast.error(`Giá nhập (${price.toLocaleString()}) cao hơn giá bán hiện tại (${currentSellingPrice.toLocaleString()}). Vui lòng nhập giá bán mới cho sản phẩm ${product.name}`);
+                    return;
+                }
 
                 if (quantity > 0 && price > 0) {
                     details.push({
                         product_id: Number(productId),
                         import_quantity: quantity,
-                        import_price: price
+                        import_price: price,
+                        selling_price: newSellingPrice > 0 ? newSellingPrice : undefined,
                         // Không có classification_attribute_relationship_id
                     });
                 }
@@ -502,6 +603,8 @@ export default function ImportProductPage() {
                             classificationSelections={classificationSelections}
                             handleClassificationCheckboxChange={handleClassificationCheckboxChange}
                             handleClassificationInputChange={handleClassificationInputChange}
+                            sellingPrices={sellingPrices}
+                            newSellingPrices={newSellingPrices}
                         />
                     </div>
                 )}
