@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
-import { getRevenueData } from "@/api/services/orderService";
+import { Order as ImportedOrder } from "@/api/services/orderService";
 import DashboardFilter from "@/components/adminStore/DashboardFilter";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import RevenueChart from "@/components/dashboard/RevenueChart";
@@ -17,40 +17,14 @@ import { getStoreById } from "@/api/services/storeService";
 // IMPORT API LẤY ORDERS THEO STORE
 import { listOrdersByStore } from "@/api/services/orderService";
 
-interface RevenueData {
-  month: string;
-  revenue: number;
-}
-
-interface Order {
-  status?: string;
-  current_order?: {
-    customer_id?: number;
-    items?: Array<{
-      product_name?: string;
-      product_id?: number;
-      quantity?: number;
-      store_id?: number;
-
-    }>;
-  };
-  items?: Array<{
-    product_name?: string;
-    product_id?: number;
-    quantity?: number;
-  }>;
-}
-
-interface Customer { is_active?: boolean; active?: boolean; age?: number }
 interface Product { id?: number; stock?: number; quantity?: number; name?: string }
 
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
-  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [orders, setOrders] = useState<ImportedOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [totalByStatus, setTotalByStatus] = useState<Record<string, number>>({});
 
   const [filteredStoreId, setFilteredStoreId] = useState<number | undefined>(undefined);
   const [storeName, setStoreName] = useState<string>("Tất cả cửa hàng");
@@ -107,24 +81,22 @@ const DashboardPage = () => {
       setIsFiltering(true);
 
       try {
-        const ordersList = await listOrdersByStore(filteredStoreId ?? 0);
-        setOrders(ordersList);
+        const orderResponse = await (await import("@/api/services/orderService")).listOrders({
+          start_date: filters.startDate,
+          end_date: filters.endDate,
+          store_id: filteredStoreId,
+          size: 1000
+        });
+        setOrders(orderResponse.data);
+        setTotalByStatus(orderResponse.totalByStatus || {});
 
-
-
-        const [customerList, productList] = await Promise.all([
-          (await import("@/api/services/customerService")).getCustomers({
-            start_date: filters.startDate,
-            end_date: filters.endDate
-          }),
+        const [productList] = await Promise.all([
           (await import("@/api/services/productApi")).getProducts({
             start_date: filters.startDate,
             end_date: filters.endDate
           })
         ]);
 
-        setOrders(ordersList);
-        setCustomers(customerList);
         setProducts(productList);
       } catch (err) {
         console.error("Lỗi Filter:", err);
@@ -142,24 +114,21 @@ const DashboardPage = () => {
     try {
       const currentFilter = dateFilter;
 
-      const revenue = await getRevenueData({
+      const orderResponse = await (await import("@/api/services/orderService")).listOrders({
         start_date: currentFilter.startDate,
         end_date: currentFilter.endDate,
-        store_id: storeIdToUse
+        store_id: storeIdToUse,
+        size: 1000
       });
 
-      const ordersList = await listOrdersByStore(storeIdToUse);
-
-      const [customerList, productList] = await Promise.all([
-        (await import("@/api/services/customerService")).getCustomers({}),
+      const [productList] = await Promise.all([
         (await import("@/api/services/productApi")).getProducts({}),
         listInventories({})
       ]);
       const inventoryList = await listInventories({ store_id: storeIdToUse });
 
-      setRevenueData(revenue);
-      setOrders(ordersList);
-      setCustomers(customerList);
+      setOrders(orderResponse.data);
+      setTotalByStatus(orderResponse.totalByStatus || {});
       setProducts(productList);
       setInventories(inventoryList.data || []);
     } catch (err) {
@@ -174,7 +143,7 @@ const DashboardPage = () => {
       await loadData(storeId);
       setLoading(false);
     })();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="text-center text-gray-500 mt-10">Đang tải dữ liệu dashboard...</div>;
@@ -184,33 +153,80 @@ const DashboardPage = () => {
   // 🔥 TÍNH TOÁN DASHBOARD
   // ----------------------------------------------
 
-  const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
+  // Calculate sales revenue from all statuses except cancelled
+  const totalSalesRevenue = Object.entries(totalByStatus)
+    .filter(([status]) => !['CANCELLED', 'REJECTED'].includes(status))
+    .reduce((sum, [, amount]) => sum + amount, 0);
+
+  // Generate revenue chart data from orders instead of API
+  const generateRevenueChartData = () => {
+    const monthNames = [
+      'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+      'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    ];
+
+    const revenueMap = new Map<string, number>();
+
+    // Process orders to calculate revenue by month
+    orders.forEach(order => {
+      // Get total amount from either direct property or current_order
+      const totalAmount = order.total_amount || order.current_order?.total_amount;
+
+      if (!['CANCELLED', 'REJECTED'].includes(order.status || '') && totalAmount) {
+        const orderDate = new Date(order.order_date);
+        const year = orderDate.getFullYear();
+        const month = orderDate.getMonth();
+        const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+
+        const prev = revenueMap.get(monthKey) || 0;
+        const amount = typeof totalAmount === 'string'
+          ? parseFloat(totalAmount)
+          : Number(totalAmount);
+        revenueMap.set(monthKey, prev + amount);
+      }
+    });
+
+    // Generate 12 months data for current year
+    const currentYear = new Date().getFullYear();
+    const chartData = [];
+
+    for (let i = 0; i < 12; i++) {
+      const monthKey = `${currentYear}-${i.toString().padStart(2, '0')}`;
+      const revenue = revenueMap.get(monthKey) || 0;
+
+      chartData.push({
+        name: monthNames[i],
+        revenue: revenue
+      });
+    }
+
+    return chartData;
+  };
+
+  const chartRevenueData = generateRevenueChartData();
 
   const totalOrders = orders.length;
   const deliveredOrders = orders.filter(o => o.status === "DELIVERED").length;
 
-  const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(u => u.is_active || u.active).length;
-  
-const uniqueCustomerIds = new Set<number>();
+  const uniqueCustomerIds = new Set<number>();
 
-orders.forEach(order => {
-  const items = order.current_order?.items || [];
-  const hasStoreItem = items.some(item => item.store_id === filteredStoreId);
-  if (hasStoreItem && order.current_order?.customer_id) {
-    uniqueCustomerIds.add(order.current_order.customer_id);
-  }
-});
+  orders.forEach(order => {
+    const items = order.current_order?.items || [];
+    const hasStoreItem = items.some(item => item.store_id === filteredStoreId);
+    if (hasStoreItem && order.current_order?.customer_id) {
+      uniqueCustomerIds.add(order.current_order.customer_id);
+    }
+  });
 
-const totalCustomersForStore = uniqueCustomerIds.size;
+  const totalCustomersForStore = uniqueCustomerIds.size;
 
-const totalProducts = products.length;
+  const totalProducts = products.length;
   //const inStockProducts = products.filter(p => (p.stock || p.quantity || 0) > 0).length;
-  
-const storeInventories = inventories.filter(inv => inv.store_id === filteredStoreId);
 
-// Lấy số sản phẩm còn tồn kho
-const inStockProducts = storeInventories.filter(inv => (inv.quantity_stock || 0) > 0).length;
+  const storeInventories = inventories.filter(inv => inv.store_id === filteredStoreId);
+
+  // Lấy số sản phẩm còn tồn kho
+  const inStockProducts = storeInventories.filter(inv => (inv.quantity_stock || 0) > 0).length;
   // Best seller
   const bestSeller = (() => {
     const sales: Record<string, { name: string; totalSold: number }> = {};
@@ -226,7 +242,7 @@ const inStockProducts = storeInventories.filter(inv => (inv.quantity_stock || 0)
     return top || null;
   })();
 
-  const revenueChartData = revenueData.map(d => ({ name: d.month, revenue: d.revenue }));
+  const revenueChartData = chartRevenueData;
 
   const statusMap = orders.reduce((acc, o) => {
     const s = o.status || "UNKNOWN";
@@ -295,7 +311,7 @@ const inStockProducts = storeInventories.filter(inv => (inv.quantity_stock || 0)
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
         <DashboardSummary
-          revenue={totalRevenue}
+          revenue={totalSalesRevenue}
           ordersLabel={`${deliveredOrders}/${totalOrders}`}
           customersLabel={`${totalCustomersForStore}`}
           productsLabel={`${inStockProducts}/${totalProducts}`}
@@ -306,8 +322,44 @@ const inStockProducts = storeInventories.filter(inv => (inv.quantity_stock || 0)
       {/* Revenue + Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
-          <div className="font-semibold text-lg mb-2 ml-3">Doanh số</div>
+          <div className="flex justify-between items-center mb-3 px-4">
+            <div className="font-semibold text-lg">Doanh số</div>
+          </div>
           <RevenueChart data={revenueChartData} />
+
+          {/* Tổng tiền theo trạng thái đơn hàng */}
+          <div className="mt-4 px-3">
+            <div className="text-sm font-medium text-gray-700 mb-3">Chi tiết doanh thu:</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {[...Object.entries(totalByStatus)
+                .filter(([status]) => status !== 'CANCELLED')
+                .concat(Object.entries(totalByStatus).filter(([status]) => status === 'CANCELLED'))
+              ].map(([status, amount]) => {
+                const statusLabel = {
+                  'CREATED': 'Chờ xác nhận',
+                  'CONFIRMED': 'Đã xác nhận',
+                  'SHIPPING': 'Đang vận chuyển',
+                  'DELIVERED': 'Đã giao thành công',
+                  'CANCELLED': 'Đã hủy',
+                  'REJECTED': 'Bị từ chối',
+                  'EXCHANGED': 'Đã đổi trả',
+                  'RETURN_REQUESTED': 'Đang yêu cầu hoàn trả'
+                }[status] || status;
+
+                const isPositive = !['CANCELLED', 'REJECTED'].includes(status);
+                return (
+                  <div key={status} className={`p-2 rounded-lg border ${isPositive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                    }`}>
+                    <div className="text-xs text-gray-600">{statusLabel}</div>
+                    <div className={`font-semibold ${isPositive ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                      {amount.toLocaleString()} ₫
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-4">
