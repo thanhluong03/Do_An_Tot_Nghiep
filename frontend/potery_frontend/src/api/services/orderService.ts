@@ -112,6 +112,7 @@ export const listDropdownStores = async (): Promise<Store[]> => {
 export interface ListOrdersResponse {
   data: Order[];
   total: number;
+  totalByStatus?: Record<string, number>;
 }
 export async function listOrders(params: ListOrderParams): Promise<ListOrdersResponse> {
   // Create a mutable copy of params to avoid "read-only" errors.
@@ -140,7 +141,8 @@ export async function listOrders(params: ListOrderParams): Promise<ListOrdersRes
     return order;
   });
   const total: number = responseData.total;
-  return { data: orders, total: total };
+  const totalByStatus = responseData.totalByStatus || {};
+  return { data: orders, total: total, totalByStatus };
 }
 export async function listOrderAll(params: ListOrderParams): Promise<ListOrdersResponse> {
   const queryParams = {
@@ -163,8 +165,9 @@ export async function listOrderAll(params: ListOrderParams): Promise<ListOrdersR
 
   const orders: Order[] = responseData.data || [];
   const total: number = responseData.total;
+  const totalByStatus = responseData.totalByStatus || {};
 
-  return { data: orders, total: total };
+  return { data: orders, total: total, totalByStatus };
 }
 
 
@@ -192,22 +195,79 @@ export async function getRevenueData(params: {
     store_id: params.store_id,
   });
 
-  const map = new Map<string, number>();
+  // Map để lưu doanh thu theo tháng-năm
+  const revenueMap = new Map<string, number>();
 
+  // Tên các tháng bằng tiếng Việt
+  const monthNames = [
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+  ];
+
+  // Xử lý dữ liệu đơn hàng
   response.data.forEach(order => {
-    if (order.status === 'DELIVERED' && order.total_amount) {
-      const month = new Date(order.order_date)
-        .toLocaleString('en-US', { month: 'short' });
+    // Chỉ tính doanh thu từ các đơn hàng không bị hủy hoặc từ chối
+    if (!['CANCELLED', 'REJECTED'].includes(order.status || '') && order.total_amount) {
+      const orderDate = new Date(order.order_date);
+      const year = orderDate.getFullYear();
+      const month = orderDate.getMonth(); // 0-11
+      const monthKey = `${year}-${month.toString().padStart(2, '0')}`; // Format: 2024-01
 
-      const prev = map.get(month) || 0;
-      map.set(month, prev + Number(order.total_amount));
+      const prev = revenueMap.get(monthKey) || 0;
+      revenueMap.set(monthKey, prev + Number(order.total_amount));
     }
   });
 
-  return Array.from(map.entries()).map(([month, revenue]) => ({
-    month,
-    revenue,
-  }));
+  // Xác định khoảng thời gian để hiển thị
+  let startYear = new Date().getFullYear();
+  let endYear = startYear;
+
+  // Nếu có filter theo ngày, điều chỉnh khoảng năm
+  if (params.start_date) {
+    startYear = new Date(params.start_date).getFullYear();
+  }
+  if (params.end_date) {
+    endYear = new Date(params.end_date).getFullYear();
+  }
+
+  const allMonths: { month: string; revenue: number }[] = [];
+
+  // Tạo danh sách tháng cho tất cả các năm trong khoảng
+  for (let year = startYear; year <= endYear; year++) {
+    for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+      // Nếu có filter ngày, chỉ hiển thị tháng trong khoảng đó
+      if (params.start_date || params.end_date) {
+        const monthDate = new Date(year, monthIndex, 1);
+
+        if (params.start_date && monthDate < new Date(params.start_date)) {
+          continue;
+        }
+        if (params.end_date && monthDate > new Date(params.end_date)) {
+          continue;
+        }
+      }
+
+      const monthKey = `${year}-${monthIndex.toString().padStart(2, '0')}`;
+      const revenue = revenueMap.get(monthKey) || 0;
+
+      // Hiển thị tên tháng với năm nếu có nhiều năm
+      const displayName = (startYear === endYear)
+        ? monthNames[monthIndex]
+        : `${monthNames[monthIndex]} ${year}`;
+
+      allMonths.push({
+        month: displayName,
+        revenue: revenue
+      });
+    }
+  }
+
+  // Nếu không có filter, chỉ hiển thị 12 tháng gần nhất
+  if (!params.start_date && !params.end_date && allMonths.length > 12) {
+    return allMonths.slice(-12);
+  }
+
+  return allMonths;
 }
 export const listOrdersByStore = async (
   storeId: number,
