@@ -101,7 +101,7 @@ export class ConversationService {
             .addSelect('m.sent_at', 'last_message_time')
             .from(MessageEntity, 'm')
             .where(
-              'm.sent_at = (SELECT MAX(m2.sent_at) FROM messages m2 WHERE m2.conversation_id = m.conversation_id)',
+              'm.sent_at = (SELECT MAX(m2.sent_at) FROM public.messages m2 WHERE m2.conversation_id = m.conversation_id)',
             ),
         'latest_msg',
         'latest_msg.conversation_id = c.id',
