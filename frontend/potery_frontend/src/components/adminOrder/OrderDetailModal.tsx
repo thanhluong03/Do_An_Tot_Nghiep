@@ -100,6 +100,15 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   const displayTotalAmount =
     typeof order.total_amount === "string" ? parseFloat(order.total_amount) : order.total_amount;
 
+  // Lấy thông tin giao dịch chính
+  const paymentTransactions = (order as any)?.paymentTransactions || [];
+  const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
+
+  // Debug: Log payment transaction data  
+  console.log('Admin Order Payment Transactions:', paymentTransactions);
+  console.log('Admin Order Main Transaction:', mainTxn);
+  console.log('Admin Order Full Data:', order);
+
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
@@ -226,6 +235,45 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 <CreditCard className="w-5 h-5 mr-2" />
                 Tóm tắt Thanh toán
               </h3>
+
+              {/* Mã giao dịch */}
+              {mainTxn && mainTxn.gateway_txn_ref && (
+                <InfoRow
+                  label="Mã giao dịch"
+                  value={<span className="font-semibold text-gray-900">{mainTxn.gateway_txn_ref}</span>}
+                />
+              )}
+
+              <InfoRow
+                label="Phương thức"
+                value={
+                  paymentMethod === "ONSITE"
+                    ? "Thanh toán khi nhận hàng"
+                    : paymentMethod === "CARD"
+                      ? "Thanh toán MoMo"
+                      : paymentMethod === "BANK_TRANSFER"
+                        ? "Chuyển khoản"
+                        : "Không xác định"
+                }
+              />
+
+              {/* Thời gian thanh toán */}
+              {mainTxn && mainTxn.created_at && (
+                <InfoRow
+                  label="Thời gian thanh toán"
+                  value={<span className="font-semibold text-gray-900">
+                    {new Date(mainTxn.created_at).toLocaleString('vi-VN', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })}
+                  </span>}
+                />
+              )}
+
               <InfoRow label="Tổng tiền sản phẩm" value={formatCurrency(displayTotalAmount)} />
               <InfoRow label="Phí vận chuyển" value={formatCurrency(30000)} />
               <div className="pt-4 mt-4 border-t-2 border-indigo-300">
@@ -233,18 +281,14 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                   label="Tổng thanh toán"
                   value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount + 30000)}</span>}
                 />
-                <InfoRow
-                  label="Phương thức"
-                  value={
-                    paymentMethod === "ONSITE"
-                      ? "Thanh toán khi nhận hàng"
-                      : paymentMethod === "CARD"
-                        ? "Thanh toán qua thẻ"
-                        : paymentMethod === "BANK_TRANSFER"
-                          ? "Chuyển khoản"
-                          : "Không xác định"
-                  }
-                />
+
+                {/* Tiền giao dịch */}
+                {mainTxn && mainTxn.amount && (
+                  <InfoRow
+                    label="Tiền giao dịch"
+                    value={<span className="text-lg font-bold text-green-600">{Number(mainTxn.amount).toLocaleString('vi-VN')} đ</span>}
+                  />
+                )}
 
                 <InfoRow
                   label="Trạng thái thanh toán"
@@ -259,6 +303,16 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                     </span>
                   }
                 />
+                {mainTxn && mainTxn.txn_status && (
+                  <InfoRow
+                    label="Trạng thái giao dịch"
+                    value={
+                      <span className={`font-semibold text-gray-900 ${mainTxn.txn_status === 'SUCCESS' ? 'text-green-700' : 'text-red-700'}`}>
+                        {mainTxn.txn_status === 'SUCCESS' ? 'Thành công' : 'Thất bại'}
+                      </span>
+                    }
+                  />
+                )}
               </div>
             </section>
           </div>

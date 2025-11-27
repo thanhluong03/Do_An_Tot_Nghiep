@@ -688,15 +688,23 @@ function OrderDetailClient({ id }: { id: string }) {
                 <h2 className="text-[16px] font-bold text-[#A38D64] mb-2">Thanh toán</h2>
                 <div className="text-gray-700 space-y-2 text-[15px]">
                   {mainTxn && (
-                    <span className="font-text text-gray-900 mb-2 block">Mã giao dịch: <span className="font-semibold">{mainTxn.gateway_txn_ref}</span></span>
+                    <span className="text-[15px] text-gray-900 mb-2 block">Mã giao dịch: <span className="font-semibold">{mainTxn.gateway_txn_ref}</span></span>
                   )}
-                  <div>Phương thức: <span className="font-bold text-gray-900">{
+                  <div>Phương thức: <span className="text-[15px] text-gray-900">{
                     order.payment_method === 'ONSITE'
                       ? 'Thanh toán khi nhận hàng (COD)'
                       : order.payment_method === 'CARD'
-                        ? 'Thẻ/MoMo'
+                        ? 'Thanh toán MoMo'
                         : order.payment_method
                   }</span></div>
+                  {mainTxn && mainTxn.txn_status && (
+                    <div className="text-[15px] text-gray-900 mb-2 flex items-center gap-2">
+                      <span>Trạng thái giao dịch:</span>
+                      <span className={`font-semibold ${mainTxn.txn_status === 'SUCCESS' ? 'text-green-700' : 'text-red-700'}`}>
+                        {mainTxn.txn_status === 'SUCCESS' ? 'Thành công' : 'Thất bại'}
+                      </span>
+                    </div>
+                  )}
                   <div>Tổng tiền hàng: <span className="font-bold">{formatPrice(order.total_amount)}</span></div>
                   <div>Phí vận chuyển: <span className="font-bold">{formatPrice(30000)}</span></div>
                   <div className="font-bold text-[16px] text-[#A38D64]">
