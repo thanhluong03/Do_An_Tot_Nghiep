@@ -33,6 +33,9 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
     permissions: "Quyền hạn",
     importproduct: "Nhập kho",
     conversation: "Tin nhắn khách hàng",
+    profileAdmin: "Trang cá nhân",
+    changePassword: "Đổi mật khẩu",
+    adminImportrequests: "Nhập kho",
   };
 
   if (parts.length === 0 || parts[0] === "dashboard") {
@@ -121,7 +124,6 @@ export default function AdminHeader() {
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between h-20 bg-white px-6 shadow-sm border-b border-gray-100">
       <div className="flex items-center space-x-4">
-        <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
         <nav className="hidden sm:flex items-center text-sm text-gray-500">
           <span className="text-gray-400">Home</span>
           <span className="mx-2 text-gray-400">/</span>
