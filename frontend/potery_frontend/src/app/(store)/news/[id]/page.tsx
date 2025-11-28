@@ -129,9 +129,10 @@ export default function NewsDetailPage() {
 
           {/* AI Chat Modal */}
           <AIChatModal
-            isOpen={isAIChatOpen}
-            onClose={() => setIsAIChatOpen(false)}
-          />
+                      isOpen={isAIChatOpen}
+                      onClose={() => setIsAIChatOpen(false)}
+                      userId={Number(user.id)} 
+                    />
 
           {/* Floating Buttons */}
           <div

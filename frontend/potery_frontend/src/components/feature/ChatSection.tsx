@@ -1,4 +1,6 @@
-// File: ChatModal.tsx
+// ChatModal with avatar support
+// USER avatar: from API (msg.user_avatar)
+// ADMIN avatar: fixed image URL
 
 'use client';
 
@@ -10,8 +12,9 @@ interface Message {
   id?: number | string;
   sender_type: 'USER' | 'ADMIN';
   content: string;
-  sent_at: string; 
+  sent_at: string;
   conversation_id: number;
+  user_avatar?: string; // <-- thêm avatar user từ API
 }
 
 interface ConversationDetail {
@@ -22,9 +25,10 @@ interface ConversationDetail {
 interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userId: number; // customer_id
+  userId: number;
   storeId: number;
   conversationId?: number | null;
+  userAvatar?: string; // <-- avatar USER truyền từ API cha
 }
 
 export function ChatModal({
@@ -33,6 +37,7 @@ export function ChatModal({
   userId,
   storeId,
   conversationId,
+  userAvatar,
 }: ChatModalProps) {
   const socketRef = useRef<Socket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -41,6 +46,8 @@ export function ChatModal({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const ADMIN_AVATAR = "/images/admin-avatar.png"; // <-- ảnh cố định cho chủ cửa hàng
 
   useEffect(() => {
     if (!isOpen) return;
@@ -55,7 +62,9 @@ export function ChatModal({
     const fetchHistory = (id: number) => {
       setLoading(true);
       socket.emit("get_conversation_detail", { conversation_id: id }, (res: ConversationDetail) => {
-        setMessages(res?.messages || []);
+        const list = res?.messages || [];
+        const withAvatar = list.map(m => ({ ...m, user_avatar: userAvatar }));
+        setMessages(withAvatar);
         setLoading(false);
       });
     };
@@ -76,10 +85,15 @@ export function ChatModal({
 
         setConvId(id);
         currentConvId = id;
-        
-        console.log(`🟢 (User) Joining NEW conversation: ${id}`);
+
         socketInstance.emit('join_conversation', { conversation_id: id });
-        setMessages(res?.messages || []);
+
+        const withAvatar = (res?.messages || []).map((m: Message) => ({
+        ...m,
+        user_avatar: userAvatar,
+      }));
+      
+        setMessages(withAvatar);
       } catch (err) {
         console.error('❌ Lỗi khởi tạo chat:', err);
       } finally {
@@ -87,48 +101,39 @@ export function ChatModal({
       }
     };
 
-    // ✅ PHẢI CHỜ KẾT NỐI XONG MỚI EMIT
     socket.on('connect', () => {
-      console.log('🟢 (User) Socket connected');
-      
       if (!currentConvId) {
         initConversation(socket);
       } else {
-        if (!convId) setConvId(currentConvId); 
-        console.log(`🟢 (User) Joining EXISTING conversation: ${currentConvId}`);
+        if (!convId) setConvId(currentConvId);
         socket.emit('join_conversation', { conversation_id: currentConvId });
         fetchHistory(currentConvId);
       }
     });
 
-    // Lắng nghe tin nhắn mới (từ Admin)
     const handleNewMessage = (msg: Message) => {
       if (msg.conversation_id === currentConvId) {
-        setMessages((prevMessages) => {
-          const messageExists = prevMessages.some(m => m.id === msg.id);
-          if (messageExists) return prevMessages;
-          return [...prevMessages, msg];
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === msg.id);
+          if (exists) return prev;
+          return [...prev, { ...msg, user_avatar: userAvatar }];
         });
       }
     };
+
     socket.on('new_message', handleNewMessage);
 
     return () => {
-      console.log('🔴 (User) Socket disconnected');
-      if (socket) {
-        socket.off('new_message', handleNewMessage);
-        socket.off('connect');
-        socket.disconnect();
-      }
+      socket.off('new_message', handleNewMessage);
+      socket.disconnect();
       socketRef.current = null;
     };
-  }, [isOpen, userId, storeId, conversationId]); 
+  }, [isOpen, userId, storeId, conversationId, userAvatar]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ✅ SỬA LỖI GỬI TIN NHẮN
   const handleSend = async () => {
     if (!input.trim() || !convId || !socketRef.current) return;
 
@@ -140,13 +145,13 @@ export function ChatModal({
       user_id: userId,
       store_id: storeId,
     };
+
     try {
       setSending(true);
-      // Chỉ emit. Server sẽ gửi 'new_message' về.
       socketRef.current.emit('send_message', msg);
       setInput('');
     } catch (error) {
-      console.error('❌ Gửi tin nhắn lỗi:', error);
+      console.error('❌ Gửi lỗi:', error);
     } finally {
       setSending(false);
     }
@@ -154,53 +159,48 @@ export function ChatModal({
 
   if (!isOpen) return null;
 
-  // ... (Phần JSX y hệt như trước, chỉ đổi msg.created_at -> msg.sent_at)
   return (
     <div className="fixed bottom-5 right-17 z-50 w-80 h-[500px] bg-[#8B7D6B] shadow-lg rounded-2xl flex flex-col ">
-      {/* Header */}
       <div className="flex justify-between items-center p-4 bg-[#8B7D6B] rounded-t-lg text-white font-semibold">
         <span>Chat Cùng Tiệm Gốm</span>
         <button onClick={onClose} className="text-white text-xl hover:text-gray-200">×</button>
       </div>
 
-      {/* Nội dung chat */}
       <div className="flex-1 p-3 overflow-y-auto bg-gray-50 space-y-2">
         {loading ? (
-          <div className="text-center text-gray-400 mt-10">⏳ Đang tải cuộc trò chuyện...</div>
+          <div className="text-center text-gray-400 mt-10">⏳ Đang tải...</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10">Bắt đầu trò chuyện với admin...</div>
+          <div className="text-center text-gray-400 mt-10">Bắt đầu trò chuyện...</div>
         ) : (
           messages.map((msg, i) => (
-            <div key={msg.id || i} className={`flex ${msg.sender_type === 'USER' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`px-3 py-2 rounded-lg max-w-[70%] ${
-                  msg.sender_type === 'USER'
-                    ? 'bg-[#8B7D6B] text-white'
-                    : 'bg-gray-200 text-gray-800'
-                }`}
-              >
+            <div key={msg.id || i} className={`flex items-end gap-2 ${msg.sender_type === 'USER' ? 'justify-end' : 'justify-start'}`}>
+              {msg.sender_type === 'ADMIN' && (
+                <img src={ADMIN_AVATAR} className="w-7 h-7 rounded-full object-cover" />
+              )}
+
+              <div className={`px-3 py-2 rounded-lg max-w-[70%] ${msg.sender_type === 'USER' ? 'bg-[#8B7D6B] text-white' : 'bg-gray-200 text-gray-800'}`}>
                 <p className="text-sm break-words">{msg.content}</p>
-                
-                <p className={`text-xs mt-1 text-right ${
-                  msg.sender_type === 'USER'
-                    ? ' text-white'
-                    : ' text-gray-700'
-                }`}>
-                  {/* Sửa tên trường */}
+                <p className="text-xs mt-1 text-right opacity-80">
                   {new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
+
+              {msg.sender_type === 'USER' && (
+                <img
+                  src={msg.user_avatar || '/images/default-user.png'}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              )}
             </div>
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Ô nhập tin */}
       <div className="flex p-3 border-t border-gray-300 bg-white">
         <input
           type="text"
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
           placeholder="Nhập tin nhắn..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -209,7 +209,7 @@ export function ChatModal({
         />
         <button
           onClick={handleSend}
-          className="ml-2 px-4 py-2 bg-[#8B7D6B] text-white rounded-lg font-semibold hover:bg-[#8B7D6B]/80 disabled:opacity-50"
+          className="ml-2 px-4 py-2 bg-[#8B7D6B] text-white rounded-lg font-semibold disabled:opacity-50"
           disabled={sending || loading}
         >
           {sending ? '⏳' : 'Gửi'}
