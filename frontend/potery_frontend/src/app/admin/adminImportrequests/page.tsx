@@ -353,7 +353,7 @@ export default function ImportRequestListAdmin() {
                     <table className="min-w-full">
                         <thead className="bg-gray-100">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-xl w-[60px]">ID</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-xl w-[60px]">STT</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[150px]">Cửa hàng</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">Trạng thái</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">Ngày tạo</th>
@@ -362,9 +362,11 @@ export default function ImportRequestListAdmin() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredRequests.map((request) => (
+                            {filteredRequests.map((request, index) => (
                                 <tr key={request.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{request.id}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {((page - 1) * ITEMS_PER_PAGE) + index + 1}
+                                    </td>
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-[150px] truncate">
                                         {request.store_name || (request.store ? request.store.store_name : `ID: ${request.store_id}`)}
                                     </td>

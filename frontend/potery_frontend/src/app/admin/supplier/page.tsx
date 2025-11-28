@@ -25,7 +25,7 @@ export default function SupplierPage() {
   const [showModal, setShowModal] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(5);
+  const [pageSize] = useState(10);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
 
@@ -160,7 +160,7 @@ export default function SupplierPage() {
                   key={s.id}
                   className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
                 >
-                  <td className="px-1 py-3 text-gray-500 text-sm">{idx + 1}</td>
+                  <td className="px-1 py-3 text-gray-500 text-sm">{(currentPage - 1) * pageSize + idx + 1}</td>
                   <td className="px-1 py-3 text-gray-600 text-sm">{s.name}</td>
                   <td className="px-1 py-3 text-gray-600 text-sm">{s.address}</td>
                   <td className="px-1 py-3 text-gray-600 text-sm">{s.phone}</td>

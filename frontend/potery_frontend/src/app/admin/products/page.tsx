@@ -15,7 +15,7 @@ import ProductFormModal from "@/components/adminProducts/ProductFormModal";
 import ProductsTable from "@/components/adminProducts/ProductsTable";
 import { getSuppliers, Supplier } from "@/api/services/supplierService";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
-
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 export interface ProductFormErrors {
   name?: string;
   price?: string;
@@ -374,18 +374,19 @@ export default function ProductsPage() {
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-6">
                 <button
+                  title="back"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                  className="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
                 >
-                  Trước
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
                     onClick={() => handlePageChange(i + 1)}
                     className={`px-3 py-1 rounded-lg ${currentPage === i + 1
-                      ? "bg-indigo-600 text-white"
+                      ? "bg-orange-600 text-white"
                       : "bg-gray-200 hover:bg-gray-300"
                       }`}
                   >
@@ -393,11 +394,12 @@ export default function ProductsPage() {
                   </button>
                 ))}
                 <button
+                  title="next"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                  className="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
                 >
-                  Sau
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             )}

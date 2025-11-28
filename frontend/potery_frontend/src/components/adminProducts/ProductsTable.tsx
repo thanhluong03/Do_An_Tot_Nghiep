@@ -174,14 +174,17 @@ export default function ProductsTable({
                                                     // Sử dụng màu cam cho nút xem chi tiết
                                                     className="text-orange-700 hover:underline"
                                                 >
-                                                    
+
                                                     {expandedRow === p.id
                                                         ? "Ẩn chi tiết"
                                                         : "Xem chi tiết giá phân loại"}
                                                 </button>
                                             ) : (
                                                 // Hiển thị giá cố định nếu không có phân loại
-                                                p.price?.toLocaleString("vi-VN") + " ₫"
+                                                (Math.round(p.price) ?? 0).toLocaleString("vi-VN", {
+                                                    minimumFractionDigits: 0,
+                                                    maximumFractionDigits: 0,
+                                                }) + " ₫"
                                             )}
                                         </td>
 
@@ -292,7 +295,7 @@ export default function ProductsTable({
                                                                                     <th className="px-2 py-2 border border-gray-200 text-left">Phân loại 1</th>
                                                                                     <th className="px-2 py-2 border border-gray-200 text-left">Phân loại 2</th>
                                                                                     <th className="px-2 py-2 border border-gray-200 text-right">Giá bán (₫)</th>
-                                                                                    <th className="px-2 py-2 border border-gray-200 text-right">Số lượng</th>
+                                                                                    {/* <th className="px-2 py-2 border border-gray-200 text-right">Số lượng</th> */}
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -314,9 +317,9 @@ export default function ProductsTable({
                                                                                             <td className="border border-gray-200 px-4 py-2 text-right font-semibold text-gray-800">
                                                                                                 {price}
                                                                                             </td>
-                                                                                            <td className="border border-gray-200 px-4 py-2 text-right text-gray-800">
+                                                                                            {/* <td className="border border-gray-200 px-4 py-2 text-right text-gray-800">
                                                                                                 {qty}
-                                                                                            </td>
+                                                                                            </td> */}
                                                                                         </tr>
                                                                                     );
                                                                                 })}

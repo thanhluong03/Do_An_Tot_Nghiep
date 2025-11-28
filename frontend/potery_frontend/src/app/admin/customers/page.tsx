@@ -9,7 +9,7 @@ export default function CustomerPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(5);
+  const [pageSize] = useState(10);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function CustomerPage() {
                     key={c.id}
                     className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}
                   >
-                    <td className="px-4 py-3 text-gray-500 text-sm">{idx + 1}</td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">{(currentPage - 1) * pageSize + idx + 1}</td>
                     <td className="px-4 py-3">
                       {c.avatar_image ? (
                         <img

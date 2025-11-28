@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   listVouchersAdmin,
@@ -16,10 +16,11 @@ import {
 import { VoucherForm } from '@/components/adminVoucher/VoucherForm';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { Pencil, Trash2 } from 'lucide-react';
-
+import PaginationControls from '@/components/common/PaginationControls'; // <-- THÊM DÒNG NÀY
 const AdminVoucherPage: React.FC = () => {
   const [allVouchers, setAllVouchers] = useState<VoucherResponseDto[]>([]);
   const [vouchers, setVouchers] = useState<VoucherResponseDto[]>([]);
+  const [filteredVouchers, setFilteredVouchers] = useState<VoucherResponseDto[]>([]); // <--- ĐỔI 'vouchers' thành 'filteredVouchers'
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -27,21 +28,36 @@ const AdminVoucherPage: React.FC = () => {
   const [queryParams, setQueryParams] = useState<ListVoucherRequestDto>({ page: 1, size: 10, key: '' });
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
+  const pageSize = queryParams.size ?? 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredVouchers.slice(startIndex, startIndex + pageSize);
+  }, [filteredVouchers, currentPage, pageSize]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
   // --- FETCH DATA ---
   const fetchVouchers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listVouchersAdmin(queryParams);
+      // Lấy toàn bộ dữ liệu (hoặc số lượng lớn) để phân trang FE
+      const data = await listVouchersAdmin({ page: 1, size: 1000, key: '' });
       setAllVouchers(data);
-      setVouchers(data);
+
+      // Cập nhật filteredVouchers ngay sau khi fetch (trường hợp key rỗng)
+      setFilteredVouchers(data);
+      setCurrentPage(1); // Reset về trang 1
     } catch (err) {
       setError('Lỗi khi tải danh sách voucher.');
       toast.error('Không thể tải danh sách voucher!');
     } finally {
       setIsLoading(false);
     }
-  }, [queryParams.page, queryParams.size]);
+  }, []);
 
   useEffect(() => {
     fetchVouchers();
@@ -113,18 +129,15 @@ const AdminVoucherPage: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const keyword = queryParams.key?.trim().toLowerCase() || '';
-    if (keyword === '') {
-      setVouchers(allVouchers);
-      return;
-    }
 
+    // Lọc trên toàn bộ dữ liệu (allVouchers)
     const filtered = allVouchers.filter(voucher =>
       voucher.name?.toLowerCase().includes(keyword)
     );
 
-    setVouchers(filtered);
+    setFilteredVouchers(filtered); // <-- Cập nhật state đã đổi tên
+    setCurrentPage(1); // <-- THÊM: Reset về trang 1 sau khi tìm kiếm
   };
-
   const formatTime = (date?: Date) => {
     if (!date) return 'Vô thời hạn';
     return new Date(date).toLocaleString('vi-VN', {
@@ -205,12 +218,12 @@ const AdminVoucherPage: React.FC = () => {
         </div>
       )}
 
-      {!isLoading && vouchers.length > 0 && (
+      {!isLoading && filteredVouchers.length > 0 && (
         <div className="overflow-x-auto bg-white rounded-xl shadow-2xl">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-100">
               <tr>
-                <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">ID</th>
+                <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">STT</th>
                 <th className="py-4 px-6 text-left text-xs font-extrabold text-gray-600 uppercase">Tên Voucher</th>
                 <th className="py-4 px-6 text-center text-xs font-extrabold text-gray-600 uppercase">Giảm Giá (%)</th>
                 <th className="py-4 px-6 text-center text-xs font-extrabold text-gray-600 uppercase">Số Lượng</th>
@@ -223,21 +236,28 @@ const AdminVoucherPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {vouchers.map((voucher) => (
+              {currentItems.map((voucher, index) => (
                 <tr key={voucher.id} className="hover:bg-yellow-50 transition duration-100">
-                  <td className="py-3 px-6 text-sm font-semibold text-gray-900">{voucher.id}</td>
+                  <td className="py-3 px-6 text-sm font-semibold text-gray-900">{(currentPage - 1) * pageSize + index + 1}</td>
                   <td className="py-3 px-6 text-sm text-gray-800">{voucher.name}</td>
-                  <td className="py-3 px-6 text-sm text-center text-gray-700">{voucher.voucher_percentage}%</td>
+                  <td className="py-3 px-6 text-sm text-center text-gray-700">{Math.round(voucher.voucher_percentage ?? 0)}%</td>
                   <td className="py-3 px-6 text-sm text-center text-gray-700">{voucher.quantity}</td>
-                  <td className="py-3 px-6 text-sm text-right text-gray-700">{voucher.order_conditions?.toLocaleString() || 0}</td>
+                  <td className="py-3 px-6 text-sm text-right text-gray-700">
+                    {/* Ép kiểu sang Number và sử dụng tùy chọn định dạng */}
+                    {Number(voucher.order_conditions).toLocaleString('vi-VN', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                      // Dùng useGrouping: false nếu giá trị nhỏ hơn 10000 
+                      useGrouping: Number(voucher.order_conditions) >= 10000,
+                    }) || '0'}
+                  </td>
                   <td className="py-3 px-6 text-sm text-gray-700">{formatTime(voucher.start_time)}</td>
                   <td className="py-3 px-6 text-sm text-gray-700">{formatTime(voucher.end_time)}</td>
                   <td className="py-3 px-6 text-sm text-gray-700">{formatTime(voucher.effective_period_ends)}</td>
                   <td className="py-3 px-6 text-center">
                     <span
-                      className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
-                        voucher.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}
+                      className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${voucher.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}
                     >
                       {voucher.is_active ? 'Hoạt động' : 'Tạm dừng'}
                     </span>
@@ -264,8 +284,14 @@ const AdminVoucherPage: React.FC = () => {
           </table>
         </div>
       )}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={filteredVouchers.length} // Tổng số mục ĐÃ LỌC
+        onPageChange={handlePageChange}
+      />
 
-      {!isLoading && vouchers.length === 0 && (
+      {!isLoading && filteredVouchers.length === 0 && (
         <div className="text-center py-20 border border-dashed border-gray-300 rounded-xl bg-white shadow-inner">
           <p className="text-xl text-gray-600">Không tìm thấy Voucher nào. Hãy tạo Voucher mới!</p>
         </div>

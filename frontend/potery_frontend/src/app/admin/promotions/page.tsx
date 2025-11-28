@@ -12,6 +12,7 @@ import {
 import { Pencil, Trash2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import ConfirmDialog from "@/components/common/ConfirmDialog"; // IMPORT MỚI
+import PaginationControls from "@/components/common/PaginationControls";
 
 const toDatetimeLocal = (isoDateString?: Date | string) => {
     if (!isoDateString) return "";
@@ -30,12 +31,19 @@ export default function PromotionPage() {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize] = useState(5);
+    const [pageSize] = useState(10);
     const [productAssignments, setProductAssignments] = useState<ProductPromotionAssignment[]>([]);
     const [isSavingAssignments, setIsSavingAssignments] = useState(false);
     const [selectedPromotionId, setSelectedPromotionId] = useState<number | null>(null);
     const [productCheckboxValue, setProductCheckboxValue] = useState<string | string[] | undefined>(undefined);
 
+    const [currentAssignedPage, setCurrentAssignedPage] = useState(1);
+    const [assignedPageSize, setAssignedPageSize] = useState(10);
+
+    const handleAssignedPageChange = (page: number) => {
+        setCurrentAssignedPage(page);
+        window.scrollTo({ top: document.getElementById('assignment-table')?.offsetTop || 0, behavior: 'smooth' });
+    };
     // STATES MỚI CHO CONFIRM DIALOG
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState<number | null>(null);
@@ -264,14 +272,31 @@ export default function PromotionPage() {
             toast.error("Hủy gán khuyến mãi thất bại.", { id: loadingToastId });
         }
     };
-    
-    const totalPages = Math.ceil(promotions.length / pageSize);
+
+    // Dòng 357 (giữ lại và thêm hàm xử lý chuyển trang):
+    // const totalPages = Math.ceil(promotions.length / pageSize); // KHÔNG CẦN NỮA
     const startIndex = (currentPage - 1) * pageSize;
-    const currentItems = promotions.slice(startIndex, startIndex + pageSize);
+    const currentItems = promotions.slice(startIndex, startIndex + pageSize); // CẦN GIỮ LẠI VÀ CHUYỂN VÀO useMemo/useState NẾU CẦN
     const activePromotions = promotions.filter(p => p.is_active && p.id);
     const assignedProductAssignments = useMemo(() => {
         return productAssignments.filter(a => a.promotionId !== null);
     }, [productAssignments]);
+
+    // THÊM LOGIC PHÂN TRANG CHO BẢNG GÁN SẢN PHẨM
+    const assignedItemsToDisplay = useMemo(() => {
+        const startIndex = (currentAssignedPage - 1) * assignedPageSize;
+        return assignedProductAssignments.slice(startIndex, startIndex + assignedPageSize);
+    }, [assignedProductAssignments, currentAssignedPage, assignedPageSize]);
+    // THÊM HÀM XỬ LÝ CHUYỂN TRANG
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    // CẬP NHẬT LẠI currentItems DÙNG useMemo để tối ưu (Tùy chọn)
+    const itemsToDisplay = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize;
+        return promotions.slice(startIndex, startIndex + pageSize);
+    }, [promotions, currentPage, pageSize]);
 
     return (
         <div className="min-h-screen bg-white rounded-xl shadow-2xl  p-4">
@@ -348,7 +373,7 @@ export default function PromotionPage() {
                     <table className="w-full border-collapse bg-white">
                         <thead>
                             <tr className="bg-gray-200 text-black text-sm font-semibold uppercase tracking-wider">
-                                <th className="px-5 py-3 text-left rounded-tl-xl">ID</th>
+                                <th className="px-5 py-3 text-left rounded-tl-xl">Stt</th>
                                 <th className="px-5 py-3 text-left">Tên/Mô tả</th>
                                 <th className="px-5 py-3 text-left">Giá trị giảm</th>
                                 <th className="px-5 py-3 text-left">Thời gian</th>
@@ -357,21 +382,32 @@ export default function PromotionPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {currentItems.map((promo, idx) => (
+                            {itemsToDisplay.map((promo, idx) => (
                                 <tr
                                     key={promo.id}
                                     className={`border-b border-gray-100 transition hover:bg-gray-50 ${editingId === promo.id ? 'bg-yellow-50' : ''}`}
                                 >
-                                    <td className="px-5 py-3 text-sm font-mono text-gray-600">{promo.id}</td>
+                                    <td className="px-5 py-3 text-sm font-mono text-gray-600">{(currentPage - 1) * pageSize + idx + 1}</td>
                                     <td className="px-5 py-3 text-sm">
                                         <p className="font-semibold text-gray-800">{promo.name}</p>
                                         <p className="text-xs text-gray-500 truncate max-w-xs">{promo.description || '(Không mô tả)'}</p>
                                     </td>
                                     <td className="px-5 py-3 text-sm font-bold text-indigo-600">
-                                        {promo.discount_type === DiscountType.PERCENTAGE
-                                            ? `${promo.discount_value}%`
-                                            : `${promo.discount_value?.toLocaleString()} VNĐ`
-                                        }
+                                        {/* 1. Đảm bảo giá trị là Number và gán vào biến */}
+                                        {(() => {
+                                            const value = Number(promo.discount_value);
+
+                                            return promo.discount_type === DiscountType.PERCENTAGE
+                                                ? `${value}%`
+                                                : `${value.toLocaleString('vi-VN', {
+                                                    // 2. Thiết lập hiển thị số thập phân (luôn là 0)
+                                                    minimumFractionDigits: 0,
+                                                    maximumFractionDigits: 0,
+                                                    // 3. THÊM LOGIC ĐIỀU KIỆN CHO DẤU PHÂN CÁCH
+                                                    // Bật useGrouping nếu giá trị >= 10000, tắt nếu < 10000
+                                                    useGrouping: value >= 10000,
+                                                })} VNĐ`;
+                                        })()}
                                         <p className="text-xs font-normal text-gray-500">({promo.discount_type})</p>
                                     </td>
                                     <td className="px-5 py-3 text-xs text-gray-600">
@@ -413,7 +449,17 @@ export default function PromotionPage() {
                             )}
                         </tbody>
                     </table>
+                    {/* Pagination */}
+                    <div className="mt-6 p-4">
+                        <PaginationControls
+                            pageSize={pageSize}
+                            totalItems={promotions.length}
+                            currentPage={currentPage}
+                            onPageChange={handlePageChange}
+                        />
+                    </div>
                 </div>
+                <hr className="my-10 border-gray-200" />
 
                 {/* 5. KHU VỰC GÁN KHUYẾN MÃI HÀNG LOẠT */}
                 <div className="mt-10">
@@ -483,10 +529,10 @@ export default function PromotionPage() {
                                             selectedProductIds.length === 0
                                         }
                                         className={`w-full px-6 py-2.5 rounded-xl font-semibold shadow-md transition-all duration-150 transform active:scale-95 ${isSavingAssignments ||
-                                                selectedPromotionId === null ||
-                                                selectedProductIds.length === 0
-                                                ? "bg-orange-300 text-gray-100 cursor-not-allowed shadow-none"
-                                                : "bg-orange-600 hover:bg-orange-700 text-white hover:shadow-lg"
+                                            selectedPromotionId === null ||
+                                            selectedProductIds.length === 0
+                                            ? "bg-orange-300 text-gray-100 cursor-not-allowed shadow-none"
+                                            : "bg-orange-600 hover:bg-orange-700 text-white hover:shadow-lg"
                                             }`}
                                     >
                                         {isSavingAssignments ? "Đang Lưu..." : "Lưu Gán Khuyến mãi"}
@@ -533,20 +579,20 @@ export default function PromotionPage() {
                 <p className="text-sm text-gray-500 text-center mb-4 italic">
                     (Chỉ hiển thị các sản phẩm đang có Khuyến mãi được gán)
                 </p>
-                <div className="overflow-x-auto max-h-[400px] border border-gray-100 rounded-lg shadow-inner">
+                <div className="overflow-x-auto  border border-gray-100 rounded-lg shadow-inner">
                     <table className="w-full border-collapse bg-white modern-table">
                         <thead>
                             <tr className="bg-gray-50 text-gray-600 text-sm font-medium uppercase sticky top-0 z-10 border-b border-gray-200">
-                                <th className="px-5 py-3 text-left w-[120px]">ID Sản phẩm</th>
+                                <th className="px-5 py-3 text-left w-[120px]">Stt</th>
                                 <th className="px-5 py-3 text-left">Tên Sản phẩm</th>
                                 <th className="px-5 py-3 text-left w-1/3">Khuyến mãi hiện tại</th>
                                 <th className="px-5 py-3 text-center w-[300px]">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {assignedProductAssignments.map((assignment, idx) => (
+                            {assignedItemsToDisplay.map((assignment, idx) => (
                                 <tr key={assignment.productId} className={`border-b border-gray-100 transition hover:bg-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                                    <td className="px-5 py-3 text-sm font-mono text-gray-600">{assignment.productId}</td>
+                                    <td className="px-5 py-3 text-sm font-mono text-gray-600">{(currentAssignedPage - 1) * assignedPageSize + idx + 1}</td>
                                     <td className="px-5 py-3 font-semibold text-gray-800">
                                         {assignment.product?.name || `Product ID ${assignment.productId} (Không tên)`}
                                     </td>
@@ -597,34 +643,12 @@ export default function PromotionPage() {
                             )}
                         </tbody>
                     </table>
-                </div>
-
-                <hr className="my-10 border-gray-200" />
-
-                {/* Pagination */}
-                <div className="flex justify-between items-center mt-6 p-4">
-                    <p className="text-sm text-gray-600">
-                        Hiển thị {startIndex + 1} - {Math.min(startIndex + pageSize, promotions.length)} trên {promotions.length}
-                    </p>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                            disabled={currentPage === 1}
-                            className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 disabled:opacity-50 transition"
-                        >
-                            &larr; Trước
-                        </button>
-                        <span className="px-4 py-2 font-semibold text-indigo-600 bg-indigo-50 rounded-lg">
-                            {currentPage}/{totalPages || 1}
-                        </span>
-                        <button
-                            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                            disabled={currentPage === totalPages || totalPages === 0}
-                            className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 disabled:opacity-50 transition"
-                        >
-                            Sau &rarr;
-                        </button>
-                    </div>
+                    <PaginationControls
+                        pageSize={assignedPageSize}
+                        totalItems={assignedProductAssignments.length}
+                        currentPage={currentAssignedPage}
+                        onPageChange={handleAssignedPageChange}
+                    />
                 </div>
             </div>
         </div>

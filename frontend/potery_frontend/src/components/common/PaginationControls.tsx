@@ -59,9 +59,10 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
     return (
         <div className="flex justify-center items-center space-x-2 p-4 bg-white border-t border-gray-100 mt-4 rounded-b-xl">
             <button
+                title='back'
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-2 border rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition"
+                className="p-2 rounded-lg text-gray-600 bg-gray-100 disabled:opacity-50 transition"
             >
                 <ChevronLeft size={16} />
             </button>
@@ -86,10 +87,10 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
             ))}
 
             <button
-                
+                title='next'
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-2 border rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition"
+                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition"
             >
                 <ChevronRight size={16} />
             </button>
