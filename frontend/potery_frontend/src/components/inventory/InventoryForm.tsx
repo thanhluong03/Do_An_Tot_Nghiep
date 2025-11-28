@@ -458,13 +458,19 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                         {/* Thông tin sản phẩm */}
                                                         <div className="flex-1 min-w-0">
                                                             <h5 className="text-gray-800 text-sm truncate">{product?.name}</h5>
+                                                            {/* Hiển thị giá nếu không có phân loại */}
+                                                            {classifications.length === 0 && product?.price !== undefined && (
+                                                                <p className="text-xs text-green-600 font-semibold mt-1">
+                                                                    Giá bán: {Number(product.price).toLocaleString('vi-VN', { maximumFractionDigits: 0 })}đ
+                                                                </p>
+                                                            )}
                                                             <p className="text-sm text-gray-500 mt-1">Còn lại: <span className="text-gray-500">{product?.total_quantity_divided || 0}</span></p>
                                                         </div>
 
                                                         {/* Input số lượng (không phân loại) */}
                                                         {classifications.length === 0 && (
                                                             <div className="flex flex-col items-end w-32">
-                                                                <label className="text-xs font-medium text-gray-600 mb-1">Số lượng</label>
+                                                                <label className="text-xs font-medium text-gray-600 mb-1">Số lượng chia: </label>
                                                                 <div className="relative w-full">
                                                                     <input
                                                                         title="individual_quantity"
@@ -500,17 +506,17 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                                             <p className="text-xs text-gray-600">
                                                                             </p>
                                                                             <p className="text-xs text-green-600 font-medium">
-                                                                                Giá: {classification.price?.toLocaleString()}đ
+                                                                                Giá bán: {Number(classification.price).toLocaleString('vi-VN', { maximumFractionDigits: 0 })}đ
                                                                             </p>
                                                                         </div>
                                                                         <div className="text-right">
-                                                                            <p className="text-xs text-gray-600">Còn</p>
+                                                                            <p className="text-xs text-gray-600">Số lượng còn</p>
                                                                             <p className="font-medium text-blue-600">{classification.quantity}</p>
                                                                         </div>
                                                                     </div>
 
                                                                     <div className="flex items-center gap-2">
-                                                                        <label className="text-sm font-medium text-gray-700 min-w-[40px]">Chia:</label>
+                                                                        <label className="text-sm font-medium text-gray-700 min-w-[40px]">Số lượng chia:</label>
                                                                         <div className="relative flex-1">
                                                                             <input
                                                                                 type="number"
@@ -540,10 +546,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg bg-gray-50">
-                                        <Box size={48} className="mx-auto mb-3 text-gray-400" />
-                                        <p>Vui lòng chọn sản phẩm để xem phân loại</p>
-                                    </div>
+                                    null
                                 )}
                             </div>
                         </div>
@@ -650,17 +653,9 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                                             <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
                                                                             <h6 className="font-medium text-gray-900 text-xs">{classification.name}</h6>
                                                                         </div>
-                                                                        <div className="space-y-1">
-                                                                            <p className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
-                                                                                {classification.attribute1_name}
-                                                                            </p>
-                                                                            <p className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
-                                                                                {classification.attribute2_name}
-                                                                            </p>
-                                                                        </div>
                                                                         <div className="mt-2">
                                                                             <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-                                                                                Còn: {classification.quantity}
+                                                                                Còn lại: {classification.quantity}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -743,7 +738,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                 {!canSubmit && !editingId && (
                     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                         <p className="text-sm text-amber-700 font-medium text-center">
-                            Vui lòng chọn ít nhất 1 sản phẩm và 1 cửa hàng để tiếp tục
+                            Vui lòng chọn ít nhất 1 sản phẩm và 1 cửa hàng hoặc nhập đúng số lượng để tiếp tục
                         </p>
                     </div>
                 )}
@@ -753,7 +748,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         onClick={handleCancelEdit}
                         className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
                     >
-                        {editingId ? "HỦY BỎ" : "ĐÓNG FORM"}
+                        {editingId ? "Hủy" : "Đóng"}
                     </button>
 
                     <button
@@ -764,7 +759,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                             : 'bg-gray-400 cursor-not-allowed opacity-50'
                             }`}
                     >
-                        {editingId ? "CẬP NHẬT TỒN KHO" : "THÊM MỚI TỒN KHO"}
+                        {editingId ? "Cập nhật tồn kho" : "Thêm mới tồn kho"}
                     </button>
                 </div>
             </div>

@@ -172,7 +172,7 @@ const mapProduct = (p: any): Product => {
     originalPrice: minPrice < maxPrice ? maxPrice : undefined, // Show price range
     discount,
     images,
-    category: p.category ?? '',
+    category: String(p.category_id ?? p.category ?? ''),
     category_name: p.category_name ?? '',
     rating: Number(p.rating ?? 5),
     reviewCount: Number(p.reviewCount ?? 0),
@@ -230,6 +230,25 @@ const getInventoryList = async (): Promise<InventoryItem[]> => {
 };
 // -----------------------------------
 export const productApi = {
+  // Lấy sản phẩm theo cửa hàng
+  getProductsByStore: async (storeId: number | string): Promise<{ products: Product[] }> => {
+    try {
+      const response = await api.get(`/products/listproduct-by-store/${storeId}`);
+      const rawData = response.data;
+      const productsArray = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.products) ? rawData.products
+          : Array.isArray(rawData?.data) ? rawData.data
+            : Array.isArray(rawData?.items) ? rawData.items
+              : Array.isArray(rawData?.rows) ? rawData.rows
+                : [];
+      const products: Product[] = productsArray.map(mapProduct);
+      return { products };
+    } catch (error) {
+      console.error('Failed to fetch products by store:', error);
+      return { products: [] };
+    }
+  },
   // Lấy danh sách sản phẩm và tích hợp số lượng tồn kho
   getProducts: async (params?: {
     page?: number;
@@ -411,7 +430,7 @@ export const productApi = {
       const response = await api.get('/products/best-selling', {
         params: { limit }
       });
-      
+
       const rawData = response.data;
       const productsArray = Array.isArray(rawData)
         ? rawData
@@ -423,6 +442,107 @@ export const productApi = {
     } catch (error) {
       console.error('Failed to fetch best selling products:', error);
       throw new Error('Failed to fetch best selling products');
+    }
+  },
+
+  // ===== INVENTORY & STORE BUSINESS LOGIC =====
+
+  // Lấy danh sách cửa hàng cho dropdown
+  getStoresForDropdown: async () => {
+    try {
+      const { getStoresList } = await import('../services/productApi');
+      const rawData = await getStoresList();
+      const storesData = rawData.stores || rawData;
+      const stores = Array.isArray(storesData) ? storesData : [];
+      return stores.map((s: { id: number; store_name: string }) => ({
+        id: s.id as number,
+        name: s.store_name
+      }));
+    } catch (error) {
+      console.error('Failed to fetch stores:', error);
+      return [];
+    }
+  },
+
+  // Lấy danh sách sản phẩm có tồn kho trong cửa hàng
+  getStoreProducts: async (storeId: number) => {
+    try {
+      const { getInventoriesList } = await import('../services/productApi');
+      const inventories = await getInventoriesList({ store_id: storeId });
+      const inventoryData = inventories?.data || inventories;
+      const inventoryArray = Array.isArray(inventoryData) ? inventoryData : [];
+
+      const uniqueProducts = new Map<number, string>();
+
+      // Lấy tất cả sản phẩm để mapping tên
+      const { products } = await productApi.getProducts({ limit: 1000 });
+      const productMap = new Map(products.map(p => [Number(p.id), p.name]));
+
+      // Chỉ lấy sản phẩm có tồn kho
+      inventoryArray.forEach((inv: { product_id: number }) => {
+        if (inv.product_id && !uniqueProducts.has(inv.product_id)) {
+          const productName = productMap.get(inv.product_id);
+          if (productName) {
+            uniqueProducts.set(inv.product_id, productName);
+          }
+        }
+      });
+
+      return Array.from(uniqueProducts.entries()).map(([id, name]) => ({ id, name }));
+    } catch (error) {
+      console.error('Error fetching store products:', error);
+      return [];
+    }
+  },
+
+  // Lấy phân loại sản phẩm
+  getProductClassifications: async (productId: number) => {
+    try {
+      const { getProductClassificationsList } = await import('../services/productApi');
+      const rawData = await getProductClassificationsList(productId);
+      return Array.isArray(rawData) ? rawData : [];
+    } catch (error) {
+      console.error('Error fetching product classifications:', error);
+      return [];
+    }
+  },
+
+  // Lấy chi tiết tồn kho sản phẩm tại cửa hàng
+  getStoreProductInventoryDetails: async (storeId: number, productId: number) => {
+    try {
+      const { getInventoriesList, getInventoryDetails } = await import('../services/productApi');
+
+      // Tìm inventory của sản phẩm tại cửa hàng
+      const inventories = await getInventoriesList({ store_id: storeId });
+      const inventoryData = inventories?.data || inventories;
+      const inventoryArray = Array.isArray(inventoryData) ? inventoryData : [];
+      const inventory = inventoryArray.find((inv: { product_id: number; id: number }) => inv.product_id === productId);
+
+      if (!inventory) return null;
+
+      // Lấy chi tiết combo
+      const details = await getInventoryDetails(inventory.id);
+      return details;
+    } catch (error) {
+      console.error('Error fetching store product inventory details:', error);
+      return null;
+    }
+  },
+
+  // Chuyển hàng giữa cửa hàng
+  transferInventory: async (transferData: {
+    product_id: number;
+    from_store_ids: number[];
+    to_store_ids: number[];
+    details?: { classification_attribute_relationship_id: number; quantity: number; }[];
+  }) => {
+    try {
+      const { transferInventoryRaw } = await import('../services/productApi');
+      const result = await transferInventoryRaw(transferData);
+      return result;
+    } catch (error) {
+      console.error('Error transferring inventory:', error);
+      throw error;
     }
   }
 };

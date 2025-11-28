@@ -221,7 +221,8 @@ export class ProductController {
         if (isNaN(catId)) {
             return { products: [] };
         }
-        return await this.productService.findAllByInventoryWithCategory(catId);
+        const result = await this.productService.findAllByInventoryWithCategory(catId);
+        return result;
     }
 
     @Get('productdetail-by-inventory/:productId')
