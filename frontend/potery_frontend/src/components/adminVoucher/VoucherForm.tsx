@@ -72,7 +72,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
     };
 
     return (
-        <form onSubmit={handleSubmit} className="relative p-6 border rounded-xl shadow-2xl max-w-lg mx-auto bg-white transition-all duration-300">
+        <form onSubmit={handleSubmit} className="relative p-6 border rounded-xl shadow-2xl max-w-8xl mx-auto bg-white transition-all duration-300">
             
             {/* NÚT ĐÓNG (X) */}
             <button
@@ -85,7 +85,7 @@ export const VoucherForm: React.FC<VoucherFormProps> = ({ initialData, onSubmit,
             </button>
             {/* HẾT NÚT ĐÓNG */}
 
-            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 border-b pb-2 pr-10">
+            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 pb-2 pr-10">
                 {isEditMode ? 'Cập Nhật Voucher' : 'Thêm Mới Voucher'}
             </h2>
             <div className="mb-4">

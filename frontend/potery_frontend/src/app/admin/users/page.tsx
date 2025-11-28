@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import UserTable from "@/components/adminUsers/UserTable";
 import { getRoles, Role } from "@/api/services/roleService";
@@ -13,6 +13,7 @@ import {
 } from "@/api/services/userService";
 import UserFormModal from "@/components/adminUsers/UserFormModal";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import PaginationControls from "@/components/common/PaginationControls";
 import { getStores, Store } from "@/api/services/storeService";
 
 export default function UserPage() {
@@ -23,26 +24,46 @@ export default function UserPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10); // Đặt kích thước trang mặc định
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const data = await listUsers();
       setUsers(data);
+      // ⬅️ SỬA: Đảm bảo trở về trang 1 khi dữ liệu mới được tải
+      setCurrentPage(1);
     } catch (error) {
       toast.error("Tải danh sách người dùng thất bại.");
     } finally {
       setLoading(false);
     }
   };
+  const totalUsers = users.length;
+  const totalPages = Math.ceil(totalUsers / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+
+  // Sử dụng useMemo để tính toán danh sách người dùng trên trang hiện tại
+  const currentUsers = useMemo(() => {
+    return users.slice(startIndex, startIndex + pageSize);
+  }, [users, startIndex, pageSize]);
+
+  // ⬅️ THÊM: Hàm xử lý thay đổi trang
+  const handlePageChange = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
   const fetchRoles = async () => {
-  try {
-    const data = await getRoles({});
-    setRoles(data);
-  } catch {
-    toast.error("Không thể tải danh sách vai trò!");
-  }
-};
+    try {
+      const data = await getRoles({});
+      setRoles(data);
+
+    } catch {
+      toast.error("Không thể tải danh sách vai trò!");
+    }
+  };
   const fetchStores = async () => {
     try {
       const data = await getStores();
@@ -50,7 +71,7 @@ export default function UserPage() {
     } catch {
       toast.error("Không thể tải danh sách cửa hàng!");
     }
-};
+  };
 
 
   useEffect(() => {
@@ -59,12 +80,13 @@ export default function UserPage() {
     fetchStores();
   }, []);
 
-  
+
   const handleCreate = async (formData: FormData) => {
     try {
       await createUser(formData);
       toast.success("Tạo người dùng thành công.");
       fetchUsers();
+
 
     } catch (error) {
       toast.error("Tạo người dùng thất bại.");
@@ -123,18 +145,30 @@ export default function UserPage() {
         </div>
       ) : (
         <UserTable
-          users={users}
+          // ⬅️ SỬA: Chỉ truyền dữ liệu của trang hiện tại
+          users={currentUsers}
           roles={roles}
           stores={stores}
+          // ⬅️ TRUYỀN THÊM startIndex để tính STT
+          startIndex={startIndex}
           onEdit={(user) => {
             setEditingUser(user);
             setModalOpen(true);
           }}
-          
           onDelete={handleDelete}
         />
       )}
+      {totalUsers > pageSize && (
+        // Nếu bạn có component PaginationControls, hãy sử dụng nó:
 
+        <PaginationControls
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalUsers}
+          onPageChange={handlePageChange}
+        />
+
+      )}
       {modalOpen && (
         <UserFormModal
           user={editingUser}
@@ -158,4 +192,3 @@ export default function UserPage() {
     </div>
   );
 }
-  

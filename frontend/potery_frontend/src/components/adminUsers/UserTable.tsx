@@ -11,6 +11,7 @@ interface UserTableProps {
   stores: Store[];
   onEdit: (user: User) => void;
   onDelete: (id: number) => void;
+  startIndex: number;
 }
 const roleLabels: Record<string, string> = {
   DRIVER: "Tài xế",
@@ -24,11 +25,12 @@ export default function UserTable({
   onDelete,
   roles,
   stores,
+  startIndex,
 }: UserTableProps) {
- const getRoleName = (roleId: number): string => {
-  const role = roles.find((r) => r.id === roleId);
-  return role ? roleLabels[role.name] || role.name : `#${roleId}`;
-};
+  const getRoleName = (roleId: number): string => {
+    const role = roles.find((r) => r.id === roleId);
+    return role ? roleLabels[role.name] || role.name : `#${roleId}`;
+  };
 
   const getStoreName = (storeId: number | string): string => {
     const store = stores.find((s) => Number(s.id) === Number(storeId));
@@ -63,7 +65,7 @@ export default function UserTable({
                   className="border-t border-gray-100 hover:bg-indigo-50 transition duration-100"
                 >
                   <td className="px-4 py-3 text-center font-semibold text-gray-500">
-                    {index + 1}
+                    {startIndex + index + 1}
                   </td>
 
                   <td className="px-4 py-3">
