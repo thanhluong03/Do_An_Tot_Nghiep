@@ -112,7 +112,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
             htmlFor={`${name}-all`}
             className="ml-3 text-base font-bold text-orange-600 cursor-pointer select-none"
         >
-            --- TẤT CẢ {allLabel} ---
+            --- Tất cả {allLabel} ---
         </label>
     </div>
 

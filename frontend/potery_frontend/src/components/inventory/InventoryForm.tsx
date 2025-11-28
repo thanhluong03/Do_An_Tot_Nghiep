@@ -40,22 +40,45 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     // State để quản lý phân loại sản phẩm
     const [productClassifications, setProductClassifications] = useState<{ [productId: number]: ProductClassification[] }>({});
     const [classificationQuantities, setClassificationQuantities] = useState<{ [classificationId: number]: number }>({});
-    const [,setShowClassifications] = useState(false);
+    const [, setShowClassifications] = useState(false);
+    // State để quản lý số lượng riêng cho từng sản phẩm không có phân loại
+    const [individualQuantities, setIndividualQuantities] = useState<{ [productId: number]: number }>({});
+    // State để quản lý lỗi validation
+    const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
 
     // Load classifications khi sản phẩm được chọn
     useEffect(() => {
         const loadClassifications = async () => {
-            if (!form.product_id) return;
+            if (!form.product_id) {
+                // Reset state khi không có sản phẩm nào được chọn
+                setProductClassifications({});
+                setClassificationQuantities({});
+                setIndividualQuantities({});
+                setValidationErrors({});
+                setShowClassifications(false);
+                return;
+            }
 
             const selectedProductIds: number[] = [];
             if (Array.isArray(form.product_id)) {
                 selectedProductIds.push(...form.product_id.map(id => Number(id)));
+            } else if (form.product_id === 'all') {
+                // Khi chọn "all", thêm tất cả sản phẩm vào danh sách
+                selectedProductIds.push(...products.map(p => p.id));
             } else if (form.product_id !== 'all' && form.product_id) {
                 selectedProductIds.push(Number(form.product_id));
             }
 
-            if (selectedProductIds.length === 0) return;
+            if (selectedProductIds.length === 0) {
+                // Reset state khi không có ID hợp lệ
+                setProductClassifications({});
+                setClassificationQuantities({});
+                setIndividualQuantities({});
+                setValidationErrors({});
+                setShowClassifications(false);
+                return;
+            }
 
             try {
                 const newClassifications: { [productId: number]: ProductClassification[] } = {};
@@ -73,7 +96,9 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                 setShowClassifications(hasClassifications);
                 // Chỉ reset quantities khi không đang edit
                 if (!editingId) {
-                    setClassificationQuantities({}); // Reset quantities
+                    setClassificationQuantities({}); // Reset quantities hoàn toàn khi tạo mới
+                    setIndividualQuantities({}); // Reset individual quantities
+                    setValidationErrors({}); // Reset validation errors
                 }
             } catch (error) {
                 console.error("Error loading classifications:", error);
@@ -81,7 +106,30 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
         };
 
         loadClassifications();
-    }, [form.product_id, editingId]);
+    }, [form.product_id, editingId, products]);
+
+    // Filter classification quantities khi productClassifications thay đổi
+    useEffect(() => {
+        if (!editingId && Object.keys(productClassifications).length > 0) {
+            // Chỉ giữ lại quantities của classifications thuộc sản phẩm hiện tại
+            const validClassificationIds = new Set<number>();
+            Object.values(productClassifications).forEach(classifications => {
+                classifications.forEach(classification => {
+                    validClassificationIds.add(classification.id);
+                });
+            });
+
+            setClassificationQuantities(prev => {
+                const filtered: { [classificationId: number]: number } = {};
+                Object.entries(prev).forEach(([classificationId, quantity]) => {
+                    if (validClassificationIds.has(parseInt(classificationId))) {
+                        filtered[parseInt(classificationId)] = quantity;
+                    }
+                });
+                return filtered;
+            });
+        }
+    }, [productClassifications, editingId]);
 
     // Load edit classification data when editing
     useEffect(() => {
@@ -91,15 +139,88 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     }, [editingId, editClassificationData]);
 
     const handleClassificationQuantityChange = (classificationId: number, quantity: number) => {
+        // Tìm classification để lấy max quantity
+        let maxQuantity = 0;
+        Object.values(productClassifications).forEach(classifications => {
+            const classification = classifications.find(c => c.id === classificationId);
+            if (classification) {
+                maxQuantity = classification.quantity;
+            }
+        });
+
+        // Lưu giá trị thực tế mà người dùng nhập (không giới hạn)
         setClassificationQuantities(prev => ({
             ...prev,
-            [classificationId]: Math.max(0, quantity)
+            [classificationId]: Math.max(0, quantity) // Chỉ giới hạn >= 0
         }));
-    };
+
+        // Cập nhật lỗi validation
+        const errorKey = `classification_${classificationId}`;
+        if (quantity > maxQuantity) {
+            setValidationErrors(prev => ({
+                ...prev,
+                [errorKey]: `Vượt quá số lượng có sẵn (${maxQuantity})`
+            }));
+        } else {
+            setValidationErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[errorKey];
+                return newErrors;
+            });
+        }
+    }; const handleIndividualQuantityChange = (productId: number, quantity: number) => {
+        const product = allProducts.find(p => p.id === productId);
+        const maxQuantity = product?.total_quantity_divided || 0;
+
+        // Lưu giá trị thực tế mà người dùng nhập (không giới hạn)
+        setIndividualQuantities(prev => ({
+            ...prev,
+            [productId]: Math.max(0, quantity) // Chỉ giới hạn >= 0
+        }));
+
+        // Cập nhật lỗi validation
+        const errorKey = `individual_${productId}`;
+        if (quantity > maxQuantity) {
+            setValidationErrors(prev => ({
+                ...prev,
+                [errorKey]: `Vượt quá số lượng có sẵn (${maxQuantity})`
+            }));
+        } else {
+            setValidationErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[errorKey];
+                return newErrors;
+            });
+        }
+    };    // Kiểm tra xem có thể submit form không
+    const canSubmit = useMemo(() => {
+        // Đối với chế độ edit, luôn cho phép submit
+        if (editingId) return Object.keys(validationErrors).length === 0;
+
+        // Đối với chế độ tạo mới, kiểm tra đã chọn sản phẩm và cửa hàng chưa
+        const hasValidProduct = form.product_id &&
+            form.product_id !== undefined &&
+            (Array.isArray(form.product_id) ? form.product_id.length > 0 : form.product_id !== '');
+
+        const hasValidStore = form.store_id &&
+            form.store_id !== undefined &&
+            (Array.isArray(form.store_id) ? form.store_id.length > 0 : form.store_id !== '');
+
+        // Kiểm tra không có lỗi validation
+        const hasNoValidationErrors = Object.keys(validationErrors).length === 0;
+
+        return hasValidProduct && hasValidStore && hasNoValidationErrors;
+    }, [editingId, form.product_id, form.store_id, validationErrors]);
 
     const handleFormSubmit = async () => {
+        // Kiểm tra lỗi validation trước khi submit
+        if (Object.keys(validationErrors).length > 0) {
+            toast.error("Vui lòng sửa lại các lỗi validation trước khi gửi!");
+            return;
+        }
+
         try {
-            const { createInventory } = await import("@/api/services/inventoryService");
+            const { createInventory, updateInventory } = await import("@/api/services/inventoryService");
             const productId = form.product_id;
             const storeId = form.store_id;
 
@@ -117,7 +238,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                     return;
                 }
 
-                const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
                 const inventoryDetails = Object.entries(classificationQuantities)
                     .filter(([, qty]) => qty > 0)
                     .map(([classificationId, quantity]) => ({
@@ -126,36 +246,75 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         quantity_sold: 0
                     }));
 
-                await createInventory({
-                    product_id: productId as string | string[],
-                    store_id: storeId as string | string[],
-                    quantity_stock: totalQuantity,
-                    inventory_details: inventoryDetails,
-                });
-
-                toast.success("Tạo tồn kho theo phân loại thành công!");
+                if (editingId) {
+                    // CẬP NHẬT tồn kho với phân loại
+                    await updateInventory(editingId, {
+                        inventory_details: inventoryDetails
+                    });
+                    toast.success(`Cập nhật tồn kho thành công!`);
+                } else {
+                    // TẠO MỚI tồn kho với phân loại
+                    const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
+                    await createInventory({
+                        product_id: productId as string | string[],
+                        store_id: storeId as string | string[],
+                        quantity_stock: totalQuantity,
+                        inventory_details: inventoryDetails,
+                    });
+                    toast.success("Tạo tồn kho sản phẩm có phân loại thành công!");
+                }
             }
             // Nếu sản phẩm KHÔNG có phân loại → chỉ gửi quantity_stock
             else {
-                if (!form.quantity_stock || form.quantity_stock <= 0) {
+                // Kiểm tra số lượng cho từng sản phẩm
+                const selectedProductIds: number[] = [];
+                if (Array.isArray(form.product_id)) {
+                    selectedProductIds.push(...form.product_id.map(id => Number(id)));
+                } else if (form.product_id === 'all') {
+                    selectedProductIds.push(...products.map(p => p.id));
+                } else if (form.product_id !== 'all' && form.product_id) {
+                    selectedProductIds.push(Number(form.product_id));
+                }
+
+                const hasValidQuantity = selectedProductIds.some(productId =>
+                    (individualQuantities[productId] || 0) > 0
+                );
+
+                if (!hasValidQuantity && (!form.quantity_stock || form.quantity_stock <= 0)) {
                     toast.error("Vui lòng nhập số lượng tồn kho hợp lệ!");
                     return;
                 }
 
-                await createInventory({
-                    product_id: productId as string | string[],
-                    store_id: storeId as string | string[],
-                    quantity_stock: form.quantity_stock,
-                });
-
-                toast.success("Tạo tồn kho thành công (sản phẩm không có phân loại)!");
+                if (editingId) {
+                    // CẬP NHẬT tồn kho không phân loại
+                    const productId = Number(form.product_id);
+                    const quantity = individualQuantities[productId] || form.quantity_stock || 0;
+                    await updateInventory(editingId, {
+                        quantity_stock: quantity,
+                        quantity_sold: form.quantity_sold
+                    });
+                    toast.success(`Cập nhật tồn kho thành công!`);
+                } else {
+                    // TẠO MỚI tồn kho không phân loại - tạo cho từng sản phẩm riêng biệt
+                    for (const productId of selectedProductIds) {
+                        const quantity = individualQuantities[productId] || 0;
+                        if (quantity > 0) {
+                            await createInventory({
+                                product_id: productId.toString(),
+                                store_id: storeId as string | string[],
+                                quantity_stock: quantity,
+                            });
+                        }
+                    }
+                    toast.success("Tạo tồn kho sản phẩm không có phân loại thành công!");
+                }
             }
 
             handleCancelEdit();
             window.location.reload();
         } catch (error) {
             console.error("Error submitting inventory form:", error);
-            toast.error("Có lỗi xảy ra khi tạo tồn kho!");
+            toast.error(editingId ? "Có lỗi xảy ra khi cập nhật tồn kho!" : "Có lỗi xảy ra khi tạo tồn kho!");
         }
     };
 
@@ -221,7 +380,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
             <label className={`text-xl font-bold mb-6 flex items-center gap-3 ${accentColor} border-b-2 border-gray-100 pb-3`}>
                 <Zap size={18} className={iconColor} />
-                {editingId ? `SỬA TỒN KHO ID: ${editingId}` : "QUẢN LÝ TỒN KHO LINH HOẠT"}
+                {editingId ? `SỬA TỒN KHO ID: ${editingId}` : "Quản lý tồn kho linh hoạt"}
             </label>
 
             <div className={`grid gap-8 ${editingId === null ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
@@ -232,7 +391,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
                             <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
                                 <Package size={18} className="text-orange-500" />
-                                1. CHỌN SẢN PHẨM
+                                1. Chọn sản phẩm
                             </h4>
                             <div className="p-4">
                                 <CheckboxList
@@ -252,7 +411,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         <div className='col-span-1 p-0 border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden'>
                             <h4 className="flex items-center gap-2 p-4 bg-gray-50 text-base font-bold text-gray-700 border-b border-gray-200">
                                 <Store size={18} className="text-orange-500" />
-                                2. CHỌN CỬA HÀNG
+                                2. Chọn cửa hàng
                             </h4>
                             <div className="p-4">
                                 <CheckboxList
@@ -270,8 +429,8 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                         {/* 3. Phân loại sản phẩm & input số lượng */}
                         <div className="col-span-2 pt-4">
                             <div>
-                                <label className="block text-sm font-extrabold text-gray-800 mb-4 flex items-center gap-2">
-                                    <Box size={18} className="text-orange-500" /> CHIA THEO PHÂN LOẠI SẢN PHẨM
+                                <label className="block text-lg font-extrabold text-gray-800 mb-4 flex items-center gap-2">
+                                    <Box size={18} className="text-orange-500" /> Chi tiết sản phẩm chia  cho các cửa hàng
                                 </label>
 
                                 {Object.keys(productClassifications).length > 0 ? (
@@ -298,23 +457,33 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
                                                         {/* Thông tin sản phẩm */}
                                                         <div className="flex-1 min-w-0">
-                                                            <h5 className="font-semibold text-gray-800 text-base truncate">{product?.name}</h5>
-                                                            <p className="text-sm text-gray-500 mt-1">Còn lại: <span className="font-medium text-gray-700">{product?.total_quantity_divided || 0}</span></p>
+                                                            <h5 className="text-gray-800 text-sm truncate">{product?.name}</h5>
+                                                            <p className="text-sm text-gray-500 mt-1">Còn lại: <span className="text-gray-500">{product?.total_quantity_divided || 0}</span></p>
                                                         </div>
 
                                                         {/* Input số lượng (không phân loại) */}
                                                         {classifications.length === 0 && (
-                                                            <div className="flex flex-col items-end w-24">
+                                                            <div className="flex flex-col items-end w-32">
                                                                 <label className="text-xs font-medium text-gray-600 mb-1">Số lượng</label>
-                                                                <input
-                                                                    title="quantity_stock"
-                                                                    type="number"
-                                                                    min={0}
-                                                                    value={form.quantity_stock || 0}
-                                                                    onChange={onNumberInputChange}
-                                                                    name="quantity_stock"
-                                                                    className="w-full border border-gray-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
-                                                                />
+                                                                <div className="relative w-full">
+                                                                    <input
+                                                                        title="individual_quantity"
+                                                                        type="number"
+                                                                        min={0}
+                                                                        value={individualQuantities[product?.id || 0] || 0}
+                                                                        onChange={(e) => handleIndividualQuantityChange(product?.id || 0, parseInt(e.target.value) || 0)}
+                                                                        className={`w-full border rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 transition ${validationErrors[`individual_${product?.id || 0}`]
+                                                                            ? 'border-red-400 bg-red-50 focus:ring-red-500'
+                                                                            : 'border-gray-300 focus:ring-orange-400 focus:border-orange-400'
+                                                                            }`}
+                                                                    />
+                                                                    <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                                                                        <span className="text-xs text-gray-400">/{product?.total_quantity_divided || 0}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {validationErrors[`individual_${product?.id || 0}`] && (
+                                                                    <p className="text-xs text-red-500 mt-1 font-medium">{validationErrors[`individual_${product?.id || 0}`]}</p>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -329,7 +498,6 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                                         <div className="flex-1">
                                                                             <h6 className="font-medium text-gray-800 text-sm">{classification.name}</h6>
                                                                             <p className="text-xs text-gray-600">
-                                                                                {classification.attribute1_name} | {classification.attribute2_name}
                                                                             </p>
                                                                             <p className="text-xs text-green-600 font-medium">
                                                                                 Giá: {classification.price?.toLocaleString()}đ
@@ -343,19 +511,25 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
                                                                     <div className="flex items-center gap-2">
                                                                         <label className="text-sm font-medium text-gray-700 min-w-[40px]">Chia:</label>
-                                                                        <input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            max={classification.quantity}
-                                                                            value={classificationQuantities[classification.id] || 0}
-                                                                            onChange={(e) => handleClassificationQuantityChange(classification.id, parseInt(e.target.value) || 0)}
-                                                                            className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-orange-500"
-                                                                            placeholder="0"
-                                                                        />
+                                                                        <div className="relative flex-1">
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                value={classificationQuantities[classification.id] || 0}
+                                                                                onChange={(e) => handleClassificationQuantityChange(classification.id, parseInt(e.target.value) || 0)}
+                                                                                className={`w-full border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-orange-500 pr-12 ${validationErrors[`classification_${classification.id}`]
+                                                                                    ? 'border-red-400 bg-red-50 focus:ring-red-500'
+                                                                                    : 'border-gray-300'
+                                                                                    }`}
+                                                                                placeholder="0"
+                                                                            />
+                                                                            <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                                                                                <span className="text-xs text-gray-400">/{classification.quantity}</span>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-
-                                                                    {(classificationQuantities[classification.id] || 0) > classification.quantity && (
-                                                                        <p className="text-xs text-red-500 mt-1">Vượt quá số lượng có sẵn!</p>
+                                                                    {validationErrors[`classification_${classification.id}`] && (
+                                                                        <p className="text-xs text-red-500 mt-1 font-medium">{validationErrors[`classification_${classification.id}`]}</p>
                                                                     )}
                                                                 </div>
                                                             ))}
@@ -453,8 +627,14 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                                 <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">
                                                                     Tổng: {product?.total_quantity_divided || 0}
                                                                 </span>
-                                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">
-                                                                    {classifications.length} loại
+                                                                <span
+                                                                    className={
+                                                                        classifications.length > 0
+                                                                            ? "text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium"
+                                                                            : "text-xs text-gray-500 px-2 py-1 font-medium"
+                                                                    }
+                                                                >
+                                                                    {classifications.length > 0 ? `${classifications.length} loại` : 'Không có phân loại'}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -494,16 +674,21 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                                             <input
                                                                                 type="number"
                                                                                 min="0"
-                                                                                max={classification.quantity + (classificationQuantities[classification.id] || 0)}
                                                                                 value={classificationQuantities[classification.id] || 0}
                                                                                 onChange={(e) => handleClassificationQuantityChange(classification.id, parseInt(e.target.value) || 0)}
-                                                                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono text-center focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                                                                                className={`w-full border rounded px-2 py-1 text-sm font-mono text-center focus:ring-1 focus:border-orange-500 outline-none ${validationErrors[`classification_${classification.id}`]
+                                                                                    ? 'border-red-400 bg-red-50 focus:ring-red-500'
+                                                                                    : 'border-gray-300 focus:ring-orange-500'
+                                                                                    }`}
                                                                                 placeholder="0"
                                                                             />
                                                                             <div className="absolute inset-y-0 right-1 flex items-center pointer-events-none">
-                                                                                <span className="text-xs text-gray-400">/{classification.quantity + (classificationQuantities[classification.id] || 0)}</span>
+                                                                                <span className="text-xs text-gray-400">/{classification.quantity}</span>
                                                                             </div>
                                                                         </div>
+                                                                        {validationErrors[`classification_${classification.id}`] && (
+                                                                            <p className="text-xs text-red-500 mt-1 font-medium">{validationErrors[`classification_${classification.id}`]}</p>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -511,15 +696,28 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
                                                     ) : (
                                                         <div className="flex items-center gap-3 mt-2">
                                                             <label className="text-sm font-medium text-gray-700">Số lượng:</label>
-                                                            <input
-                                                                title='quantity_stock'
-                                                                type="number"
-                                                                min={0}
-                                                                value={form.quantity_stock || 0}
-                                                                onChange={onNumberInputChange} // hàm bạn đã có
-                                                                name="quantity_stock"
-                                                                className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-center focus:ring-1 focus:ring-orange-500"
-                                                            />
+                                                            <div className="flex flex-col w-32">
+                                                                <div className="relative w-full">
+                                                                    <input
+                                                                        title='quantity_stock'
+                                                                        type="number"
+                                                                        min={0}
+                                                                        value={form.quantity_stock || 0}
+                                                                        onChange={onNumberInputChange}
+                                                                        name="quantity_stock"
+                                                                        className={`w-full border rounded px-2 py-1 text-sm text-center focus:ring-1 ${validationErrors['edit_quantity_stock']
+                                                                            ? 'border-red-400 bg-red-50 focus:ring-red-500'
+                                                                            : 'border-gray-300 focus:ring-orange-500'
+                                                                            }`}
+                                                                    />
+                                                                    <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                                                                        <span className="text-xs text-gray-400">/{product?.total_quantity_divided || 0}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {validationErrors['edit_quantity_stock'] && (
+                                                                    <p className="text-xs text-red-500 mt-1 font-medium">{validationErrors['edit_quantity_stock']}</p>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -540,20 +738,35 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
             </div>
 
             {/* --- Button controls --- */}
-            <div className="flex justify-end gap-3 pt-8 border-t mt-8 border-gray-100">
-                <button
-                    onClick={handleCancelEdit}
-                    className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
-                >
-                    {editingId ? "HỦY BỎ" : "ĐÓNG FORM"}
-                </button>
+            <div className="pt-8 border-t mt-8 border-gray-100">
+                {/* Thông báo hướng dẫn khi button bị disable */}
+                {!canSubmit && !editingId && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-700 font-medium text-center">
+                            Vui lòng chọn ít nhất 1 sản phẩm và 1 cửa hàng để tiếp tục
+                        </p>
+                    </div>
+                )}
 
-                <button
-                    onClick={handleFormSubmit}
-                    className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform hover:scale-[1.02] ${btnPrimaryClass}`}
-                >
-                    {editingId ? "CẬP NHẬT TỒN KHO" : "THÊM MỚI TỒN KHO"}
-                </button>
+                <div className="flex justify-end gap-3">
+                    <button
+                        onClick={handleCancelEdit}
+                        className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
+                    >
+                        {editingId ? "HỦY BỎ" : "ĐÓNG FORM"}
+                    </button>
+
+                    <button
+                        onClick={handleFormSubmit}
+                        disabled={!canSubmit}
+                        className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform ${canSubmit
+                            ? `hover:scale-[1.02] ${btnPrimaryClass}`
+                            : 'bg-gray-400 cursor-not-allowed opacity-50'
+                            }`}
+                    >
+                        {editingId ? "CẬP NHẬT TỒN KHO" : "THÊM MỚI TỒN KHO"}
+                    </button>
+                </div>
             </div>
         </div>
     );
