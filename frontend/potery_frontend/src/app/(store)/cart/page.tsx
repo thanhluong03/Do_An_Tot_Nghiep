@@ -388,6 +388,7 @@ export default function CartPage() {
           <AIChatModal
             isOpen={isAIChatOpen}
             onClose={() => setIsAIChatOpen(false)}
+            userId={Number(user.id)} 
           />
 
           {/* Floating Buttons */}

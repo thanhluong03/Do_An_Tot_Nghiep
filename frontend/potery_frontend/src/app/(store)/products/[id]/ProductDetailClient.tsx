@@ -939,9 +939,10 @@ export function ProductDetailClient({ product }: { product: any }) {
 
           {/* AI Chat Modal */}
           <AIChatModal
-            isOpen={isAIChatOpen}
-            onClose={() => setIsAIChatOpen(false)}
-          />
+                      isOpen={isAIChatOpen}
+                      onClose={() => setIsAIChatOpen(false)}
+                      userId={Number(user.id)} 
+                    />
 
           {/* Floating Buttons */}
           <div
