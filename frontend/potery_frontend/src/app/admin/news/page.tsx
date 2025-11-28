@@ -14,6 +14,7 @@ import {
 import { Pencil, Trash2, ImagePlus, Search } from "lucide-react";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { listUsers, User } from "@/api/services/userService";
+import PaginationControls from "@/components/common/PaginationControls";
 
 import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
@@ -58,6 +59,9 @@ export default function NewsPage() {
     const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
     const [users, setUsers] = useState<User[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10; // mỗi trang 10 bài
+
 
     // STATES MỚI CHO CONFIRM DIALOG
     const [showConfirm, setShowConfirm] = useState(false);
@@ -99,7 +103,10 @@ export default function NewsPage() {
                 return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
             });
 
+            setTotalItems(filtered.length);
             setNewsList(filtered);
+            setCurrentPage(1); // reset về trang 1 khi search hoặc sort
+
         } catch (error) {
             toast.error("Không thể tải danh sách tin tức!");
         } finally {
@@ -253,6 +260,8 @@ export default function NewsPage() {
         setNewsToDeleteId(null);
     };
 
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedNews = newsList.slice(startIndex, startIndex + pageSize);
 
     return (
         <div className="min-h-screen bg-white shadow-xl  p-2">
@@ -425,13 +434,14 @@ export default function NewsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="text-gray-600 text-sm font-light">
-                                    {newsList.map((n, index) => (
+                                    {paginatedNews.map((n, index) => (
                                         <tr
                                             key={n.id}
                                             className="bg-white hover:bg-gray-50 transition duration-150 ease-in-out border border-gray-100 rounded-lg shadow-sm"
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap rounded-l-lg font-bold text-gray-500">
-                                                {index + 1}
+                                                {startIndex + index + 1}
+
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -497,13 +507,17 @@ export default function NewsPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="flex justify-start items-center mt-6 pt-4 border-t border-gray-200">
-                            <span className="text-sm text-gray-600">
-                                Hiển thị {newsList.length} trên {totalItems} kết quả
-                            </span>
-                        </div>
                     </>
                 )}
+                <div className="flex justify-center mt-6">
+                    <PaginationControls
+                        currentPage={currentPage}
+                        pageSize={pageSize}
+                        totalItems={totalItems}
+                        onPageChange={(page) => setCurrentPage(page)}
+                    />
+                </div>
+
             </div>
 
             {/* RENDER CONFIRM DIALOG */}
