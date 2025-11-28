@@ -547,12 +547,16 @@ export default function CheckoutPage() {
             console.log('✅ Redirecting to MoMo payment:', paymentUrl);
             window.location.href = paymentUrl;
 
-        } catch (error) {
-            console.error('❌ Chi tiết lỗi thanh toán MoMo:', error);
+        } catch (e: unknown) {
+            console.error('❌ Chi tiết lỗi thanh toán MoMo:', e);
+            const error = e as Error & { response?: { data?: { message?: string } } };
+            const message = error.response?.data?.message || error.message || 'Lỗi không xác định';
+
             if (error.response) {
                 console.error('❌ API Response Error:', error.response.data);
             }
-            toast.error('Không thể khởi tạo thanh toán MoMo: ' + (error.message || 'Lỗi không xác định'));
+
+            toast.error('Không thể khởi tạo thanh toán MoMo: ' + message);
         }
     };
 
@@ -1276,7 +1280,7 @@ export default function CheckoutPage() {
                             >
                                 {creating
                                     ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span>
-                                    : paymentMethod === 'VNPAY'
+                                    : paymentMethod === 'MOMO'
                                         ? `THANH TOÁN ${formatPrice(totalWithShipping)}`
                                         : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
                             </button>

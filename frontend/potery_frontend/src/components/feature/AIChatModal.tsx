@@ -23,6 +23,19 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Tùy chỉnh nội dung lời chào ở đây
+  const WELCOME_MESSAGE = `Xin chào! Mình là AI trợ giúp của bạn. Hỏi mình bất cứ điều gì liên quan đến sản phẩm gốm nhé.`;
+
+  // Khi mở modal lần đầu (không có messages) => thêm lời chào
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const welcome: Message = { role: 'assistant', content: WELCOME_MESSAGE };
+      setMessages([welcome]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]); // chỉ chạy khi isOpen thay đổi
+
+  // Scroll xuống cuối khi messages thay đổi
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -68,7 +81,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => 
     <div className="fixed bottom-10 right-20 z-[110] w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col border border-gray-200">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg flex font-bold text-gray-800"><BotIcon  className='mr-2'/> Chat với AI</h2>
+        <h2 className="text-lg flex font-bold text-gray-800"><BotIcon className='mr-2'/> Chat với AI</h2>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-800">&times;</button>
       </div>
 
