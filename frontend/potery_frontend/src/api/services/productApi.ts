@@ -71,3 +71,46 @@ export const updateProduct = async (id: number, formData: FormData): Promise<Pro
     });
     return res.data;
 };
+
+// ===== RAW API CALLS FOR INVENTORY & STORE =====
+const API_URL_INVENTORY = "http://localhost:3000/inventory";
+const API_URL_STORES = "http://localhost:3000/stores";
+const API_URL_CATEGORIES = "http://localhost:3000/categories";
+
+// Store APIs
+export const getStoresList = async () => {
+    const res = await axios.get(`${API_URL_STORES}/liststore`);
+    return res.data;
+};
+
+// Category APIs
+export const getCategoriesList = async () => {
+    const res = await axios.get(`${API_URL_CATEGORIES}/listcategory`);
+    return res.data;
+};
+
+// Inventory APIs
+export const getInventoriesList = async (params?: { store_id?: number }) => {
+    const res = await axios.get(`${API_URL_INVENTORY}/list`, { params });
+    return res.data;
+};
+
+export const getInventoryDetails = async (inventoryId: number) => {
+    const res = await axios.get(`${API_URL_INVENTORY}/details/${inventoryId}`);
+    return res.data;
+};
+
+export const getProductClassificationsList = async (productId: number) => {
+    const res = await axios.get(`${API_URL}/classifications/${productId}`);
+    return res.data;
+};
+
+export const transferInventoryRaw = async (data: {
+    product_id: number;
+    from_store_ids: number[];
+    to_store_ids: number[];
+    details?: { classification_attribute_relationship_id: number; quantity: number; }[];
+}) => {
+    const res = await axios.post(`${API_URL_INVENTORY}/transfer`, data);
+    return res.data;
+};
