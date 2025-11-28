@@ -193,7 +193,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
 
 
     if (loading) return <p className="mt-6 text-gray-500 text-center">Đang tải danh sách...</p>;
-
+    
     return (
         <div className="mt-10">
             <div className="text-xl font-bold mb-5 text-gray-800 pb-3">
@@ -227,7 +227,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                     <div className="flex items-center space-x-2">
                         <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày:</label>
                         <input
-                            
+                            title="dateStart"
                             type="date"
                             value={startDate}
                             onChange={(e) => {
@@ -240,6 +240,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                     <div className="flex items-center space-x-2">
                         <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày:</label>
                         <input
+                            title="dateEnd"
                             type="date"
                             value={endDate}
                             onChange={(e) => {
@@ -269,7 +270,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                 <table className="min-w-full border-collapse bg-white table-fixed">
                     <thead>
                         <tr className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider font-bold border-b border-gray-200">
-                            <th className="px-4 py-3 text-left w-[60px] rounded-tl-xl">ID</th>
+                            <th className="px-4 py-3 text-left w-[60px] rounded-tl-xl">Stt</th>
                             <th className="px-4 py-3 text-left w-[160px]">Ngày tạo</th>
                             <th className="px-4 py-3 text-left">Ghi chú</th>
                             <th className="px-4 py-3 text-center w-[200px]">Trạng thái</th>
@@ -292,7 +293,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                                 className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
                             >
                                 <td className="px-4 py-3 font-semibold text-gray-800">
-                                    {req.id}
+                                    {(allRequests.indexOf(req) + 1)}
                                 </td>
 
                                 <td className="px-4 py-3 text-xs text-gray-600">

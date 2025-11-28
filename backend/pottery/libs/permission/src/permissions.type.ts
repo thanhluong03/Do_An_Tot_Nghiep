@@ -67,8 +67,8 @@ export const AVAILABLE_PERMISSIONS = {
     'adminstore/dashboard': [
         { key: 'adminstore/dashboard', name: 'Bảng điều khiển cửa hàng' },
     ],
-    'adminStore/storeRequestImportProduct': [
-        { key: 'adminStore/storeRequestImportProduct', name: 'Quản lý yêu cầu nhập kho cửa hàng' },
+    'adminstore/storeRequestImportProduct': [
+        { key: 'adminstore/storeRequestImportProduct', name: 'Quản lý yêu cầu nhập kho cửa hàng' },
     ],
     'adminstore/orders': [
         { key: 'adminstore/orders', name: 'Quản lý đơn hàng cửa hàng' },
