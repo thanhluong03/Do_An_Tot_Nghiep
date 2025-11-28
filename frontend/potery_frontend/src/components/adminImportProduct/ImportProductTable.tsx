@@ -349,7 +349,7 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                 {totalPages > 1 && (
                     <div className="p-4 flex flex-col sm:flex-row items-center justify-between bg-gray-50">
                         <div className="text-sm text-gray-600 mb-2 sm:mb-0">
-                            Hiển thị từ <span className="font-semibold">{startIndex}</span> đến <span className="font-semibold">{endIndex}</span> trong tổng số <span className="font-semibold">{totalItems}</span> mục
+                            Hiển thị từ <span className="font-semibold">{startIndex}</span> đến <span className="font-semibold">{endIndex}</span> / tổng số <span className="font-semibold">{totalItems}</span> mục
                         </div>
                         <div className="flex items-center space-x-2">
                             <button

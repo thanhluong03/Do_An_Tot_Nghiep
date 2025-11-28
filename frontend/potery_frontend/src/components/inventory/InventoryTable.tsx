@@ -47,6 +47,15 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     totalItems,
     allProducts,
 }) => {
+    // Nhóm inventories theo store_id
+    const groupedByStore = inventories.reduce((acc, item) => {
+        const storeId = item.store_id;
+        if (!acc[storeId]) {
+            acc[storeId] = [];
+        }
+        acc[storeId].push(item);
+        return acc;
+    }, {} as Record<number, Inventory[]>);
 
     return (
         <>
@@ -62,101 +71,116 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             )}
 
             {inventories.length > 0 && (
-                <div className="overflow-x-auto rounded-xl shadow-lg mt-6 border border-gray-100">
-                    <table className="min-w-full border-collapse bg-white table-fixed">
-                        <thead>
-                            <tr className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider font-bold border-b border-gray-200">
-                                <th className="px-4 py-3 text-left w-[50px] rounded-tl-xl">STT</th>
-                                <th className="px-2 py-3 text-center w-[60px]">Ảnh</th>
-                                <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th>
-                                <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th>
-                                <th className="px-4 py-3 text-center w-[90px]">Trong kho cửa hàng</th>
-                                <th className="px-4 py-3 text-center w-[90px]">Đã bán</th>
-                                <th className="px-4 py-3 text-left w-[150px]">Ngày tạo</th>
-                                <th className="px-4 py-3 text-left w-[150px]">Cập nhật</th>
-                                <th className="px-4 py-3 text-center w-[120px] rounded-tr-xl">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {inventories.map((item, index) => (
+                <div className="mt-6 space-y-6">
+                    {Object.entries(groupedByStore).map(([storeId, storeInventories]) => (
+                        <div key={storeId} className="bg-white rounded-xl shadow-lg border border-gray-100">
+                            {/* Tên cửa hàng */}
+                            <div className="from-blue-500 to-blue-600 text-[#B95D26] px-4 py-3 rounded-t-xl">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    {getDisplayName(stores, Number(storeId))}
+                                    <span className="text-blue-500 text-sm font-normal">
+                                        ({storeInventories.length} sản phẩm)
+                                    </span>
+                                </h3>
+                            </div>
 
-                                <tr
-                                    key={item.id}
-                                    className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
-                                >
-                                    <td className="px-4 py-3 font-semibold text-gray-800 truncate">
-                                        {index + 1}
-                                    </td>
+                            {/* Bảng riêng cho từng cửa hàng */}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse bg-white table-fixed">
+                                    <thead>
+                                        <tr className="bg-gray-100 text-gray-600 text-sm tracking-wider font-bold border-b border-gray-200">
+                                            <th className="px-4 py-3 text-left w-[50px]">STT</th>
+                                            <th className="px-2 py-3 text-center w-[60px]">Ảnh</th>
+                                            <th className="px-4 py-3 text-left w-[200px]">Sản phẩm</th>
+                                            <th className="px-4 py-3 text-left w-[180px]">Cửa hàng</th>
+                                            <th className="px-4 py-3 text-center w-[120px]">Số lượng</th>
+                                            <th className="px-4 py-3 text-center w-[90px]">Đã bán</th>
+                                            <th className="px-4 py-3 text-left w-[150px]">Ngày tạo</th>
+                                            <th className="px-4 py-3 text-left w-[150px]">Cập nhật</th>
+                                            <th className="px-4 py-3 text-center w-[120px]">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {storeInventories.map((item, index) => (
+                                            <tr
+                                                key={item.id}
+                                                className="border-t border-gray-100 hover:bg-blue-50/70 text-sm text-gray-700 transition duration-150"
+                                            >
+                                                <td className="px-4 py-3 font-semibold text-gray-800 truncate">
+                                                    {index + 1}
+                                                </td>
 
-                                    <td className="px-2 py-2 text-center">
-                                        <div className="flex justify-center">
-                                            <Image
-                                                src={getInventoryProductImageUrl(item.product_id, allProducts) || "/no-image.jpg"}
-                                                alt={getDisplayName(products, item.product_id) || "Product Image"}
-                                                width={36}
-                                                height={36}
-                                                className="object-cover rounded-md shadow-sm"
-                                                onError={(e) => {
-                                                    const target = e.currentTarget as HTMLImageElement;
-                                                    target.src = "/no-image.jpg";
-                                                }}
-                                            />
-                                        </div>
-                                    </td>
+                                                <td className="px-2 py-2 text-center">
+                                                    <div className="flex justify-center">
+                                                        <Image
+                                                            src={getInventoryProductImageUrl(item.product_id, allProducts) || "/no-image.jpg"}
+                                                            alt={getDisplayName(products, item.product_id) || "Product Image"}
+                                                            width={36}
+                                                            height={36}
+                                                            className="object-cover rounded-md shadow-sm"
+                                                            onError={(e) => {
+                                                                const target = e.currentTarget as HTMLImageElement;
+                                                                target.src = "/no-image.jpg";
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </td>
 
-                                    <td
-                                        className="px-4 py-3 text-sm max-w-[300px] break-words"
-                                        title={getDisplayName(products, item.product_id)}
-                                    >
-                                        {getDisplayName(products, item.product_id)}
-                                    </td>
-                                    <td
-                                        className="px-4 py-3 break-words text-sm"
-                                        title={getDisplayName(stores, item.store_id)}
-                                    >
-                                        {getDisplayName(stores, item.store_id)}
-                                    </td>
+                                                <td
+                                                    className="px-4 py-3 text-sm max-w-[300px] break-words"
+                                                    title={getDisplayName(products, item.product_id)}
+                                                >
+                                                    {getDisplayName(products, item.product_id)}
+                                                </td>
+                                                <td
+                                                    className="px-4 py-3 break-words text-sm"
+                                                    title={getDisplayName(stores, item.store_id)}
+                                                >
+                                                    {getDisplayName(stores, item.store_id)}
+                                                </td>
 
-                                    <td className="px-4 py-3 text-center text-base font-extrabold text-teal-600">
-                                        {(
-                                            item.inventory_details && item.inventory_details.length > 0
-                                                ? item.inventory_details.reduce((sum, d) => sum + (d.quantity_stock ?? 0), 0)
-                                                : item.quantity_stock ?? 0
-                                        ).toLocaleString()}
-                                    </td>
+                                                <td className="px-4 py-3 text-center text-base font-extrabold text-teal-600">
+                                                    {(
+                                                        item.inventory_details && item.inventory_details.length > 0
+                                                            ? item.inventory_details.reduce((sum, d) => sum + (d.quantity_stock ?? 0), 0)
+                                                            : item.quantity_stock ?? 0
+                                                    ).toLocaleString()}
+                                                </td>
 
-                                    <td className="px-4 py-3 text-center text-base font-extrabold text-red-500">
-                                        {(
-                                            item.inventory_details && item.inventory_details.length > 0
-                                                ? item.inventory_details.reduce((sum, d) => sum + (d.quantity_sold ?? 0), 0)
-                                                : item.quantity_sold ?? 0
-                                        ).toLocaleString()}
-                                    </td>
+                                                <td className="px-4 py-3 text-center text-base font-extrabold text-red-500">
+                                                    {(
+                                                        item.inventory_details && item.inventory_details.length > 0
+                                                            ? item.inventory_details.reduce((sum, d) => sum + (d.quantity_sold ?? 0), 0)
+                                                            : item.quantity_sold ?? 0
+                                                    ).toLocaleString()}
+                                                </td>
 
+                                                <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.created_at)}</td>
+                                                <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updated_at)}</td>
 
-                                    <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.created_at)}</td>
-                                    <td className="px-4 py-3 text-xs text-gray-500">{formatDateTime(item.updated_at)}</td>
-
-                                    <td className="px-4 py-3 text-center space-x-1">
-                                        <button
-                                            title='edit'
-                                            onClick={() => handleEdit(item)}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
-                                        >
-                                            <Pencil size={15} />
-                                        </button>
-                                        <button
-                                            title='trash'
-                                            onClick={() => handleDelete(item.id)}
-                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
-                                        >
-                                            <Trash2 size={15} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                                <td className="px-4 py-3 text-center space-x-1">
+                                                    <button
+                                                        title='edit'
+                                                        onClick={() => handleEdit(item)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
+                                                    >
+                                                        <Pencil size={15} />
+                                                    </button>
+                                                    <button
+                                                        title='trash'
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </>

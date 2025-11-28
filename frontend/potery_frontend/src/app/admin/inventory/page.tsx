@@ -64,7 +64,7 @@ export default function InventoryPage() {
         store_id: undefined,
         quantity_stock: 0,
         quantity_sold: 0,
-        
+
     });
 
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -249,7 +249,7 @@ export default function InventoryPage() {
 
         if (form.quantity_stock < 0) {
             newErrors.quantity_stock = "SL Tồn kho phải ≥ 0.";
-        } else if (isCreating && form.product_id && !Array.isArray(form.product_id)) {
+        } else if (isCreating && form.product_id && !Array.isArray(form.product_id) && form.product_id !== 'all') {
             const product = allProducts.find(p => p.id === Number(form.product_id));
             if (product && form.quantity_stock > (product.total_quantity_divided || 0)) {
                 newErrors.quantity_stock = `Số lượng nhập (${form.quantity_stock}) vượt quá số lượng còn trong kho (${product.total_quantity_divided || 0}).`;
@@ -266,42 +266,42 @@ export default function InventoryPage() {
 
     // Submit form
     // Submit form (SP KHÔNG CÓ PHÂN LOẠI)
-const handleSubmit = async () => {
-    const isCreating = editingId === null;
-    if (!validate(isCreating)) return;
+    const handleSubmit = async () => {
+        const isCreating = editingId === null;
+        if (!validate(isCreating)) return;
 
-    try {
-        if (isCreating) {
-            const productId = form.product_id;
-            const storeId = form.store_id;
+        try {
+            if (isCreating) {
+                const productId = form.product_id;
+                const storeId = form.store_id;
 
-            const createDto: CreateInventoryDto = {
-                product_id: productId as string | string[],
-                store_id: storeId as string | string[],
-                quantity_stock: form.quantity_stock,
-            };
+                const createDto: CreateInventoryDto = {
+                    product_id: productId as string | string[],
+                    store_id: storeId as string | string[],
+                    quantity_stock: form.quantity_stock,
+                };
 
-            await createInventory(createDto);
-            toast.success("Tạo tồn kho thành công!");
-            await fetchDropdownData();
-        } else {
-            const updateDto: UpdateInventoryDto = {
-                quantity_stock: form.quantity_stock,
-                quantity_sold: form.quantity_sold,
-            };
+                await createInventory(createDto);
+                toast.success("Tạo tồn kho thành công!");
+                await fetchDropdownData();
+            } else {
+                const updateDto: UpdateInventoryDto = {
+                    quantity_stock: form.quantity_stock,
+                    quantity_sold: form.quantity_sold,
+                };
 
-            await updateInventory(editingId!, updateDto);
-            toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
-            await fetchDropdownData();
+                await updateInventory(editingId!, updateDto);
+                toast.success(`Cập nhật tồn kho ID ${editingId} thành công!`);
+                await fetchDropdownData();
+            }
+
+            handleCancelEdit();
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            toast.error("Số lượng trong kho không đủ hoặc có lỗi khi cập nhật!");
         }
-
-        handleCancelEdit();
-        fetchData();
-    } catch (error) {
-        console.error(error);
-        toast.error("Số lượng trong kho không đủ hoặc có lỗi khi cập nhật!");
-    }
-};
+    };
 
 
     // Hàm submit với dữ liệu phân loại
@@ -383,8 +383,8 @@ const handleSubmit = async () => {
         <div className="min-h-screen">
             <Toaster position="top-center" />
             <div className="w-full mx-auto bg-white/90 rounded-2xl shadow-2xl p-8 border border-gray-200">
-                <h2 className="text-3xl font-extrabold text-center text-[#B95D26] mb-8 tracking-wide">
-                    Quản lý Tồn kho trong cửa hàng
+                <h2 className="text-3xl font-extrabold text-[#B95D26] mb-8 tracking-wide">
+                    Quản lý tồn kho trong cửa hàng
                 </h2>
 
                 {/* --- QUẢN LÝ TỒN KHO THÔNG THƯỜNG --- */}
@@ -440,7 +440,9 @@ const handleSubmit = async () => {
                             editClassificationData={editClassificationData}
                         />
                     )}
-
+                    <h1 className="text-2xl text-center font-bold text-[#B95D26]">
+                        Danh sách sản phẩm tồn trong cửa hàng
+                    </h1>
                     {/* --- BỘ LỌC & TÌM KIẾM --- */}
                     <div className="mt-10 bg-white p-6 rounded-xl border border-gray-200">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

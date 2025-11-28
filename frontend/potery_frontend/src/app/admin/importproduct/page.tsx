@@ -571,7 +571,7 @@ export default function ImportProductPage() {
             <div className="w-full mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-1">
 
                 <div className="flex justify-between items-center m-6  border-gray-200 pb-3">
-                    <h1 className="text-2xl font-bold text-[#B95D26]">
+                    <h1 className="text-3xl font-bold text-[#B95D26]">
                         Quản lý nhập kho sản phẩm
                     </h1>
                     <button

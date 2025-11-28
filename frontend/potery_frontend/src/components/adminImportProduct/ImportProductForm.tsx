@@ -114,8 +114,8 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                             title='s'
                             value={selectedSupplier}
                             onChange={(e) => setSelectedSupplier(e.target.value)}
-                            className="mt-1 block w-full border border-gray-300 rounded-xl shadow-md py-3 px-4 bg-white text-gray-800 font-medium 
-                                        focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all sm:text-lg appearance-none cursor-pointer"
+                            className="mt-1 block w-full border border-gray-300 rounded-xl shadow-md py-3 px-4 bg-white text-gray-800 font-medium
+                                        focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all sm:text-sm appearance-none cursor-pointer"
                         >
                             <option value="" disabled={!!selectedSupplier}>-- Chọn Nhà cung cấp --</option>
                             {suppliers.map((s) => (
@@ -244,10 +244,10 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
                                                         })}
                                                     </div>
                                                 ) : (
-                                                    <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                                                        <p className="text-sm text-yellow-700 mb-2">
+                                                    <div className=" p-3 rounded border border-gray-200">
+                                                        {/* <p className="text-sm text-yellow-700 mb-2">
                                                             Sản phẩm không có phân loại
-                                                        </p>
+                                                        </p> */}
                                                         <div className="grid grid-cols-3 gap-2">
                                                             <div>
                                                                 <label className="text-xs text-gray-500 mb-1 flex items-center gap-1 font-medium">
@@ -308,7 +308,7 @@ const ImportProductForm: React.FC<ImportProductFormProps> = ({
 
                     <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
                         Chọn Sản phẩm
-                        <span className="text-sm font-semibold text-gray-500">({products.length} loại)</span>
+                        <span className="text-sm font-semibold text-gray-500">({products.length} Sản phẩm)</span>
                     </h4>
 
                     <div className={`${MAX_HEIGHT_SCROLL_AREA} overflow-y-auto border border-gray-300 rounded-xl p-3 bg-white shadow-lg space-y-2`}>

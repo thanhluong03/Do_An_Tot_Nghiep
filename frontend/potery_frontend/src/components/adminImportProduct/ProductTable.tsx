@@ -64,16 +64,16 @@ const ProductListTable: React.FC<ProductListTableProps> = ({
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-white border-b-2 border-gray-200">
                     <tr>
-                        <th className="px-1 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-2">STT</th>
-                        <th className="px-1 py-2 text-xs font-extrabold text-gray-700 tracking-wider w-10">Ảnh</th>
-                        <th className="px-1 py-2 text-left text-xs font-extrabold text-gray-700 tracking-wider w-1/4">Tên sản phẩm</th>
+                        <th className="px-1 py-2 text-center text-sm font-extrabold text-gray-700 tracking-wider w-2">STT</th>
+                        <th className="px-1 py-2 text-sm font-extrabold text-gray-700 tracking-wider w-10">Ảnh</th>
+                        <th className="px-1 py-2 text-left text-sm font-extrabold text-gray-700 tracking-wider w-1/4">Tên sản phẩm</th>
                         
                         {/* 1. BỎ COMMENT VÀ CHỈNH LẠI CỘT GIÁ BÁN */}
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-24">Giá bán</th>
+                        <th className="px-3 py-2 text-center text-sm font-extrabold text-gray-700 tracking-wider w-24">Giá bán</th>
                         
-                        <th className="px-3 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-24">Tồn kho nhập</th>
-                        <th className="px-3 py-2 text-left text-xs font-extrabold text-gray-700 tracking-wider w-1/6">Nhà cung cấp</th>
-                        <th className="px-2 py-2 text-center text-xs font-extrabold text-gray-700 tracking-wider w-8">Chi tiết</th>
+                        <th className="px-3 py-2 text-center text-sm font-extrabold text-gray-700 tracking-wider w-24">Tồn kho nhập</th>
+                        <th className="px-3 py-2 text-left text-sm font-extrabold text-gray-700 tracking-wider w-1/6">Nhà cung cấp</th>
+                        <th className="px-2 py-2 text-center text-sm font-extrabold text-gray-700 tracking-wider w-8">Chi tiết</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">

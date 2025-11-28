@@ -117,7 +117,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
             >
                 {/* --- Header cố định --- */}
                 <div className="sticky top-0 z-20 bg-orange-100/90 backdrop-blur-sm border-b border-orange-200 px-4 py-3 flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wide">
+                    <h4 className="text-sm font-bold text-orange-700 tracking-wide">
                         {isProductList ? "Danh sách sản phẩm" : "Danh sách cửa hàng"}
                     </h4>
                     {isProductList && (
@@ -149,19 +149,19 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                 {/* --- Ô tìm kiếm --- */}
                 {isProductList && (
                     <div className="sticky top-[90px] z-10 bg-white px-4 py-2 border-b border-gray-200">
-                    <div className="relative">
-                        <Search
-                        size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
-                        <input
-                        type="text"
-                        placeholder="Tìm sản phẩm..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-400"
-                        />
-                    </div>
+                        <div className="relative">
+                            <Search
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Tìm sản phẩm..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-400"
+                            />
+                        </div>
                     </div>
 
                 )}
@@ -181,7 +181,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                         htmlFor={`${name}-all`}
                         className="ml-3 text-base font-bold text-orange-600 cursor-pointer select-none"
                     >
-                        --- TẤT CẢ {isProductList ? "SẢN PHẨM" : "CỬA HÀNG"} ---
+                        --- Tất cả {isProductList ? "sản phẩm" : "cửa hàng"} ---
                     </label>
                 </div>
 
@@ -214,20 +214,6 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                             className="flex items-center justify-between bg-gray-50/60 hover:bg-orange-50 transition-all duration-200 p-3 rounded-xl border border-transparent hover:border-orange-200"
                                         >
                                             <div className="flex items-center flex-1 min-w-0">
-                                                {isProductList && (
-                                                    <Image
-                                                        width={40}
-                                                        height={40}
-                                                        src={findProductImage(opt.id, allProducts)}
-                                                        alt={opt.name}
-                                                        className= "object-cover rounded-full border border-gray-200 shadow-sm mr-3"
-                                                        onError={(e) => {
-                                                            e.currentTarget.onerror = null;
-                                                            e.currentTarget.src = "/no-image.jpg";
-                                                        }}
-                                                    />
-                                                )}
-
                                                 <input
                                                     type="checkbox"
                                                     id={`${name}-${opt.id}`}
@@ -239,16 +225,30 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                                         selectedIds.includes(String(opt.id))
                                                     }
                                                     onChange={handleCheckboxChange}
-                                                    className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer transform scale-110"
+                                                    className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer transform scale-110 mr-3"
                                                 />
+
+                                                {isProductList && (
+                                                    <Image
+                                                        width={40}
+                                                        height={40}
+                                                        src={findProductImage(opt.id, allProducts)}
+                                                        alt={opt.name}
+                                                        className="object-cover rounded border border-gray-200 shadow-sm mr-3"
+                                                        style={{ aspectRatio: '1 / 1', width: '40px', height: '40px' }}
+                                                        onError={(e) => {
+                                                            e.currentTarget.onerror = null;
+                                                            e.currentTarget.src = "/no-image.jpg";
+                                                        }}
+                                                    />
+                                                )}
 
                                                 <label
                                                     htmlFor={`${name}-${opt.id}`}
-                                                    className={`ml-3 text-base font-medium truncate ${
-                                                        isAllSelected
-                                                            ? "text-gray-400 cursor-not-allowed"
-                                                            : "text-gray-700 cursor-pointer hover:text-orange-700"
-                                                    }`}
+                                                    className={`text-sm font-medium truncate ${isAllSelected
+                                                        ? "text-gray-400 cursor-not-allowed"
+                                                        : "text-gray-700 cursor-pointer hover:text-orange-700"
+                                                        }`}
                                                     title={opt.name}
                                                 >
                                                     {opt.name}
@@ -259,11 +259,10 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                             {isProductList &&
                                                 total_quantity_divided !== null && (
                                                     <span
-                                                        className={`ml-4 px-3 py-1 text-sm font-semibold rounded-full whitespace-nowrap ${
-                                                            total_quantity_divided > 0
-                                                                ? "bg-orange-100 text-orange-700"
-                                                                : "bg-gray-100 text-gray-500"
-                                                        }`}
+                                                        className={`ml-4 px-3 py-1 text-sm font-semibold rounded-full whitespace-nowrap ${total_quantity_divided > 0
+                                                            ? "bg-orange-100 text-orange-700"
+                                                            : "bg-gray-100 text-gray-500"
+                                                            }`}
                                                         title={`Tồn kho tổng: ${total_quantity_divided}`}
                                                     >
                                                         {total_quantity_divided.toLocaleString(
