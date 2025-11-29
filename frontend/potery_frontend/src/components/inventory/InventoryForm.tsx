@@ -45,6 +45,8 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
     const [individualQuantities, setIndividualQuantities] = useState<{ [productId: number]: number }>({});
     // State để quản lý lỗi validation
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
+    // State để quản lý loading
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
 
     // Load classifications khi sản phẩm được chọn
@@ -212,6 +214,12 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
         return hasValidProduct && hasValidStore && hasNoValidationErrors;
     }, [editingId, form.product_id, form.store_id, validationErrors]);
 
+    // Wrapper function để reset loading khi cancel
+    const handleCancelWithReset = () => {
+        setIsSubmitting(false);
+        handleCancelEdit();
+    };
+
     const handleFormSubmit = async () => {
         // Kiểm tra lỗi validation trước khi submit
         if (Object.keys(validationErrors).length > 0) {
@@ -219,95 +227,125 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
             return;
         }
 
+        // Tránh submit nhiều lần
+        if (isSubmitting) {
+            return;
+        }
+
+        setIsSubmitting(true);
+
         try {
-            const { createInventory, updateInventory } = await import("@/api/services/inventoryService");
-            const productId = form.product_id;
-            const storeId = form.store_id;
+            const { createInventory, updateInventory, createInventoryBatch } = await import("@/api/services/inventoryService");
 
-            // Kiểm tra xem sản phẩm có phân loại hay không
-            const hasClassifications = Object.values(productClassifications).some(
-                (classifications) => classifications.length > 0
-            );
+            if (editingId) {
+                // Xử lý CẬP NHẬT (giữ nguyên logic cũ)
+                const productId = form.product_id;
+                const hasClassifications = Object.values(productClassifications).some(
+                    (classifications) => classifications.length > 0
+                );
 
-            // Nếu sản phẩm có phân loại → xử lý inventory_details
-            if (hasClassifications) {
-                const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+                if (hasClassifications) {
+                    const hasClassificationData = Object.values(classificationQuantities).some(qty => qty > 0);
+                    if (!hasClassificationData) {
+                        toast.error("Vui lòng nhập số lượng cho ít nhất một phân loại!");
+                        return;
+                    }
 
-                if (!hasClassificationData) {
-                    toast.error("Vui lòng nhập số lượng cho ít nhất một phân loại!");
-                    return;
-                }
+                    const inventoryDetails = Object.entries(classificationQuantities)
+                        .filter(([, qty]) => qty > 0)
+                        .map(([classificationId, quantity]) => ({
+                            classification_attribute_relationship_id: parseInt(classificationId),
+                            quantity_stock: quantity,
+                            quantity_sold: 0
+                        }));
 
-                const inventoryDetails = Object.entries(classificationQuantities)
-                    .filter(([, qty]) => qty > 0)
-                    .map(([classificationId, quantity]) => ({
-                        classification_attribute_relationship_id: parseInt(classificationId),
-                        quantity_stock: quantity,
-                        quantity_sold: 0
-                    }));
-
-                if (editingId) {
-                    // CẬP NHẬT tồn kho với phân loại
                     await updateInventory(editingId, {
                         inventory_details: inventoryDetails
                     });
                     toast.success(`Cập nhật tồn kho thành công!`);
                 } else {
-                    // TẠO MỚI tồn kho với phân loại
-                    const totalQuantity = Object.values(classificationQuantities).reduce((sum, qty) => sum + qty, 0);
-                    await createInventory({
-                        product_id: productId as string | string[],
-                        store_id: storeId as string | string[],
-                        quantity_stock: totalQuantity,
-                        inventory_details: inventoryDetails,
-                    });
-                    toast.success("Tạo tồn kho sản phẩm có phân loại thành công!");
-                }
-            }
-            // Nếu sản phẩm KHÔNG có phân loại → chỉ gửi quantity_stock
-            else {
-                // Kiểm tra số lượng cho từng sản phẩm
-                const selectedProductIds: number[] = [];
-                if (Array.isArray(form.product_id)) {
-                    selectedProductIds.push(...form.product_id.map(id => Number(id)));
-                } else if (form.product_id === 'all') {
-                    selectedProductIds.push(...products.map(p => p.id));
-                } else if (form.product_id !== 'all' && form.product_id) {
-                    selectedProductIds.push(Number(form.product_id));
-                }
-
-                const hasValidQuantity = selectedProductIds.some(productId =>
-                    (individualQuantities[productId] || 0) > 0
-                );
-
-                if (!hasValidQuantity && (!form.quantity_stock || form.quantity_stock <= 0)) {
-                    toast.error("Vui lòng nhập số lượng tồn kho hợp lệ!");
-                    return;
-                }
-
-                if (editingId) {
-                    // CẬP NHẬT tồn kho không phân loại
-                    const productId = Number(form.product_id);
-                    const quantity = individualQuantities[productId] || form.quantity_stock || 0;
+                    const productIdNum = Number(form.product_id);
+                    const quantity = individualQuantities[productIdNum] || form.quantity_stock || 0;
                     await updateInventory(editingId, {
                         quantity_stock: quantity,
                         quantity_sold: form.quantity_sold
                     });
                     toast.success(`Cập nhật tồn kho thành công!`);
-                } else {
-                    // TẠO MỚI tồn kho không phân loại - tạo cho từng sản phẩm riêng biệt
-                    for (const productId of selectedProductIds) {
+                }
+            } else {
+                // Xử lý TẠO MỚI với batch API
+                const productIds: number[] = [];
+                const storeIds: number[] = [];
+
+                // Lấy danh sách product IDs
+                if (Array.isArray(form.product_id)) {
+                    productIds.push(...form.product_id.map(id => Number(id)));
+                } else if (form.product_id === 'all') {
+                    productIds.push(...products.map(p => p.id));
+                } else if (form.product_id !== 'all' && form.product_id) {
+                    productIds.push(Number(form.product_id));
+                }
+
+                // Lấy danh sách store IDs
+                if (Array.isArray(form.store_id)) {
+                    storeIds.push(...form.store_id.map(id => Number(id)));
+                } else if (form.store_id === 'all') {
+                    storeIds.push(...stores.map(s => s.id));
+                } else if (form.store_id !== 'all' && form.store_id) {
+                    storeIds.push(Number(form.store_id));
+                }
+
+                // Tạo mảng inventory requests theo format API mong muốn
+                const inventoryRequests: any[] = [];
+
+                for (const productId of productIds) {
+                    const productClassificationsForProduct = productClassifications[productId] || [];
+                    const hasClassifications = productClassificationsForProduct.length > 0;
+
+                    if (hasClassifications) {
+                        // Sản phẩm có phân loại
+                        const inventoryDetails = Object.entries(classificationQuantities)
+                            .filter(([classificationId, qty]) => {
+                                // Chỉ lấy classification thuộc sản phẩm này
+                                const isForThisProduct = productClassificationsForProduct.some(
+                                    c => c.id === parseInt(classificationId)
+                                );
+                                return isForThisProduct && qty > 0;
+                            })
+                            .map(([classificationId, quantity]) => ({
+                                classification_attribute_relationship_id: parseInt(classificationId),
+                                quantity_stock: quantity,
+                                quantity_sold: 0
+                            }));
+
+                        if (inventoryDetails.length > 0) {
+                            inventoryRequests.push({
+                                product_id: productId,
+                                store_id: storeIds,
+                                inventory_details: inventoryDetails
+                            });
+                        }
+                    } else {
+                        // Sản phẩm không có phân loại
                         const quantity = individualQuantities[productId] || 0;
                         if (quantity > 0) {
-                            await createInventory({
-                                product_id: productId.toString(),
-                                store_id: storeId as string | string[],
-                                quantity_stock: quantity,
+                            inventoryRequests.push({
+                                product_id: productId,
+                                store_id: storeIds,
+                                quantity_stock: quantity
                             });
                         }
                     }
-                    toast.success("Tạo tồn kho sản phẩm không có phân loại thành công!");
                 }
+
+                if (inventoryRequests.length === 0) {
+                    toast.error("Vui lòng nhập số lượng tồn kho hợp lệ!");
+                    return;
+                }
+
+                // Gửi batch request
+                await createInventoryBatch(inventoryRequests);
+                toast.success(`Tạo tồn kho thành công cho ${inventoryRequests.length} sản phẩm!`);
             }
 
             handleCancelEdit();
@@ -315,6 +353,8 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
         } catch (error) {
             console.error("Error submitting inventory form:", error);
             toast.error(editingId ? "Có lỗi xảy ra khi cập nhật tồn kho!" : "Có lỗi xảy ra khi tạo tồn kho!");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -735,7 +775,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
             {/* --- Button controls --- */}
             <div className="pt-8 border-t mt-8 border-gray-100">
                 {/* Thông báo hướng dẫn khi button bị disable */}
-                {!canSubmit && !editingId && (
+                {!canSubmit && !editingId && !isSubmitting && (
                     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                         <p className="text-sm text-amber-700 font-medium text-center">
                             Vui lòng chọn ít nhất 1 sản phẩm và 1 cửa hàng hoặc nhập đúng số lượng để tiếp tục
@@ -745,7 +785,7 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
                 <div className="flex justify-end gap-3">
                     <button
-                        onClick={handleCancelEdit}
+                        onClick={handleCancelWithReset}
                         className="px-8 py-3 rounded-xl font-bold shadow-lg transition duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 transform hover:scale-[1.02]"
                     >
                         {editingId ? "Hủy" : "Đóng"}
@@ -753,13 +793,20 @@ const InventoryForm: React.FC<InventoryFormProps> = ({
 
                     <button
                         onClick={handleFormSubmit}
-                        disabled={!canSubmit}
-                        className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform ${canSubmit
+                        disabled={!canSubmit || isSubmitting}
+                        className={`px-8 py-3 rounded-xl font-extrabold shadow-xl transition duration-200 text-white flex items-center gap-2 transform ${canSubmit && !isSubmitting
                             ? `hover:scale-[1.02] ${btnPrimaryClass}`
                             : 'bg-gray-400 cursor-not-allowed opacity-50'
                             }`}
                     >
-                        {editingId ? "Cập nhật tồn kho" : "Thêm mới tồn kho"}
+                        {isSubmitting ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                {editingId ? "Đang cập nhật..." : "Đang thêm mới..."}
+                            </>
+                        ) : (
+                            <>{editingId ? "Cập nhật tồn kho" : "Thêm mới tồn kho"}</>
+                        )}
                     </button>
                 </div>
             </div>
