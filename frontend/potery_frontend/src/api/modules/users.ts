@@ -91,21 +91,37 @@ export const userApi = {
         const cached = localStorage.getItem('customer');
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (parsed.full_name && parsed.phone_number && parsed.address) {
+          // A valid cache must have the avatar property, even if it's null
+          if (Object.prototype.hasOwnProperty.call(parsed, 'avatar')) {
             return parsed;
           }
         }
       }
 
-      // ✅ Nếu không có cache đầy đủ -> lấy từ API
+      // ✅ Nếu không có cache hợp lệ -> lấy từ API
       const customerId = typeof window !== 'undefined' ? localStorage.getItem('customerId') : null;
       if (customerId) {
         const response = await api.get(`/customers/customerdetail/${customerId}`);
         const userData = response.data;
+
+        const normalizedUser = {
+          id: userData.id || customerId,
+          full_name: userData.full_name || userData.name || '',
+          email: userData.email || '',
+          phone_number: userData.phone_number || userData.phone || '',
+          address: userData.address || '',
+          avatar: userData.avatar_image || userData.avatar || null,
+        };
+        
         if (typeof window !== 'undefined') {
-          localStorage.setItem('customer', JSON.stringify(userData));
+            const userToCache = { ...normalizedUser };
+            // Don't cache large avatar strings
+            if (userToCache.avatar && typeof userToCache.avatar === 'string' && userToCache.avatar.length > 1024) {
+                delete userToCache.avatar;
+            }
+            localStorage.setItem('customer', JSON.stringify(userToCache));
         }
-        return userData;
+        return normalizedUser;
       }
 
       throw new Error('User data not found.');
@@ -126,9 +142,6 @@ export const userApi = {
     return user as unknown as UserProfile; // Cần chắc chắn Customer type khớp UserProfile
   },
 
-  // Cập nhật profile
-  // Cập nhật profile
-  // Cập nhật profile
   updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
     try {
       const token = getToken();
@@ -174,17 +187,23 @@ export const userApi = {
       // 🔄 Chuẩn hóa về UserProfile cho frontend
       const normalizedUser = {
         id: updatedUser.id || customerId,
-        name: updatedUser.full_name || updatedUser.name || '',
+        full_name: updatedUser.full_name || updatedUser.name || '',
         email: updatedUser.email || '',
-        phone: updatedUser.phone_number || '',
+        phone_number: updatedUser.phone_number || updatedUser.phone || '',
         address: updatedUser.address || '',
-        avatar_image: updatedUser.avatar_image || null,
-      } as unknown as UserProfile;
+        avatar: updatedUser.avatar_image || updatedUser.avatar || null,
+      };
 
-      // Cập nhật localStorage
-      localStorage.setItem('customer', JSON.stringify(normalizedUser));
+      // Cập nhật localStorage, nhưng bỏ qua avatar nếu nó quá lớn (base64)
+      const userToCache = { ...normalizedUser };
+      if (userToCache.avatar && typeof userToCache.avatar === 'string' && userToCache.avatar.length > 1024) {
+        // This is likely a base64 string, don't store it in localStorage.
+        // This will cause the cache to be invalid on next load, forcing a refetch.
+        delete userToCache.avatar;
+      }
+      localStorage.setItem('customer', JSON.stringify(userToCache));
 
-      return normalizedUser;
+      return normalizedUser as unknown as UserProfile;
     } catch (error) {
       console.error('❌ Lỗi update profile:', error);
       throw handleAxiosError(error, 'Không thể cập nhật thông tin người dùng.');

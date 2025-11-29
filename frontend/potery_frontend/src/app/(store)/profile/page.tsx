@@ -129,7 +129,7 @@ export default function ProfilePage() {
       if (selectedFile) {
         const formDataToSend = new FormData();
         Object.entries(formData).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
+          if (key !== 'avatar' && key !== 'avatar_image' && value !== undefined && value !== null) {
             formDataToSend.append(key, value as any);
           }
         });

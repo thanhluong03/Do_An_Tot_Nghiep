@@ -1,10 +1,10 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000 // 30s timeout
+  timeout: 30000
 });
 
 export const paymentApi = {
@@ -14,7 +14,7 @@ export const paymentApi = {
 
     try {
       const res = await api.post('/paymenttransaction/momo', {
-        order_id: order_id,
+        order_id,
         amount,
       });
 
@@ -22,15 +22,19 @@ export const paymentApi = {
       console.log('📥 API Response data:', res.data);
 
       return res.data;
-    } catch (error) {
-      console.error('🚨 API Error:', error);
-      if (error.response) {
-        console.error('🚨 Error response:', error.response.data);
-        console.error('🚨 Error status:', error.response.status);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error('🚨 Axios Error:', error.message);
+
+        if (error.response) {
+          console.error('🚨 Error response:', error.response.data);
+          console.error('🚨 Error status:', error.response.status);
+        }
+      } else {
+        console.error('🚨 Unknown error:', error);
       }
+
       throw error;
     }
   },
 };
-
-
