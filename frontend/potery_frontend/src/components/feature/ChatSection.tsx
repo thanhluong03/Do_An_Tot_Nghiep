@@ -28,7 +28,6 @@ interface ChatModalProps {
   userId: number;
   storeId: number;
   conversationId?: number | null;
-  userAvatar?: string; // <-- avatar USER truyền từ API cha
 }
 
 export function ChatModal({
@@ -37,7 +36,6 @@ export function ChatModal({
   userId,
   storeId,
   conversationId,
-  userAvatar,
 }: ChatModalProps) {
   const socketRef = useRef<Socket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,8 +44,37 @@ export function ChatModal({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [userAvatar, setUserAvatar] = useState<string>('');
 
-  const ADMIN_AVATAR = "/images/admin-avatar.png"; // <-- ảnh cố định cho chủ cửa hàng
+  const ADMIN_AVATAR = "/about.png"; // <-- ảnh cố định cho chủ cửa hàng
+  const USER_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+  useEffect(() => {
+    const fetchUserAvatar = async () => {
+      if (!userId) return;
+      try {
+        const res = await fetch(`${USER_API_BASE_URL}/customers/customerdetail/${userId}`);
+        const data = await res.json();
+        const avatarData = data.avatar || data.avatar_image;
+        if (avatarData) {
+            if (avatarData.startsWith('http') || avatarData.startsWith('data:image')) {
+                setUserAvatar(avatarData);
+            } else {
+                setUserAvatar(`data:image/jpeg;base64,${avatarData}`);
+            }
+        } else {
+            setUserAvatar('/images/default-avatar.jpg');
+        }
+      } catch (err) {
+        console.error('Lỗi fetch avatar user:', err);
+        setUserAvatar('/star.png');
+      }
+    };
+
+    if (isOpen) {
+      fetchUserAvatar();
+    }
+  }, [isOpen, userId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -187,7 +214,7 @@ export function ChatModal({
 
               {msg.sender_type === 'USER' && (
                 <img
-                  src={msg.user_avatar || '/images/default-user.png'}
+                  src={msg.user_avatar || '/images/default-avatar.jpg'}
                   className="w-7 h-7 rounded-full object-cover"
                 />
               )}
