@@ -209,9 +209,10 @@ const ImportProductTable: React.FC<ImportProductTableProps> = ({
                                                         Chi tiết nhập hàng
                                                     </h5>
                                                     <div className="grid gap-3">
-                                                        {item.products?.map((product) => (
+                                                        {item.products?.map((product, productIdx) => (
                                                             <div key={product.product_id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                                                                 <div className="text-[15px] text-gray-800 mb-3">
+                                                                    <span className=" mr-2">{productIdx + 1}.</span>
                                                                     Sản phẩm: {product.product_name}
                                                                 </div>
                                                                 {product.classifications && product.classifications.length > 0 ? (

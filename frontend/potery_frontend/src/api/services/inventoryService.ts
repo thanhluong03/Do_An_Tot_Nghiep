@@ -47,8 +47,8 @@ export interface CreateInventoryDto {
     product_id: number | string | number[] | string[];
     store_id: number | string | number[] | string[];
     inventory_details?: InventoryDetailItemDto[];// Bắt buộc phải có
-    quantity_stock?: number; 
-    
+    quantity_stock?: number;
+
 }
 
 export interface InventoryDetailItemDto {
@@ -71,7 +71,7 @@ export interface UpdateInventoryDto {
 }
 
 export interface Inventory {
-    
+
     id: number;
     product_id: number;
     store_id: number;
@@ -94,7 +94,7 @@ export interface Product {
     images?: { url?: string; image_data?: string | { data: number[] } }[];
     main_image?: string | { data: number[] };
     relationships?: ProductRelationship[]; // Mảng các combo phân loại
-    
+
     // (Optional) Nếu bạn dùng classifications trong code, cần update
     classifications?: any[]; // Hoặc định nghĩa type chi tiết hơn nếu cần
 }
@@ -199,17 +199,35 @@ export const listInventories = async (
 };
 
 export const createInventory = async (data: CreateInventoryDto) => {
-  const payload = {
-    ...data,
-  };
+    const payload = {
+        ...data,
+    };
 
-  // ✅ Nếu sản phẩm không có phân loại, backend chỉ cần quantity_stock
-  if (!payload.inventory_details || payload.inventory_details.length === 0) {
-    delete payload.inventory_details;
-  }
+    // ✅ Nếu sản phẩm không có phân loại, backend chỉ cần quantity_stock
+    if (!payload.inventory_details || payload.inventory_details.length === 0) {
+        delete payload.inventory_details;
+    }
 
-  const res = await axios.post(`${API_URL_INVENTORY}/createinventory`, payload);
-  return res.data;
+    const res = await axios.post(`${API_URL_INVENTORY}/createinventory`, [payload]); // Gửi dưới dạng mảng
+    return res.data;
+};
+
+// Hàm tạo tồn kho batch theo format API mới
+export const createInventoryBatch = async (inventoryItems: CreateInventoryDto[]) => {
+    // Chuẩn bị payload theo đúng format API mong muốn
+    const payload = inventoryItems.map(item => {
+        const processedItem = { ...item };
+
+        // ✅ Nếu sản phẩm không có phân loại, xóa inventory_details
+        if (!processedItem.inventory_details || processedItem.inventory_details.length === 0) {
+            delete processedItem.inventory_details;
+        }
+
+        return processedItem;
+    });
+
+    const res = await axios.post(`${API_URL_INVENTORY}/createinventory`, payload);
+    return res.data;
 };
 
 
@@ -231,8 +249,8 @@ export interface InventoryDetailsResponse {
         quantity_sold: number;
         classification_attribute_relationship: object;
     }[];
-    quantity_stock : number;
-    quantity_sold : number;
+    quantity_stock: number;
+    quantity_sold: number;
 }
 
 export const getInventoryDetails = async (id: number): Promise<InventoryDetailsResponse> => {
@@ -321,7 +339,7 @@ export interface TransferInventoryDto {
 
 // Chuyển combo phân loại giữa các cửa hàng
 export const transferInventory = async (data: TransferInventoryDto): Promise<{ success: boolean; message: string }> => {
-  // backend endpoint: POST /inventory/transfer
-  const res = await axios.post(`${API_URL_INVENTORY}/transfer`, data);
-  return res.data;
+    // backend endpoint: POST /inventory/transfer
+    const res = await axios.post(`${API_URL_INVENTORY}/transfer`, data);
+    return res.data;
 };

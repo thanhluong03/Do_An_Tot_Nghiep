@@ -471,8 +471,8 @@ const TransferInventoryForm: React.FC<TransferInventoryFormProps> = ({ onSuccess
                                                         (e.target as HTMLImageElement).src = '/no-image.jpg';
                                                     }}
                                                 />
-                                                <span className="flex-1 truncate font-medium text-gray-700">{product.name}</span>
-                                                <span className={`px-2 py-1 text-xs rounded font-semibold ${stock > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>Tồn: {stock}</span>
+                                                <span className="flex-1 text-sm truncate text-gray-700">{product.name}</span>
+                                                <span className={`px-3 py-1 text-xs rounded-full font-semibold ${stock > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>Tồn: {stock}</span>
                                             </div>
                                         );
                                     })

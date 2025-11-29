@@ -35,18 +35,33 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
     categories,
 }) => {
     const selectedIds: string[] = React.useMemo(() => {
-        if (Array.isArray(selectedValues)) return selectedValues.filter((val) => val !== "all");
-        if (typeof selectedValues === "string" && selectedValues !== "all") return [selectedValues];
+        if (Array.isArray(selectedValues)) return selectedValues;
+        if (typeof selectedValues === "string") return [selectedValues];
         return [];
     }, [selectedValues]);
 
-    const isAllSelected = selectedValues === "all";
+    // Danh sách id sản phẩm tồn kho > 0
+    const availableProductIds: string[] = React.useMemo(() => {
+        if (name !== "product_id") return options.map((opt) => String(opt.id));
+        return options
+            .filter((opt) => {
+                const product = findProduct(opt.id, allProducts);
+                return product && (product.total_quantity_divided ?? 0) > 0;
+            })
+            .map((opt) => String(opt.id));
+    }, [options, allProducts, name]);
+
+    // Checkbox "Tất cả" được tích nếu đã chọn hết các sản phẩm tồn kho > 0
+    const isAllSelected =
+        name === "product_id"
+            ? availableProductIds.length > 0 && availableProductIds.every((id) => selectedIds.includes(id))
+            : options.length > 0 && options.every((opt) => selectedIds.includes(String(opt.id)));
     const isProductList = name === "product_id";
 
     const [searchTerm, setSearchTerm] = React.useState("");
     const [selectedCategory, setSelectedCategory] = React.useState<string>("all");
 
-    // --- Lọc theo từ khoá & category ---
+    // --- Lọc theo từ khoá, danh mục & tồn kho ---
     const filteredOptions = React.useMemo(() => {
         let result = [...options];
 
@@ -61,6 +76,14 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
             result = result.filter((opt) => {
                 const product = findProduct(opt.id, allProducts);
                 return product && product.category_id?.toString() === selectedCategory;
+            });
+        }
+
+        // Lọc sản phẩm có tồn kho tổng > 0
+        if (isProductList) {
+            result = result.filter((opt) => {
+                const product = findProduct(opt.id, allProducts);
+                return product && (product.total_quantity_divided ?? 0) > 0;
             });
         }
 
@@ -94,7 +117,12 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
         let newValue: string | string[] | undefined;
 
         if (value === "all") {
-            newValue = checked ? "all" : undefined;
+            if (checked) {
+                // Chọn tất cả sản phẩm tồn kho > 0
+                newValue = availableProductIds.length > 0 ? availableProductIds : undefined;
+            } else {
+                newValue = undefined;
+            }
         } else {
             let newSelectedIds = [...selectedIds];
             if (checked && !newSelectedIds.includes(value)) newSelectedIds.push(value);
@@ -219,13 +247,10 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                                     id={`${name}-${opt.id}`}
                                                     name={name}
                                                     value={String(opt.id)}
+                                                    checked={selectedIds.includes(String(opt.id))}
                                                     disabled={isAllSelected}
-                                                    checked={
-                                                        isAllSelected ||
-                                                        selectedIds.includes(String(opt.id))
-                                                    }
                                                     onChange={handleCheckboxChange}
-                                                    className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer transform scale-110 mr-3"
+                                                    className={`h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 transform scale-110 mr-3 ${isAllSelected ? 'cursor-pointer' : 'cursor-pointer'}`}
                                                 />
 
                                                 {isProductList && (
@@ -246,7 +271,7 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
                                                 <label
                                                     htmlFor={`${name}-${opt.id}`}
                                                     className={`text-sm font-medium truncate ${isAllSelected
-                                                        ? "text-gray-400 cursor-not-allowed"
+                                                        ? "text-gray-400 cursor-pointer"
                                                         : "text-gray-700 cursor-pointer hover:text-orange-700"
                                                         }`}
                                                     title={opt.name}

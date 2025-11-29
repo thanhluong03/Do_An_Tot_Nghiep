@@ -18,10 +18,10 @@ export class InventoryDetailItemDto {
 
 export class CreateInventoryDto {
     @IsNotEmpty()
-    product_id: number | string;
+    product_id: number | string | number[] | string[];
 
     @IsNotEmpty()
-    store_id: number | string;
+    store_id: number | string | number[] | string[];
 
     @IsOptional()
     @IsArray()

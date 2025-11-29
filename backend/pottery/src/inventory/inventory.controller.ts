@@ -14,12 +14,16 @@ export class InventoryController {
 
 
     @Post('createinventory')
-    async create(@Body() dto: CreateInventoryDto) {
-        return await this.inventoryService.create({
-            ...dto,
-            product_id: dto.product_id,
-            store_id: dto.store_id,
-        });
+    async create(@Body() dto: CreateInventoryDto[]) {
+        return await Promise.all(
+            dto.map((item) =>
+                this.inventoryService.create({
+                    ...item,
+                    product_id: item.product_id,
+                    store_id: item.store_id,
+                })
+            )
+        );
     }
 
     @Put('updateinventory/:id')
