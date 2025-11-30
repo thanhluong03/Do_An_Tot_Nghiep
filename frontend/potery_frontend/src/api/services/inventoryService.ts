@@ -182,7 +182,7 @@ export const getProductImageUrl = (product: Product): string => {
 
 export const listInventories = async (
     dto: ListInventoryDto
-): Promise<{ data: Inventory[]; total: number; page: number; size: number }> => {
+): Promise<{ data: Inventory[]; total: number; page: number; size: number; totalPages?: number }> => {
     // Truyền các tham số lọc/phân trang/tìm kiếm lên backend
     const res = await axios.get(`${API_URL_INVENTORY}/list`, {
         params: dto
@@ -190,10 +190,18 @@ export const listInventories = async (
 
     const responseData = res.data;
     if (responseData && (Array.isArray(responseData.data) || Array.isArray(responseData.items))) {
-        return responseData;
+        const page = dto.page || 1;
+        const size = dto.size || 10;
+        const total = responseData.total || (Array.isArray(responseData.data) ? responseData.data.length : (Array.isArray(responseData.items) ? responseData.items.length : 0));
+        const totalPages = Math.ceil(total / size) || 0;
+        return { ...responseData, total, page, size, totalPages } as any;
     }
     if (Array.isArray(responseData)) {
-        return { data: responseData, total: responseData.length, page: dto.page || 1, size: dto.size || 10 };
+        const page = dto.page || 1;
+        const size = dto.size || 10;
+        const total = responseData.length;
+        const totalPages = Math.ceil(total / size) || 0;
+        return { data: responseData, total, page, size, totalPages };
     }
     return { data: [], total: 0, page: 1, size: 10 };
 };

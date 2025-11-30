@@ -41,8 +41,8 @@ export class InventoryController {
     async list(@Query() query: any) {
         const input = {
             ...query,
-            page: query.page ?? 1,
-            size: query.size ?? 10,
+            page: Number(query.page) || 1,
+            size: Number(query.size) || 10,
         };
         return await this.inventoryService.list(input);
     }

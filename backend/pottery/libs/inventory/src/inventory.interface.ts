@@ -1,6 +1,6 @@
 export interface ListInventoryInput {
-    page: number;
-    size: number;
+    page?: number;
+    size?: number;
     key?: string;
     product_id?: number;
     store_id?: number;
