@@ -375,7 +375,7 @@ export class InventoryService {
     }
 
 
-    async list(input: ListInventoryInput): Promise<{ data: any[]; total: number; page: number; size: number }> {
+    async list(input: ListInventoryInput): Promise<{ data: any[]; total: number; page: number; size: number; totalPages: number }> {
         let list = (await this.inventoryRepository.findAll())
             .filter(inv => inv.product && inv.store);
         let pid: number | undefined = undefined;
@@ -397,17 +397,35 @@ export class InventoryService {
             });
         }
 
+        // Group by store_id ascending, then by product name
+        list.sort((a, b) => {
+            const sa = Number(a.store_id) || 0;
+            const sb = Number(b.store_id) || 0;
+            if (sa !== sb) return sa - sb;
+            const pa = (a.product?.name || '').toString();
+            const pb = (b.product?.name || '').toString();
+            return pa.localeCompare(pb);
+        });
+
+        // If both product_id and store_id are provided, move that specific inventory to the
+        // front of its store's group (so the store-grouping remains intact)
         if (pid !== undefined && sid !== undefined) {
             const idx = list.findIndex(inv => Number(inv.product_id) === pid && Number(inv.store_id) === sid);
-            if (idx > 0) {
+            if (idx !== -1) {
                 const dup = list.splice(idx, 1)[0];
-                list.unshift(dup);
+                // Find the first index of this store group and insert at the start of the group
+                const storeStartIdx = list.findIndex(inv => Number(inv.store_id) === sid);
+                if (storeStartIdx !== -1) {
+                    list.splice(storeStartIdx, 0, dup);
+                } else {
+                    list.unshift(dup);
+                }
             }
         }
 
         const total = list.length;
-        const page = input.page && input.page > 0 ? input.page : 1;
-        const size = input.size && input.size > 0 ? input.size : 10;
+        const page = Number(input.page) && Number(input.page) > 0 ? Number(input.page) : 1;
+        const size = Number(input.size) && Number(input.size) > 0 ? Number(input.size) : 10;
         const start = (page - 1) * size;
         const end = start + size;
         const data = await Promise.all(
@@ -427,7 +445,8 @@ export class InventoryService {
                 updated_at: inv.updated_at,
             }))
         );
-        return { data, total, page, size };
+        const totalPages = Math.ceil(total / size) || 0;
+        return { data, total, page, size, totalPages };
     }
 
     async transferInventory(data: {
