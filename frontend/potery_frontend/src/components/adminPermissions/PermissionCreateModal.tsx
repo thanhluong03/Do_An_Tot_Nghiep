@@ -46,6 +46,7 @@ export default function PermissionCreateModal({ open, roles, onClose, onCreate }
                     <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700">Vai trò (Role)</label>
                         <select
+                            title="role"
                             value={roleId}
                             onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : "")}
                             className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
@@ -72,6 +73,7 @@ export default function PermissionCreateModal({ open, roles, onClose, onCreate }
                     <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700">Mô tả</label>
                         <textarea
+                            title="description"
                             value={desc}
                             onChange={(e) => setDesc(e.target.value)}
                             className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
