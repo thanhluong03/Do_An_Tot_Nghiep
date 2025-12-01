@@ -165,10 +165,43 @@ export default function MyOrdersPage() {
     if (paymentStatus === 'success' && orderId) {
       (async () => {
         try {
+          // Cập nhật order đầu tiên (đã được backend callback cập nhật, nhưng đảm bảo chắc chắn)
           await orderApi.updateOrder(Number(orderId), {
             status: 'CONFIRMED',
             payment_status: 'PAID',
           });
+
+          // Kiểm tra xem có danh sách order IDs khác từ sessionStorage không (nhiều đơn từ nhiều cửa hàng)
+          const momoOrderIdsStr = sessionStorage.getItem('momo_order_ids');
+          if (momoOrderIdsStr) {
+            try {
+              const allOrderIds: number[] = JSON.parse(momoOrderIdsStr);
+              console.log('💾 Tìm thấy danh sách order IDs từ sessionStorage:', allOrderIds);
+              
+              // Cập nhật payment_status cho tất cả các order còn lại (trừ order đầu tiên đã cập nhật)
+              const remainingOrderIds = allOrderIds.filter(id => id !== Number(orderId));
+              if (remainingOrderIds.length > 0) {
+                console.log(`🔄 Cập nhật payment_status cho ${remainingOrderIds.length} đơn hàng còn lại:`, remainingOrderIds);
+                await Promise.all(
+                  remainingOrderIds.map(orderId => 
+                    orderApi.updateOrder(orderId, {
+                      status: 'CONFIRMED',
+                      payment_status: 'PAID',
+                    }).catch(err => {
+                      console.error(`❌ Lỗi cập nhật đơn #${orderId}:`, err);
+                    })
+                  )
+                );
+                console.log('✅ Đã cập nhật payment_status cho tất cả các đơn hàng');
+              }
+
+              // Xóa sessionStorage sau khi xử lý xong
+              sessionStorage.removeItem('momo_order_ids');
+            } catch (parseErr) {
+              console.error('❌ Lỗi parse momo_order_ids:', parseErr);
+            }
+          }
+
           clearCart();
           toast.success('🎉 Thanh toán thành công!');
           window.history.replaceState({}, '', '/orders');
@@ -178,6 +211,8 @@ export default function MyOrdersPage() {
         }
       })();
     } else if (paymentStatus === 'failed') {
+      // Xóa sessionStorage nếu thanh toán thất bại
+      sessionStorage.removeItem('momo_order_ids');
       toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
       window.history.replaceState({}, '', '/orders');
     }
