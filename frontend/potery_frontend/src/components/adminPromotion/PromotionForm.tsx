@@ -43,10 +43,6 @@ const PromotionForm: React.FC<PromotionFormProps> = ({
 }) => {
     return (
         <div className={`border p-6 rounded-lg mb-8 ${editingId ? "border-yellow-400" : "border-blue-400"}`}>
-            <h3 className="text-xl font-semibold mb-4 text-gray-700">
-                {editingId ? `Sửa Promotion ID: ${editingId}` : "Thêm Promotion mới"}
-            </h3>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 
                 {/* CỘT 1 (Tên, Mô tả) */}

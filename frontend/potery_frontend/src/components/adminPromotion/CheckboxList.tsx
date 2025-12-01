@@ -67,14 +67,14 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
 
     const allLabel =
         name === "product_id"
-            ? "SẢN PHẨM"
+            ? "sản phẩm"
             : name === "supplier_id"
-            ? "NHÀ CUNG CẤP"
-            : "CỬA HÀNG";
+                ? "nhà cung cấp"
+                : "cửa hàng";
 
     return (
         <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
+            <label className="block text-sm text-gray-800 mb-2">
                 {label}
             </label>
 
@@ -92,92 +92,90 @@ const CheckboxList: React.FC<CheckboxListProps> = ({
             )}
 
             <div
-    className="p-3 border border-orange-200 rounded-xl bg-gradient-to-br from-white via-orange-50 to-white overflow-y-auto shadow-inner relative"
-    style={{ maxHeight: "600px" }}
->
-    {/* --- TẤT CẢ (CỐ ĐỊNH Ở ĐẦU) --- */}
-    <div
-        className="flex items-center mb-2 pb-2 border-b border-dashed border-orange-200 bg-white sticky top-0 z-10 shadow-sm"
-    >
-        <input
-            type="checkbox"
-            id={`${name}-all`}
-            name={name}
-            value="all"
-            checked={isAllSelected}
-            onChange={handleCheckboxChange}
-            className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
-        />
-        <label
-            htmlFor={`${name}-all`}
-            className="ml-3 text-base font-bold text-orange-600 cursor-pointer select-none"
-        >
-            --- Tất cả {allLabel} ---
-        </label>
-    </div>
-
-    {/* Danh sách checkbox */}
-    <div className="grid grid-cols-1 gap-2 mt-1">
-        {filteredOptions.length > 0 ? (
-            filteredOptions.map((opt) => (
+                className="p-3 border border-orange-200 rounded-xl bg-gradient-to-br from-white via-orange-50 to-white overflow-y-auto shadow-inner relative"
+                style={{ maxHeight: "600px" }}
+            >
+                {/* --- TẤT CẢ (CỐ ĐỊNH Ở ĐẦU) --- */}
                 <div
-                    key={opt.id}
-                    className={`flex items-center p-3 rounded-lg transition-colors duration-150 ${
-                        isAllSelected
-                            ? "bg-gray-100 text-gray-400"
-                            : selectedIds.includes(String(opt.id))
-                            ? "bg-orange-50 border border-orange-300"
-                            : "hover:bg-orange-50"
-                    }`}
+                    className="flex items-center mb-2 pb-2 border-b border-dashed border-orange-200 bg-white sticky top-0 z-10 shadow-sm"
                 >
                     <input
                         type="checkbox"
-                        id={`${name}-${opt.id}`}
+                        id={`${name}-all`}
                         name={name}
-                        value={String(opt.id)}
-                        disabled={isAllSelected}
-                        checked={
-                            isAllSelected ||
-                            selectedIds.includes(String(opt.id))
-                        }
+                        value="all"
+                        checked={isAllSelected}
                         onChange={handleCheckboxChange}
-                        className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 flex-shrink-0 cursor-pointer"
+                        className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
                     />
-
-                    {name === "product_id" && opt.imageUrl && (
-                        <img
-                            src={opt.imageUrl}
-                            alt={opt.name}
-                            className="w-12 h-12 object-cover rounded-md ml-3 shadow-sm flex-shrink-0"
-                            onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = "/no-image.jpg";
-                            }}
-                        />
-                    )}
-
                     <label
-                        htmlFor={`${name}-${opt.id}`}
-                        className={`ml-3 text-base truncate flex-grow ${
-                            isAllSelected
-                                ? "cursor-not-allowed text-gray-500"
-                                : "cursor-pointer text-gray-800"
-                        }`}
-                        title={opt.name}
+                        htmlFor={`${name}-all`}
+                        className="ml-3 text-sm font-bold text-orange-600 cursor-pointer select-none"
                     >
-                        {opt.name}
+                        --- Tất cả {allLabel} ---
                     </label>
                 </div>
-            ))
-        ) : (
-            <p className="text-center text-sm text-gray-500 py-3 italic">
-                {searchTerm
-                    ? "Không tìm thấy sản phẩm phù hợp."
-                    : "Không có dữ liệu để hiển thị."}
-            </p>
-        )}
-    </div>
-</div>
+
+                {/* Danh sách checkbox */}
+                <div className="grid grid-cols-1 gap-2 mt-1">
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((opt) => (
+                            <div
+                                key={opt.id}
+                                className={`flex items-center p-3 rounded-lg transition-colors duration-150 ${isAllSelected
+                                        ? "bg-gray-100 text-gray-400"
+                                        : selectedIds.includes(String(opt.id))
+                                            ? "bg-orange-50 border border-orange-300"
+                                            : "hover:bg-orange-50"
+                                    }`}
+                            >
+                                <input
+                                    type="checkbox"
+                                    id={`${name}-${opt.id}`}
+                                    name={name}
+                                    value={String(opt.id)}
+                                    disabled={isAllSelected}
+                                    checked={
+                                        isAllSelected ||
+                                        selectedIds.includes(String(opt.id))
+                                    }
+                                    onChange={handleCheckboxChange}
+                                    className="h-5 w-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 flex-shrink-0 cursor-pointer"
+                                />
+
+                                {name === "product_id" && opt.imageUrl && (
+                                    <img
+                                        src={opt.imageUrl}
+                                        alt={opt.name}
+                                        className="w-12 h-12 object-cover rounded-md ml-3 shadow-sm flex-shrink-0"
+                                        onError={(e) => {
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = "/no-image.jpg";
+                                        }}
+                                    />
+                                )}
+
+                                <label
+                                    htmlFor={`${name}-${opt.id}`}
+                                    className={`ml-3 text-sm truncate flex-grow ${isAllSelected
+                                            ? "cursor-not-allowed text-gray-500"
+                                            : "cursor-pointer text-gray-800"
+                                        }`}
+                                    title={opt.name}
+                                >
+                                    {opt.name}
+                                </label>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-sm text-gray-500 py-3 italic">
+                            {searchTerm
+                                ? "Không tìm thấy sản phẩm phù hợp."
+                                : "Không có dữ liệu để hiển thị."}
+                        </p>
+                    )}
+                </div>
+            </div>
 
 
             {error && (
