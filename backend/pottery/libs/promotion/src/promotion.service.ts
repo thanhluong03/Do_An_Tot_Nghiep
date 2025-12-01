@@ -1,4 +1,4 @@
-import { PromotionEntity, PromotionRepository, ProductPromotionRepository } from '@app/database';
+import { PromotionEntity, PromotionRepository, ProductPromotionRepository, ProductImageRepository } from '@app/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ICreatePromotion, IListPromotion, IUpdatePromotion } from './promotion.interface';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE } from '@app/common';
@@ -20,6 +20,7 @@ export class PromotionService {
     constructor(
         private readonly promotionRepository: PromotionRepository,
         private readonly productPromotionRepository: ProductPromotionRepository,
+        private readonly productImageRepository: ProductImageRepository,
     ) { }
 
     async create(data: ICreatePromotion): Promise<{ message: string, promotion: PromotionEntity | null }> {
@@ -86,14 +87,30 @@ export class PromotionService {
 
     async getAllProductPromotions() {
         const productPromotions = await this.productPromotionRepository.findAll();
-        return productPromotions.map(pp => ({
-            productId: pp.product_id,
-            promotionId: pp.promotion_id,
-            product: pp.product,
-            promotion: pp.promotion,
+        // Trả về danh sách, mỗi product sẽ truy vấn ảnh theo product_id
+        return await Promise.all(productPromotions.map(async pp => {
+            let images: any[] = [];
+            if (pp.product && pp.product.id) {
+                const imgs = await this.productImageRepository.findByProductId(pp.product.id);
+                images = imgs.map(img => ({
+                    id: img.id,
+                    is_main_image: img.is_main_image,
+                    priority: img.priority,
+                    image_data: img.image_data ? img.image_data.toString('base64') : null
+                }));
+            }
+            return {
+                productId: pp.product_id,
+                promotionId: pp.promotion_id,
+                product: {
+                    ...pp.product,
+                    images,
+                },
+                promotion: pp.promotion,
+            };
         }));
     }
-    
+
 
     // async setProductPromotion(assignments: { productId: number, promotionId: number }[]): Promise<{ message: string }> {
     //     const currentAssignments = await this.productPromotionRepository.findAll();
@@ -136,52 +153,52 @@ export class PromotionService {
     //     return { message: `Synced ${assignments.length} product assignments successfully!` };
     // }
     async setProductPromotion(assignments: { productId: number, promotionId: number | null }[]): Promise<{ message: string }> {
-    
-    // 1. Chỉ lấy các bản ghi gán hiện tại (existingAssignment) của CÁC SẢN PHẨM CÓ TRONG PAYLOAD.
-    const productIdsInPayload = assignments.map(a => a.productId);
-    
-    // 💡 GIẢ ĐỊNH: ProductPromotionRepository CÓ HÀM findByProductIds(number[])
-    const currentAssignments = await this.productPromotionRepository.findByProductIds(productIdsInPayload);
-    
-    // ⚠️ Loại bỏ hoàn toàn logic xóa các sản phẩm không có trong payload.
 
-    for (const newAssignment of assignments) {
-        const existingAssignment = currentAssignments.find(
-            // Lấy bản ghi gán hiện tại (nếu có)
-            ca => ca.product_id === newAssignment.productId
-        );
+        // 1. Chỉ lấy các bản ghi gán hiện tại (existingAssignment) của CÁC SẢN PHẨM CÓ TRONG PAYLOAD.
+        const productIdsInPayload = assignments.map(a => a.productId);
 
-        // Trường hợp 1: HỦY GÁN (promotionId == null)
-        if (newAssignment.promotionId === null) {
-            // Nếu sản phẩm đang có gán, thực hiện xóa mềm
+        // 💡 GIẢ ĐỊNH: ProductPromotionRepository CÓ HÀM findByProductIds(number[])
+        const currentAssignments = await this.productPromotionRepository.findByProductIds(productIdsInPayload);
+
+        // ⚠️ Loại bỏ hoàn toàn logic xóa các sản phẩm không có trong payload.
+
+        for (const newAssignment of assignments) {
+            const existingAssignment = currentAssignments.find(
+                // Lấy bản ghi gán hiện tại (nếu có)
+                ca => ca.product_id === newAssignment.productId
+            );
+
+            // Trường hợp 1: HỦY GÁN (promotionId == null)
+            if (newAssignment.promotionId === null) {
+                // Nếu sản phẩm đang có gán, thực hiện xóa mềm
+                if (existingAssignment) {
+                    await this.productPromotionRepository.softDeleteByProductId(newAssignment.productId);
+                }
+                continue;
+            }
+
+            // --- Trường hợp 2: GÁN/CẬP NHẬT GÁN (promotionId là một số) ---
+
             if (existingAssignment) {
-                await this.productPromotionRepository.softDeleteByProductId(newAssignment.productId);
-            }
-            continue;
-        }
-        
-        // --- Trường hợp 2: GÁN/CẬP NHẬT GÁN (promotionId là một số) ---
-        
-        if (existingAssignment) {
-            // Cập nhật nếu ID khuyến mãi thay đổi
-            if (existingAssignment.promotion_id !== newAssignment.promotionId) {
-                console.log(`Updating promotion for product ${newAssignment.productId}: ${existingAssignment.promotion_id} -> ${newAssignment.promotionId}`);
-                await this.productPromotionRepository.updatePromotionForProduct(
-                    newAssignment.productId,
-                    // Đã kiểm tra newAssignment.promotionId không null ở trên
-                    newAssignment.promotionId as number 
-                );
+                // Cập nhật nếu ID khuyến mãi thay đổi
+                if (existingAssignment.promotion_id !== newAssignment.promotionId) {
+                    console.log(`Updating promotion for product ${newAssignment.productId}: ${existingAssignment.promotion_id} -> ${newAssignment.promotionId}`);
+                    await this.productPromotionRepository.updatePromotionForProduct(
+                        newAssignment.productId,
+                        // Đã kiểm tra newAssignment.promotionId không null ở trên
+                        newAssignment.promotionId as number
+                    );
+                } else {
+                    console.log(`Skipping product ${newAssignment.productId} - no change needed`);
+                }
             } else {
-                console.log(`Skipping product ${newAssignment.productId} - no change needed`);
+                // Tạo mới gán
+                await this.productPromotionRepository.createMany([{
+                    product_id: newAssignment.productId,
+                    promotion_id: newAssignment.promotionId as number // Đã kiểm tra không null
+                }]);
             }
-        } else {
-            // Tạo mới gán
-            await this.productPromotionRepository.createMany([{
-                product_id: newAssignment.productId,
-                promotion_id: newAssignment.promotionId as number // Đã kiểm tra không null
-            }]);
         }
-    }
 
         return { message: `Cập nhật gán cho ${assignments.length} sản phẩm thành công (Không ảnh hưởng các sản phẩm khác)!` };
     }

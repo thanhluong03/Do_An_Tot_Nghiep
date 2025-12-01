@@ -42,7 +42,10 @@ export default function ImportProductPage() {
     const [itemToDeleteId, setItemToDeleteId] = useState<number | null>(null);
     // DỮ LIỆU SẢN PHẨM: TÁCH BIỆT MỤC ĐÍCH
     const [allProductsForForm, setAllProductsForForm] = useState<Product[]>([]); // Toàn bộ sản phẩm (cho việc lọc/chọn trong Form)
-    const [productsInTable, setProductsInTable] = useState<Product[]>([]);       // Sản phẩm của trang hiện tại (cho bảng tồn kho)
+    // Toàn bộ sản phẩm tồn kho (không phân trang từ API)
+    const [allProductsInTable, setAllProductsInTable] = useState<Product[]>([]);
+    // Sản phẩm của trang hiện tại (phân trang local)
+    const [productsInTable, setProductsInTable] = useState<Product[]>([]);
 
     const [filteredProducts, setFilteredProducts] = useState<SelectOption[]>([]);
 
@@ -74,22 +77,6 @@ export default function ImportProductPage() {
     const [showTable, setShowTable] = useState(false);
 
     const [editingItem, setEditingItem] = useState<ImportProduct | null>(null);
-
-    const fetchProductsForTable = async (page: number, size: number) => {
-        setLoadingProductList(true);
-        try {
-            const res = await listProducts({ page, size });
-            setProductsInTable(Array.isArray(res.data) ? res.data : []);
-            setProductListTotalItems(res.total);
-            setProductListCurrentPage(res.page);
-        } catch {
-            toast.error("Không thể tải danh sách sản phẩm tồn kho!");
-            setProductsInTable([]);
-            setProductListTotalItems(0);
-        } finally {
-            setLoadingProductList(false);
-        }
-    };
 
     // 2. Tải toàn bộ sản phẩm (hoặc một lượng lớn) để LỌC (Dùng cho ImportProductForm)
     const fetchAllProductsForForm = async () => {
@@ -131,13 +118,37 @@ export default function ImportProductPage() {
         }
     };
 
+    // Fetch all products for table (no pagination from API)
+    const fetchProductsForTable = async () => {
+        setLoadingProductList(true);
+        try {
+            const res = await listProducts({ page: 1, size: 1000 });
+            // Lọc bỏ sản phẩm có số lượng tồn kho = 0 và sắp xếp theo cập nhật mới nhất lên đầu
+            const allProducts = Array.isArray(res.data)
+                ? res.data
+                    .filter(p => Number(p.quantity) > 0)
+                    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                : [];
+            setAllProductsInTable(allProducts);
+            setProductListTotalItems(allProducts.length);
+            setProductListCurrentPage(1);
+        } catch {
+            toast.error("Không thể tải danh sách sản phẩm tồn kho!");
+            setAllProductsInTable([]);
+            setProductListTotalItems(0);
+        } finally {
+            setLoadingProductList(false);
+        }
+    };
+
     const handleImportPageChange = (page: number) => {
         if (page < 1 || page > Math.ceil(importTotalItems / importPageSize)) return;
         setImportPage(page);
     };
 
     const handleProductListPageChange = (page: number) => {
-        if (page < 1 || page > Math.ceil(productListTotalItems / productListSize)) return;
+        const totalPages = Math.max(1, Math.ceil(productListTotalItems / productListSize));
+        if (page < 1 || page > totalPages) return;
         setProductListCurrentPage(page);
     };
 
@@ -147,10 +158,17 @@ export default function ImportProductPage() {
         fetchAllProductsForForm(); // Tải toàn bộ sản phẩm cho Form
     }, []);
 
-    // EFFECT: Tải sản phẩm cho BẢNG TỒN KHO khi chuyển trang
+    // Fetch all products once
     useEffect(() => {
-        fetchProductsForTable(productListCurrentPage, productListSize);
-    }, [productListCurrentPage, productListSize]);
+        fetchProductsForTable();
+    }, []);
+
+    // Slice products for current page
+    useEffect(() => {
+        const startIdx = (productListCurrentPage - 1) * productListSize;
+        const endIdx = startIdx + productListSize;
+        setProductsInTable(allProductsInTable.slice(startIdx, endIdx));
+    }, [allProductsInTable, productListCurrentPage, productListSize]);
 
     // EFFECT: Tải lịch sử nhập kho
     useEffect(() => {
@@ -498,7 +516,7 @@ export default function ImportProductPage() {
             resetForm();
 
             // Cập nhật lại dữ liệu
-            await fetchProductsForTable(productListCurrentPage, productListSize);
+            await fetchProductsForTable();
             await fetchAllProductsForForm();
 
             if (showTable) {
@@ -527,7 +545,7 @@ export default function ImportProductPage() {
         try {
             await deleteImportProduct(id);
             toast.success(`Xóa phiếu nhập kho ID #${id} thành công!`);
-            await fetchProductsForTable(productListCurrentPage, productListSize);
+            await fetchProductsForTable();
             await fetchAllProductsForForm();
 
             fetchImportProducts(importPage, importPageSize);
