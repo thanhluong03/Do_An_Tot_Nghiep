@@ -733,8 +733,11 @@ export default function CheckoutPage() {
                 itemsByStore[item.store_id].push(item);
             });
 
-            // Tạo đơn cho từng cửa hàng
+            // Tạo đơn cho từng cửa hàng - TẠO TẤT CẢ ĐƠN TRƯỚC
             const storeIds = Object.keys(itemsByStore).map(Number);
+            const createdOrderIds: number[] = [];
+            let totalAmountForPayment = 0; // Tổng tiền của tất cả các đơn
+
             for (const [index, storeId] of storeIds.entries()) {
                 const storeItems = itemsByStore[storeId];
                 const storeTotalBeforeDiscount = storeItems.reduce((sum, i) => sum + i.price_at_order * i.quantity, 0);
@@ -746,7 +749,7 @@ export default function CheckoutPage() {
                     customer_id: customerId,
                     shipping_address: `${address.trim()}, ${city.trim()}`,
                     voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
-                    payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
+                    payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD', // Tất cả đơn đều dùng CARD nếu MOMO
                     items: storeItems,
                     note,
                 };
@@ -757,27 +760,39 @@ export default function CheckoutPage() {
                 const createdId = Number(res?.data?.id ?? res?.id);
                 if (!createdId) throw new Error(`Không thể tạo đơn cho cửa hàng ${storeId}`);
 
+                createdOrderIds.push(createdId);
+                totalAmountForPayment += storeFinalTotalWithShipping; // Cộng dồn tổng tiền
+
                 // COD email cho guest
                 if (paymentMethod === 'COD' && !isAuthenticated) {
                     await sendOrderConfirmationEmail(createdId);
                 }
+            }
 
-                // MoMo: redirect đơn đầu tiên (Xóa Server Cart Item và Session trước khi redirect)
-                if (paymentMethod === 'MOMO' && index === 0) {
-                    if (!isAuthenticated) clearGuestData();
-
-                    // 🔥 Xóa Server Cart Item cho user đã login
-                    if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
-                        console.log('🗑️ Deleting server cart items before MOMO redirect...');
-                        await Promise.all(serverCartItemIdsToDelete.map(id => cartApi.remove(id)));
-                    }
-
-                    // Xóa Session Checkout
-                    sessionStorage.removeItem('checkout_items');
-
-                    await handlePayment(createdId, storeFinalTotalWithShipping);
-                    return;
+            // Sau khi tạo TẤT CẢ các đơn, xử lý thanh toán
+            if (paymentMethod === 'MOMO') {
+                // Lưu danh sách order IDs vào sessionStorage để xử lý sau khi thanh toán thành công
+                if (createdOrderIds.length > 1) {
+                    sessionStorage.setItem('momo_order_ids', JSON.stringify(createdOrderIds));
+                    console.log('💾 Đã lưu danh sách order IDs cho thanh toán MOMO:', createdOrderIds);
                 }
+
+                if (!isAuthenticated) clearGuestData();
+
+                // 🔥 Xóa Server Cart Item cho user đã login
+                if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
+                    console.log('🗑️ Deleting server cart items before MOMO redirect...');
+                    await Promise.all(serverCartItemIdsToDelete.map(id => cartApi.remove(id)));
+                }
+
+                // Xóa Session Checkout
+                sessionStorage.removeItem('checkout_items');
+
+                // Redirect thanh toán với order_id đầu tiên và TỔNG TIỀN của tất cả các đơn
+                const firstOrderId = createdOrderIds[0];
+                console.log(`💳 Redirecting to MoMo payment: Order #${firstOrderId}, Total Amount: ${formatPrice(totalAmountForPayment)}`);
+                await handlePayment(firstOrderId, totalAmountForPayment);
+                return;
             }
 
             // Nếu COD (Tất cả đơn hàng đã được tạo thành công)
