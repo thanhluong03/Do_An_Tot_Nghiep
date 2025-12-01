@@ -17,6 +17,7 @@ const roleLabels: Record<string, string> = {
     DRIVER: "Tài xế",
     ADMIN: "Nhân viên quản lý cửa hàng",
     SUPER_ADMIN: "Quản lý chuỗi cửa hàng",
+    SUPERADMIN: "Quản lý chuỗi cửa hàng",
 };
 
 export default function PermissionsPage() {

@@ -7,7 +7,12 @@ import { Package, History, User, LogOut, Menu } from 'lucide-react';
 interface DriverLayoutProps {
   children: React.ReactNode;
 }
-
+const deleteCookie = (name: string) => {
+  // Đặt Expires về ngày trong quá khứ và Max-Age=0 để trình duyệt xóa cookie ngay lập tức.
+  document.cookie = name + '=; Max-Age=0; path=/;';
+  // Hoặc dùng Expires:
+  // document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+};
 export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [driverName, setDriverName] = useState('Tài xế');
@@ -26,6 +31,10 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
     localStorage.removeItem('adminRole');
     localStorage.removeItem('adminRoleId');
     localStorage.removeItem('adminPermissions');
+
+    sessionStorage.clear();
+    deleteCookie('adminToken');
+
     window.location.href = '/admin/login';
   };
 
