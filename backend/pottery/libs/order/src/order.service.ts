@@ -329,6 +329,10 @@ export class OrderService {
       const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
       (order as any).product_count = totalQuantity;
 
+      // Thêm payment transactions cho từng order
+      const paymentTransactions = await this.paymentTransactionRepository.findByOrderId(order.id);
+      (order as any).paymentTransactions = paymentTransactions;
+
       // Chỉ lấy driverLocations: mảng các object {id, driver: {id, name}}
       if (order.driverLocations && Array.isArray(order.driverLocations)) {
         (order as any).driverLocations = order.driverLocations.map((dl: any) => ({

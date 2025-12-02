@@ -19,7 +19,33 @@ const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 };
 
-// Màu nền theo trạng thái
+// Hàm tính tổng tiền đơn hàng theo logic của OrderDetailModal
+const getTotalAmount = (order: Order): number => {
+  // Tổng tiền sản phẩm (đã có từ backend)
+  const displayTotalAmount = typeof order.total_amount === "string"
+    ? parseFloat(order.total_amount)
+    : order.total_amount;
+
+  // Lấy thông tin giao dịch chính (giống OrderDetailModal)
+  const orderWithTransactions = order as Order & {
+    paymentTransactions?: Array<{
+      amount?: number | string;
+      gateway_txn_ref?: string;
+      created_at?: string;
+      txn_status?: string;
+    }>
+  };
+  const paymentTransactions = orderWithTransactions.paymentTransactions || [];
+  const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
+
+  // Tính phí vận chuyển từ transaction data (giống OrderDetailModal)
+  const shippingFeeFromTransaction = mainTxn && mainTxn.amount ?
+    Math.max(0, Number(mainTxn.amount) - displayTotalAmount) : 30000;
+  const displayShippingFee = shippingFeeFromTransaction > 0 ? shippingFeeFromTransaction : 30000;
+
+  // Tổng cuối cùng = tổng sản phẩm + phí vận chuyển
+  return displayTotalAmount + displayShippingFee;
+};// Màu nền theo trạng thái
 const getStatusColor = (status: OrderStatus | PaymentStatus) => {
   switch (status) {
     case "CREATED":
@@ -104,7 +130,7 @@ export default function OrderTable({
               <td className="px-4 py-3 font-semibold text-indigo-600">#{order.id}</td>
               <td className="px-4 py-3">{order.customer_name || `Khách #${order.customer_id}`}</td>
               <td className="px-4 py-3 font-medium text-gray-900">
-                {formatCurrency(Number(order.total_amount))}
+                {formatCurrency(getTotalAmount(order))}
               </td>
               <td className="px-4 py-3 text-center">
                 <span

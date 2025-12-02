@@ -73,10 +73,29 @@ export default function MoMoReturnPage() {
                     }
                 }
 
-                // thanh toán thành công
-                const orderIdParam = extractedOrderId ? `&order_id=${extractedOrderId}` : '';
-                console.log('✅ MoMo payment success, redirecting to orders page');
-                router.replace(`/orders?payment=success${orderIdParam}`);
+                // Thanh toán thành công - Kiểm tra có nhiều đơn hàng không
+                const multipleOrderIds = sessionStorage.getItem('momo_order_ids');
+                if (multipleOrderIds) {
+                    try {
+                        const orderIds = JSON.parse(multipleOrderIds);
+                        console.log('✅ MoMo payment success for multiple orders:', orderIds);
+
+                        // Xóa session storage
+                        sessionStorage.removeItem('momo_order_ids');
+
+                        // Redirect đến confirmation với nhiều order IDs
+                        const orderIdsParam = encodeURIComponent(JSON.stringify(orderIds));
+                        router.replace(`/confirmation?orderIds=${orderIdsParam}&payment=success`);
+                        return;
+                    } catch (error) {
+                        console.error('❌ Error parsing multiple order IDs:', error);
+                    }
+                }
+
+                // Single order hoặc fallback
+                const orderIdParam = extractedOrderId ? `&orderId=${extractedOrderId}` : '';
+                console.log('✅ MoMo payment success, redirecting...');
+                router.replace(extractedOrderId ? `/confirmation?orderId=${extractedOrderId}&payment=success` : `/orders?payment=success${orderIdParam}`);
             } else {
                 // thất bại
                 console.log('❌ MoMo payment failed, redirecting to orders page');

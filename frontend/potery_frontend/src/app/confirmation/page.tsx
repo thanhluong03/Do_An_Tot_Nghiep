@@ -4,10 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { BaseLayout } from '../../layouts';
 // Giả sử các imports này đã được định nghĩa đúng trong '@/api/services/orderService'
 import { getOrderDetail, Order, OrderItem } from '@/api/services/orderService';
+import { orderApi } from '@/api/modules/orders';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { CheckCircle, Clock, MapPin, Package, CreditCard } from 'lucide-react';
+import { CheckCircle, Clock, MapPin, Package, CreditCard, Store } from 'lucide-react';
 
 // Hàm định dạng tiền tệ đơn giản
 const formatPrice = (amount: string | number) => {
@@ -19,35 +20,94 @@ export default function ConfirmationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get('orderId');
-  const [order, setOrder] = useState<Order | null>(null);
+  const orderIds = searchParams.get('orderIds'); // Để hỗ trợ nhiều đơn hàng
+  const paymentStatus = searchParams.get('payment'); // success/failed
+  const [orders, setOrders] = useState<Order[]>([]); // Thay đổi thành array
   const [loading, setLoading] = useState(true);
 
-  // --- Fetch order detail ---
+  // --- Fetch order detail(s) ---
   useEffect(() => {
-    const fetchOrder = async () => {
+    const fetchOrders = async () => {
       try {
-        if (!orderId) return;
+        let orderIdsToFetch: string[] = [];
 
-        const data = await getOrderDetail(Number(orderId));
-        // console.log('Order detail:', data);
+        // Xử lý nhiều order IDs
+        if (orderIds) {
+          try {
+            orderIdsToFetch = JSON.parse(orderIds);
+          } catch {
+            orderIdsToFetch = orderIds.split(',');
+          }
+        } else if (orderId) {
+          // Kiểm tra nếu orderId là transaction reference (bắt đầu bằng MOMO)
+          if (orderId.startsWith('MOMO')) {
+            console.log('🔄 Detected transaction reference, fetching order IDs...');
+            try {
+              const transactionResponse = await orderApi.getOrdersByTransaction(orderId);
+              console.log('📊 Transaction API response:', transactionResponse);
 
-        // Chuẩn hóa và gán items
-        const items: OrderItem[] = data.items || data.current_order?.items || [];
+              if (transactionResponse.success && transactionResponse.data?.orderIds) {
+                orderIdsToFetch = transactionResponse.data.orderIds.map(String);
+                console.log('✅ Found order IDs from transaction:', orderIdsToFetch);
+              } else {
+                console.error('❌ Could not get order IDs from transaction reference');
+                return;
+              }
+            } catch (err) {
+              console.error('❌ Error fetching orders by transaction:', err);
+              return;
+            }
+          } else {
+            orderIdsToFetch = [orderId];
+          }
+        }
 
-        // Chuẩn hóa tên khách hàng
-        const customerName = data.customer_name || data.customer_full_name || 'Khách vãng lai';
+        if (orderIdsToFetch.length === 0) return;
 
-        setOrder({ ...data, items, customer_full_name: customerName });
+        console.log('📦 Fetching orders:', orderIdsToFetch);
+
+        // Fetch tất cả các đơn hàng
+        const orderPromises = orderIdsToFetch.map(async (id) => {
+          try {
+            console.log('🔄 Đang fetch đơn hàng ID:', id);
+            const data = await getOrderDetail(Number(id));
+            console.log('📊 Response data cho ID', id, ':', data);
+
+            // Kiểm tra an toàn trước khi truy cập properties
+            if (!data) {
+              console.error(`❌ Không nhận được dữ liệu cho đơn hàng ${id}`);
+              return null;
+            }
+
+            // Chuẩn hóa và gán items
+            const items: OrderItem[] = data.items || data.current_order?.items || [];
+            console.log('📦 Items cho đơn hàng', id, ':', items);
+
+            // Chuẩn hóa tên khách hàng
+            const customerName = data.customer_name || data.customer_full_name || 'Khách vãng lai';
+
+            return { ...data, items, customer_full_name: customerName };
+          } catch (err) {
+            console.error(`❌ Lỗi khi tải đơn hàng ${id}:`, err);
+            return null;
+          }
+        });
+
+        const fetchedOrders = await Promise.all(orderPromises);
+        const validOrders = fetchedOrders.filter(order => order !== null) as Order[];
+
+        console.log('✅ Fetched orders:', validOrders);
+        setOrders(validOrders);
       } catch (err) {
-        console.error(err);
+        console.error('❌ Lỗi tổng thể:', err);
         toast.error('Không thể tải thông tin đơn hàng.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOrder();
-  }, [orderId]);
+    fetchOrders();
+  }, [orderId, orderIds]);
 
   // --- Helper để lấy ảnh chính ---
   const getMainImage = (images: any) => {
@@ -74,7 +134,7 @@ export default function ConfirmationPage() {
     );
   }
 
-  if (!order) {
+  if (!orders || orders.length === 0) {
     return (
       <BaseLayout>
         <div className="max-w-xl mx-auto text-center py-20">
@@ -91,11 +151,16 @@ export default function ConfirmationPage() {
     );
   }
 
-  // --- Định dạng các trường dữ liệu ---
-  const shippingAddress = order.shipping_address || order.current_order?.shipping_address || '—';
-  const customerName = order.customer_full_name || order.customer_name || 'Khách vãng lai';
-  const orderDate = order.order_date
-    ? new Date(order.order_date).toLocaleString('vi-VN', {
+  // --- Tính toán tổng cho tất cả đơn hàng ---
+  const totalAmount = orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+  const shippingFee = 30000; // Phí vận chuyển cố định 30k cho tất cả đơn hàng
+  const firstOrder = orders[0]; // Lấy thông tin từ đơn hàng đầu tiên cho địa chỉ, khách hàng
+
+  // --- Định dạng các trường dữ liệu từ đơn hàng đầu tiên ---
+  const shippingAddress = firstOrder.shipping_address || firstOrder.current_order?.shipping_address || '—';
+  const customerName = firstOrder.customer_full_name || firstOrder.customer_name || 'Khách vãng lai';
+  const orderDate = firstOrder.order_date
+    ? new Date(firstOrder.order_date).toLocaleString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -104,22 +169,18 @@ export default function ConfirmationPage() {
     })
     : '—';
   const paymentMethodText =
-    order.payment_method === 'ONSITE'
+    firstOrder.payment_method === 'COD'
       ? 'COD (Thanh toán khi nhận hàng)'
-      : order.payment_method === 'CARD'
-        ? 'Thẻ Tín dụng/Ghi nợ'
+      : firstOrder.payment_method === 'MOMO'
+        ? 'Thanh toán MoMo'
         : 'Chuyển khoản Ngân hàng';
   const paymentStatusText =
-    order.payment_status === 'PAID'
+    firstOrder.payment_status === 'PAID'
       ? 'Đã thanh toán'
-      : order.payment_status === 'UNPAID'
+      : firstOrder.payment_status === 'UNPAID'
         ? 'Chưa thanh toán'
         : 'Đang xử lý';
-  const paymentStatusColor = order.payment_status === 'PAID' ? 'text-green-600' : 'text-red-600';
-  const totalAmount = Number(order.total_amount) || 0;
-  const originalAmount = Number(order.current_order?.original_amount) || totalAmount;
-  const discountAmount = Number(order.current_order?.discount_amount) || 0;
-  const shippingFee = 30000; // ✅ Phí vận chuyển cố định, không lưu trong DB
+  const paymentStatusColor = firstOrder.payment_status === 'PAID' ? 'text-green-600' : 'text-red-600';
 
 
   return (
@@ -134,7 +195,8 @@ export default function ConfirmationPage() {
               Xác nhận Đơn hàng
             </h1>
             <p className="text-lg text-[#5A5547]">
-              Cảm ơn bạn, đơn hàng của bạn đã được đặt thành công!
+              Cảm ơn bạn, {orders.length > 1 ? `${orders.length} đơn hàng` : 'đơn hàng'} của bạn đã được đặt thành công!
+              {paymentStatus === 'success' && ' 💳 Thanh toán đã được xác nhận.'}
             </p>
 
           </div>
@@ -157,7 +219,20 @@ export default function ConfirmationPage() {
                 </p>
                 <p className='mt-4'>
                   <strong className="text-[#7C7768]">Trạng thái Đơn hàng:</strong> <br />
-                  <span className={`font-bold ${order.status === 'CREATED' ? 'text-blue-500' : 'text-yellow-600'}`}>{order.status}</span>
+                  <span
+                    className={`font-bold ${firstOrder.status === 'CREATED'
+                      ? 'text-blue-500'
+                      : firstOrder.status === 'CONFIRMED'
+                        ? 'text-green-600'
+                        : 'text-yellow-600'
+                      }`}
+                  >
+                    {firstOrder.status === 'CREATED'
+                      ? 'Chờ xác nhận'
+                      : firstOrder.status === 'CONFIRMED'
+                        ? 'Đã xác nhận'
+                        : firstOrder.status}
+                  </span>
                 </p>
               </div>
             </div>
@@ -172,12 +247,6 @@ export default function ConfirmationPage() {
                   <span>Tổng tiền sản phẩm</span>
                   <span className="font-medium">{formatPrice(totalAmount)}</span>
                 </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-red-500">
-                    <span>Giảm giá</span>
-                    <span>-{formatPrice(discountAmount)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-green-700 font-medium">
                   <span>Phí vận chuyển</span>
                   <span>{formatPrice(shippingFee)}</span>
@@ -203,55 +272,95 @@ export default function ConfirmationPage() {
               </div>
             </div>
 
-            {/* --- Cột 3: Sản phẩm (Mở rộng toàn bộ hàng dưới) --- */}
+            {/* --- Cột 3: Sản phẩm theo từng cửa hàng (Mở rộng toàn bộ hàng dưới) --- */}
             <div className="lg:col-span-3 p-6 border border-[#EBE8E0] rounded-xl bg-[#FFF]">
               <h2 className="text-xl font-semibold mb-4 text-[#A38D64] flex items-center gap-2">
-                <Package className="w-5 h-5" /> Sản phẩm đã đặt ({order.items?.length || 0})
+                <Package className="w-5 h-5" /> Chi tiết đơn hàng ({orders.length} {orders.length > 1 ? 'cửa hàng' : 'đơn hàng'})
               </h2>
-              <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto pr-2">
-                {order.items?.length ? (
-                  order.items.map((item, i) => {
-                    const imgSrc = getMainImage(item.product_images);
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-start py-4 gap-4"
-                      >
-                        <div className="w-16 h-16 flex-shrink-0 relative">
-                          {imgSrc ? (
-                            <Image
-                              src={imgSrc}
-                              alt={item.product_name || 'Sản phẩm'}
-                              fill
-                              sizes='(max-width: 768px) 100vw, 33vw'
-                              className="rounded-lg border object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-100 border rounded-lg flex items-center justify-center text-xs text-gray-400">
-                              No image
-                            </div>
-                          )}
+              <div className="space-y-6 max-h-96 overflow-y-auto pr-2">
+                {orders.map((order, orderIndex) => {
+                  const totalItems = order.items?.length || 0;
+
+                  return (
+                    <div key={order.id} className="border border-[#F1F0E8] rounded-lg p-4 bg-[#FFFCF7]">
+                      {/* Header cho từng cửa hàng */}
+                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#EBE8E0]">
+                        <div className="flex items-center gap-2">
+                          <Store className="w-4 h-4 text-[#A38D64]" />
+                          <h3 className="font-semibold text-[#2C2A24]">
+                            {/* Lấy tên cửa hàng từ item đầu tiên */}
+                            {order.items?.[0]?.store_name || `Cửa hàng #${order.items?.[0]?.store_id || orderIndex + 1}`}
+                          </h3>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-[#2C2A24] truncate">{item.product_name || 'Sản phẩm không rõ'}</p>
-                          <p className="text-xs text-[#7C7768] mt-1">
-                            Cửa hàng: {item.store_name || '—'}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm text-[#A38D64] font-semibold">
-                            {formatPrice(Number(item.price_at_order || 0) * (item.quantity || 1))}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            SL: {item.quantity || 1}
+                        <div className="text-right">
+                          <p className="text-sm text-[#7C7768]">Đơn hàng #{order.id}</p>
+                          <p className="text-xs text-[#A38D64] font-medium">
+                            {totalItems} sản phẩm • {formatPrice(Number(order.total_amount))}
                           </p>
                         </div>
                       </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-gray-500 italic text-center py-6">Không có sản phẩm nào trong đơn hàng này.</p>
-                )}
+
+                      {/* Danh sách sản phẩm của cửa hàng */}
+                      <div className="divide-y divide-gray-100">
+                        {order.items?.length ? (
+                          order.items.map((item, i) => {
+                            const imgSrc = getMainImage(item.product_images);
+                            return (
+                              <div
+                                key={i}
+                                className="flex items-start py-3 gap-4 first:pt-0 last:pb-0"
+                              >
+                                <div className="w-14 h-14 flex-shrink-0 relative">
+                                  {imgSrc ? (
+                                    <Image
+                                      src={imgSrc}
+                                      alt={item.product_name || 'Sản phẩm'}
+                                      fill
+                                      sizes='(max-width: 768px) 100vw, 33vw'
+                                      className="rounded-lg border object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gray-100 border rounded-lg flex items-center justify-center text-xs text-gray-400">
+                                      No image
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-[#2C2A24] text-sm">{item.product_name || 'Sản phẩm không rõ'}</p>
+                                  {/* Hiển thị thông tin phân loại nếu có */}
+                                  {(item.attribute1_name || item.attribute2_name) && (
+                                    <div className="flex gap-1 mt-1">
+                                      {item.attribute1_name && (
+                                        <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                          {item.attribute1_name}
+                                        </span>
+                                      )}
+                                      {item.attribute2_name && (
+                                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">
+                                          {item.attribute2_name}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="text-sm text-[#A38D64] font-semibold">
+                                    {formatPrice(Number(item.price_at_order || 0) * (item.quantity || 1))}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    SL: {item.quantity || 1}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-gray-500 italic text-center py-4 text-sm">Không có sản phẩm nào trong đơn hàng này.</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

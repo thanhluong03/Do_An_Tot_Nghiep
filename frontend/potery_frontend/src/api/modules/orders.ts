@@ -60,6 +60,10 @@ export const orderApi = {
     });
     return res.data;
   },
+  async getOrdersByTransaction(transactionRef: string) {
+    const res = await api.get(`/paymenttransaction/orders-by-transaction/${transactionRef}`);
+    return res.data;
+  },
 };
 
 
