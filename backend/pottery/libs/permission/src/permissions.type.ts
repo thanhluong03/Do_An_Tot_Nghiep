@@ -6,10 +6,10 @@ export const AVAILABLE_PERMISSIONS = {
         { key: 'admin/dashboard', name: 'Bảng điều khiển' },
     ],
     'admin/importproduct': [
-        { key: 'admin/importproduct', name: 'Nhập sản phẩm' },
+        { key: 'admin/importproduct', name: 'Quản lý nhập sản phẩm' },
     ],
     'admin/inventory': [
-        { key: 'admin/inventory', name: 'Quản lý kho' },
+        { key: 'admin/inventory', name: 'Quản lý kho cửa hàng' },
     ],
     'admin/news': [
         { key: 'admin/news', name: 'Quản lý tin tức' },

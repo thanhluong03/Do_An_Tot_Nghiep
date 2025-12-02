@@ -177,13 +177,13 @@ export default function MyOrdersPage() {
             try {
               const allOrderIds: number[] = JSON.parse(momoOrderIdsStr);
               console.log('💾 Tìm thấy danh sách order IDs từ sessionStorage:', allOrderIds);
-              
+
               // Cập nhật payment_status cho tất cả các order còn lại (trừ order đầu tiên đã cập nhật)
               const remainingOrderIds = allOrderIds.filter(id => id !== Number(orderId));
               if (remainingOrderIds.length > 0) {
                 console.log(`🔄 Cập nhật payment_status cho ${remainingOrderIds.length} đơn hàng còn lại:`, remainingOrderIds);
                 await Promise.all(
-                  remainingOrderIds.map(orderId => 
+                  remainingOrderIds.map(orderId =>
                     orderApi.updateOrder(orderId, {
                       status: 'CONFIRMED',
                       payment_status: 'PAID',
@@ -277,6 +277,27 @@ export default function MyOrdersPage() {
   const formatPrice = (price: number | string) => {
     const num = Number(price) || 0;
     return num.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+  };
+
+  // Hàm tính phí vận chuyển dựa trên transaction data (giống logic admin)
+  const getShippingFee = (order: any) => {
+    const info = order.current_order || order;
+    // Kiểm tra paymentTransactions cả trong current_order và order trực tiếp
+    const paymentTransactions = order.paymentTransactions || info?.paymentTransactions || [];
+    const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
+
+    // Debug log
+    console.log(`Order ${order.id} - Payment Transactions:`, paymentTransactions);
+    console.log(`Order ${order.id} - Main Transaction:`, mainTxn);
+    console.log(`Order ${order.id} - Total Amount:`, info.total_amount);
+
+    if (mainTxn && mainTxn.amount) {
+      const shippingFee = Math.max(0, Number(mainTxn.amount) - Number(info.total_amount));
+      console.log(`Order ${order.id} - Calculated Shipping Fee:`, shippingFee);
+      return shippingFee > 0 ? shippingFee : 30000;
+    }
+    console.log(`Order ${order.id} - Using default shipping fee: 30000`);
+    return 30000; // Mặc định 30k nếu không có transaction
   };
   const filteredOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
     const normalizedStatus = order.status?.toUpperCase();
@@ -384,10 +405,10 @@ export default function MyOrdersPage() {
 
           {/* AI Chat Modal */}
           <AIChatModal
-                      isOpen={isAIChatOpen}
-                      onClose={() => setIsAIChatOpen(false)}
-                      userId={Number(user.id)} 
-                    />
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+            userId={Number(user.id)}
+          />
 
           {/* Return Order Modal */}
           {isReturnModalOpen && (
@@ -645,14 +666,14 @@ export default function MyOrdersPage() {
                           Thanh toán: <span className="font-semibold text-[#2C2A24]">{translatePaymentMethod(info.payment_method)}</span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          Phí vận chuyển: <span className="font-semibold text-[#2C2A24]">{formatPrice(30000)}</span>
+                          Phí vận chuyển: <span className="font-semibold text-[#2C2A24]">{formatPrice(getShippingFee(order))}</span>
                         </div>
                       </div>
 
                       <div className="text-right flex items-center gap-4">
                         <div>
                           <div className="text-sm font-semibold  text-gray-600">Tổng tiền hàng: <span>{formatPrice(info.total_amount)}</span></div>
-                          <div className="text-sm font-semibold  text-gray-600">Tổng thanh toán: <span className="font-bold text-[#A38D64]">{formatPrice(info.total_amount + 30000)}</span></div>
+                          <div className="text-sm font-semibold  text-gray-600">Tổng thanh toán: <span className="font-bold text-[#A38D64]">{formatPrice(info.total_amount + getShippingFee(order))}</span></div>
                         </div>
                       </div>
 

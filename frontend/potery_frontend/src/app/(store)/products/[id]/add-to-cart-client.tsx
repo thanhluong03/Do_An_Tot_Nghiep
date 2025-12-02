@@ -43,9 +43,14 @@ export function AddToCartClient({
       setLoading(true);
       setMessage(null);
       try {
+        // Tìm store name từ product data
+        const selectedStore = product.stores?.find((store: any) => store.store_id === storeId);
+        const storeName = selectedStore?.store_name || (product.store as any)?.name || `Cửa hàng #${storeId}`;
+
         // Pass classification data to guest cart
         addItem(product, quantity, {
           storeId,
+          storeName: storeName,
           classifications: selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id) ? {
             attribute1_id: selectedClassifications.attribute1_id,
             attribute2_id: selectedClassifications.attribute2_id,

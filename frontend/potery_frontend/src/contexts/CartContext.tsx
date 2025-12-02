@@ -18,6 +18,7 @@ export interface CartItem {
   product: Product;
   quantity: number;
   storeId?: string;
+  storeName?: string;
   classifications?: CartClassification;
   price?: number; // Actual price with classification
   classificationId?: number; // For backend cart
@@ -28,10 +29,11 @@ interface CartContextValue {
   items: CartItem[];
   addItem: (product: Product, quantity?: number, options?: {
     storeId?: string;
+    storeName?: string;
     classifications?: CartClassification;
     price?: number;
     classificationId?: number;
-    
+
   }) => void;
   selectItem: (productId: string, selected: boolean, classificationKey?: string) => void;
   removeItem: (productId: string, classificationKey?: string) => void;
@@ -45,15 +47,15 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const selectItem = (productId: string, selected: boolean, classificationKey?: string) => {
-  setItems(prev => prev.map(i => {
-    if (classificationKey) {
-      const key = getCartItemKey(String(i.product.id), i.classifications);
-      return key === classificationKey ? { ...i, selected } : i;
-    } else {
-      return String(i.product.id) === String(productId) ? { ...i, selected } : i;
-    }
-  }));
-};
+    setItems(prev => prev.map(i => {
+      if (classificationKey) {
+        const key = getCartItemKey(String(i.product.id), i.storeId, i.classifications);
+        return key === classificationKey ? { ...i, selected } : i;
+      } else {
+        return String(i.product.id) === String(productId) ? { ...i, selected } : i;
+      }
+    }));
+  };
 
   // ✅ Load cart từ cookie khi reload trang
   useEffect(() => {
@@ -89,26 +91,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
       Cookies.set('cart_session', JSON.stringify(items), { expires: 7 });
     } catch { }
   }, [items]);
-  // Helper function to generate unique key for cart items with classifications
-  const getCartItemKey = (productId: string, classifications?: CartClassification) => {
+  // Helper function to generate unique key for cart items with classifications and store
+  const getCartItemKey = (productId: string, storeId?: string, classifications?: CartClassification) => {
+    const baseKey = String(productId);
+    const storeKey = storeId ? `-store-${storeId}` : '';
+
     if (!classifications || (!classifications.attribute1_id && !classifications.attribute2_id)) {
-      return String(productId);
+      return baseKey + storeKey;
     }
-    return `${productId}-${classifications.attribute1_id || 'null'}-${classifications.attribute2_id || 'null'}`;
+    return `${baseKey}-${classifications.attribute1_id || 'null'}-${classifications.attribute2_id || 'null'}${storeKey}`;
   };
 
   const addItem = (product: Product, quantity: number = 1, options?: {
     storeId?: string;
+    storeName?: string;
     classifications?: CartClassification;
     price?: number;
     classificationId?: number;
   }) => {
     setItems((prev) => {
-      const itemKey = getCartItemKey(String(product.id), options?.classifications);
+      const itemKey = getCartItemKey(String(product.id), options?.storeId, options?.classifications);
 
-      // Find existing item with same product and classification combination
+      // Find existing item with same product, store, and classification combination
       const idx = prev.findIndex((i) => {
-        const existingKey = getCartItemKey(String(i.product.id), i.classifications);
+        const existingKey = getCartItemKey(String(i.product.id), i.storeId, i.classifications);
         return existingKey === itemKey;
       });
 
@@ -123,10 +129,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
           product,
           quantity,
           storeId: options?.storeId,
+          storeName: options?.storeName,
           classifications: options?.classifications,
           price: options?.price || product.price,
           classificationId: options?.classificationId
-          
+
         };
         next = [...prev, newItem];
       }
@@ -142,9 +149,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => {
       let next: CartItem[];
       if (classificationKey) {
-        // Remove specific classification variant
+        // Remove specific classification variant using the provided key
         next = prev.filter((i) => {
-          const itemKey = getCartItemKey(String(i.product.id), i.classifications);
+          const itemKey = getCartItemKey(String(i.product.id), i.storeId, i.classifications);
           return itemKey !== classificationKey;
         });
       } else {
@@ -166,7 +173,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => {
       const next = prev.map((i) => {
         if (classificationKey) {
-          const itemKey = getCartItemKey(String(i.product.id), i.classifications);
+          const itemKey = getCartItemKey(String(i.product.id), i.storeId, i.classifications);
           return itemKey === classificationKey ? { ...i, quantity } : i;
         } else {
           return String(i.product.id) === String(productId) ? { ...i, quantity } : i;

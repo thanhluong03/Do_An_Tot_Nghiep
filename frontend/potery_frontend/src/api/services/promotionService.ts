@@ -17,8 +17,15 @@ export interface Product {
     // Thêm các trường cần thiết để khớp với giao diện Product trong thực tế
     price?: number; 
     quantity?: number;
-    images?: { url?: string; image_data?: string | { data: number[] } }[]; 
+    images?: { 
+        id?: number;
+        url?: string; 
+        image_data?: string | { data: number[] };
+        is_main_image?: boolean;
+        priority?: number;
+    }[]; 
     main_image?: string | { data: number[] };
+    imageUrl?: string; // Để tương thích với SelectOption
     categoryId?: number;
 }
 
@@ -64,7 +71,7 @@ const bufferToBase64 = (buffer: { data: number[] }): string | null => {
             ""
         );
         return `data:image/png;base64,${btoa(binary)}`;
-    } catch (error) {
+    } catch {
         return null;
     }
 };
@@ -111,7 +118,7 @@ export const getProductImageUrl = (product: Product): string => {
 
 // ================== API Calls ==================
 
-export const getPromotions = async (params: any = {}): Promise<Promotion[]> => { 
+export const getPromotions = async (params: Record<string, unknown> = {}): Promise<Promotion[]> => { 
     try {
         const res = await axios.get(`${API_URL}/listpromotion`, { params });
         return res.data;
@@ -160,7 +167,7 @@ export const listProducts = async (dto: { page: number, size: number }): Promise
 
 export const listDropdownProducts = async (): Promise<SelectOption[]> => {
     const res = await listProducts({ page: 1, size: 1000 });
-    const products: Product[] = res.data.data || res.data || []; 
+    const products: Product[] = Array.isArray(res.data) ? res.data : (res.data as { data: Product[] })?.data || []; 
     
     return Array.isArray(products) 
         ? products.map(p => ({ 
@@ -173,40 +180,64 @@ export const listDropdownProducts = async (): Promise<SelectOption[]> => {
 };
 
 // LẤY DANH SÁCH SẢN PHẨM & KHUYẾN MÃI ĐANG ÁP DỤNG (ĐÃ CẬP NHẬT LOGIC)
-// Mục tiêu: Luôn trả về TẤT CẢ SẢN PHẨM, kèm theo promotionId (nếu có)
+// Mục tiêu: Luôn trả về TẤT CẢ SẢN PHẨM, kèm theo promotionId (nếu có) và ảnh chính
 export const getAllProductsWithPromotions = async (): Promise<ProductPromotionAssignment[]> => {
     try {
         // 1. Lấy danh sách TẤT CẢ sản phẩm cơ bản (để đảm bảo list không trống)
         const productOptions: SelectOption[] = await listDropdownProducts(); 
 
-        // 2. Lấy danh sách gán khuyến mãi hiện tại (API có thể bị lỗi/trả về ít)
+        // 2. Lấy danh sách gán khuyến mãi hiện tại với ảnh từ API backend
         let assignmentMap = new Map<number, number | null>();
+        const productImagesMap = new Map<number, { url?: string; image_data?: string; is_main_image?: boolean }[]>();
+        
         try {
             const res = await axios.get(`${API_URL}/listproductpromotions`);
-            // Giả định API này trả về mảng các đối tượng ProductPromotionAssignment đã được gán
-            const currentAssignments: ProductPromotionAssignment[] = Array.isArray(res.data) 
+            // API này trả về mảng các đối tượng ProductPromotionAssignment với ảnh đầy đủ
+            interface BackendAssignment {
+                productId: number;
+                promotionId: number | null;
+                product?: {
+                    id: number;
+                    name: string;
+                    images?: { url?: string; image_data?: string; is_main_image?: boolean }[];
+                };
+            }
+            
+            const currentAssignments: BackendAssignment[] = Array.isArray(res.data) 
                 ? res.data 
                 : (res.data.data || []); 
             
             assignmentMap = new Map(currentAssignments.map(a => [a.productId, a.promotionId]));
+            
+            // Lưu thông tin ảnh từ backend
+            currentAssignments.forEach(a => {
+                if (a.product && a.product.images && Array.isArray(a.product.images)) {
+                    productImagesMap.set(a.productId, a.product.images);
+                }
+            });
         } catch (assignmentError) {
             console.warn("Không thể tải danh sách gán khuyến mãi hiện tại từ /listproductpromotions. Coi như tất cả là NULL.", assignmentError);
             // Tiếp tục với Map trống/null nếu API gán bị lỗi
         }
 
-        // 3. Map list sản phẩm đầy đủ sang format ProductPromotionAssignment, áp dụng promotionId từ Map
-        return productOptions.map(opt => ({
-            productId: opt.id as number,
-            promotionId: assignmentMap.get(opt.id as number) || null, // Lấy ID khuyến mãi hoặc null
-            product: { 
-                id: opt.id as number, 
-                name: opt.name, 
-                imageUrl: opt.imageUrl,
-                categoryId: opt.categoryId || null,
-            } as Product, 
-        }));
+        // 3. Map list sản phẩm đầy đủ sang format ProductPromotionAssignment, áp dụng promotionId và images từ Map
+        return productOptions.map(opt => {
+            const images = productImagesMap.get(opt.id as number) || [];
+            
+            return {
+                productId: opt.id as number,
+                promotionId: assignmentMap.get(opt.id as number) || null, // Lấy ID khuyến mãi hoặc null
+                product: { 
+                    id: opt.id as number, 
+                    name: opt.name, 
+                    imageUrl: opt.imageUrl, // Giữ imageUrl từ dropdown
+                    images: images, // Thêm mảng images từ backend
+                    categoryId: opt.categoryId || null,
+                } as Product, 
+            };
+        });
         
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Lỗi nghiêm trọng khi tải danh sách Sản phẩm và gán:", error);
         return []; // Trả về mảng rỗng nếu có lỗi tổng thể
     }
@@ -223,7 +254,7 @@ export const setProductPromotionAssignments = async (
             headers: { "Content-Type": "application/json" },
         });
         return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (axios.isAxiosError(error) && error.response) {
             console.error("Lỗi Backend (Response Data):", error.response.data);
             throw new Error(`Thao tác gán thất bại: ${JSON.stringify(error.response.data)}`);

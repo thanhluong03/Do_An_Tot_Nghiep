@@ -104,9 +104,15 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   const paymentTransactions = (order as any)?.paymentTransactions || [];
   const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
 
+  // Tính phí vận chuyển từ transaction data
+  const shippingFeeFromTransaction = mainTxn && mainTxn.amount ?
+    Math.max(0, Number(mainTxn.amount) - displayTotalAmount) : 30000;
+  const displayShippingFee = shippingFeeFromTransaction > 0 ? shippingFeeFromTransaction : 30000;
+
   // Debug: Log payment transaction data  
   console.log('Admin Order Payment Transactions:', paymentTransactions);
   console.log('Admin Order Main Transaction:', mainTxn);
+  console.log('Admin Order Shipping Fee:', displayShippingFee);
   console.log('Admin Order Full Data:', order);
 
   return (
@@ -275,11 +281,14 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
               )}
 
               <InfoRow label="Tổng tiền sản phẩm" value={formatCurrency(displayTotalAmount)} />
-              <InfoRow label="Phí vận chuyển" value={formatCurrency(30000)} />
+              <InfoRow
+                label="Phí vận chuyển"
+                value={<span className="text-green-600">{formatCurrency(displayShippingFee)}</span>}
+              />
               <div className="pt-4 mt-4 border-t-2 border-indigo-300">
                 <InfoRow
                   label="Tổng thanh toán"
-                  value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount + 30000)}</span>}
+                  value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount + displayShippingFee)}</span>}
                 />
 
                 {/* Tiền giao dịch */}

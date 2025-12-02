@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { IsOptional, IsString, IsNumber, IsBoolean, IsEmail, IsPositive } from 'class-validator';
 
 export class CreateUserDto {
@@ -34,11 +34,18 @@ export class CreateUserDto {
     @Expose()
     @IsOptional()
     @IsBoolean()
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            return value.toLowerCase() === 'true';
+        }
+        return Boolean(value);
+    })
     is_active?: boolean;
 
     @Expose()
     @IsNumber()
     @IsPositive()
+    @Type(() => Number) // ✅ CẦN DÒNG NÀY ĐỂ ÉP KIỂU
     role_id: number;
 
     @Expose()
@@ -47,7 +54,6 @@ export class CreateUserDto {
     @IsPositive()
     @Type(() => Number) // ✅ CẦN DÒNG NÀY ĐỂ ÉP KIỂU
     store_id?: number;
-
 }
 
 export class UpdateUserDto {
@@ -88,20 +94,27 @@ export class UpdateUserDto {
     @Expose()
     @IsOptional()
     @IsBoolean()
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            return value.toLowerCase() === 'true';
+        }
+        return Boolean(value);
+    })
     is_active?: boolean;
 
     @Expose()
     @IsOptional()
     @IsNumber()
     @IsPositive()
+    @Type(() => Number)
     role_id?: number;
 
     @Expose()
     @IsOptional()
     @IsNumber()
     @IsPositive()
+    @Type(() => Number)
     store_id?: number;
-
 }
 
 export class ListUserRequestDto {

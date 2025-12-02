@@ -7,6 +7,7 @@ import { formatPrice } from '../../../utils/format';
 import { useAuth } from '../../../contexts/AuthContext';
 import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
+import { getStoreById } from '../../../api/services/storeService';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Bot, Gift, MessageSquare, User } from 'lucide-react'; // Import icons
@@ -55,6 +56,11 @@ export default function CartPage() {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
   const [selectedStores, setSelectedStores] = useState<Record<string, boolean>>({});
+  // States cho guest user
+  const [guestSelectedItems, setGuestSelectedItems] = useState<Record<string, boolean>>({});
+  const [guestSelectedStores, setGuestSelectedStores] = useState<Record<string, boolean>>({});
+  // State để lưu trữ thông tin stores
+  const [storeInfo, setStoreInfo] = useState<Record<string, { id: string; name: string; address?: string }>>({});
 
   const orderData = {
     customer_id: user?.id,
@@ -159,12 +165,138 @@ export default function CartPage() {
     if (isAuthenticated) return;
     if (items.length > 0) return;
     if (cookieItems.length === 0) return;
+
     cookieItems.forEach(ci => {
-      if (ci?.product) addItem(ci.product, ci.quantity ?? 1);
+      if (ci?.product) {
+        addItem(ci.product, ci.quantity ?? 1, {
+          storeId: ci.storeId,
+          storeName: ci.storeName,
+          classifications: ci.classifications,
+          price: ci.price,
+          classificationId: ci.classificationId
+        });
+      }
     });
     // Do not set cookieItems here to avoid loops; addItem will persist cookie
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, cookieItems.length]);
+
+  // Effect để tự động select tất cả items cho guest
+  useEffect(() => {
+    if (isAuthenticated) return;
+    const currentItems = items.length > 0 ? items : cookieItems;
+    if (currentItems.length > 0) {
+      const allSelectedItems: Record<string, boolean> = {};
+      const allSelectedStores: Record<string, boolean> = {};
+
+      currentItems.forEach(ci => {
+        const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+          ? `${ci.product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+          : ci.product.id;
+        allSelectedItems[uniqueKey] = true;
+
+        const storeId = ci.storeId || ci.product.store?.id || 'default';
+        allSelectedStores[storeId] = true;
+      });
+
+      setGuestSelectedItems(allSelectedItems);
+      setGuestSelectedStores(allSelectedStores);
+    }
+  }, [items, cookieItems, isAuthenticated]);
+
+  // Effect để fetch thông tin store cho guest user
+  useEffect(() => {
+    if (isAuthenticated) return;
+    const currentItems = items.length > 0 ? items : cookieItems;
+    console.log('🔄 fetchStoreInfo useEffect - currentItems:', currentItems);
+    console.log('🔄 items.length:', items.length, 'cookieItems.length:', cookieItems.length);
+
+    if (currentItems.length === 0) return;
+
+    const fetchStoreInfo = async () => {
+      const storeIds = new Set<string>();
+      currentItems.forEach(ci => {
+        const storeId = ci.storeId || ci.product?.store?.id;
+        if (storeId) storeIds.add(String(storeId));
+      });
+
+      console.log('🔍 fetchStoreInfo - currentItems:', currentItems);
+      console.log('🔍 fetchStoreInfo - storeIds:', Array.from(storeIds));
+
+      if (storeIds.size === 0) return;
+
+      const storePromises = Array.from(storeIds).map(async (storeId) => {
+        try {
+          // Tìm product có store thông tin đầy đủ nhất
+          const itemWithStore = currentItems.find(ci =>
+            (ci.storeId || ci.product?.store?.id) === storeId
+          );
+
+          console.log(`🔍 Store ${storeId} - itemWithStore:`, itemWithStore);
+          console.log(`🔍 Store ${storeId} - ci.storeName:`, itemWithStore?.storeName);
+
+          // Ưu tiên storeName từ cart item nếu có và không phải generic
+          if (itemWithStore?.storeName && itemWithStore.storeName !== 'Cửa hàng') {
+            console.log(`✅ Store ${storeId} - Using cart item storeName:`, itemWithStore.storeName);
+            return {
+              id: storeId,
+              name: itemWithStore.storeName,
+              address: itemWithStore.product?.store?.address || ''
+            };
+          }
+
+          // Kiểm tra product.store.name nếu không phải generic
+          if (itemWithStore?.product?.store?.name && itemWithStore.product.store.name !== 'Cửa hàng') {
+            console.log(`✅ Store ${storeId} - Using product.store.name:`, itemWithStore.product.store.name);
+            return {
+              id: storeId,
+              name: itemWithStore.product.store.name,
+              address: itemWithStore.product.store.address || ''
+            };
+          }
+
+          // Nếu không có thông tin store trong cart, fetch từ API
+          try {
+            console.log(`🌐 Fetching store info for store ID: ${storeId}`);
+            const storeData = await getStoreById(Number(storeId));
+            console.log(`✅ API response for store ${storeId}:`, storeData);
+            return {
+              id: storeId,
+              name: storeData.store_name || `Cửa hàng #${storeId}`,
+              address: storeData.address || ''
+            };
+          } catch (apiError) {
+            console.error(`❌ API error for store ${storeId}:`, apiError);
+            return {
+              id: storeId,
+              name: `Cửa hàng #${storeId}`,
+              address: ''
+            };
+          }
+        } catch (error) {
+          console.error(`❌ Lỗi khi lấy thông tin store ${storeId}:`, error);
+          return {
+            id: storeId,
+            name: `Cửa hàng #${storeId}`,
+            address: ''
+          };
+        }
+      });
+
+      try {
+        const stores = await Promise.all(storePromises);
+        const storeMap: Record<string, { id: string; name: string; address?: string }> = {};
+        stores.forEach(store => {
+          storeMap[store.id] = store;
+        });
+        setStoreInfo(storeMap);
+      } catch (error) {
+        console.error('Lỗi khi fetch thông tin stores:', error);
+      }
+    };
+
+    fetchStoreInfo();
+  }, [items, cookieItems, isAuthenticated]);
 
   // 🔹 Fetch related products (Logic giữ nguyên)
   useEffect(() => {
@@ -388,7 +520,7 @@ export default function CartPage() {
           <AIChatModal
             isOpen={isAIChatOpen}
             onClose={() => setIsAIChatOpen(false)}
-            userId={Number(user.id)} 
+            userId={Number(user.id)}
           />
 
           {/* Floating Buttons */}
@@ -720,120 +852,221 @@ export default function CartPage() {
                   </div>
                 ) : !isAuthenticated && (items.length > 0 || cookieItems.length > 0) ? (
                   <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-10">
-                    {/* Left: Guest items from cookie */}
+                    {/* Left: Guest items grouped by store */}
                     <div className="space-y-6">
-                      {(items.length > 0 ? items : cookieItems).map((ci) => {
-                        const product = ci.product;
-                        const actualPrice = ci.price || product.price; // Use classification price if available
-                        const totalPrice = actualPrice * (ci.quantity ?? 1);
+                      <div className="flex items-center gap-3 mb-4">
+                        <input
+                          type="checkbox"
+                          checked={
+                            Object.values(guestSelectedItems).length > 0 &&
+                            Object.values(guestSelectedItems).every(v => v === true)
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            const currentItems = items.length > 0 ? items : cookieItems;
 
-                        // Generate unique key including classification info
-                        const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
-                          ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
-                          : product.id;
+                            // Bật tất cả sản phẩm
+                            const newSelectedItems: Record<string, boolean> = {};
+                            currentItems.forEach(ci => {
+                              const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                ? `${ci.product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                                : `${ci.product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+                              newSelectedItems[uniqueKey] = checked;
+                            });
+                            setGuestSelectedItems(newSelectedItems);
 
+                            // Bật tất cả cửa hàng
+                            const newSelectedStores: Record<string, boolean> = {};
+                            currentItems.forEach(ci => {
+                              const storeId = ci.storeId || ci.product.store?.id || 'default';
+                              newSelectedStores[storeId] = checked;
+                            });
+                            setGuestSelectedStores(newSelectedStores);
+                          }}
+                        />
+                        <span className="text-lg font-semibold">Chọn tất cả</span>
+                      </div>
+                      {Object.entries(
+                        (items.length > 0 ? items : cookieItems).reduce((acc, ci) => {
+                          const storeId = ci.storeId || ci.product.store?.id || 'default';
+                          if (!acc[storeId]) acc[storeId] = [];
+                          acc[storeId].push(ci);
+                          return acc;
+                        }, {} as Record<string, typeof items>)
+                      ).map(([storeId, storeItems]) => {
+                        const storeName = storeInfo[storeId]?.name || storeItems[0]?.storeName || storeItems[0]?.product?.store?.name || `Cửa hàng #${storeId}`;
                         return (
-                          <div
-                            key={uniqueKey}
-                            className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-5 shadow-lg shadow-gray-100/50"
-                          >
-                            <Link href={`/products/${product.id}`} className="flex-shrink-0">
-                              <img
-                                src={product.images?.[0] || '/pott.jpg'}
-                                alt={product.name}
-                                className="w-24 h-24 rounded-lg object-cover transition-transform hover:scale-105"
+                          <div key={storeId} className="mb-10 rounded-xl p-5 md:p-6 shadow-sm bg-white">
+                            {/* Header cửa hàng với checkbox */}
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  // Store checkbox được tích khi TẤT CẢ sản phẩm trong store được tích
+                                  storeItems.length > 0 && storeItems.every(item => {
+                                    const itemKey = item.classifications && (item.classifications.attribute1_id || item.classifications.attribute2_id)
+                                      ? `${item.product.id}-${item.classifications.attribute1_id || 'null'}-${item.classifications.attribute2_id || 'null'}-store-${item.storeId || item.product.store?.id || 'default'}`
+                                      : `${item.product.id}-store-${item.storeId || item.product.store?.id || 'default'}`;
+                                    return guestSelectedItems[itemKey] === true;
+                                  })
+                                }
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setGuestSelectedStores(prev => ({ ...prev, [storeId]: checked }));
+
+                                  // Khi tích cửa hàng, tích tất cả sản phẩm của cửa hàng đó
+                                  const newSelected = { ...guestSelectedItems };
+                                  storeItems.forEach(ci => {
+                                    const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                      ? `${ci.product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                                      : `${ci.product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+                                    newSelected[uniqueKey] = checked;
+                                  });
+                                  setGuestSelectedItems(newSelected);
+                                }}
                               />
-                            </Link>
-                            <div className="flex-grow flex justify-between items-center w-full md:w-auto">
-                              <div className="flex-grow">
-                                <Link href={`/products/${product.id}`}>
-                                  <h3 className={`font-medium text-lg ${DARK_TEXT} hover:underline transition`}>
-                                    {product.name}
-                                  </h3>
-                                </Link>
-                                <p className={`text-sm ${LIGHT_TEXT}`}>
-                                  Đơn giá: {formatPrice(actualPrice)}
-                                </p>
+                              {storeName}
+                            </h2>
 
-                                {/* Show classification info if available */}
-                                {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
-                                  <div className="flex gap-2 mt-2">
-                                    {ci.classifications.attribute1_name && (
-                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
-                                        {ci.classifications.attribute1_name}
-                                      </span>
-                                    )}
-                                    {ci.classifications.attribute2_name && (
-                                      <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
-                                        {ci.classifications.attribute2_name}
-                                      </span>
-                                    )}
+                            {storeItems.map((ci) => {
+                              const product = ci.product;
+                              const actualPrice = ci.price || product.price;
+                              const totalPrice = actualPrice * (ci.quantity ?? 1);
+
+                              const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                                : `${product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+
+                              return (
+                                <div key={uniqueKey} className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row items-center gap-5 shadow-lg shadow-gray-100/50">
+                                  {/* Checkbox sản phẩm */}
+                                  <input
+                                    type="checkbox"
+                                    checked={guestSelectedItems[uniqueKey] || false}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setGuestSelectedItems(prev => ({ ...prev, [uniqueKey]: checked }));
+
+                                      // Cập nhật checkbox cửa hàng: nếu tất cả sản phẩm trong store được check → check store
+                                      const updatedSelectedItems = { ...guestSelectedItems, [uniqueKey]: checked };
+                                      const allProductsInStoreChecked = storeItems.every(item => {
+                                        const itemKey = item.classifications && (item.classifications.attribute1_id || item.classifications.attribute2_id)
+                                          ? `${item.product.id}-${item.classifications.attribute1_id || 'null'}-${item.classifications.attribute2_id || 'null'}-store-${item.storeId || item.product.store?.id || 'default'}`
+                                          : `${item.product.id}-store-${item.storeId || item.product.store?.id || 'default'}`;
+                                        return updatedSelectedItems[itemKey] === true;
+                                      });
+
+                                      setGuestSelectedStores(prev => ({ ...prev, [storeId]: allProductsInStoreChecked }));
+                                    }}
+                                    className="mr-3"
+                                  />
+
+                                  <Link href={`/products/${product.id}`} className="flex-shrink-0">
+                                    <img
+                                      src={product.images?.[0] || '/pott.jpg'}
+                                      alt={product.name}
+                                      className="w-24 h-24 rounded-lg object-cover transition-transform hover:scale-105"
+                                    />
+                                  </Link>
+
+                                  <div className="flex-grow flex justify-between items-center w-full md:w-auto">
+                                    <div className="flex-grow">
+                                      <Link href={`/products/${product.id}`}>
+                                        <h3 className={`font-medium text-lg ${DARK_TEXT} hover:underline transition`}>
+                                          {product.name}
+                                        </h3>
+                                      </Link>
+                                      <p className={`text-sm ${LIGHT_TEXT}`}>
+                                        Đơn giá: {formatPrice(actualPrice)}
+                                      </p>
+
+                                      {/* Show classification info if available */}
+                                      {ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id) && (
+                                        <div className="flex gap-2 mt-2">
+                                          {ci.classifications.attribute1_name && (
+                                            <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
+                                              {ci.classifications.attribute1_name}
+                                            </span>
+                                          )}
+                                          {ci.classifications.attribute2_name && (
+                                            <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
+                                              {ci.classifications.attribute2_name}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Bộ đếm số lượng */}
+                                      <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
+                                        <button
+                                          onClick={() => {
+                                            const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                              ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+                                              : undefined;
+                                            updateQuantity(product.id, Math.max(1, (ci.quantity ?? 1) - 1), cartKey);
+                                          }}
+                                          disabled={ci.quantity === 1}
+                                          className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
+                                        >
+                                          <Minus className="w-4 h-4" />
+                                        </button>
+                                        <span className={`px-3 font-semibold ${DARK_TEXT}`}>
+                                          {ci.quantity}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                              ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
+                                              : undefined;
+                                            updateQuantity(product.id, (ci.quantity ?? 1) + 1, cartKey);
+                                          }}
+                                          className="p-2 text-gray-700 hover:bg-gray-100 transition"
+                                        >
+                                          <Plus className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-right flex flex-col items-end gap-2">
+                                      <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>
+                                        {formatPrice(totalPrice)}
+                                      </p>
+                                      <button
+                                        onClick={() => {
+                                          const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                            ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                                            : `${product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+                                          removeItem(product.id, cartKey);
+                                          // Cập nhật lại guest selected items
+                                          setGuestSelectedItems(prev => {
+                                            const newSelected = { ...prev };
+                                            delete newSelected[uniqueKey];
+                                            return newSelected;
+                                          });
+                                          if (!isAuthenticated) {
+                                            try {
+                                              let parsed: any[] | null = null;
+                                              if (typeof window !== 'undefined') {
+                                                const ss = sessionStorage.getItem('cart_session');
+                                                if (ss) parsed = JSON.parse(ss);
+                                              }
+                                              if (!parsed) {
+                                                const saved = Cookies.get('cart_session');
+                                                if (saved) parsed = JSON.parse(saved || '[]');
+                                              }
+                                              if (Array.isArray(parsed)) setCookieItems(parsed);
+                                            } catch { }
+                                          }
+                                        }}
+                                        className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
+                                      >
+                                        <Trash2 className="w-4 h-4" /> Xóa
+                                      </button>
+                                    </div>
                                   </div>
-                                )}
-
-                                {/* Bộ đếm số lượng */}
-                                <div className="flex items-center mt-3 border border-gray-300 rounded-lg w-fit">
-                                  <button
-                                    title='update'
-                                    onClick={() => {
-                                      const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
-                                        ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
-                                        : undefined;
-                                      updateQuantity(product.id, Math.max(1, (ci.quantity ?? 1) - 1), cartKey);
-                                    }}
-                                    disabled={ci.quantity === 1}
-                                    className="p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition"
-                                  >
-                                    <Minus className="w-4 h-4" />
-                                  </button>
-                                  <span className={`px-3 font-semibold ${DARK_TEXT}`}>
-                                    {ci.quantity}
-                                  </span>
-                                  <button
-                                    title='update'
-                                    onClick={() => {
-                                      const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
-                                        ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
-                                        : undefined;
-                                      updateQuantity(product.id, (ci.quantity ?? 1) + 1, cartKey);
-                                    }}
-                                    className="p-2 text-gray-700 hover:bg-gray-100 transition"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
                                 </div>
-                              </div>
-                              <div className="text-right flex flex-col items-end gap-2">
-                                <p className={`font-bold text-lg text-[${ACCENT_COLOR}]`}>
-                                  {formatPrice(totalPrice)}
-                                </p>
-                                <button
-                                  onClick={() => {
-                                    const cartKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
-                                      ? `${product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}`
-                                      : undefined;
-                                    removeItem(product.id, cartKey);
-                                    if (!isAuthenticated) {
-                                      try {
-                                        let parsed: any[] | null = null;
-                                        if (typeof window !== 'undefined') {
-                                          const ss = sessionStorage.getItem('cart_session');
-                                          if (ss) parsed = JSON.parse(ss);
-                                        }
-                                        if (!parsed) {
-                                          const saved = Cookies.get('cart_session');
-                                          if (saved) parsed = JSON.parse(saved || '[]');
-                                        }
-                                        if (Array.isArray(parsed)) setCookieItems(parsed);
-                                      } catch { }
-                                    }
-                                  }}
-                                  className={`text-sm ${LIGHT_TEXT} hover:text-red-600 transition flex items-center gap-1`}
-                                >
-                                  <Trash2 className="w-4 h-4" /> Xóa
-                                </button>
-                              </div>
-                            </div>
+                              );
+                            })}
                           </div>
                         );
                       })}
@@ -845,8 +1078,17 @@ export default function CartPage() {
                       </h3>
                       <div className="space-y-3 mb-6">
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
-                          <span>Tạm tính ({(items.length > 0 ? items : cookieItems).length} sản phẩm):</span>
-                          <span>{formatPrice(items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0)))}</span>
+                          <span>Tạm tính ({Object.values(guestSelectedItems).filter(Boolean).length} sản phẩm):</span>
+                          <span>{formatPrice(
+                            (items.length > 0 ? items : cookieItems)
+                              .filter(ci => {
+                                const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                  ? `${ci.product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                                  : `${ci.product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+                                return guestSelectedItems[uniqueKey] === true;
+                              })
+                              .reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0)
+                          )}</span>
                         </div>
                         <div className={`flex justify-between text-base ${DARK_TEXT}`}>
                           <span>Phí vận chuyển:</span>
@@ -855,10 +1097,63 @@ export default function CartPage() {
                       </div>
                       <div className={`border-t border-gray-300 pt-4 flex justify-between font-bold text-xl text-[${ACCENT_COLOR}]`}>
                         <span>Tổng cộng:</span>
-                        <span>{formatPrice((items.length > 0 ? subtotal : (cookieItems.reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0))) + 30000)}</span>
+                        <span>{formatPrice(
+                          (items.length > 0 ? items : cookieItems)
+                            .filter(ci => {
+                              const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                                ? `${ci.product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                                : `${ci.product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+                              return guestSelectedItems[uniqueKey] === true;
+                            })
+                            .reduce((s, ci) => s + (ci.price || ci.product.price) * (ci.quantity ?? 1), 0) + 30000
+                        )}</span>
                       </div>
                       <button
-                        onClick={handleCheckout}
+                        onClick={() => {
+                          const currentItems = items.length > 0 ? items : cookieItems;
+                          const selectedGuestItems = currentItems.filter(ci => {
+                            const uniqueKey = ci.classifications && (ci.classifications.attribute1_id || ci.classifications.attribute2_id)
+                              ? `${ci.product.id}-${ci.classifications.attribute1_id || 'null'}-${ci.classifications.attribute2_id || 'null'}-store-${ci.storeId || ci.product.store?.id || 'default'}`
+                              : `${ci.product.id}-store-${ci.storeId || ci.product.store?.id || 'default'}`;
+                            return guestSelectedItems[uniqueKey] === true;
+                          });
+
+                          if (selectedGuestItems.length === 0) {
+                            alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
+                            return;
+                          }
+
+                          // Lưu các sản phẩm được chọn vào sessionStorage giống như user đã đăng nhập
+                          console.log('\ud83d\udcbe Lưu guest selected items vào sessionStorage:', selectedGuestItems);
+                          const guestCheckoutItems = selectedGuestItems.map((ci, idx) => {
+                            const item = {
+                              id: `guest-${idx}`, // Guest không có server cart ID
+                              product_id: Number(ci.product.id),
+                              quantity: Number(ci.quantity),
+                              store_id: Number(ci.storeId || ci.product.store?.id || 1),
+                              price: ci.price || ci.product.price || 0,
+                              classificationPrice: ci.price || null,
+                              classificationId: ci.classificationId || null,
+                              classifications: ci.classifications || null
+                            };
+                            console.log('\ud83d\udce6 Guest checkout item mapped:', item);
+                            return item;
+                          });
+
+                          try {
+                            sessionStorage.setItem('checkout_items', JSON.stringify(guestCheckoutItems));
+                            const verify = sessionStorage.getItem('checkout_items');
+                            console.log('\u2705 Guest checkout items saved successfully');
+                            console.log('\u2705 Verification read:', verify);
+                          } catch (error) {
+                            console.error('\u274c Error saving guest checkout items:', error);
+                            alert('Có lỗi xảy ra khi lưu dữ liệu. Vui lòng thử lại.');
+                            return;
+                          }
+
+                          // Chuyển sang trang checkout giống như user đã đăng nhập
+                          router.push('/checkout');
+                        }}
                         className="block w-full text-center mt-8 bg-[#A0522D] text-white py-3 rounded-lg font-semibold text-lg transition-all duration-300 hover:bg-[#8B4513] shadow-md hover:shadow-lg"
                       >
                         Tiến hành thanh toán

@@ -1,6 +1,7 @@
 // src/app/PromotionPage.tsx
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
+import Image from "next/image";
 import CheckboxList from "@/components/adminPromotion/CheckboxList";
 import { SelectOption } from "@/api/services/promotionService";
 import PromotionForm, { initialFormState } from "@/components/adminPromotion/PromotionForm";
@@ -13,6 +14,22 @@ import { Pencil, Trash2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import ConfirmDialog from "@/components/common/ConfirmDialog"; // IMPORT MỚI
 import PaginationControls from "@/components/common/PaginationControls";
+
+// Define types for product images
+interface ProductImage {
+    id: number;
+    image_data: string;
+    is_main_image: boolean;
+    priority: number;
+}
+
+interface ProductWithImages {
+    id: number;
+    name: string;
+    images?: ProductImage[];
+    imageUrl?: string;
+    categoryId?: number;
+}
 
 const toDatetimeLocal = (isoDateString?: Date | string) => {
     if (!isoDateString) return "";
@@ -38,7 +55,7 @@ export default function PromotionPage() {
     const [productCheckboxValue, setProductCheckboxValue] = useState<string | string[] | undefined>(undefined);
 
     const [currentAssignedPage, setCurrentAssignedPage] = useState(1);
-    const [assignedPageSize, setAssignedPageSize] = useState(10);
+    const [assignedPageSize] = useState(10);
 
     const handleAssignedPageChange = (page: number) => {
         setCurrentAssignedPage(page);
@@ -77,8 +94,8 @@ export default function PromotionPage() {
         return productAssignments.map(a => ({
             id: a.productId,
             name: a.product?.name || `ID: ${a.productId} (Chưa có tên)`,
-            imageUrl: a.product?.imageUrl,
-            categoryId: (a.product as any)?.category_id || a.product?.categoryId || null,
+            imageUrl: (a.product as ProductWithImages)?.imageUrl || undefined,
+            categoryId: (a.product as ProductWithImages)?.categoryId || null,
         }));
     }, [productAssignments]);
 
@@ -176,6 +193,7 @@ export default function PromotionPage() {
 
         try {
             if (editingId) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { id, ...updateDto } = form;
                 await updatePromotion(editingId, updateDto);
                 toast.success(`Cập nhật Promotion ID ${editingId} thành công!`);
@@ -189,8 +207,8 @@ export default function PromotionPage() {
             setErrors({});
             setIsFormVisible(false);
             await fetchPromotions();
-        } catch (error: any) {
-            const errorMsg = error.message || "Có lỗi xảy ra khi thực hiện thao tác!";
+        } catch (error: unknown) {
+            const errorMsg = error instanceof Error ? error.message : "Có lỗi xảy ra khi thực hiện thao tác!";
             console.error("Lỗi CRUD:", error);
             toast.error(errorMsg);
         }
@@ -275,8 +293,7 @@ export default function PromotionPage() {
 
     // Dòng 357 (giữ lại và thêm hàm xử lý chuyển trang):
     // const totalPages = Math.ceil(promotions.length / pageSize); // KHÔNG CẦN NỮA
-    const startIndex = (currentPage - 1) * pageSize;
-    const currentItems = promotions.slice(startIndex, startIndex + pageSize); // CẦN GIỮ LẠI VÀ CHUYỂN VÀO useMemo/useState NẾU CẦN
+    // const startIndex = (currentPage - 1) * pageSize; // KHÔNG DÙNG
     const activePromotions = promotions.filter(p => p.is_active && p.id);
     const assignedProductAssignments = useMemo(() => {
         return productAssignments.filter(a => a.promotionId !== null);
@@ -349,8 +366,10 @@ export default function PromotionPage() {
                                 &times;
                             </button>
 
-                            <h3 className="text-xl font-semibold mb-6 text-gray-700 border-b pb-2">
-                                {editingId ? `Chỉnh Sửa Khuyến mãi ID: ${editingId}` : "Thêm Khuyến mãi Mới"}
+                            <h3 className="text-xl text-[#B95D26] font-semibold mb-6">
+                                {editingId
+                                    ? `Cập nhật khuyến mãi: ${promotions.find(p => p.id === editingId)?.name || editingId}`
+                                    : "Thêm khuyến mãi mới"}
                             </h3>
 
                             <PromotionForm
@@ -365,15 +384,15 @@ export default function PromotionPage() {
                 )}
 
                 {/* 4. BẢNG LIỆT KÊ PROMOTION */}
-                <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center mt-10">
+                <h2 className="text-lg font-bold text-gray-700 mb-6 text-center mt-10">
                     Danh sách Khuyến mãi
                 </h2>
 
                 <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-100">
                     <table className="w-full border-collapse bg-white">
                         <thead>
-                            <tr className="bg-gray-200 text-black text-sm font-semibold uppercase tracking-wider">
-                                <th className="px-5 py-3 text-left rounded-tl-xl">Stt</th>
+                            <tr className="bg-gray-200 text-gray-700 text-sm tracking-wider">
+                                <th className="px-5 py-3 text-left rounded-tl-xl">STT</th>
                                 <th className="px-5 py-3 text-left">Tên/Mô tả</th>
                                 <th className="px-5 py-3 text-left">Giá trị giảm</th>
                                 <th className="px-5 py-3 text-left">Thời gian</th>
@@ -464,8 +483,8 @@ export default function PromotionPage() {
                 {/* 5. KHU VỰC GÁN KHUYẾN MÃI HÀNG LOẠT */}
                 <div className="mt-10">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-700">
-                            Gán Khuyến mãi hàng loạt cho Sản phẩm
+                        <h2 className="text-2xl font-bold text-[#B95D26]">
+                            Gán khuyến mãi cho Sản phẩm
                         </h2>
                         <button
                             onClick={() => setIsAssignVisible(!isAssignVisible)}
@@ -481,12 +500,12 @@ export default function PromotionPage() {
                             {/* CỘT 1: CHỌN KHUYẾN MÃI & NÚT LƯU */}
                             <div className="md:col-span-1 flex flex-col justify-between">
                                 <div>
-                                    <h3 className="text-2xl font-bold mb-4 text-[#B95D26] flex items-center gap-2">
+                                    <h3 className="text-lg font-bold mb-4 text-[#B95D26] flex items-center gap-2">
                                         Bước 1: Chọn Khuyến mãi
                                     </h3>
 
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Áp dụng Khuyến mãi
+                                        Chọn Khuyến mãi
                                     </label>
 
                                     <select
@@ -542,8 +561,8 @@ export default function PromotionPage() {
 
                             {/* CỘT 2 & 3: CHỌN SẢN PHẨM */}
                             <div className="md:col-span-2">
-                                <h3 className="text-2xl font-bold mb-4 text-[#B95D26] flex items-center gap-2">
-                                    Bước 2: Chọn Sản phẩm để GÁN / HỦY GÁN
+                                <h3 className="text-lg font-bold mb-4 text-[#B95D26] flex items-center gap-2">
+                                    Bước 2: Chọn Sản phẩm để Gán / Hủy Gán
                                 </h3>
 
                                 <div className="bg-white border border-gray-200 rounded-xl shadow-inner p-4">
@@ -573,70 +592,101 @@ export default function PromotionPage() {
                 <hr className="my-10 border-gray-200" />
 
                 {/* 3. BẢNG LIỆT KÊ TÌNH TRẠNG GÁN HIỆN TẠI */}
-                <h2 className="text-2xl font-bold text-gray-700 mb-6 text-center mt-10">
-                    Tình trạng Gán Khuyến mãi của Sản phẩm
+                <h2 className="text-lg font-bold text-gray-500 mb-6 text-center mt-10">
+                    Danh sách Sản phẩm đã được gán Khuyến mãi
                 </h2>
-                <p className="text-sm text-gray-500 text-center mb-4 italic">
+                <p className="text-xs text-gray-500 text-center mb-4 italic">
                     (Chỉ hiển thị các sản phẩm đang có Khuyến mãi được gán)
                 </p>
                 <div className="overflow-x-auto  border border-gray-100 rounded-lg shadow-inner">
                     <table className="w-full border-collapse bg-white modern-table">
                         <thead>
-                            <tr className="bg-gray-50 text-gray-600 text-sm font-medium uppercase sticky top-0 z-10 border-b border-gray-200">
-                                <th className="px-5 py-3 text-left w-[120px]">Stt</th>
+                            <tr className="bg-gray-50 text-gray-600 text-sm font-medium sticky top-0 z-10 border-b border-gray-200">
+                                <th className="px-5 py-3 text-left w-[80px]">STT</th>
+                                <th className="px-5 py-3 text-left w-[100px]">Hình ảnh</th>
                                 <th className="px-5 py-3 text-left">Tên Sản phẩm</th>
-                                <th className="px-5 py-3 text-left w-1/3">Khuyến mãi hiện tại</th>
+                                <th className="px-5 py-3 text-left w-1/4">Khuyến mãi hiện tại</th>
                                 <th className="px-5 py-3 text-center w-[300px]">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {assignedItemsToDisplay.map((assignment, idx) => (
-                                <tr key={assignment.productId} className={`border-b border-gray-100 transition hover:bg-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                                    <td className="px-5 py-3 text-sm font-mono text-gray-600">{(currentAssignedPage - 1) * assignedPageSize + idx + 1}</td>
-                                    <td className="px-5 py-3 font-semibold text-gray-800">
-                                        {assignment.product?.name || `Product ID ${assignment.productId} (Không tên)`}
-                                    </td>
-                                    <td className="px-5 py-3 text-sm">
-                                        {assignment.promotionId
-                                            ? <span className="inline-block bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-medium">
-                                                {promotions.find(p => p.id === assignment.promotionId)?.name || `ID: ${assignment.promotionId}`}
-                                            </span>
-                                            : null
-                                        }
-                                    </td>
-                                    {/* 👇 THÊM CỘT HÀNH ĐỘNG VỚI NÚT */}
-                                    <td className="px-5 py-3 text-center">
-                                        <div className="flex gap-2 justify-center">
-                                            {/* Nút HỦY GÁN (Unassign) */}
-                                            <button
-                                                title="Hủy Gán Khuyến Mãi"
-                                                onClick={() => handleUnassignSingleProduct(assignment.productId)}
-                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
-                                            >
-                                                <Trash2 size={14} /> Hủy Gán
-                                            </button>
+                            {assignedItemsToDisplay.map((assignment, idx) => {
+                                // Extract main image from product images array
+                                const getMainImage = (product: ProductWithImages | undefined): string => {
+                                    if (!product?.images || !Array.isArray(product.images) || product.images.length === 0) {
+                                        return "/no-image.jpg";
+                                    }
 
-                                            {/* Nút SỬA GÁN (Tùy chọn: Mở khu vực gán hàng loạt với sản phẩm này) */}
-                                            <button
-                                                title="Sửa Gán (Mở lại khu vực gán)"
-                                                onClick={() => {
-                                                    setProductCheckboxValue(String(assignment.productId)); // Chọn duy nhất sản phẩm này
-                                                    setSelectedPromotionId(assignment.promotionId); // Giữ lại khuyến mãi cũ
-                                                    setIsAssignVisible(true); // Mở khu vực gán
-                                                    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn lên đầu trang
+                                    // Find main image or get first image
+                                    const mainImg = product.images.find((img: ProductImage) => img.is_main_image) || product.images[0];
+
+                                    if (mainImg?.image_data) {
+                                        return `data:image/jpeg;base64,${mainImg.image_data}`;
+                                    }
+
+                                    return "/no-image.jpg";
+                                };
+
+                                return (
+                                    <tr key={assignment.productId} className={`border-b border-gray-100 transition hover:bg-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                                        <td className="px-5 py-3 text-sm font-mono text-gray-600">{(currentAssignedPage - 1) * assignedPageSize + idx + 1}</td>
+                                        <td className="px-5 py-3">
+                                            <Image
+                                                src={getMainImage(assignment.product as ProductWithImages)}
+                                                alt={assignment.product?.name || `Product ${assignment.productId}`}
+                                                width={64}
+                                                height={64}
+                                                className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-sm"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = "/no-image.jpg";
                                                 }}
-                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
-                                            >
-                                                <Pencil size={14} /> Sửa
-                                            </button>
-                                        </div>
-                                    </td>
-                                    {/* 👆 KẾT THÚC THÊM CỘT HÀNH ĐỘNG VỚI NÚT */}
-                                </tr>
-                            ))}
+                                            />
+                                        </td>
+                                        <td className="px-5 py-3 text-sm text-gray-800">
+                                            {assignment.product?.name || `Product ID ${assignment.productId} (Không tên)`}
+                                        </td>
+                                        <td className="px-5 py-3 text-sm">
+                                            {assignment.promotionId
+                                                ? <span className="inline-block bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-medium">
+                                                    {promotions.find(p => p.id === assignment.promotionId)?.name || `ID: ${assignment.promotionId}`}
+                                                </span>
+                                                : null
+                                            }
+                                        </td>
+                                        {/* 👇 THÊM CỘT HÀNH ĐỘNG VỚI NÚT */}
+                                        <td className="px-5 py-3 text-center">
+                                            <div className="flex gap-2 justify-center">
+                                                {/* Nút HỦY GÁN (Unassign) */}
+                                                <button
+                                                    title="Hủy Gán Khuyến Mãi"
+                                                    onClick={() => handleUnassignSingleProduct(assignment.productId)}
+                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition"
+                                                >
+                                                    <Trash2 size={14} /> Hủy Gán
+                                                </button>
+
+                                                {/* Nút SỬA GÁN (Tùy chọn: Mở khu vực gán hàng loạt với sản phẩm này) */}
+                                                <button
+                                                    title="Sửa Gán (Mở lại khu vực gán)"
+                                                    onClick={() => {
+                                                        setProductCheckboxValue(String(assignment.productId)); // Chọn duy nhất sản phẩm này
+                                                        setSelectedPromotionId(assignment.promotionId); // Giữ lại khuyến mãi cũ
+                                                        setIsAssignVisible(true); // Mở khu vực gán
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn lên đầu trang
+                                                    }}
+                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
+                                                >
+                                                    <Pencil size={14} /> Sửa
+                                                </button>
+                                            </div>
+                                        </td>
+                                        {/* 👆 KẾT THÚC THÊM CỘT HÀNH ĐỘNG VỚI NÚT */}
+                                    </tr>
+                                );
+                            })}
                             {assignedProductAssignments.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-4 text-gray-500 italic">
+                                    <td colSpan={5} className="text-center py-4 text-gray-500 italic">
                                         Không có sản phẩm nào đang được gán khuyến mãi.
                                     </td>
                                 </tr>

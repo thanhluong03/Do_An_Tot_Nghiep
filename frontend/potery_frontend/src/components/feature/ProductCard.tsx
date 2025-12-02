@@ -413,8 +413,13 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
         // Pass classification info to cart only if there are valid classifications
         const hasValidClassifications = selectedClassifications.attribute1_id && selectedClassifications.attribute2_id;
 
+        // Tìm store name
+        const selectedStore = stores.find((s) => s.store_id === selectedStoreId);
+        const storeName = selectedStore?.store_name || product.store?.name || `Cửa hàng #${selectedStoreId}`;
+
         const classificationOptions = hasValidClassifications ? {
           storeId: selectedStoreId || undefined,
+          storeName: storeName,
           classifications: {
             attribute1_id: selectedClassifications.attribute1_id,
             attribute2_id: selectedClassifications.attribute2_id,
@@ -428,6 +433,7 @@ export const ProductCard: React.FC<{ product: Product; onViewDetails?: (p: Produ
           )?.id
         } : {
           storeId: selectedStoreId || undefined,
+          storeName: storeName,
           price: classificationData.price
         };
 
