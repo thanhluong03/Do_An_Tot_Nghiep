@@ -15,7 +15,7 @@ import {
     faNewspaper,
     faTruck,
     faTags,
-    faUserShield, // Giữ lại icon này cho mục cha
+    faUserShield,
     faUser,
     faChevronDown,
     faChevronUp,
@@ -26,11 +26,11 @@ import {
     faUserCheck,
     faMessage,
     faRobot,
-    faClipboardCheck, // 💡 Icon mới cho mục cha "Phân quyền/Tài khoản"
+    faClipboardCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import Image from "next/image";
-import { ClipboardCheck } from "lucide-react";
+// import { ClipboardCheck } from "lucide-react"; // Đã bỏ import không cần thiết
 
 interface MenuItem {
     name: string;
@@ -39,6 +39,51 @@ interface MenuItem {
     color?: string;
     children?: MenuItem[];
 }
+
+// --- LOGIC KIỂM TRA QUYỀN HẠN ---
+// Cache để lưu trữ quyền sau khi load lần đầu, tránh đọc localStorage nhiều lần.
+const permissionsCache: string[] = [];
+
+/**
+ * Lấy danh sách quyền hạn từ Local Storage.
+ * @returns Mảng các chuỗi quyền hạn.
+ */
+const getAdminPermissions = (): string[] => {
+    if (typeof window !== 'undefined' && permissionsCache.length === 0) {
+        const permissionsJson = localStorage.getItem('adminPermissions_1'); 
+        try {
+            const permissions = permissionsJson ? JSON.parse(permissionsJson) : [];
+            // Lưu vào cache
+            if (Array.isArray(permissions)) {
+                permissionsCache.push(...permissions);
+            }
+        } catch (error) {
+            console.error("Error parsing admin permissions from localStorage:", error);
+        }
+    }
+    return permissionsCache;
+};
+
+/**
+ * Kiểm tra xem người dùng có quyền truy cập vào một đường dẫn cụ thể không.
+ * @param href Đường dẫn cần kiểm tra (ví dụ: '/admin/dashboard').
+ * @returns true nếu người dùng có quyền, ngược lại là false.
+ */
+const isPermitted = (href: string): boolean => {
+    // Đảm bảo cache đã được load
+    if (permissionsCache.length === 0) {
+        getAdminPermissions();
+    }
+    
+    // Đường dẫn trong sidebar: /admin/dashboard
+    // Đường dẫn trong permissions: admin/dashboard
+    const cleanHref = href.startsWith('/') ? href.substring(1) : href;
+    
+    // Chuyển sang lowercase để đảm bảo so sánh
+    return permissionsCache.map(p => p.toLowerCase()).includes(cleanHref.toLowerCase());
+};
+
+// --- ĐỊNH NGHĨA CÁC MỤC MENU ---
 
 const dashboardItems: MenuItem[] = [
     { name: "Dashboard", icon: faHome, href: "/admin/dashboard" },
@@ -81,13 +126,12 @@ const contentResourcesItems: MenuItem[] = [
     { name: "Tin tức/Bài viết", icon: faNewspaper, href: "/admin/news", color: "bg-red-100 text-red-600" },
 ];
 
-// 💡 SỬA ĐỔI: Gộp Vai trò và Quyền hạn vào mục con "Phân quyền"
 const systemItems: MenuItem[] = [
     { name: "Quản lý AI chat", icon: faRobot, href: "/admin/ai" },
-    { name: "Tài khoản", icon: faUserCheck, href: "/admin/users" },
+    { name: "Tài khoản nhân viên", icon: faUserCheck, href: "/admin/users" },
     {
-        name: "Phân quyền", // Tên mục cha mới
-        icon: faUsersCog, // Icon cho Phân quyền (Users with Cog/Gear)
+        name: "Phân quyền",
+        icon: faUsersCog,
         children: [
             { name: "Vai trò", icon: faUserShield, href: "/admin/roles" },
             { name: "Quyền hạn", icon: faUserShield, href: "/admin/permissions" },
@@ -95,6 +139,7 @@ const systemItems: MenuItem[] = [
     },
 ];
 
+// --- COMPONENT SIDEBAR ITEM ---
 const SidebarItem = ({
     item,
     currentPath,
@@ -102,14 +147,15 @@ const SidebarItem = ({
     item: MenuItem;
     currentPath: string;
 }) => {
-    // Thêm logic để tự động mở/đóng mục cha nếu mục con active
+    // Logic tự động mở/đóng mục cha nếu mục con active
     const isChildActive = item.children?.some(
         (child) => child.href && currentPath.startsWith(child.href)
     );
 
-    // 💡 Tự động mở nếu có mục con đang active
+    // Tự động mở nếu có mục con đang active
     const [open, setOpen] = useState(!!isChildActive);
 
+    // Xác định trạng thái active cho mục đơn
     const isActive = item.href
         ? currentPath === item.href ||
         (currentPath.startsWith(item.href + "/") &&
@@ -166,6 +212,7 @@ const SidebarItem = ({
         );
     }
 
+    // Mục đơn
     return (
         <Link
             href={item.href!}
@@ -182,25 +229,68 @@ const SidebarItem = ({
     );
 };
 
+// --- COMPONENT ADMIN SIDEBAR CHÍNH ---
 export default function AdminSidebar() {
     const pathname = usePathname();
 
-    const renderMenuSection = (title: string, items: MenuItem[]) => (
-        <div>
-            <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2 mt-4 first:mt-0">
-                {title}
-            </h3>
-            <div className="space-y-1">
-                {items.map((item) => (
-                    <SidebarItem
-                        key={item.name}
-                        item={item}
-                        currentPath={pathname}
-                    />
-                ))}
+    /**
+     * Lọc các mục menu dựa trên quyền hạn của người dùng.
+     * @param items Mảng MenuItem đầu vào.
+     * @returns Mảng MenuItem đã được lọc.
+     */
+    const filterMenuItems = (items: MenuItem[]): MenuItem[] => {
+        return items
+            .map(item => {
+                if (item.children) {
+                    // 1. Lọc các mục con
+                    const filteredChildren = item.children.filter(child => 
+                        child.href ? isPermitted(child.href) : true
+                    );
+                    
+                    // 2. Chỉ giữ lại mục cha nếu có ít nhất 1 mục con hợp lệ
+                    if (filteredChildren.length > 0) {
+                        return { ...item, children: filteredChildren };
+                    }
+                    return null; // Loại bỏ mục cha
+                }
+                
+                // 3. Kiểm tra mục đơn (không có con)
+                if (item.href && isPermitted(item.href)) {
+                    return item;
+                }
+                
+                return null; // Loại bỏ mục đơn
+            })
+            .filter((item): item is MenuItem => item !== null); // Lọc bỏ các mục null
+    };
+
+    const renderMenuSection = (title: string, items: MenuItem[]) => {
+        // Lọc các mục trước khi render
+        const filteredItems = filterMenuItems(items);
+
+        // Không render section nếu không có mục nào được phép
+        if (filteredItems.length === 0) return null;
+
+        return (
+            <div>
+                <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2 mt-4 first:mt-0">
+                    {title}
+                </h3>
+                <div className="space-y-1">
+                    {filteredItems.map((item) => (
+                        <SidebarItem
+                            key={item.name}
+                            item={item}
+                            currentPath={pathname}
+                        />
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    // Khởi tạo permission cache khi component được render
+    getAdminPermissions();
 
     return (
         <div className="w-58 bg-white flex flex-col h-screen sticky top-0 overflow-y-auto border-r border-gray-200 shadow-md scrollbar-none">
@@ -210,8 +300,8 @@ export default function AdminSidebar() {
                     <Image
                         src="/logoADmin.jpg"
                         alt="Tiệm Gốm Nhà Gạo Admin Logo"
-                        width={800}  // <-- THÊM VÀO: Kích thước thật (chiều rộng) của file ảnh
-                        height={250} // <-- THÊM VÀO: Kích thước thật (chiều cao) của file ảnh
+                        width={800}
+                        height={250}
                         className=" object-contain cursor-pointer hover:scale-[1.02]"
                     />
                 </Link>
