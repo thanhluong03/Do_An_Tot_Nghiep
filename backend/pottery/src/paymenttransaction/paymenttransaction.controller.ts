@@ -96,10 +96,10 @@ export class PaymentTransactionController {
                 });
             }
 
-            // Save transaction
+            // Save transaction for main order (will be updated with correct amount later)
             const savedTransaction = await this.paymentTransactionRepo.create({
                 order_id: orderId,
-                amount,
+                amount, // Will be updated with calculated amount later
                 payment_gateway: 'MOMO',
                 gateway_txn_ref: body.requestId,
                 txn_status: status,
@@ -108,31 +108,80 @@ export class PaymentTransactionController {
                 raw_response_data: body,
             });
 
-            // Update order if payment successful
+            // Update order(s) if payment successful
             if (status === 'SUCCESS' && orderId) {
-                const order = await this.orderRepository.findById(orderId);
-                if (order) {
-                    order.payment_status = PaymentStatus.PAID;
-                    order.status = OrderStatus.CONFIRMED;
-                    order.current_order = order.current_order
-                        ? { ...order.current_order, payment_status: PaymentStatus.PAID }
-                        : { payment_status: PaymentStatus.PAID };
+                // Find all orders that need to be updated (main order + related orders)
+                const ordersToUpdate = await this.findRelatedOrdersForPayment(orderId);
 
-                    await this.orderRepository.save(order);
-                    // Send email for guest customers
+                console.log(`[MOMO] 🔄 Updating payment status for orders: ${ordersToUpdate.join(', ')}`);
+
+                // Calculate payment distribution for each order
+                const orderPaymentData = await this.calculatePaymentDistribution(ordersToUpdate, amount);
+
+                // Update all related orders with proper payment amounts
+                for (const orderPayment of orderPaymentData) {
                     try {
-                        const customer = await this.customerRepository.findById(order.customer_id);
-                        if (customer && customer.username && customer.username.startsWith('guest_')) {
-                            const customerEmail = customer.email || `order_${orderId}@pottery.com`;
-                            await this.sendMailService.sendOrderConfirmationMail({
-                                to: customerEmail,
-                                orderId: orderId,
-                            });
+                        const order = await this.orderRepository.findById(orderPayment.orderId);
+                        if (order) {
+                            order.payment_status = PaymentStatus.PAID;
+                            order.status = OrderStatus.CONFIRMED;
+                            order.current_order = order.current_order
+                                ? { ...order.current_order, payment_status: PaymentStatus.PAID }
+                                : { payment_status: PaymentStatus.PAID };
+
+                            await this.orderRepository.save(order);
+                            console.log(`[MOMO] ✅ Updated order #${orderPayment.orderId} with amount ${orderPayment.amount}`);
+
+                            // Create/Update transaction record for each order with calculated amounts
+                            if (orderPayment.orderId === orderId) {
+                                // Create additional transaction for main order with correct calculated amount
+                                await this.paymentTransactionRepo.create({
+                                    order_id: orderPayment.orderId,
+                                    amount: orderPayment.amount,
+                                    payment_gateway: 'MOMO',
+                                    gateway_txn_ref: `${body.requestId}_split_main`,
+                                    txn_status: status,
+                                    txn_message: `Split payment (main order) #${orderPayment.orderId} - Amount: ${orderPayment.amount}đ - ${message}`,
+                                    txn_time: new Date(),
+                                    raw_response_data: { ...body, split_order_id: orderPayment.orderId, split_amount: orderPayment.amount, is_main_order: true },
+                                });
+                            } else {
+                                // Create transaction for related orders with their calculated amounts
+                                await this.paymentTransactionRepo.create({
+                                    order_id: orderPayment.orderId,
+                                    amount: orderPayment.amount,
+                                    payment_gateway: 'MOMO',
+                                    gateway_txn_ref: body.requestId, // Same transaction reference for all orders
+                                    txn_status: status,
+                                    txn_message: `Split payment for order #${orderPayment.orderId} - Amount: ${orderPayment.amount}đ - ${message}`,
+                                    txn_time: new Date(),
+                                    raw_response_data: { ...body, split_order_id: orderPayment.orderId, split_amount: orderPayment.amount },
+                                });
+                            }
+
+                            // Send email for guest customers (only once for the main order)
+                            if (orderPayment.orderId === orderId) {
+                                try {
+                                    const customer = await this.customerRepository.findById(order.customer_id);
+                                    if (customer && customer.username && customer.username.startsWith('guest_')) {
+                                        const customerEmail = customer.email || `order_${orderId}@pottery.com`;
+                                        await this.sendMailService.sendOrderConfirmationMail({
+                                            to: customerEmail,
+                                            orderId: orderId,
+                                        });
+                                        console.log(`[MOMO] 📧 Email sent to ${customerEmail}`);
+                                    }
+                                } catch (emailError) {
+                                    console.error(`[MOMO] ❌ Email failed for order #${orderId}:`, emailError);
+                                }
+                            }
                         }
-                    } catch (emailError) {
-                        console.error(`[MOMO] ❌ Email failed for order #${orderId}:`, emailError);
+                    } catch (updateError) {
+                        console.error(`[MOMO] ❌ Failed to update order #${orderPayment.orderId}:`, updateError);
                     }
                 }
+
+                console.log(`[MOMO] ✅ Successfully updated ${orderPaymentData.length} orders`);
             }
 
             return res.status(HttpStatus.OK).json({
@@ -158,6 +207,31 @@ export class PaymentTransactionController {
             const resultCode = Number(query.resultCode);
 
             if (resultCode === 0) {
+                // Payment successful - ensure all related orders are updated
+                if (orderId) {
+                    const ordersToUpdate = await this.findRelatedOrdersForPayment(orderId);
+                    console.log(`[MOMO RETURN] 🔄 Ensuring ${ordersToUpdate.length} orders are updated: ${ordersToUpdate.join(', ')}`);
+
+                    // Double-check all orders are properly updated
+                    for (const orderIdToUpdate of ordersToUpdate) {
+                        try {
+                            const order = await this.orderRepository.findById(orderIdToUpdate);
+                            if (order && order.payment_status !== PaymentStatus.PAID) {
+                                order.payment_status = PaymentStatus.PAID;
+                                order.status = OrderStatus.CONFIRMED;
+                                order.current_order = order.current_order
+                                    ? { ...order.current_order, payment_status: PaymentStatus.PAID }
+                                    : { payment_status: PaymentStatus.PAID };
+
+                                await this.orderRepository.save(order);
+                                console.log(`[MOMO RETURN] ✅ Updated order #${orderIdToUpdate}`);
+                            }
+                        } catch (updateError) {
+                            console.error(`[MOMO RETURN] ❌ Failed to update order #${orderIdToUpdate}:`, updateError);
+                        }
+                    }
+                }
+
                 return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=success&order_id=${orderId}`);
             } else {
                 return res.redirect(`${process.env.FRONTEND_URL}/orders?payment=failed`);
@@ -176,6 +250,133 @@ export class PaymentTransactionController {
         }
         const numbers = orderInfo.replace(/\D/g, '');
         return numbers ? Number(numbers) : 0;
+    }
+
+    private async findRelatedOrdersForPayment(mainOrderId: number): Promise<number[]> {
+        const ordersToUpdate: number[] = [mainOrderId];
+
+        try {
+            const mainOrder = await this.orderRepository.findById(mainOrderId);
+            if (!mainOrder || !mainOrder.customer_id) {
+                return ordersToUpdate;
+            }
+
+            // Find all other orders from the same customer created within the last 10 minutes
+            // that are still unpaid and in CREATED status
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+            const recentOrders = await this.orderRepository.findAll({
+                customer_id: mainOrder.customer_id,
+                page: 1,
+                size: 100
+            });
+
+            // Filter orders created around the same time and not yet paid
+            const relatedOrders = recentOrders.orders.filter(order => {
+                const orderTime = new Date(order.created_at);
+                return order.id !== mainOrderId &&
+                    orderTime >= tenMinutesAgo &&
+                    order.payment_status === PaymentStatus.UNPAID &&
+                    order.status === OrderStatus.CREATED;
+            });
+
+            // Sort by creation time to ensure consistent ordering
+            relatedOrders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+            relatedOrders.forEach(order => {
+                if (!ordersToUpdate.includes(order.id)) {
+                    ordersToUpdate.push(order.id);
+                }
+            });
+
+            // Log for debugging
+            if (relatedOrders.length > 0) {
+                console.log(`[MOMO] Found ${relatedOrders.length} related orders for customer ${mainOrder.customer_id}`);
+            }
+
+        } catch (error) {
+            console.error('[MOMO] Error finding related orders:', error);
+        }
+
+        return ordersToUpdate;
+    }
+
+    private async calculatePaymentDistribution(orderIds: number[], totalAmount: number): Promise<{ orderId: number; amount: number; shippingFee: number }[]> {
+        const TOTAL_SHIPPING_FEE = 30000; // Total shipping fee for entire payment (30,000đ)
+        const result: { orderId: number; amount: number; shippingFee: number }[] = [];
+
+        try {
+            // Get all order details
+            const orders = await Promise.all(
+                orderIds.map(id => this.orderRepository.findById(id))
+            );
+
+            const validOrders = orders.filter(order => order !== null);
+            if (validOrders.length === 0) return result;
+
+            // Calculate shipping fee per order (divided equally)
+            const shippingFeePerOrder = Math.round(TOTAL_SHIPPING_FEE / validOrders.length);
+
+            // Calculate total product amount (excluding shipping) for all orders
+            let totalProductAmount = 0;
+            const orderProductAmounts: { orderId: number; productAmount: number }[] = [];
+
+            for (const order of validOrders) {
+                // Parse current_order to get items and calculate product total
+                const currentOrder = order.current_order as any;
+                const items = Array.isArray(currentOrder?.items) ? currentOrder.items : [];
+
+                const productAmount = items.reduce((sum: number, item: any) => {
+                    return sum + ((item.price_at_order || 0) * (item.quantity || 0));
+                }, 0);
+
+                orderProductAmounts.push({
+                    orderId: order.id,
+                    productAmount: productAmount
+                });
+
+                totalProductAmount += productAmount;
+            }
+
+            // Distribute payment: each order gets its product amount + divided shipping fee
+            for (const orderData of orderProductAmounts) {
+                // Each order gets: its product amount + shipping fee divided equally
+                const orderAmount = Math.round(orderData.productAmount + shippingFeePerOrder);
+
+                result.push({
+                    orderId: orderData.orderId,
+                    amount: orderAmount,
+                    shippingFee: shippingFeePerOrder
+                });
+
+                console.log(`[PAYMENT SPLIT] Order #${orderData.orderId}: Product ${orderData.productAmount}đ + Shipping ${shippingFeePerOrder}đ (=${TOTAL_SHIPPING_FEE}đ÷${validOrders.length}) = Total ${orderAmount}đ`);
+            }
+
+            // Verify total matches (with small rounding tolerance)
+            const calculatedTotal = result.reduce((sum, item) => sum + item.amount, 0);
+            const difference = Math.abs(calculatedTotal - totalAmount);
+
+            console.log(`[PAYMENT SPLIT] Summary: ${validOrders.length} orders, Total shipping ${TOTAL_SHIPPING_FEE}đ ÷ ${validOrders.length} = ${shippingFeePerOrder}đ per order`);
+
+            if (difference > 100) { // Allow 100đ tolerance for rounding
+                console.warn(`[PAYMENT SPLIT] Warning: Calculated total ${calculatedTotal}đ differs from actual ${totalAmount}đ by ${difference}đ`);
+            }
+
+        } catch (error) {
+            console.error('[PAYMENT SPLIT] Error calculating payment distribution:', error);
+
+            // Fallback: distribute equally
+            const equalAmount = Math.round(totalAmount / orderIds.length);
+            const shippingFeePerOrder = Math.round(TOTAL_SHIPPING_FEE / orderIds.length);
+            for (const orderId of orderIds) {
+                result.push({
+                    orderId: orderId,
+                    amount: equalAmount,
+                    shippingFee: shippingFeePerOrder
+                });
+            }
+        }
+
+        return result;
     }
 
     @Get('test')
@@ -335,5 +536,67 @@ export class PaymentTransactionController {
     @Get('order/:order_id')
     async getTransactionsByOrder(@Param('order_id') order_id: number) {
         return this.paymentTransactionRepo.findByOrderId(Number(order_id));
+    }
+
+    @Get('test/payment-split/:order_id')
+    async testPaymentSplit(@Param('order_id') order_id: number) {
+        try {
+            const ordersToUpdate = await this.findRelatedOrdersForPayment(Number(order_id));
+            const paymentDistribution = await this.calculatePaymentDistribution(ordersToUpdate, 100000); // Test with 100k
+
+            return {
+                success: true,
+                mainOrderId: order_id,
+                relatedOrders: ordersToUpdate,
+                paymentDistribution,
+                message: 'Payment split calculation test completed'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Payment split test failed'
+            };
+        }
+    }
+
+    @Get('orders-by-transaction/:transactionRef')
+    async getOrdersByTransaction(@Param('transactionRef') transactionRef: string) {
+        try {
+            console.log('🔍 Finding orders for transaction reference:', transactionRef);
+
+            // Tìm tất cả orders có transaction reference này
+            const relatedOrders = await this.orderRepository.findOrdersByGatewayTxnRef(transactionRef);
+            console.log('📦 Found orders:', relatedOrders);
+
+            if (!relatedOrders || relatedOrders.length === 0) {
+                return {
+                    success: false,
+                    message: 'Không tìm thấy đơn hàng nào với mã giao dịch này',
+                    data: []
+                };
+            }
+
+            // Lấy order IDs
+            const orderIds = relatedOrders.map(order => order.id);
+
+            console.log('📦 Found order IDs:', orderIds);
+
+            return {
+                success: true,
+                message: 'Lấy danh sách đơn hàng thành công',
+                data: {
+                    orderIds: orderIds,
+                    transactionRef: transactionRef
+                }
+            };
+        } catch (error) {
+            console.error('❌ Error getting orders by transaction:', error);
+            return {
+                success: false,
+                message: 'Lỗi khi lấy danh sách đơn hàng',
+                error: error.message
+            };
+        }
     }
 }

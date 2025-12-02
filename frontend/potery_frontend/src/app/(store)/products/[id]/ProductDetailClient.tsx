@@ -350,9 +350,14 @@ export function ProductDetailClient({ product }: { product: any }) {
     if (!isAuthenticated || !user?.id) {
       setLoading(true);
       try {
+        // Tìm store name từ product.stores
+        const selectedStore = product.stores?.find((store: any) => store.store_id === selectedStoreId);
+        const storeName = selectedStore?.store_name || `Cửa hàng #${selectedStoreId}`;
+
         // Pass classification data to guest cart
         addItem(product, Number(quantity) || 1, {
           storeId: selectedStoreId ?? undefined,
+          storeName: storeName,
           classifications: selectedClassifications && (selectedClassifications.attribute1_id || selectedClassifications.attribute2_id) ? {
             attribute1_id: selectedClassifications.attribute1_id,
             attribute2_id: selectedClassifications.attribute2_id,
@@ -939,10 +944,10 @@ export function ProductDetailClient({ product }: { product: any }) {
 
           {/* AI Chat Modal */}
           <AIChatModal
-                      isOpen={isAIChatOpen}
-                      onClose={() => setIsAIChatOpen(false)}
-                      userId={Number(user.id)} 
-                    />
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+            userId={Number(user.id)}
+          />
 
           {/* Floating Buttons */}
           <div

@@ -243,6 +243,21 @@ function OrderDetailClient({ id }: { id: string }) {
   );
 
   // ---------------- Helper ----------------
+  // Hàm tính phí vận chuyển dựa trên transaction data (giống logic admin)
+  const getShippingFee = () => {
+    // Kiểm tra paymentTransactions cả từ order trực tiếp và từ current_order
+    const paymentTransactions = order?.paymentTransactions || [];
+    const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
+
+    if (mainTxn && mainTxn.amount) {
+      const shippingFee = Math.max(0, Number(mainTxn.amount) - Number(order.total_amount));
+      console.log(`Order Detail ${order?.id} - Calculated Shipping Fee:`, shippingFee);
+      return shippingFee > 0 ? shippingFee : 30000;
+    }
+    console.log(`Order Detail ${order?.id} - Using default shipping fee: 30000`);
+    return 30000; // Mặc định 30k nếu không có transaction
+  };
+
   // Đồng bộ màu trạng thái với danh sách đơn hàng
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -351,10 +366,10 @@ function OrderDetailClient({ id }: { id: string }) {
 
           {/* AI Chat Modal */}
           <AIChatModal
-                      isOpen={isAIChatOpen}
-                      onClose={() => setIsAIChatOpen(false)}
-                      userId={Number(user.id)} 
-                    />
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+            userId={Number(user.id)}
+          />
 
           {/* Floating Buttons */}
           <div
@@ -707,9 +722,9 @@ function OrderDetailClient({ id }: { id: string }) {
                     </div>
                   )}
                   <div>Tổng tiền hàng: <span className="font-bold">{formatPrice(order.total_amount)}</span></div>
-                  <div>Phí vận chuyển: <span className="font-bold">{formatPrice(30000)}</span></div>
+                  <div>Phí vận chuyển: <span className="font-bold">{formatPrice(getShippingFee())}</span></div>
                   <div className="font-bold text-[16px] text-[#A38D64]">
-                    Tổng thanh toán: {formatPrice(Number(order.total_amount || 0) + 30000)}
+                    Tổng thanh toán: {formatPrice(Number(order.total_amount || 0) + getShippingFee())}
                     {mainTxn && (
                       <div className="font-bold text-[16px] text-[#A38D64] mt-1">Số tiền đã thanh toán: <span className="font-semibold">{Number(mainTxn.amount).toLocaleString('vi-VN')} đ</span></div>
                     )}

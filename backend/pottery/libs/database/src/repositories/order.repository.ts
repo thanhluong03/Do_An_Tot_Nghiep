@@ -159,4 +159,19 @@ export class OrderRepository {
 
         return query.getMany();
     }
+
+    async findOrdersByGatewayTxnRef(gateway_txn_ref: string): Promise<OrderEntity[]> {
+        try {
+            // Tìm orders thông qua payment transactions
+            const query = this.orderRepository.createQueryBuilder('order')
+                .leftJoin('payment_transactions', 'pt', 'pt.order_id = order.id')
+                .where('pt.gateway_txn_ref = :gateway_txn_ref', { gateway_txn_ref })
+                .andWhere('order.deleted_at IS NULL');
+
+            return await query.getMany();
+        } catch (error) {
+            console.error('[OrderRepository] Error finding orders by gateway_txn_ref:', error);
+            return [];
+        }
+    }
 }

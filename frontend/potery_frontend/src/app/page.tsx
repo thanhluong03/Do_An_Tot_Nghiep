@@ -57,7 +57,6 @@ export default function HomePage() {
   }, [isAuthenticated, user?.id]);
 
   const handleAddToCart = async (product: Product) => {
-    addItem(product, 1);
     if (isAuthenticated && user?.id) {
       try {
         setAddingId(product.id);
@@ -68,6 +67,15 @@ export default function HomePage() {
       } finally {
         setAddingId(null);
       }
+    } else {
+      // Guest user - add with store info
+      const storeInfo = Array.isArray(product.store) ? product.store[0] : product.store;
+      const storeId = String(storeInfo?.store_id ?? storeInfo?.id ?? 1);
+      const storeName = (storeInfo as any)?.store_name ?? (storeInfo as any)?.name ?? `Cửa hàng #${storeId}`;
+      addItem(product, 1, {
+        storeId: storeId,
+        storeName: storeName
+      });
     }
   };
 
@@ -109,9 +117,8 @@ export default function HomePage() {
 
           {/* Floating Buttons */}
           <div
-            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${
-              isChatDropdownOpen ? 'right-1' : 'right-1'
-            }`}
+            className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${isChatDropdownOpen ? 'right-1' : 'right-1'
+              }`}
           >
             {/* Voucher Button */}
             <button

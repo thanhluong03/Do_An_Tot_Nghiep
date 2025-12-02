@@ -13,6 +13,7 @@ import { cartApi } from '../../../api/modules/cart';
 import { productApi } from '../../../api/modules/products';
 import { voucherApi, Voucher } from '../../../api/modules/voucher';
 import { customersApi } from '../../../api/modules/customers';
+import { getStoreById } from '../../../api/services/storeService';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import { ShoppingBag, Tag, MapPin, CreditCard, Wallet, User, Phone, Mail, CheckCircle, X, Clock, Bot, Gift, MessageSquare, FileText } from 'lucide-react';
@@ -57,6 +58,7 @@ export default function CheckoutPage() {
     }>>([]);
     const [serverProducts, setServerProducts] = useState<Record<number, { id: number; name: string; price: number; images: string[]; promotion?: any }>>({});
     const [loadingCart, setLoadingCart] = useState(false);
+    const [storeNames, setStoreNames] = useState<Record<string, string>>({});
     const [hasCheckoutItems, setHasCheckoutItems] = useState(false); // Đánh dấu đã load từ checkout_items
     const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
     const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
@@ -200,6 +202,7 @@ export default function CheckoutPage() {
                                 setServerItems(formattedItems);
                                 setHasCheckoutItems(true); // Đánh dấu đã load từ checkout_items
                                 console.log('✅ Set serverItems to checkout items:', formattedItems.length, 'items');
+                                console.log('✅ Checkout items details:', formattedItems);
                                 loadedFromCheckout = true; // Set flag local
                                 // ✅ KHÔNG xóa sessionStorage ngay - để tránh bị override khi re-render
                                 // Sẽ xóa khi tạo đơn hàng thành công hoặc khi unmount
@@ -226,7 +229,9 @@ export default function CheckoutPage() {
                                 setLoadingVouchers(false);
                             }
 
-                            return; // Return ngay sau khi load từ checkout_items
+                            // ✅ DIỆT BỌT TẤT CẢ xử lý khác - CHỈ dùng checkout_items
+                            console.log('✅ Sử dụng checkout_items, bỏ qua tất cả fallback logic');
+                            return; // CRITICAL: Dừng tại đây, không chạy bất kỳ code nào khác
                         } else {
                             console.warn('⚠️ Checkout items is not a valid array or is empty');
                         }
@@ -243,6 +248,8 @@ export default function CheckoutPage() {
                 return;
             }
 
+            console.log('🔄 Chỉ có thể ở đây nếu KHÔNG có checkout_items trong sessionStorage');
+            console.log('🔄 Loading fallback cart data...');
             setLoadingCart(true);
             try {
                 // 🔥 NẾU NGƯỜI DÙNG THẬT ĐĂNG NHẬP → XÓA THÔNG TIN GUEST CŨ
@@ -582,18 +589,28 @@ export default function CheckoutPage() {
     useEffect(() => {
         // ✅ KHÔNG sync nếu đã có checkout_items từ cart (sản phẩm đã được chọn)
         if (hasCheckoutItems) {
-            // Đã load sản phẩm được chọn từ cart, không sync từ context
+            console.log('🚫 Bỏ qua sync từ context vì đã có checkout_items');
             return;
         }
 
+        // ✅ KIỂM TRA sessionStorage trước khi sync từ context
+        if (typeof window !== 'undefined') {
+            const checkoutItemsStr = sessionStorage.getItem('checkout_items');
+            if (checkoutItemsStr) {
+                console.log('🚫 Bỏ qua sync từ context vì có checkout_items trong sessionStorage');
+                return;
+            }
+        }
+
         if (!isAuthenticated && items.length > 0) {
+            console.log('🔄 Sync từ context vì không có checkout_items:', items.length, 'items');
             const mapped = items.map((i, idx) => ({
                 id: `guest-${idx}`,
                 product_id: Number(i.product?.id),
                 quantity: i.quantity,
-                store_id: Number(i.product?.store?.id || 1),
+                store_id: Number(i.storeId || i.product?.store?.id || 1),
                 price: i.price || i.product.price,
-                classificationId: i.classificationId || undefined, // null → undefined
+                classificationId: i.classificationId || undefined,
                 classifications: i.classifications ? {
                     attribute1_id: i.classifications.attribute1_id ?? undefined,
                     attribute2_id: i.classifications.attribute2_id ?? undefined,
@@ -604,6 +621,60 @@ export default function CheckoutPage() {
             setServerItems(mapped);
         }
     }, [isAuthenticated, items, hasCheckoutItems]);
+
+    // Effect to fetch store names
+    useEffect(() => {
+        const fetchStoreNames = async () => {
+            const itemsToCheck = serverItems.length > 0 ? serverItems : items;
+            if (itemsToCheck.length === 0) return;
+
+            const storeIds = new Set<string>();
+            itemsToCheck.forEach(item => {
+                const storeId = (item as any).store_id || (item as any).storeId || (item as any).product?.store?.id;
+                if (storeId) storeIds.add(String(storeId));
+            });
+
+            if (storeIds.size === 0) return;
+
+            const newStoreNames: Record<string, string> = {};
+
+            for (const storeId of Array.from(storeIds)) {
+                try {
+                    // Thử lấy từ cart context items trước
+                    const contextItem = items.find(i => {
+                        const itemStoreId = i.storeId || i.product?.store?.id;
+                        return String(itemStoreId) === storeId;
+                    });
+
+                    // Ưu tiên storeName từ cart item
+                    if (contextItem?.storeName && contextItem.storeName !== 'Cửa hàng') {
+                        newStoreNames[storeId] = contextItem.storeName;
+                        continue;
+                    }
+
+                    // Nếu không có, thử lấy từ product.store
+                    if (contextItem?.product?.store?.name && contextItem.product.store.name !== 'Cửa hàng') {
+                        newStoreNames[storeId] = contextItem.product.store.name;
+                        continue;
+                    }
+
+                    // Nếu không có trong context, gọi API
+                    try {
+                        const storeData = await getStoreById(Number(storeId));
+                        newStoreNames[storeId] = storeData.store_name || `Cửa hàng #${storeId}`;
+                    } catch {
+                        newStoreNames[storeId] = `Cửa hàng #${storeId}`;
+                    }
+                } catch {
+                    newStoreNames[storeId] = `Cửa hàng #${storeId}`;
+                }
+            }
+
+            setStoreNames(newStoreNames);
+        };
+
+        fetchStoreNames();
+    }, [serverItems, items]);
 
     /** ===================== TẠO ĐƠN HÀNG VÀ XÓA SẢN PHẨM ĐÃ CHỌN ===================== */
     const handleCreate = async () => {
@@ -738,12 +809,12 @@ export default function CheckoutPage() {
             const createdOrderIds: number[] = [];
             let totalAmountForPayment = 0; // Tổng tiền của tất cả các đơn
 
-            for (const [index, storeId] of storeIds.entries()) {
+            for (const storeId of storeIds) {
                 const storeItems = itemsByStore[storeId];
                 const storeTotalBeforeDiscount = storeItems.reduce((sum, i) => sum + i.price_at_order * i.quantity, 0);
                 const storeDiscount = total > 0 ? storeItems.reduce((sum, i) => sum + ((i.price_at_order * i.quantity) / total) * discountAmount, 0) : 0;
                 const storeFinalTotal = Math.max(0, storeTotalBeforeDiscount - storeDiscount);
-                const storeFinalTotalWithShipping = storeFinalTotal + SHIPPING_FEE;
+                // Không cộng phí ship vào từng đơn hàng riêng lẻ
 
                 const payloadPerStore = {
                     customer_id: customerId,
@@ -761,7 +832,7 @@ export default function CheckoutPage() {
                 if (!createdId) throw new Error(`Không thể tạo đơn cho cửa hàng ${storeId}`);
 
                 createdOrderIds.push(createdId);
-                totalAmountForPayment += storeFinalTotalWithShipping; // Cộng dồn tổng tiền
+                totalAmountForPayment += storeFinalTotal; // Cộng dồn tổng tiền không có ship
 
                 // COD email cho guest
                 if (paymentMethod === 'COD' && !isAuthenticated) {
@@ -770,6 +841,9 @@ export default function CheckoutPage() {
             }
 
             // Sau khi tạo TẤT CẢ các đơn, xử lý thanh toán
+            // Cộng phí ship một lần cho tất cả đơn hàng
+            totalAmountForPayment += SHIPPING_FEE;
+
             if (paymentMethod === 'MOMO') {
                 // Lưu danh sách order IDs vào sessionStorage để xử lý sau khi thanh toán thành công
                 if (createdOrderIds.length > 1) {
@@ -815,7 +889,16 @@ export default function CheckoutPage() {
                 } catch { }
 
                 if (!isAuthenticated) clearGuestData();
-                window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderId=${storeIds[0]}`;
+
+                // Tạo URL redirect phù hợp
+                if (createdOrderIds.length > 1) {
+                    // Nhiều đơn hàng - truyền danh sách order IDs
+                    const orderIdsParam = encodeURIComponent(JSON.stringify(createdOrderIds));
+                    window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderIds=${orderIdsParam}`;
+                } else {
+                    // Chỉ một đơn hàng
+                    window.location.href = isAuthenticated ? '/orders' : `/confirmation?orderId=${createdOrderIds[0]}`;
+                }
             }
 
         } catch (e: unknown) {
@@ -880,10 +963,10 @@ export default function CheckoutPage() {
 
                     {/* AI Chat Modal */}
                     <AIChatModal
-                                isOpen={isAIChatOpen}
-                                onClose={() => setIsAIChatOpen(false)}
-                                userId={Number(user.id)} 
-                              />
+                        isOpen={isAIChatOpen}
+                        onClose={() => setIsAIChatOpen(false)}
+                        userId={Number(user.id)}
+                    />
 
                     {/* Floating Buttons */}
                     <div
@@ -989,53 +1072,90 @@ export default function CheckoutPage() {
                             ) : (
                                 <div className="divide-y divide-[#F5F3EF]">
                                     {(() => {
-                                        const itemsToDisplay = serverItems.length > 0 ? serverItems : items.map((i, idx) => ({ id: `guest-${idx}`, product_id: Number(i.product.id), quantity: i.quantity, store_id: Number(i.product.store?.id || 0), classifications: i.classifications, classificationId: i.classificationId, price: i.price || i.product.price }));
-                                        console.log('🛒 Rendering checkout items. serverItems.length:', serverItems.length, 'itemsToDisplay.length:', itemsToDisplay.length);
-                                        return itemsToDisplay;
-                                    })().map((ci) => {
-                                        const p = serverProducts[ci.product_id] || contextProducts[ci.product_id];
-                                        if (!p) {
-                                            console.warn('⚠️ Product not found for product_id:', ci.product_id);
-                                            return null;
-                                        }
+                                        const itemsToDisplay = serverItems.length > 0 ? serverItems : items.map((i, idx) => {
+                                            // Lấy storeId một cách cẩn thận
+                                            const storeId = i.storeId || i.product?.store?.id;
 
-                                        const actualPrice = ci.price || p.price;
 
-                                        // Debug log
-                                        console.log('🔍 Checkout item:', { id: ci.id, product: p.name, classifications: ci.classifications, classificationId: ci.classificationId, price: actualPrice, originalPrice: p.price });
+                                            return {
+                                                id: `guest-${idx}`,
+                                                product_id: Number(i.product.id),
+                                                quantity: i.quantity,
+                                                store_id: Number(storeId || 0),
+                                                classifications: i.classifications,
+                                                classificationId: i.classificationId,
+                                                price: i.price || i.product.price
+                                            };
+                                        });
 
-                                        return (
-                                            <div key={ci.id} className="flex justify-between py-3 items-center">
-                                                <div className="flex items-center gap-3">
-                                                    {p.images?.[0] && (
-                                                        <Image src={p.images[0]} alt={p.name} width={48} height={48} className="w-12 h-12 object-cover rounded-md border border-[#F1F0E8]" />
-                                                    )}
-                                                    <div>
-                                                        <div className="font-medium text-sm text-[#2C2A24]">{p.name}</div>
-                                                        <div className="text-xs text-[#7C7768]">SL: {ci.quantity}</div>
-                                                        {/* Show classification info if available - Updated condition */}
-                                                        {ci.classifications && (
-                                                            <div className="flex gap-1 mt-1">
-                                                                {ci.classifications.attribute1_name && (
-                                                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
-                                                                        {ci.classifications.attribute1_name}
-                                                                    </span>
-                                                                )}
-                                                                {ci.classifications.attribute2_name && (
-                                                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
-                                                                        {ci.classifications.attribute2_name}
-                                                                    </span>
-                                                                )}
+
+
+                                        // Group items by store - sử dụng String key để tránh vấn đề
+                                        const groupedByStore = itemsToDisplay.reduce((acc: Record<string, any[]>, ci: any) => {
+                                            const storeId = String(ci.store_id || ci.storeId || ci.product?.store?.id || '0');
+
+                                            if (!acc[storeId]) acc[storeId] = [];
+                                            acc[storeId].push(ci);
+                                            return acc;
+                                        }, {});
+
+
+
+                                        return Object.entries(groupedByStore).map(([storeId, storeItems]) => {
+                                            // Lấy tên cửa hàng từ state đã fetch
+                                            const storeName = storeNames[storeId] || `Cửa hàng #${storeId}`;
+
+                                            return (
+                                                <div key={storeId} className="mb-4">
+                                                    <h4 className="font-semibold text-sm text-[#A38D64] mb-2 border-b border-[#F5F3EF] pb-1">
+                                                        {storeName}
+                                                    </h4>
+                                                    {storeItems.map((ci: any) => {
+                                                        const productId = ci.product_id || ci.product?.id;
+                                                        const p = serverProducts[productId] || contextProducts[productId];
+                                                        if (!p) {
+                                                            console.warn('⚠️ Product not found for product_id:', productId);
+                                                            return null;
+                                                        }
+
+                                                        const actualPrice = ci.price || p.price;
+
+                                                        return (
+                                                            <div key={ci.id || ci.key || `${productId}-${ci.quantity}`} className="flex justify-between py-3 items-center">
+                                                                <div className="flex items-center gap-3">
+                                                                    {p.images?.[0] && (
+                                                                        <Image src={p.images[0]} alt={p.name} width={48} height={48} className="w-12 h-12 object-cover rounded-md border border-[#F1F0E8]" />
+                                                                    )}
+                                                                    <div>
+                                                                        <div className="font-medium text-sm text-[#2C2A24]">{p.name}</div>
+                                                                        <div className="text-xs text-[#7C7768]">SL: {ci.quantity}</div>
+                                                                        {/* Show classification info if available - Updated condition */}
+                                                                        {ci.classifications && (
+                                                                            <div className="flex gap-1 mt-1">
+                                                                                {ci.classifications.attribute1_name && (
+                                                                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                                                                        {ci.classifications.attribute1_name}
+                                                                                    </span>
+                                                                                )}
+                                                                                {ci.classifications.attribute2_name && (
+                                                                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs rounded">
+                                                                                        {ci.classifications.attribute2_name}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="font-semibold text-sm text-[#2C2A24]">
+                                                                    {formatPrice(actualPrice * ci.quantity)}
+                                                                </div>
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                                <div className="font-semibold text-sm text-[#2C2A24]">
-                                                    {formatPrice(actualPrice * ci.quantity)}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             )}
                         </div>

@@ -176,6 +176,15 @@ export async function getOrderDetail(id: number): Promise<Order> {
   return res.data.data;
 }
 
+export async function getMultipleOrderDetails(ids: number[]): Promise<Order[]> {
+  const promises = ids.map(id => getOrderDetail(id));
+  const results = await Promise.allSettled(promises);
+
+  return results
+    .filter((result): result is PromiseFulfilledResult<Order> => result.status === 'fulfilled')
+    .map(result => result.value);
+}
+
 export async function updateOrder(id: number, data: UpdateOrderPayload): Promise<void> {
   await axios.put(`${API_URL}/updateorder/${id}`, data);
 }
