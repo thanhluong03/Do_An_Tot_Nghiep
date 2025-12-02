@@ -141,6 +141,7 @@ export default function UserFormModal({
             newErrors.phoneNumber = "Số điện thoại không hợp lệ.";
 
         if (!fullName.trim()) newErrors.fullName = "Họ và tên là bắt buộc.";
+        if (roleId === 0) newErrors.roleId = "Vui lòng chọn vai trò.";
         if (storeId === 0) newErrors.storeId = "Vui lòng chọn cửa hàng.";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -291,11 +292,12 @@ export default function UserFormModal({
                             Vai trò (Role)
                         </label>
                         <select
-                            title="slect"
+                            title="selectRole"
                             value={roleId}
                             onChange={(e) => setRoleId(Number(e.target.value))}
                             className={`${inputClasses} bg-white`}
                         >
+                            <option value="0">-- Chọn vai trò --</option>
                             {roles.length === 0 ? (
                                 <option value="">Đang tải...</option>
                             ) : (
@@ -303,10 +305,10 @@ export default function UserFormModal({
                                     <option key={r.id} value={r.id}>
                                         {roleLabels[r.name] || r.name}
                                     </option>
-
                                 ))
                             )}
                         </select>
+                        {errorText("roleId")}
                     </div>
                     {/* Store */}
                     <div>
