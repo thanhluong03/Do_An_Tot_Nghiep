@@ -25,6 +25,50 @@ interface MenuItem {
     children?: MenuItem[];
 }
 
+// --- LOGIC KIỂM TRA QUYỀN HẠN ---
+const permissionsCache: string[] = []; 
+
+/**
+ * Lấy danh sách quyền hạn từ Local Storage (key: 'adminPermissions_3').
+ * Dữ liệu chỉ được load 1 lần vào permissionsCache.
+ */
+const getAdminPermissions = (): string[] => {
+    if (typeof window !== 'undefined' && permissionsCache.length === 0) {
+        // Sử dụng key giả định 'adminPermissions_3'
+        const permissionsJson = localStorage.getItem('adminPermissions_1'); 
+        
+        try {
+            const permissions = permissionsJson ? JSON.parse(permissionsJson) : [];
+            if (Array.isArray(permissions)) {
+                permissionsCache.push(...permissions);
+            }
+        } catch (error) {
+            console.error("Error parsing store admin permissions from localStorage:", error);
+        }
+    }
+    return permissionsCache;
+};
+
+/**
+ * Kiểm tra xem người dùng có quyền truy cập vào một đường dẫn cụ thể không.
+ * @param href Đường dẫn cần kiểm tra (ví dụ: '/adminstore/dashboard').
+ * @returns true nếu người dùng có quyền.
+ */
+const isPermitted = (href: string): boolean => {
+    // Đảm bảo cache đã được load
+    if (permissionsCache.length === 0) {
+        getAdminPermissions();
+    }
+    
+    // Xử lý đường dẫn: /adminstore/dashboard -> adminstore/dashboard
+    const cleanHref = href.startsWith('/') ? href.substring(1) : href;
+    
+    // Kiểm tra trong danh sách quyền (không phân biệt chữ hoa/thường để an toàn)
+    return permissionsCache.map(p => p.toLowerCase()).includes(cleanHref.toLowerCase());
+};
+
+// --- ĐỊNH NGHĨA CÁC MỤC MENU ---
+
 const dashboardItems: MenuItem[] = [
     { name: "Dashboard", icon: faHome, href: "/adminstore/dashboard" },
 ];
@@ -47,6 +91,8 @@ const usersItems: MenuItem[] = [
 const orderItems: MenuItem[] = [
     { name: "Đơn hàng", icon: faShoppingCart, href: "/adminstore/orders", color: "bg-red-100 text-red-600" },
 ];
+
+// --- COMPONENT SIDEBAR ITEM (Giữ nguyên) ---
 
 const SidebarItem = ({
     item,
@@ -99,8 +145,8 @@ const SidebarItem = ({
                                 key={child.name}
                                 href={child.href!}
                                 className={`flex items-center justify-between px-0 py-2 rounded-md text-sm transition-colors ${currentPath === child.href
-                                    ? "text-[#B95D26] font-semibold bg-orange-50"
-                                    : "text-gray-600 hover:bg-gray-100"
+                                        ? "text-[#B95D26] font-semibold bg-orange-50"
+                                        : "text-gray-600 hover:bg-gray-100"
                                     }`}
                             >
                                 <div className="flex items-center space-x-2">
@@ -135,25 +181,66 @@ const SidebarItem = ({
     );
 };
 
+// --- COMPONENT ADMIN SIDEBAR CHÍNH (Đã áp dụng logic lọc) ---
 export default function AdminSidebar() {
     const pathname = usePathname();
 
-    const renderMenuSection = (title: string, items: MenuItem[]) => (
-        <div>
-            <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2 mt-4 first:mt-0">
-                {title}
-            </h3>
-            <div className="space-y-1">
-                {items.map((item) => (
-                    <SidebarItem
-                        key={item.name}
-                        item={item}
-                        currentPath={pathname}
-                    />
-                ))}
+    /**
+     * Lọc các mục menu dựa trên quyền hạn của người dùng.
+     */
+    const filterMenuItems = (items: MenuItem[]): MenuItem[] => {
+        return items
+            .map(item => {
+                if (item.children) {
+                    // 1. Lọc các mục con
+                    const filteredChildren = item.children.filter(child => 
+                        child.href ? isPermitted(child.href) : true
+                    );
+                    
+                    // 2. Chỉ giữ lại mục cha nếu có ít nhất 1 mục con hợp lệ
+                    if (filteredChildren.length > 0) {
+                        return { ...item, children: filteredChildren };
+                    }
+                    return null; // Loại bỏ mục cha
+                }
+                
+                // 3. Kiểm tra mục đơn (không có con)
+                if (item.href && isPermitted(item.href)) {
+                    return item;
+                }
+                
+                return null; // Loại bỏ mục đơn
+            })
+            .filter((item): item is MenuItem => item !== null); // Lọc bỏ các mục null
+    };
+
+    const renderMenuSection = (title: string, items: MenuItem[]) => {
+        // Lọc các mục trước khi render
+        const filteredItems = filterMenuItems(items);
+
+        // Không render section nếu không có mục nào được phép
+        if (filteredItems.length === 0) return null;
+
+        return (
+            <div>
+                <h3 className="text-[11px] font-semibold uppercase text-gray-400 mb-2 mt-4 first:mt-0">
+                    {title}
+                </h3>
+                <div className="space-y-1">
+                    {filteredItems.map((item) => (
+                        <SidebarItem
+                            key={item.name}
+                            item={item}
+                            currentPath={pathname}
+                        />
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    // Khởi tạo permission cache khi component được render
+    getAdminPermissions();
 
     return (
         <div className="w-58 bg-white flex flex-col h-screen sticky top-0 overflow-y-auto border-r border-gray-200 shadow-md scrollbar-none">

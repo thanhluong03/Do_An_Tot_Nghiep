@@ -29,6 +29,7 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
     news: "Tin tức/Bài viết",
     reviews: "Đánh giá",
     promotions: "Khuyến mãi/Vouchers",
+    vouchers: "Vouchers",
     settings: "Cài đặt",
     roles: "Vai trò",
     permissions: "Quyền hạn",
@@ -37,6 +38,9 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
     profileAdmin: "Trang cá nhân",
     changePassword: "Đổi mật khẩu",
     adminImportrequests: "Nhập kho",
+    users: "Tài khoản nhân viên",
+    adminstore: "Cửa hàng",
+    customers: "Khách hàng",
   };
 
   if (parts.length === 0 || parts[0] === "dashboard") {
