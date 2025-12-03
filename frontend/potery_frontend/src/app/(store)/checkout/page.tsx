@@ -1197,7 +1197,7 @@ export default function CheckoutPage() {
                                                             </p>
                                                             <p className={`text-xs mt-0.5 ${eligible ? 'text-[#3D6647]' : 'text-red-600'}`}>
                                                                 {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5' /> : <X className='w-3 h-3 inline-block mr-0.5' />}
-                                                                {eligible ? 'Đủ ĐK' : `Min: ${formatPrice(minOrder)}`}
+                                                                {eligible ? 'Đủ ĐK' : `Giá tổng đơn hàng phải đạt: ${formatPrice(minOrder)}`}
                                                             </p>
                                                         </div>
                                                     </div>

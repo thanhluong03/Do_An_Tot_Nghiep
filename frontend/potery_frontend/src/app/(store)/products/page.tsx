@@ -26,7 +26,14 @@ export default function ProductsPage() {
     category: categoryFromUrl,
   });
   // State mới để theo dõi nút sort nào đang active (cho UI)
-  const [activeSortType, setActiveSortType] = useState<'default' | 'banchay' | 'gia'>('default');
+  const [activeSortType, setActiveSortType] = useState<'default' | 'banchay' | 'gia' | 'priceRange'>('default');
+  const [priceRange, setPriceRange] = useState<string>('');
+
+  const handlePriceRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setPriceRange(value);
+    setActiveSortType(value ? 'priceRange' : 'default');
+  };
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
@@ -62,6 +69,10 @@ export default function ProductsPage() {
           (p.description && p.description.toLowerCase().includes(q))
       );
     }
+    if (priceRange) {
+      const [min, max] = priceRange.split('-').map(Number);
+      result = result.filter(p => p.price >= min && p.price <= max);
+    }
     // Logic sort theo loại được chọn
     if (filters.sortBy === 'bestselling') {
       // Sắp xếp theo số lượng bán (giảm dần - bán chạy nhất trước)
@@ -73,7 +84,7 @@ export default function ProductsPage() {
       );
     }
     return result;
-  }, [products, filters, search]);
+  }, [products, filters, search, priceRange]);
 
   const handleCategoryChange = useCallback((value: string) => {
     setFilters((f) => ({ ...f, category: value || undefined }));
@@ -314,6 +325,35 @@ export default function ProductsPage() {
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
                   <svg
                     className={`w-4 h-4 ${activeSortType === 'gia' ? 'text-white' : 'text-gray-600'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {/* Filter theo giá */}
+              <div className="relative">
+                <select
+                  title='price-range'
+                  value={priceRange}
+                  onChange={handlePriceRangeChange}
+                  className={`appearance-none px-4 py-2 pr-8 rounded-md text-sm font-medium focus:outline-none cursor-pointer ${activeSortType === 'priceRange'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
+                >
+                  <option value="">Lọc theo giá</option>
+                  <option value="0-50000">Dưới 50.000</option>
+                  <option value="50000-100000">50.000 - 100.000</option>
+                  <option value="100000-200000">100.000 - 200.000</option>
+                  <option value="200000-500000">Trên 200.000</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                  <svg
+                    className={`w-4 h-4 ${activeSortType === 'priceRange' ? 'text-white' : 'text-gray-600'}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
