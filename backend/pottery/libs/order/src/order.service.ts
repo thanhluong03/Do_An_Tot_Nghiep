@@ -248,12 +248,36 @@ export class OrderService {
 
     // Lấy lý do hoàn trả và các ảnh hoàn trả
     const returnReason = order.reason_change || null;
+    const returnReasonDate = order.reason_change_date || null;
     const reasonChangeImages = await this.reasonChangeImageRepository.findByOrderId(id);
     const returnReasonImage = reasonChangeImages
       .filter(img => img.reason_change_image)
       .map(img => ({
         id: img.id,
         image: img.reason_change_image.toString('base64'),
+      }));
+
+
+    // Lấy lý do hủy và các ảnh hủy
+    const returncancelReason = order.cancel_reason || null;
+    const returnpersonCancel = order.person_cancel || null;
+    const returncancelReasonDate = order.cancel_date || null;
+    const reasoncancelImages = await this.cancelReasonImageRepository.findByOrderId(id);
+    const returnCancelReasonImage = reasoncancelImages
+      .filter(img => img.cancel_reason_image)
+      .map(img => ({
+        id: img.id,
+        image: img.cancel_reason_image.toString('base64'),
+      }));
+
+    // Lấy lý do hủy và các ảnh hủy
+    const returndeliveryfailReason = order.delivery_fail_reason || null;
+    const reasondeliveryImages = await this.deliveryFailReasonImageRepository.findByOrderId(id);
+    const returnDeliveryFailReasonImage = reasondeliveryImages
+      .filter(img => img.delivery_fail_image)
+      .map(img => ({
+        id: img.id,
+        image: img.delivery_fail_image.toString('base64'),
       }));
 
     const statusHistoryRaw = await this.orderStatusHistoryRepository.getHistoryByOrderId(id);
@@ -307,8 +331,15 @@ export class OrderService {
       },
       statusHistory,
       returnReason,
+      returnReasonDate,
       returnReasonImage,
       paymentTransactions,
+      returncancelReason,
+      returncancelReasonDate,
+      returnpersonCancel,
+      returnCancelReasonImage,
+      returndeliveryfailReason,
+      returnDeliveryFailReasonImage,
     };
   }
 
