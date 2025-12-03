@@ -21,6 +21,14 @@ const translateOrderStatus = (status: OrderStatus): string => {
     EXCHANGED: "Đã đổi trả",
     RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
     CANCELLED: "Đã hủy",
+    PENDING_RETURN: "Chờ hoàn trả",
+    CONFIRMED_RETURN: "Đã xác nhận hoàn trả",
+    PENDING_DELIVERY: "Chờ giao hàng",
+    DELIVERY_FAILED: "Giao hàng thất bại",
+    PACKING: "Đang đóng gói",
+    SHIPPING_RETURN: "Đang vận chuyển hoàn trả",
+    PENDING_DELIVERY_RETURN: "Chờ giao hàng hoàn trả",
+    
   };
 
   return translations[status] || status;
@@ -104,11 +112,13 @@ export default function OrderStatusModal({
                 <option value="CONFIRMED">Đã xác nhận</option>
                 {/* <option value="SHIPPING">Đang giao</option>
                 <option value="DELIVERED">Đã giao</option> */}
+                <option value="PACKING">Đang đóng gói</option>
+                <option value="PENDING_DELIVERY">Chờ giao hàng</option>
+                <option value="CONFIRMED_RETURN">Đã xác nhận hoàn trả</option>
                 <option value="EXCHANGED">Đã đổi trả</option>
                 <option value="CANCELLED">Hủy</option>
               </select>
             </div>
-
             {/* Các trường đã bị comment (Payment Status & Payment Method) - Giữ nguyên trạng thái comment */}
             {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái thanh toán</label>
