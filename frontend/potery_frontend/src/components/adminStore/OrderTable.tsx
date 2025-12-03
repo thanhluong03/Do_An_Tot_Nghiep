@@ -118,7 +118,7 @@ export default function OrderTable({
             <th className="px-4 py-3 text-center font-semibold">Trạng thái đơn hàng</th>
             <th className="px-4 py-3 text-center font-semibold">Trạng thái thanh toán</th>
             <th className="px-4 py-3 font-semibold">Ngày đặt</th>
-            {/* <th className="px-4 py-3 text-center font-semibold">Gán tài xế</th> */}
+            <th className="px-4 py-3 text-center font-semibold">Gán tài xế</th>
             <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
           </tr>
         </thead>
@@ -163,11 +163,10 @@ export default function OrderTable({
                   : "Không có ngày"}
               </td>
 
-              {/* <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                 {order.status === 'CONFIRMED' ? (
                   <div className="flex items-center space-x-2 min-w-[250px]">
                     {order.driverLocations && order.driverLocations.length > 0 ? (
-                      <div className="flex-grow">
                       <select
                         title="Tài xế đã gán"
                         value={order.driverLocations[0].driver.id}
@@ -178,7 +177,6 @@ export default function OrderTable({
                           <option key={driver.id} value={driver.id}>{driver.full_name || driver.username}</option>
                         ))}
                       </select>
-                    </div>
                     ) : (
                       <select
                         title="Chọn tài xế"
@@ -204,7 +202,7 @@ export default function OrderTable({
                 ) : (
                   <span className="text-xs text-gray-400 italic">Không thể gán</span>
                 )}
-              </td> */}
+              </td>
 
               <td className="px-4 py-3 text-center space-x-2">
                 <button

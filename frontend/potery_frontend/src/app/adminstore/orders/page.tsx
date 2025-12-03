@@ -1,10 +1,10 @@
 "use client";
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import {
   getOrderDetail,
   listOrders,
-  updateOrder,
   deleteOrder,
+  updateOrder,
   Order,
   OrderItem,
   OrderStatus,
@@ -14,14 +14,13 @@ import {
 } from "@/api/services/orderService";
 import { getCustomers, Customer } from "@/api/services/customerService";
 import { getAvailableDrivers, assignDriverToOrder } from "@/api/services/deliveryService";
-import OrderTable from "@/components/adminOrder/OrderTable";
-// Import thêm getUserDetail
+import OrderTable from "@/components/adminStore/OrderTable";
 import { User, getUserDetail } from "@/api/services/userService";
 import OrderDetailModal from "@/components/adminOrder/OrderDetailModal";
 import OrderStatusModal from "@/components/adminOrder/OrderStatusModal";
 import OrderTrackingModal from "@/components/adminOrder/OrderTrackingModal";
 import OrderStatusTabs from "@/components/adminOrder/OrderStatusTabs";
-import { Download } from "lucide-react";
+import { Download, Search, Calendar, X } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { getStoreById } from "@/api/services/storeService";
@@ -57,19 +56,30 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
 
 export default function AdminOrderPage() {
   const [orders, setOrders] = useState<FullOrderDetails[]>([]);
+  // ⭐️ allOrders lưu trữ TẤT CẢ dữ liệu gốc (đã gán tên khách hàng)
   const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);
+  // Thêm state này vào đầu component AdminOrderPage
+const [keyAndDateFilteredOrders, setKeyAndDateFilteredOrders] = useState<FullOrderDetails[]>([]);
 
-  // Logic Store: Không còn danh sách store, chỉ giữ storeId của user hiện tại
+  // Logic Store:
   const [selectedStoreId, setSelectedStoreId] = useState<number | undefined>(undefined);
-  const [selectedStoreName, setSelectedStoreName] = useState<string>("Tất cả cửa hàng");
+  const [selectedStoreName, setSelectedStoreName] = useState<string>("Đang tải...");
+
+  // State cho tìm kiếm và lọc
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatus | "">("");
   const [pagination, setPagination] = useState({ page: 1, size: 10 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modals state
   const [selectedOrder, setSelectedOrder] = useState<FullOrderDetails | null>(null);
   const [trackingOrderId, setTrackingOrderId] = useState<number | null>(null);
   const [trackingOrderStatus, setTrackingOrderStatus] = useState<string>('');
@@ -79,40 +89,56 @@ export default function AdminOrderPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
 
-  // useEffect 1: Lấy thông tin Admin và gán Store ID
+  // ⭐️ CẬP NHẬT: Debounce logic & Reset trang khi tìm kiếm
   useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPagination(prev => ({ ...prev, page: 1 })); // Reset về trang 1
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // ⭐️ CẬP NHẬT: Reset trang khi đổi trạng thái/ngày
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [startDate, endDate, orderStatusFilter, paymentStatusFilter]);
+
+  // Logic lấy thông tin Admin (Giữ nguyên)
+  useEffect(() => {
+    // ... fetchAdminContext ... (Giữ nguyên)
     const fetchAdminContext = async () => {
       try {
         const adminId = Number(localStorage.getItem("adminID"));
         if (adminId) {
           const user = await getUserDetail(adminId);
-          // Nếu user có store_id thì set, nếu không (super admin) thì để undefined (xem tất cả)
-          if (user.store_id) {
-            setSelectedStoreId(user.store_id);
-          }
           const storeId = user.store_id ?? undefined;
 
           let storeName = "Tất cả cửa hàng";
-
           if (storeId) {
+            setSelectedStoreId(user.store_id);
             try {
               const store = await getStoreById(storeId);
               storeName = store.store_name;
             } catch {
               storeName = `Cửa hàng ID ${storeId}`;
             }
+          } else {
+            setSelectedStoreId(undefined);
+            storeName = "Tất cả cửa hàng (Admin)";
           }
           setSelectedStoreName(storeName);
+        } else {
+          setSelectedStoreName("Tất cả cửa hàng (Admin)");
         }
       } catch (error) {
         console.error("Lỗi khi lấy thông tin admin:", error);
+        setSelectedStoreName("Lỗi tải thông tin");
       }
     };
-
     fetchAdminContext();
   }, []);
 
-  // useEffect 2: Lấy dữ liệu ban đầu (Khách hàng, Tài xế)
+  // Tải danh sách khách hàng và tài xế (Giữ nguyên)
   useEffect(() => {
     getCustomers({})
       .then(setCustomers)
@@ -123,14 +149,26 @@ export default function AdminOrderPage() {
       .catch(() => toast.error("Không thể tải danh sách tài xế!"));
   }, []);
 
+  const handleClearDates = () => {
+    setStartDate("");
+    setEndDate("");
+  };
+
+  // ⭐️ CẬP NHẬT: HÀM TẢI TẤT CẢ DỮ LIỆU (KHÔNG LỌC)
   async function fetchAllOrders() {
+    if (customers.length === 0) return; // Chờ tải customers xong
+
     try {
-      // Tự động nhét store_id vào params
-      const params: any = { size: 10000, page: 1 };
+      setLoading(true); // Chỉ hiện loading khi tải TẤT CẢ dữ liệu
+      const params: any = {
+        size: 10000, // Tải tối đa 10000 đơn hàng
+        page: 1,
+      };
       if (selectedStoreId) {
         params.store_id = selectedStoreId;
       }
 
+      // ❌ KHÔNG GỬI KEY, START/END DATE VÌ CHÚNG TA LỌC LOCAL
       const response = await listOrders(params);
       const data = response.data;
 
@@ -144,68 +182,121 @@ export default function AdminOrderPage() {
           : parseFloat(order.total_amount as string),
         items: order.items || [],
       }));
+
+      // ⭐️ Đặt tất cả đơn hàng đã lấy (CHƯA LỌC) vào state allOrders
       setAllOrders(ordersWithNames);
-    } catch {
-      toast.error("Không thể tải thống kê đơn hàng!");
-    }
-  }
-
-  async function fetchOrders() {
-    setLoading(true);
-    setError(null);
-    try {
-      const rawParams = {
-        page: pagination.page,
-        size: pagination.size,
-        key: "",
-        store_id: selectedStoreId || undefined, // Filter theo store tự động
-        status: orderStatusFilter || undefined,
-        payment_status: paymentStatusFilter || undefined,
-      };
-
-      const response = await listOrders(rawParams);
-
-      const ordersWithNames = response.data.map((order) => ({
-        ...order,
-        customer_name:
-          customers.find((u) => u.id === order.customer_id)?.full_name ||
-          `Khách #${order.customer_id}`,
-        total_amount: typeof order.total_amount === "number"
-          ? order.total_amount
-          : parseFloat(order.total_amount as string),
-        items: order.items || [],
-      }));
-
-      setOrders(ordersWithNames);
-      setTotalOrders(response.total);
-    } catch {
-      setError("Không thể tải danh sách đơn hàng!");
+    } catch (e) {
+      setError("Không thể tải thống kê đơn hàng!");
     } finally {
-      setLoading(false);
+      setLoading(false); // Kết thúc loading sau khi tải xong tất cả
     }
   }
 
-  // Khi customers hoặc selectedStoreId thay đổi thì load lại đơn hàng
+  // ⭐️ CẬP NHẬT: HÀM LỌC VÀ PHÂN TRANG LOCAL
+ // ⭐️ CẬP NHẬT: HÀM LỌC VÀ PHÂN TRANG LOCAL
+async function fetchOrders() {
+    if (allOrders.length === 0 && !loading) {
+        setTotalOrders(0);
+        setOrders([]);
+        setKeyAndDateFilteredOrders([]); // 👈 Thêm
+        return;
+    }
+
+    let filteredOrders = allOrders;
+
+    // 1. LỌC THEO TÊN KHÁCH HÀNG / MÃ ĐƠN HÀNG
+    if (debouncedSearchTerm.trim() !== "") {
+      // ... (logic lọc theo tên/mã giữ nguyên)
+      const searchKey = debouncedSearchTerm.toLowerCase();
+      filteredOrders = filteredOrders.filter(order =>
+        order.customer_name?.toLowerCase().includes(searchKey) || 
+        String(order.id).includes(searchKey) 
+      );
+    }
+
+    // 2. LỌC THEO THỜI GIAN (Ngày tạo)
+    if (startDate) {
+      // ... (logic lọc theo startDate giữ nguyên)
+      const start = new Date(startDate).getTime();
+      filteredOrders = filteredOrders.filter(o => {
+        if (!o.created_at) return false;
+        return new Date(o.created_at).getTime() >= start;
+      });
+    }
+
+    if (endDate) {
+      // ... (logic lọc theo endDate giữ nguyên)
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1);
+      const endTime = end.getTime();
+      filteredOrders = filteredOrders.filter(o => {
+        if (!o.created_at) return false;
+        return new Date(o.created_at).getTime() < endTime;
+      });
+    }
+    
+    // ⭐️ BƯỚC MỚI: Cập nhật danh sách đã lọc theo Key/Date
+    // Danh sách này sẽ được dùng để tính toán số liệu cho các tab.
+    setKeyAndDateFilteredOrders(filteredOrders); 
+
+    // 3. LỌC THEO STATUS (Chỉ áp dụng cho bảng, không áp dụng cho tab)
+    let finalFilteredOrders = filteredOrders; // Bắt đầu từ danh sách đã lọc Key/Date
+    
+    if (orderStatusFilter) {
+      finalFilteredOrders = finalFilteredOrders.filter(o => o.status === orderStatusFilter);
+    }
+    if (paymentStatusFilter) {
+      finalFilteredOrders = finalFilteredOrders.filter(o => o.payment_status === paymentStatusFilter);
+    }
+
+    // 4. THỰC HIỆN PHÂN TRANG (LOCAL PAGINATION)
+    const totalCount = finalFilteredOrders.length; // Tính tổng trên danh sách đã lọc Status
+    const startIndex = (pagination.page - 1) * pagination.size;
+    const endIndex = startIndex + pagination.size;
+
+    const paginatedOrders = finalFilteredOrders.slice(startIndex, endIndex);
+
+    setOrders(paginatedOrders);
+    setTotalOrders(totalCount);
+}
+
+  // ⭐️ CẬP NHẬT: useEffect để tải ALL ORDERS khi Customers và StoreID thay đổi
   useEffect(() => {
     if (customers.length > 0) {
       fetchAllOrders();
-      fetchOrders();
     }
-  }, [customers, pagination.page, pagination.size, selectedStoreId, orderStatusFilter, paymentStatusFilter]);
+  }, [customers, selectedStoreId]);
+
+  // ⭐️ CẬP NHẬT: useEffect để LỌC VÀ PHÂN TRANG LOCAL khi ALL ORDERS hoặc bộ lọc thay đổi
+  useEffect(() => {
+    // Chỉ chạy fetchOrders (lọc local) khi allOrders đã có, hoặc khi các bộ lọc thay đổi
+    fetchOrders();
+  }, [
+    allOrders, // Kích hoạt lọc local khi tải xong tất cả
+    pagination.page,
+    pagination.size,
+    orderStatusFilter,
+    paymentStatusFilter,
+    debouncedSearchTerm,
+    startDate,
+    endDate
+  ]);
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
 
+  // ... (Giữ nguyên handleExportExcel và các hàm khác)
+
   const handleExportExcel = async () => {
     try {
-      let urlStr = "http://localhost:3000/orders/export-excel";
-      // Gắn store_id vào URL export nếu có
-      if (selectedStoreId) {
-        urlStr += `?store_id=${selectedStoreId}`;
-      }
+      const params = new URLSearchParams();
+      if (selectedStoreId) params.append('store_id', String(selectedStoreId));
+      if (debouncedSearchTerm) params.append('key', debouncedSearchTerm);
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
 
-      const response = await fetch(urlStr, {
+      const response = await fetch(`http://localhost:3000/orders/export-excel?${params.toString()}`, {
         method: "GET",
         credentials: "include",
       });
@@ -219,7 +310,7 @@ export default function AdminOrderPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "DanhSachDonHang.xlsx";
+      link.download = `DanhSachDonHang_${selectedStoreName}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -232,6 +323,7 @@ export default function AdminOrderPage() {
     }
   };
 
+  // ... (Giữ nguyên các hàm Delete, View, Edit, Assign Driver, renderPageNumbers)
   const handleDeleteOrder = (id: number) => {
     setOrderToDeleteId(id);
     setIsDeleteModalOpen(true);
@@ -246,7 +338,7 @@ export default function AdminOrderPage() {
     try {
       await deleteOrder(id);
       toast.success("Xóa đơn hàng thành công!");
-      await fetchOrders();
+      // Cập nhật lại toàn bộ dữ liệu sau khi xóa
       await fetchAllOrders();
     } catch {
       toast.error("Xóa đơn hàng thất bại!");
@@ -299,7 +391,7 @@ export default function AdminOrderPage() {
       await updateOrder(orderId, updateData);
       toast.success("Cập nhật đơn hàng thành công!");
 
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
+      // Cập nhật local state và refresh all orders
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
 
       const order = orders.find(o => o.id === orderId);
@@ -326,7 +418,7 @@ export default function AdminOrderPage() {
       setLoading(true);
       await assignDriverToOrder({ order_id: orderId, driver_id: driverId });
       toast.success(`Gán tài xế cho đơn hàng #${orderId} thành công!`);
-      await fetchOrders();
+      // Cập nhật lại toàn bộ dữ liệu sau khi gán
       await fetchAllOrders();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || "Gán tài xế thất bại!";
@@ -337,6 +429,7 @@ export default function AdminOrderPage() {
   };
 
   const renderPageNumbers = () => {
+    // ... (Giữ nguyên)
     const totalPages = Math.ceil(totalOrders / pagination.size);
     const currentPage = pagination.page;
     const maxButtons = 5;
@@ -374,37 +467,93 @@ export default function AdminOrderPage() {
     return pages;
   };
 
+
   return (
     <div className="p-6 bg-white min-h-screen shadow-md border border-gray-200">
       <Toaster position="top-right" />
-      <div className=" mx-auto bg-white rounded-2x overflow-hidden">
+      <div className="mx-auto bg-white rounded-2x overflow-hidden">
         <div className="py-6 border-b border-gray-200 text-center bg-white">
           <h1 className="text-3xl font-bold text-[#B95D26] tracking-tight">
-            Quản lý đơn hàng cho cửa hàng : {selectedStoreName}
+            Quản lý đơn hàng: {selectedStoreName}
           </h1>
         </div>
 
-        {/* Thanh công cụ: Đã xóa Select Store, chỉ còn nút Export */}
-        <div className="flex flex-wrap items-center justify-end gap-3 p-4 border-b border-gray-200">
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center justify-center space-x-2 px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition w-full md:w-auto"
-          >
-            <Download className="w-5 h-5" />
-            <span>Tải file Excel</span>
-          </button>
+        {/* Thanh công cụ lọc đầy đủ */}
+        <div className="p-4 border-b border-gray-200 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Bên trái: Ô tìm kiếm + Ngày tháng */}
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              {/* Ô tìm kiếm */}
+              <div className="relative w-full md:w-80">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm tên khách, mã đơn..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                />
+              </div>
+
+              {/* Bộ lọc ngày tháng */}
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2 bg-white">
+                  <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-500 mr-2 hidden lg:inline">Thời gian:</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="text-sm outline-none text-gray-600 w-full md:w-auto cursor-pointer"
+                    title="Từ ngày"
+                  />
+                  <span className="mx-2 text-gray-400">-</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="text-sm outline-none text-gray-600 w-full md:w-auto cursor-pointer"
+                    title="Đến ngày"
+                    min={startDate}
+                  />
+
+                  {/* Nút Clear xuất hiện khi có ngày được chọn */}
+                  {(startDate || endDate) && (
+                    <button
+                      onClick={handleClearDates}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
+                      title="Xóa bộ lọc ngày"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bên phải: Nút Xuất Excel */}
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center justify-center space-x-2 px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition w-full md:w-auto"
+            >
+              <Download className="w-5 h-5" />
+              <span>Tải Excel</span>
+            </button>
+          </div>
         </div>
 
         <div className="p-4 border-gray-200">
           <OrderStatusTabs
-            allOrders={allOrders}
+           allOrders={keyAndDateFilteredOrders}
             currentOrderStatus={orderStatusFilter}
             onSelectOrderStatus={setOrderStatusFilter}
             currentPaymentStatus={paymentStatusFilter}
             onSelectPaymentStatus={setPaymentStatusFilter}
           />
           <div className="text-right text-sm text-gray-500 mt-1">
-            Tổng: {allOrders.length} đơn hàng
+            Tổng: {totalOrders} kết quả phù hợp
           </div>
         </div>
 
