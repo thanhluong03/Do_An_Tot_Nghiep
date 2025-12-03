@@ -81,6 +81,11 @@ export class UserController {
         return await this.userService.getDrivers();
     }
 
+    @Get('drivers/store/:store_id')
+    async getDriversByStore(@Param('store_id') store_id: number) {
+        return await this.userService.getDriversByStore(Number(store_id));
+    }
+
     @Put('changepassword/:id')
     async changePassword(
         @Param('id') id: number,

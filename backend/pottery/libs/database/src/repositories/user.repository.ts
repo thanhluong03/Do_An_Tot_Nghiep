@@ -39,9 +39,22 @@ export class UserRepository {
             .leftJoinAndSelect('user.role', 'role')
             .where('user.deleted_at IS NULL')
             .andWhere('user.is_active = :isActive', { isActive: true })
-            .andWhere('(role.name = :roleName OR user.role_id = :roleId)', {
-                roleName: 'DRIVER',
-                roleId: 4
+            .andWhere('role.name = :roleName', {
+                roleName: 'DRIVER'
+            })
+            .orderBy('user.created_at', 'DESC')
+            .getMany();
+    }
+
+    async findDriversByStore(storeId: number): Promise<UserEntity[]> {
+        return this.repository.createQueryBuilder('user')
+            .leftJoinAndSelect('user.role', 'role')
+            .leftJoinAndSelect('user.store', 'store')
+            .where('user.deleted_at IS NULL')
+            .andWhere('user.is_active = :isActive', { isActive: true })
+            .andWhere('user.store_id = :storeId', { storeId })
+            .andWhere('role.name = :roleName', {
+                roleName: 'DRIVER'
             })
             .orderBy('user.created_at', 'DESC')
             .getMany();
