@@ -178,6 +178,21 @@ export class UpdateOrderDto {
     @IsOptional()
     @IsString()
     note?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    cancel_reason?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    person_cancel?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    delivery_fail_reason?: string;
 }
 export class OrderResponseDto {
     @Expose()

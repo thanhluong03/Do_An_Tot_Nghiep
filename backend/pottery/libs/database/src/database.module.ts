@@ -39,7 +39,9 @@ import {
   ClassificationAttributeRelationshipEntity,
   ImportRequestDetailEntity,
   ImportRequestEntity,
-  ReasonChangeImageEntity
+  ReasonChangeImageEntity,
+  CancelReasonImageEntity,
+  DeliveryFailImageEntity,
 } from './entities';
 import {
   ProductRepository,
@@ -74,6 +76,8 @@ import {
   ImportRequestDetailRepository,
   ReviewImageRepository,
   ReasonChangeImageRepository,
+  CancelReasonImageRepository,
+  DeliveryFailReasonImageRepository
 } from './repositories';
 
 const postgresRepositories = [
@@ -109,6 +113,8 @@ const postgresRepositories = [
   ImportRequestDetailRepository,
   ReviewImageRepository,
   ReasonChangeImageRepository,
+  CancelReasonImageRepository,
+  DeliveryFailReasonImageRepository
 ];
 const postgresEntities = [
   ProductEntity,
@@ -146,6 +152,8 @@ const postgresEntities = [
   ImportRequestEntity,
   ImportRequestDetailEntity,
   ReasonChangeImageEntity,
+  CancelReasonImageEntity,
+  DeliveryFailImageEntity,
 ];
 @Module({
   imports: [

@@ -7,6 +7,8 @@ import { OrderStatusHistoryEntity } from './order_status_history.entity';
 import { DriverLocationEntity } from './driver_location.entity'
 import { DeliveryProofEntity } from './delivery_proof.entity';
 import { ReasonChangeImageEntity } from './reason_change_image.entity';
+import { CancelReasonImageEntity } from './cancel_reason_image.entity';
+import { DeliveryFailImageEntity } from './delivery_fail_image.entity';
 
 export enum OrderStatus {
     CREATED = 'CREATED',
@@ -17,12 +19,18 @@ export enum OrderStatus {
     REJECTED = 'REJECTED',
     RETURN_REQUESTED = 'RETURN_REQUESTED',
     EXCHANGED = 'EXCHANGED',
+    PENDING_RETURN = 'PENDING_RETURN',
+    CONFIRMED_RETURN = 'CONFIRMED_RETURN',
+    PENDING_DELIVERY = 'PENDING_DELIVERY',
+    DELIVERY_FAILED = 'DELIVERY_FAILED',
+    PACKING = 'PACKING',
 }
 
 export enum PaymentStatus {
     UNPAID = 'UNPAID',
     PAID = 'PAID',
     REFUNDED = 'REFUNDED',
+    PENDING_REFUND = 'PENDING_REFUND',
 }
 
 export enum PaymentMethod {
@@ -77,6 +85,21 @@ export class OrderEntity extends BaseEntity {
     @Column({ type: 'text', nullable: true })
     reason_change: string
 
+    @Column({ type: 'text', nullable: true })
+    cancel_reason: string
+
+    @Column({ type: 'timestamptz', nullable: true })
+    cancel_date: Date
+
+    @Column({ type: 'timestamptz', nullable: true })
+    reason_change_date: Date
+
+    @Column({ type: 'text', nullable: true })
+    person_cancel: string
+
+    @Column({ type: 'text', nullable: true })
+    delivery_fail_reason: string
+
     @OneToMany(() => PaymentTransactionEntity, (paymentTransaction) => paymentTransaction.order)
     paymentTransactions: PaymentTransactionEntity[];
 
@@ -98,4 +121,10 @@ export class OrderEntity extends BaseEntity {
 
     @OneToMany(() => ReasonChangeImageEntity, (reasonChangeImage) => reasonChangeImage.order)
     reasonChangeImages: ReasonChangeImageEntity[];
+
+    @OneToMany(() => CancelReasonImageEntity, (cancelReasonImage) => cancelReasonImage.order)
+    cancelReasonImages: CancelReasonImageEntity[];
+
+    @OneToMany(() => DeliveryFailImageEntity, (deliveryFailImage) => deliveryFailImage.order)
+    deliveryFailImages: DeliveryFailImageEntity[];
 }

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { OrderService } from '../../libs/order/src/order.service';
 import { CreateOrderDto, UpdateOrderDto, SuccessResponseDto, ErrorResponseDto } from './order.dto';
 import { OrderStatus, PaymentStatus } from '../../libs/database/src/entities/order.entity';
@@ -118,21 +118,28 @@ export class OrderController {
     }
 
     @Put('updateorder/:id')
-    @UseInterceptors(FilesInterceptor('reason_change_images'))
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'reason_change_images' },
+        { name: 'cancel_reason_images' },
+        { name: 'delivery_fail_images' }
+    ]))
     async updateOrder(
         @Param('id') id: number,
         @Body() body: UpdateOrderDto,
-        @UploadedFiles() files?: Express.Multer.File[]
+        @UploadedFiles() files: { reason_change_images?: Express.Multer.File[], cancel_reason_images?: Express.Multer.File[], delivery_fail_images?: Express.Multer.File[] }
     ) {
         try {
-            // Xử lý file upload thành Buffer array
-            const reasonChangeImages = files?.map(file => file.buffer) || [];
+            const reasonChangeImages = files?.reason_change_images?.map(f => f.buffer) ?? [];
+            const cancelReasonImages = files?.cancel_reason_images?.map(f => f.buffer) ?? [];
+            const deliveryFailImages = files?.delivery_fail_images?.map(f => f.buffer) ?? [];
 
             await this.orderService.updateOrder(
                 Number(id),
                 {
                     ...body,
                     reason_change_images: reasonChangeImages.length > 0 ? reasonChangeImages : undefined,
+                    cancel_reason_images: cancelReasonImages.length > 0 ? cancelReasonImages : undefined,
+                    delivery_fail_images: deliveryFailImages.length > 0 ? deliveryFailImages : undefined,
                 },
                 body.user_id,
                 body.customer_id,

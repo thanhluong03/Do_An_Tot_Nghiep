@@ -30,3 +30,5 @@ export * from './import_request.repository';
 export * from './import_request_detail.repository';
 export * from './review_image.repository';
 export * from './reason_change_image.repository';
+export * from './cancel_reason_image.repository';
+export * from './delivery_fail_reason_image.repository';

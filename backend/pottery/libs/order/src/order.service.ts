@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, forwardRef } from '@nestjs/common';
-import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository, ReasonChangeImageRepository } from '@app/database';
+import { OrderRepository, InventoryRepository, UserRepository, CustomerRepository, ProductImageRepository, ReasonChangeImageRepository, CancelReasonImageRepository, DeliveryFailReasonImageRepository } from '@app/database';
 import { ProductRepository } from '@app/database';
 import { ICreateOrder, IUpdateOrder, IListOrder, IOrderItem } from './order.interface';
 import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/database';
@@ -27,7 +27,9 @@ export class OrderService {
     private readonly inventoryDetailRepository: InventoryDetailRepository,
     private readonly classificationAttributeRelationshipRepository: ClassificationAttributeRelationshipRepository,
     private readonly reasonChangeImageRepository: ReasonChangeImageRepository,
+    private readonly cancelReasonImageRepository: CancelReasonImageRepository,
     private readonly paymentTransactionRepository: PaymentTransactionRepository,
+    private readonly deliveryFailReasonImageRepository: DeliveryFailReasonImageRepository,
   ) { }
 
   async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -370,6 +372,8 @@ export class OrderService {
     if (data.payment_method !== undefined) updateData.payment_method = data.payment_method;
     if (data.reason_change !== undefined) updateData.reason_change = data.reason_change;
     if (typeof data.note === 'string') updateData.note = data.note;
+    if (data.cancel_reason !== undefined) updateData.cancel_reason = data.cancel_reason;
+    if (data.delivery_fail_reason !== undefined) updateData.delivery_fail_reason = data.delivery_fail_reason;
 
     await this.orderRepository.update(id, updateData);
 
@@ -385,6 +389,44 @@ export class OrderService {
           reason_change_image: imageBuffer,
         });
       }
+      // Lưu ngày hoàn trả vào order
+      const reasonChangeDate = new Date();
+      await this.orderRepository.update(id, { reason_change_date: reasonChangeDate });
+    }
+
+    if (data.cancel_reason_images && data.cancel_reason_images.length > 0) {
+      // Xóa các ảnh cũ trước khi thêm ảnh mới
+      await this.cancelReasonImageRepository.deleteByOrderId(id);
+
+      // Thêm các ảnh mới
+      for (const imageBuffer of data.cancel_reason_images) {
+        await this.cancelReasonImageRepository.create({
+          order_id: id,
+          cancel_reason_image: imageBuffer,
+        });
+      }
+      // Lưu ngày hủy vào order
+      const cancelReasonDate = new Date();
+      await this.orderRepository.update(id, {
+        cancel_date: cancelReasonDate,
+        person_cancel: data.person_cancel || ''
+      });
+    }
+
+    if (data.delivery_fail_images && data.delivery_fail_images.length > 0) {
+      // Xóa các ảnh cũ trước khi thêm ảnh mới
+      await this.deliveryFailReasonImageRepository.deleteByOrderId(id);
+
+      // Thêm các ảnh mới
+      for (const imageBuffer of data.delivery_fail_images) {
+        await this.deliveryFailReasonImageRepository.create({
+          order_id: id,
+          delivery_fail_image: imageBuffer,
+        });
+      }
+      await this.orderRepository.update(id, {
+        delivery_fail_reason: data.delivery_fail_reason || ''
+      });
     }
 
     if (statusChanged && updateData.status) {
