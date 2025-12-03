@@ -40,6 +40,7 @@ const getTitleAndBreadcrumb = (pathname: string): HeaderInfo => {
     changePassword: "Đổi mật khẩu",
     storeRequestImportProduct: "Yêu cầu nhập kho",
     adminstore: "Cửa hàng",
+    drivers: "Tài xế",
   };
 
   if (parts.length === 0 || parts[0] === "dashboard") {

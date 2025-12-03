@@ -15,6 +15,7 @@ export enum DriverStatus {
 
 export interface DriverOrder extends Order {
     product_count: number;
+    
 }
 export interface DriverLocation {
     id: number;
