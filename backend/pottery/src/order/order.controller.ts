@@ -194,4 +194,36 @@ export class OrderController {
             );
         }
     }
+
+    // API tự động gán tài xế cho đơn hàng PACKING
+    @Post('auto-assign-drivers')
+    async autoAssignDrivers() {
+        try {
+            await this.orderService.autoAssignDrivers();
+            return new SuccessResponseDto('Auto assign drivers completed successfully');
+        } catch (error: any) {
+            return new ErrorResponseDto(
+                'Failed to auto assign drivers',
+                error && typeof error === 'object' && 'message' in error
+                    ? error.message
+                    : error,
+            );
+        }
+    }
+
+    // API xử lý tài xế quá hạn (30p)
+    @Post('handle-expired-assignments')
+    async handleExpiredAssignments() {
+        try {
+            await this.orderService.handleExpiredAssignments();
+            return new SuccessResponseDto('Handle expired assignments completed successfully');
+        } catch (error: any) {
+            return new ErrorResponseDto(
+                'Failed to handle expired assignments',
+                error && typeof error === 'object' && 'message' in error
+                    ? error.message
+                    : error,
+            );
+        }
+    }
 }

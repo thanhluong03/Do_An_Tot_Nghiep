@@ -100,4 +100,15 @@ export class UserService {
         return { message: 'Đổi mật khẩu thành công' };
     }
 
+    async getDriversByStore(storeId: number): Promise<{ message: string, users: any[] }> {
+        const users = await this.userRepository.findDriversByStore(storeId);
+        const formattedUsers = users.map(user => ({
+            ...user,
+            avatar_image: user.avatar_image ? user.avatar_image.toString('base64') : null,
+        }));
+        return {
+            message: formattedUsers.length > 0 ? 'Drivers fetched successfully' : 'No drivers found',
+            users: formattedUsers,
+        };
+    }
 }

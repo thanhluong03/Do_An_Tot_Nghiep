@@ -6,6 +6,7 @@ import { OrderEntity, OrderStatus, PaymentStatus, PaymentMethod } from '@app/dat
 import { OrderStatusHistory, OrderStatusHistoryEntity, OrderStatusHistoryRepository } from '@app/database';
 import { CategoryRepository } from '@app/database';
 import { InventoryDetailRepository, ClassificationAttributeRelationshipRepository, PaymentTransactionRepository } from '@app/database';
+import { DriverLocationRepository, DriverStatus } from '@app/database';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
 interface OrdersWithTotal {
@@ -30,6 +31,7 @@ export class OrderService {
     private readonly cancelReasonImageRepository: CancelReasonImageRepository,
     private readonly paymentTransactionRepository: PaymentTransactionRepository,
     private readonly deliveryFailReasonImageRepository: DeliveryFailReasonImageRepository,
+    private readonly driverLocationRepository: DriverLocationRepository,
   ) { }
 
   async createOrder(data: ICreateOrder): Promise<OrderEntity> {
@@ -467,6 +469,37 @@ export class OrderService {
         user_id,
         customer_id
       );
+
+      // Nếu order chuyển thành PACKING thì tự động gán tài xế
+      if (updateData.status === OrderStatus.PACKING) {
+        try {
+          // Kiểm tra xem order đã có tài xế chưa
+          const existingDriver = await this.driverLocationRepository.findByOrderId(id);
+          if (!existingDriver) {
+            // Lấy thông tin order đầy đủ
+            const fullOrder = await this.orderRepository.findById(id);
+            if (fullOrder) {
+              const orderStoreId = this.getOrderStoreId(fullOrder);
+              if (orderStoreId) {
+                // Tự động gán tài xế cùng cửa hàng
+                const drivers = await this.userRepository.findDrivers();
+                const storeDrivers = drivers.filter(driver => driver.store_id === orderStoreId);
+
+                if (storeDrivers.length > 0) {
+                  const workloads = await this.calculateDriverWorkloads(storeDrivers);
+                  const bestDriver = this.selectBestDriver(workloads);
+
+                  if (bestDriver) {
+                    await this.assignDriverToOrder(id, bestDriver.id);
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error auto-assigning driver to PACKING order:', error);
+        }
+      }
     }
   }
 
@@ -591,5 +624,168 @@ export class OrderService {
       total: filteredOrders.length,
       totalByStatus: Object.keys(totalByStatus).length ? totalByStatus : {},
     };
+  }
+
+  // Tự động gán tài xế cho đơn hàng PACKING
+  async autoAssignDrivers(): Promise<void> {
+    try {
+      // Tìm đơn hàng PACKING chưa có tài xế
+      const packingOrders = await this.orderRepository.findOrdersForAdmin([OrderStatus.PACKING]);
+      const ordersWithoutDriver: OrderEntity[] = [];
+
+      for (const order of packingOrders) {
+        const existingDriver = await this.driverLocationRepository.findByOrderId(order.id);
+        if (!existingDriver) {
+          ordersWithoutDriver.push(order);
+        }
+      }
+
+      if (ordersWithoutDriver.length === 0) return;
+
+      // Lấy danh sách tài xế (role driver)
+      const drivers = await this.userRepository.findDrivers();
+      if (drivers.length === 0) return;
+
+      // Gán đơn hàng cho tài xế theo thứ tự ưu tiên
+      for (const order of ordersWithoutDriver) {
+        // Lấy store_id của đơn hàng
+        const orderStoreId = this.getOrderStoreId(order);
+        if (!orderStoreId) continue;
+
+        // Lọn tài xế theo store
+        const storeDrivers = drivers.filter(driver => driver.store_id === orderStoreId);
+        if (storeDrivers.length === 0) continue;
+
+        const workloads = await this.calculateDriverWorkloads(storeDrivers);
+        const bestDriver = this.selectBestDriver(workloads);
+        if (bestDriver) {
+          await this.assignDriverToOrder(order.id, bestDriver.id);
+          // Cập nhật workload
+          bestDriver.waitingCount++;
+        }
+      }
+    } catch (error) {
+      console.error('Error in autoAssignDrivers:', error);
+    }
+  }
+
+  // Tính toán workload cho tài xế
+  private async calculateDriverWorkloads(drivers: any[]): Promise<any[]> {
+    const workloads: any[] = [];
+
+    for (const driver of drivers) {
+      const driverLocations = await this.driverLocationRepository.findByDriverId(driver.id);
+
+      let acceptedCount = 0;
+      let waitingCount = 0;
+
+      for (const location of driverLocations) {
+        if (location.driver_status === DriverStatus.ACCEPTED) {
+          acceptedCount++;
+        } else if (location.driver_status === DriverStatus.WAITING_ACCEPT) {
+          waitingCount++;
+        }
+      }
+
+      workloads.push({
+        id: driver.id,
+        name: driver.full_name || driver.username,
+        acceptedCount,
+        waitingCount,
+      });
+    }
+
+    return workloads;
+  }
+
+  // Chọn tài xế tốt nhất theo logic ưu tiên
+  private selectBestDriver(workloads: any[]): any {
+    if (workloads.length === 0) return null;
+
+    // Sắp xếp theo: acceptedCount tăng dần, sau đó waitingCount tăng dần
+    workloads.sort((a, b) => {
+      if (a.acceptedCount !== b.acceptedCount) {
+        return a.acceptedCount - b.acceptedCount;
+      }
+      return a.waitingCount - b.waitingCount;
+    });
+
+    return workloads[0];
+  }
+
+  // Gán tài xế cho đơn hàng
+  private async assignDriverToOrder(orderId: number, driverId: number): Promise<void> {
+    await this.driverLocationRepository.create({
+      driver_id: driverId,
+      order_id: orderId,
+      driver_status: DriverStatus.WAITING_ACCEPT,
+      timestamp: new Date(),
+    });
+  }
+
+  // Hủy gán tài xế quá hạn (30 phút) và gán cho tài xế khác
+  async handleExpiredAssignments(): Promise<void> {
+    try {
+      const thirtyMinutesAgo = new Date();
+      thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
+
+      // Lấy tất cả driver có orders WAITING_ACCEPT
+      const drivers = await this.userRepository.findDrivers();
+      const expiredAssignments: any[] = [];
+
+      for (const driver of drivers) {
+        const driverLocations = await this.driverLocationRepository.findByDriverIdWithFilters(
+          driver.id,
+          DriverStatus.WAITING_ACCEPT
+        );
+
+        // Lọc những assignments quá hạn 30 phút
+        const expired = driverLocations.filter(dl => dl.created_at <= thirtyMinutesAgo);
+        expiredAssignments.push(...expired);
+      }
+
+      for (const assignment of expiredAssignments) {
+        // Xóa assignment cũ
+        await this.driverLocationRepository.softDelete(assignment.id);
+
+        // Gán lại cho tài xế khác nếu đơn hàng vẫn ở trạng thái PACKING
+        const currentOrder = await this.orderRepository.findById(assignment.order_id);
+        if (currentOrder?.status === OrderStatus.PACKING) {
+          const orderStoreId = this.getOrderStoreId(currentOrder);
+          if (orderStoreId) {
+            // Lọn tài xế cùng cửa hàng, loại trừ tài xế đã hết hạn
+            const storeDrivers = drivers.filter(d => d.store_id === orderStoreId && d.id !== assignment.driver_id);
+
+            if (storeDrivers.length > 0) {
+              const workloads = await this.calculateDriverWorkloads(storeDrivers);
+              const bestDriver = this.selectBestDriver(workloads);
+
+              if (bestDriver) {
+                await this.assignDriverToOrder(assignment.order_id, bestDriver.id);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleExpiredAssignments:', error);
+    }
+  }
+
+  // Lấy store_id của đơn hàng từ items
+  private getOrderStoreId(order: OrderEntity): number | null {
+    try {
+      const currentOrder: any = order.current_order || {};
+      const items = Array.isArray(currentOrder.items) ? currentOrder.items : [];
+
+      if (items.length > 0) {
+        // Lấy store_id của item đầu tiên (giả định tất cả items cùng store)
+        return items[0].store_id || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting order store_id:', error);
+      return null;
+    }
   }
 }
