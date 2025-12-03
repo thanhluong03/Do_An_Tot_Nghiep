@@ -42,6 +42,13 @@ export interface IUpdateOrder {
     reason_change?: string;
     reason_change_images?: Buffer[];
     note?: string;
+    cancel_reason?: string;
+    cancel_reason_images?: Buffer[];
+    reason_change_date?: string;
+    cancel_date?: string;
+    person_cancel?: string;
+    delivery_fail_images?: Buffer[];
+    delivery_fail_reason?: string;
 }
 
 export interface IListOrder {
