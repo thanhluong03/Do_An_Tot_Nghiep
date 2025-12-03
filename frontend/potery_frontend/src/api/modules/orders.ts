@@ -36,7 +36,7 @@ export const orderApi = {
     const res = await api.get(`/orders/customer/${customerId}`, { params: { page, size } });
     return res.data; // { success, data }
   },
-  async updateOrder(id: number | string, data: any, files?: File[]) {
+  async updateOrder(id: number | string, data: any, files?: File[], imageFieldName = 'reason_change_images') {
     const formData = new FormData();
 
     // Add JSON data
@@ -49,7 +49,7 @@ export const orderApi = {
     // Add files if provided
     if (files && files.length > 0) {
       files.forEach(file => {
-        formData.append('reason_change_images', file);
+        formData.append(imageFieldName, file);
       });
     }
 

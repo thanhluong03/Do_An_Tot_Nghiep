@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/dist/client/components/navigation';
 import { ArrowLeft, Bot, Gift, MessageSquare, Search, User } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
-import { VoucherModal, ChatModal, AIChatModal, ReturnOrderModal } from '@/components/feature';
+import { VoucherModal, ChatModal, AIChatModal, ReturnOrderModal, CancelOrderModal } from '@/components/feature';
 
 const translateStatus = (status: string | undefined): string => {
   if (!status) return 'Không rõ';
@@ -90,29 +90,58 @@ export default function MyOrdersPage() {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [returnOrderId, setReturnOrderId] = useState<number | null>(null);
   const [returnLoading, setReturnLoading] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [processingOrderId, setProcessingOrderId] = useState<number | null>(null);
 
   const handleCancelOrder = async (orderId: any) => {
-    if (window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
-      try {
-        await orderApi.updateOrder(Number(orderId), {
+    setCancelOrderId(orderId);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleCancelSubmit = async (reason: string, images: File[]) => {
+    if (!cancelOrderId) return;
+
+    setCancelLoading(true);
+    setProcessingOrderId(cancelOrderId);
+
+    // Đóng modal ngay lập tức
+    setIsCancelModalOpen(false);
+    setCancelOrderId(null);
+
+    try {
+      await orderApi.updateOrder(
+        cancelOrderId,
+        {
           status: 'CANCELLED',
+          cancel_reason: reason,
           actorType: 'CUSTOMER',
-        });
-        setOrders(prevOrders =>
-          prevOrders.map(order =>
-            (order.id ?? order._id) == orderId
-              ? { ...order, status: 'CANCELLED' }
-              : order
-          )
-        );
-        toast.success('Đã hủy đơn hàng thành công.');
-      } catch (error) {
-        console.error('Lỗi hủy đơn hàng:', error);
-        toast.error('Không thể hủy đơn hàng. Vui lòng thử lại.');
-      }
+        },
+        images,
+        'cancel_reason_images'
+      );
+
+      toast.success('Đã hủy đơn hàng thành công.');
+
+      // Cập nhật trạng thái đơn hàng ngay lập tức
+      setOrders(prevOrders =>
+        (Array.isArray(prevOrders) ? prevOrders : []).map(order =>
+          (order.id ?? order._id) == cancelOrderId
+            ? { ...order, status: 'CANCELLED', cancel_reason: reason }
+            : order
+        )
+      );
+
+    } catch (error) {
+      console.error('Lỗi hủy đơn hàng:', error);
+      toast.error('Không thể hủy đơn hàng. Vui lòng thử lại.');
+    } finally {
+      setCancelLoading(false);
+      setProcessingOrderId(null);
     }
   };
+
   const handleReturnOrder = async (orderId: any) => {
     setReturnOrderId(orderId);
     setIsReturnModalOpen(true);
@@ -135,7 +164,8 @@ export default function MyOrdersPage() {
           status: 'RETURN_REQUESTED',
           reason_change: reason,
         },
-        images
+        images,
+        'reason_change_images'
       );
 
       toast.success('Yêu cầu đổi trả đã được gửi thành công');
@@ -423,6 +453,19 @@ export default function MyOrdersPage() {
             />
           )}
 
+          {/* Cancel Order Modal */}
+          {isCancelModalOpen && (
+            <CancelOrderModal
+              isOpen={isCancelModalOpen}
+              onClose={() => {
+                setIsCancelModalOpen(false);
+                setCancelOrderId(null);
+              }}
+              onSubmit={handleCancelSubmit}
+              loading={cancelLoading}
+            />
+          )}
+
           {/* Floating Buttons */}
           <div
             className={`fixed top-1/2 -translate-y-1/2 flex flex-col items-end gap-4 z-[100] transition-all duration-300 ${isChatDropdownOpen ? 'right-1' : 'right-1'
@@ -682,9 +725,14 @@ export default function MyOrdersPage() {
                       {['CREATED', 'PENDING', 'CONFIRMED', 'SHIPPING'].includes(order.status?.toUpperCase()) && (
                         <button
                           onClick={() => handleCancelOrder(id)}
-                          className="px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md cursor-pointer"
+                          disabled={isProcessing}
+                          className={`px-6 py-2 text-sm font-semibold border border-red-500 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-md cursor-pointer flex items-center gap-2 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                         >
-                          Hủy đơn hàng
+                          {isProcessing && cancelLoading && (
+                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                          )}
+                          {isProcessing && cancelLoading ? 'Đang hủy...' : 'Hủy đơn hàng'}
                         </button>
                       )}
                       {(() => {
@@ -704,14 +752,14 @@ export default function MyOrdersPage() {
                         return isDelivered && within7Days ? (
                           <button
                             onClick={() => handleReturnOrder(id)}
-                            disabled={processingOrderId === id}
-                            className={`px-6 py-2 cursor-pointer text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md flex items-center gap-2 ${processingOrderId === id ? 'opacity-50 cursor-not-allowed' : ''
+                            disabled={isProcessing}
+                            className={`px-6 py-2 cursor-pointer text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md flex items-center gap-2 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
                           >
-                            {processingOrderId === id && (
+                            {isProcessing && returnLoading && (
                               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                             )}
-                            {processingOrderId === id ? 'Đang xử lý...' : 'Đổi trả đơn hàng'}
+                            {isProcessing && returnLoading ? 'Đang xử lý...' : 'Đổi trả đơn hàng'}
                           </button>
                         ) : null;
                       })()}

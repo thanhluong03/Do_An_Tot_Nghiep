@@ -52,7 +52,7 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [positionError, setPositionError] = useState<string | null>(null);
 
-  const driverId = user?.id;
+  const driverId = user?.id ? Number(user.id) : null;
 
   // Load initial tracking data
   useEffect(() => {

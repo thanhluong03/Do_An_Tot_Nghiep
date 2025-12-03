@@ -18,3 +18,4 @@ export { AIChatModal } from './AIChatModal';
 export { BestSellingProducts } from './BestSellingProducts';
 export { default as Banner } from './Banner';
 export { ReturnOrderModal } from './ReturnOrderModal';
+export { CancelOrderModal } from './CancelOrderModal';

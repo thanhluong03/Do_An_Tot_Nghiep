@@ -8,8 +8,10 @@ import { trackingApi } from '@/api/services/trackingService';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Navigation, Upload, Check } from 'lucide-react';
 import { createDeliveryProof } from '@/api/services/deliveryService';
-import { updateOrder } from '@/api/services/orderService';
+import { orderApi } from '@/api/modules/orders';
 import toast, { Toaster } from 'react-hot-toast';
+import { CancelOrderModal } from '@/components/feature';
+
 
 // Dynamic import for TrackingMap
 const TrackingMap = dynamic(() => import('@/components/map/TrackingMap'), {
@@ -55,6 +57,51 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [proofSaved, setProofSaved] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const handleCancelOrder = () => {
+    if (!proofSaved) {
+      toast.error('Vui lòng lưu minh chứng trước khi báo cáo thất bại.');
+      return;
+    }
+    setIsCancelModalOpen(true);
+  };
+
+  const handleCancelSubmit = async (reason: string, images: File[]) => {
+    if (!driverId) {
+      toast.error('Thiếu thông tin tài xế.');
+      return;
+    }
+
+    setCancelLoading(true);
+
+    try {
+      await orderApi.updateOrder(
+        Number(orderId),
+        {
+          status: 'DELIVERY_FAILED',
+          payment_status: 'PAID',
+          payment_method: 'ONSITE',
+          user_id: Number(driverId),
+          cancel_reason: reason,
+          actorType: 'DRIVER',
+        },
+        images,
+        'cancel_reason_images'
+      );
+      toast.success('Đã cập nhật trạng thái giao hàng thất bại!');
+      router.back();
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.response?.data?.message || 'Cập nhật thất bại!';
+      toast.error(msg);
+    } finally {
+      setCancelLoading(false);
+      setIsCancelModalOpen(false);
+    }
+  };
+
 
   // Read driver id from admin login context (stored in localStorage)
   const driverId = typeof window !== 'undefined'
@@ -260,7 +307,6 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
             />
           </div>
         )}
-
         {/* Proof and complete actions */}
         <div className="bg-white rounded-xl border shadow-sm p-4 space-y-4">
           <h2 className="text-lg font-semibold text-gray-800">Minh chứng giao hàng</h2>
@@ -302,7 +348,7 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
             </button>
           </div>
 
-          <div>
+          <div className="flex gap-4">
             <button
               onClick={async () => {
                 if (!driverId) {
@@ -315,7 +361,7 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
                 }
                 try {
                   setIsSaving(true);
-                  await updateOrder(Number(orderId), {
+                  await orderApi.updateOrder(Number(orderId), {
                     status: 'DELIVERED',
                     payment_status: 'PAID',
                     payment_method: 'ONSITE',
@@ -337,9 +383,26 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
               <Check className="w-4 h-4" />
               Hoàn thành đơn hàng
             </button>
+            <button
+              onClick={handleCancelOrder}
+              disabled={isSaving || !proofSaved}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+            >
+              Giao thất bại
+            </button>
           </div>
         </div>
       </div>
+      <CancelOrderModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onSubmit={handleCancelSubmit}
+        loading={cancelLoading}
+        title="Lý do giao hàng thất bại"
+        placeholder="Vui lòng mô tả chi tiết lý do giao hàng thất bại..."
+        submitText="Gửi báo cáo"
+        submitLoadingText="Đang gửi..."
+      />
     </DriverLayout>
   );
 }
