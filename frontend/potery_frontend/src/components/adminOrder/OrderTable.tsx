@@ -167,6 +167,7 @@ export default function OrderTable({
                 {order.status === 'CONFIRMED' ? (
                   <div className="flex items-center space-x-2 min-w-[250px]">
                     {order.driverLocations && order.driverLocations.length > 0 ? (
+                      <div className="flex-grow">
                       <select
                         title="Tài xế đã gán"
                         value={order.driverLocations[0].driver.id}
@@ -177,6 +178,7 @@ export default function OrderTable({
                           <option key={driver.id} value={driver.id}>{driver.full_name || driver.username}</option>
                         ))}
                       </select>
+                    </div>
                     ) : (
                       <select
                         title="Chọn tài xế"
