@@ -35,7 +35,7 @@ const permissionsCache: string[] = [];
 const getAdminPermissions = (): string[] => {
     if (typeof window !== 'undefined' && permissionsCache.length === 0) {
         // Sử dụng key giả định 'adminPermissions_3'
-        const permissionsJson = localStorage.getItem('adminPermissions_1'); 
+        const permissionsJson = localStorage.getItem('adminPermissions_5'); 
         
         try {
             const permissions = permissionsJson ? JSON.parse(permissionsJson) : [];
@@ -71,6 +71,12 @@ const isPermitted = (href: string): boolean => {
 
 const dashboardItems: MenuItem[] = [
     { name: "Dashboard", icon: faHome, href: "/adminstore/dashboard" },
+];
+const chatItems: MenuItem[] = [
+    { name: "Hội thoại", icon: faUser, href: "/adminstore/conversation", color: "bg-red-100 text-red-600" },
+];
+const driverItems: MenuItem[] = [
+    { name: "Tài xế", icon: faUser, href: "/adminstore/drivers", color: "bg-red-100 text-red-600" },
 ];
 
 const salesOperationsItems: MenuItem[] = [
@@ -260,6 +266,8 @@ export default function AdminSidebar() {
                 {renderMenuSection("Tổng Quan", dashboardItems)}
                 {renderMenuSection("Đơn hàng", orderItems)}
                 {renderMenuSection("Sản phẩm", salesOperationsItems)}
+                {/* {renderMenuSection("Hội thoại", chatItems)} */}
+                {renderMenuSection("Tài xế", driverItems)}
                 {renderMenuSection("Người dùng", usersItems)}
             </nav>
         </div>

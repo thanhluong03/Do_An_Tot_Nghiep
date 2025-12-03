@@ -85,4 +85,10 @@ export const AVAILABLE_PERMISSIONS = {
     'adminstore/changePassword': [
         { key: 'adminstore/changePassword', name: 'Đổi mật khẩu cửa hàng' },
     ],
+    'adminstore/conversation': [
+        { key: 'adminstore/conversation', name: 'Quản lý hội thoại cửa hàng' },
+    ],
+    'adminstore/drivers': [
+        { key: 'adminstore/drivers', name: 'Quản lý tài xế vận chuyển đơn hàng' },
+    ],
 };
