@@ -9,6 +9,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { CheckCircle, Clock, MapPin, Package, CreditCard, Store } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Hàm định dạng tiền tệ đơn giản
 const formatPrice = (amount: string | number) => {
@@ -19,11 +20,126 @@ const formatPrice = (amount: string | number) => {
 export default function ConfirmationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const orderId = searchParams.get('orderId');
   const orderIds = searchParams.get('orderIds'); // Để hỗ trợ nhiều đơn hàng
   const paymentStatus = searchParams.get('payment'); // success/failed
   const [orders, setOrders] = useState<Order[]>([]); // Thay đổi thành array
   const [loading, setLoading] = useState(true);
+
+  // --- Rollback COD orders nếu payment success (với retry) ---
+  useEffect(() => {
+    if (paymentStatus === 'success' && user?.id) {
+      (async () => {
+        // Hàm rollback với retry
+        const rollbackCODOrders = async (retryCount = 0) => {
+          try {
+            // Đợi một chút để đảm bảo backend đã cập nhật xong (tăng delay)
+            await new Promise(resolve => setTimeout(resolve, 4000 + retryCount * 2000));
+            console.log(`🔄 Bắt đầu rollback các đơn COD trong confirmation page (lần thử ${retryCount + 1})...`);
+            const allCustomerOrders = await orderApi.getOrdersByCustomer(user.id as string, 1, 100);
+            console.log('🔍 Raw response từ getOrdersByCustomer:', allCustomerOrders);
+            
+            // Xử lý nhiều cấu trúc response có thể có
+            let ordersList: any[] = [];
+            if (Array.isArray(allCustomerOrders)) {
+              ordersList = allCustomerOrders;
+            } else if (allCustomerOrders?.data) {
+              if (Array.isArray(allCustomerOrders.data)) {
+                ordersList = allCustomerOrders.data;
+              } else if (allCustomerOrders.data?.orders && Array.isArray(allCustomerOrders.data.orders)) {
+                ordersList = allCustomerOrders.data.orders;
+              } else if (allCustomerOrders.data?.data && Array.isArray(allCustomerOrders.data.data)) {
+                ordersList = allCustomerOrders.data.data;
+              }
+            } else if (allCustomerOrders?.orders && Array.isArray(allCustomerOrders.orders)) {
+              ordersList = allCustomerOrders.orders;
+            }
+            
+            console.log('🔍 Tổng số orders của customer:', ordersList.length);
+            
+            // Lấy danh sách order IDs MOMO từ URL hoặc sessionStorage
+            let momoOrderIds: number[] = [];
+            if (orderIds) {
+              try {
+                const parsed = JSON.parse(orderIds);
+                momoOrderIds = Array.isArray(parsed) ? parsed.map(Number) : [Number(parsed)];
+              } catch {
+                momoOrderIds = orderIds.split(',').map(Number);
+              }
+            } else if (orderId) {
+              // Nếu orderId là transaction reference (bắt đầu bằng MOMO), cần lấy order IDs từ transaction
+              if (orderId.startsWith('MOMO')) {
+                try {
+                  const transactionResponse = await orderApi.getOrdersByTransaction(orderId);
+                  if (transactionResponse.success && transactionResponse.data?.orderIds) {
+                    momoOrderIds = transactionResponse.data.orderIds.map(Number);
+                  }
+                } catch (err) {
+                  console.error('❌ Lỗi lấy order IDs từ transaction:', err);
+                }
+              } else {
+                momoOrderIds = [Number(orderId)];
+              }
+            }
+            
+            console.log('🔍 MOMO Order IDs:', momoOrderIds);
+            
+            // Đảm bảo ordersList là array trước khi filter
+            if (!Array.isArray(ordersList)) {
+              console.warn('⚠️ ordersList không phải array, bỏ qua rollback');
+              return;
+            }
+            
+            // Tìm các order COD đã bị cập nhật nhầm thành PAID
+            const codOrdersToRollback = ordersList.filter((order: any) => {
+              const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
+              const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+              const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
+              const isPaid = paymentStatus === 'PAID';
+              // Loại trừ các order MOMO hiện tại
+              const isNotMomoOrder = !momoOrderIds.includes(order.id);
+              return isCOD && isPaid && isNotMomoOrder;
+            });
+            
+            if (codOrdersToRollback.length > 0) {
+              console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
+              
+              // Rollback lại payment_status = UNPAID cho các order COD
+              await Promise.all(
+                codOrdersToRollback.map((order: any) =>
+                  orderApi.updateOrder(order.id, {
+                    payment_status: 'UNPAID',
+                  }).then(() => {
+                    console.log(`✅ Đã rollback đơn COD #${order.id}`);
+                  }).catch(err => {
+                    console.error(`❌ Lỗi rollback đơn COD #${order.id}:`, err);
+                  })
+                )
+              );
+              
+              console.log('✅ Đã rollback payment_status cho các đơn COD trong confirmation page');
+              
+              // Retry thêm 2 lần nữa sau 5 giây mỗi lần để đảm bảo
+              if (retryCount < 2) {
+                setTimeout(() => rollbackCODOrders(retryCount + 1), 5000);
+              }
+            } else {
+              console.log('✅ Không có đơn COD nào bị cập nhật nhầm trong confirmation page');
+            }
+          } catch (rollbackError) {
+            console.error('❌ Lỗi khi rollback đơn COD trong confirmation page:', rollbackError);
+            // Retry nếu chưa quá 3 lần
+            if (retryCount < 3) {
+              setTimeout(() => rollbackCODOrders(retryCount + 1), 3000);
+            }
+          }
+        };
+        
+        rollbackCODOrders();
+      })();
+    }
+  }, [paymentStatus, user?.id, orderId, orderIds]);
 
   // --- Fetch order detail(s) ---
   useEffect(() => {
@@ -96,8 +212,18 @@ export default function ConfirmationPage() {
         const fetchedOrders = await Promise.all(orderPromises);
         const validOrders = fetchedOrders.filter(order => order !== null) as Order[];
 
-        console.log('✅ Fetched orders:', validOrders);
-        setOrders(validOrders);
+        console.log('✅ Fetched orders (trước khi filter):', validOrders);
+        
+        // 🔥 QUAN TRỌNG: Chỉ hiển thị các đơn MOMO, KHÔNG hiển thị đơn COD
+        const momoOrdersOnly = validOrders.filter((order: Order) => {
+          const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
+          const isMOMO = paymentMethod === 'CARD' || paymentMethod === 'MOMO';
+          console.log(`🔍 Order #${order.id}: paymentMethod=${paymentMethod}, isMOMO=${isMOMO}`);
+          return isMOMO;
+        });
+        
+        console.log('✅ Fetched orders (sau khi filter chỉ MOMO):', momoOrdersOnly);
+        setOrders(momoOrdersOnly);
       } catch (err) {
         console.error('❌ Lỗi tổng thể:', err);
         toast.error('Không thể tải thông tin đơn hàng.');
