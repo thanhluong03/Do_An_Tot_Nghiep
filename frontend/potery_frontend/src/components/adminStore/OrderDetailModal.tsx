@@ -33,15 +33,15 @@ const statusToVietnamese = (status: string) => {
     case 'PACKING':
       return 'Đang đóng gói';
     case 'PENDING_RETURN':
-      return 'Chờ hoàn trả';
+      return 'Chờ đổi trả';
     case 'CONFIRMED_RETURN':
-      return 'Đã xác nhận hoàn trả';
+      return 'Đã xác nhận đổi trả';
     case 'PENDING_DELIVERY':
       return 'Chờ giao hàng';
     case 'SHIPPING_RETURN':
-      return 'Đang vận chuyển hoàn trả';
+      return 'Đang vận chuyển đổi trả';
     case 'PENDING_DELIVERY_RETURN':
-      return 'Chờ giao hàng hoàn trả';
+      return 'Chờ giao hàng đổi trả';
     case 'CANCELLED':
       return 'Đã hủy';
     default:

@@ -136,14 +136,13 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
 
     // --- RETURN STATUS ---
 
-    RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
-    CONFIRMED_RETURN: "Xác nhận hoàn trả",
-    PACKING_RETURN: "Đang đóng gói hoàn trả",
-    SHIPPING_RETURN: "Đang vận chuyển hoàn trả",
-    PENDING_DELIVERY_RETURN: "Chờ giao hàng hoàn trả",
-    DELIVERY_FAILED_RETURN: "Giao hàng hoàn trả thất bại",
-    CANCELLED_RETURN: "Đã hủy hoàn trả",
-
+    RETURN_REQUESTED: "Đang yêu cầu đổi trả",
+    CONFIRMED_RETURN: "Xác nhận đổi trả",
+    PACKING_RETURN: "Đang đóng gói đổi trả",
+    SHIPPING_RETURN: "Đang vận chuyển đổi trả",
+    PENDING_DELIVERY_RETURN: "Chờ giao hàng đổi trả",
+    DELIVERY_FAILED_RETURN: "Giao hàng đổi trả thất bại",
+    CANCELLED_RETURN: "Đã hủy đổi trả",
     EXCHANGED: "Đã đổi trả",
 
     // --- PAYMENT ---

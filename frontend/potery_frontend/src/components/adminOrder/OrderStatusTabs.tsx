@@ -27,13 +27,13 @@ const MAIN_TABS: { value: OrderStatus | ""; label: string }[] = [
 
 // --- 2. Trạng thái Nâng cao/Chi tiết (Gom vào Dropdown) ---
 const ADVANCED_STATUS_OPTIONS: { value: OrderStatus | ""; label: string }[] = [
-  { value: "RETURN_REQUESTED", label: "Đang yêu cầu hoàn trả" },
-  { value: "CONFIRMED_RETURN", label: "Đã xác nhận hoàn trả" },
-  { value: "PACKING_RETURN", label: "Đang đóng gói hoàn trả" },
-  { value: "SHIPPING_RETURN", label: "Đang vận chuyển hoàn trả" },
-  { value: "PENDING_DELIVERY_RETURN", label: "Chờ giao hàng hoàn trả" },
-  { value: "DELIVERY_FAILED_RETURN", label: "Giao hàng hoàn trả thất bại" },
-  { value: "CANCELLED_RETURN", label: "Đã hủy hoàn trả" },
+  { value: "RETURN_REQUESTED", label: "Đang yêu cầu đổi trả" },
+  { value: "CONFIRMED_RETURN", label: "Đã xác nhận đổi trả" },
+  { value: "PACKING_RETURN", label: "Đang đóng gói đổi trả" },
+  { value: "SHIPPING_RETURN", label: "Đang vận chuyển đổi trả" },
+  { value: "PENDING_DELIVERY_RETURN", label: "Chờ giao hàng đổi trả" },
+  { value: "DELIVERY_FAILED_RETURN", label: "Giao hàng đổi trả thất bại" },
+  { value: "CANCELLED_RETURN", label: "Đã hủy đổi trả" },
   
 ];
 
@@ -106,9 +106,9 @@ export default function OrderStatusTabs({
                 <span className="ml-1 text-xs text-gray-500">
                   ({orderCounts[tab.value] || 0})
                 </span>
-                {isActive && isMainTabSelected && (
-                  <span className="absolute left-0 bottom-0 w-full h-0.5 bg-orange-500" />
-                )}
+                {isActive && ( 
+                <span className="absolute left-0 bottom-0 w-full h-0.5 bg-orange-500" />
+            )}
               </button>
             );
           })}
@@ -130,9 +130,9 @@ export default function OrderStatusTabs({
                 <span className="ml-1 text-xs text-gray-500">
                   ({orderCounts[tab.value] || 0})
                 </span>
-                {isActive && isMainTabSelected && (
-                  <span className="absolute left-0 bottom-0 w-full h-0.5 bg-orange-500" />
-                )}
+                {isActive && ( 
+                <span className="absolute left-0 bottom-0 w-full h-0.5 bg-orange-500" />
+            )}
               </button>
             );
           })}
