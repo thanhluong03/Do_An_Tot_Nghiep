@@ -28,17 +28,19 @@ const statusTranslations: Record<OrderStatus, string> = {
     CONFIRMED: "Xác nhận đơn hàng",
     SHIPPING: "Đang giao",
     DELIVERED: "Đã giao thành công",
-    REJECTED: "Từ chối đơn hàng này",
     EXCHANGED: "Đã đổi trả",
     RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
     CANCELLED: "Hủy đơn hàng",
-    PENDING_RETURN: "Chờ hoàn trả",
+
     CONFIRMED_RETURN: "Xác nhận hoàn trả",
     PENDING_DELIVERY: "Chờ giao hàng",
     DELIVERY_FAILED: "Giao hàng thất bại",
     PACKING: "Đang đóng gói",
     SHIPPING_RETURN: "Đang vận chuyển hoàn trả",
     PENDING_DELIVERY_RETURN: "Chờ giao hàng hoàn trả",
+    DELIVERY_FAILED_RETURN: "Giao hàng hoàn trả thất bại",
+    CANCELLED_RETURN: "Đã hủy hoàn trả",
+    PACKING_RETURN: "Đang đóng gói hoàn trả",
 };
 
 // Danh sách CÁC TRẠNG THÁI MÀ ADMIN ĐƯỢC PHÉP SỬA qua modal này
@@ -48,8 +50,10 @@ const AdminAllowedStatuses: OrderStatus[] = [
     "PACKING",
     "PENDING_DELIVERY",
     "CONFIRMED_RETURN",
+    "PACKING_RETURN",
+    "PENDING_DELIVERY_RETURN",
+    "CANCELLED_RETURN",
     "EXCHANGED",
-    "REJECTED",
     "CANCELLED",
 ];
 
@@ -57,49 +61,89 @@ const translateOrderStatus = (status: OrderStatus): string => {
     return statusTranslations[status] || status;
 };
 
-// Hàm lọc trạng thái để ngăn chuyển ngược và giới hạn lựa chọn (Giữ nguyên)
 const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
     const allowed = AdminAllowedStatuses;
 
-    let available: OrderStatus[] = [currentStatus];
+    const available: OrderStatus[] = [currentStatus];
 
-    // 1. Luôn thêm trạng thái hủy nếu nó chưa phải là trạng thái cuối cùng
-    if (currentStatus !== "CANCELLED" && currentStatus !== "REJECTED" && currentStatus !== "DELIVERED" && currentStatus !== "EXCHANGED") {
-        available.push("CANCELLED");
+    // =============================================
+    // 1) Cho phép hủy nếu chưa kết thúc
+    // =============================================
+    const isFinal =
+        currentStatus === "CANCELLED" ||
+        currentStatus === "CANCELLED_RETURN" ||
+        currentStatus === "EXCHANGED" ||
+        currentStatus === "DELIVERED";
+
+    if (!isFinal) {
+        available.push(
+            currentStatus.includes("RETURN") ? "CANCELLED_RETURN" : "CANCELLED"
+        );
     }
 
-    // 2. Xử lý logic chuyển tiếp chính (ngăn chuyển ngược và giới hạn options)
-    if (currentStatus === "CREATED") {
-        available = [...available, "CONFIRMED", "CANCELLED"];
-    } else if (currentStatus === "CONFIRMED") {
-        available = [...available, "PACKING", "CANCELLED"];
-    } else if (currentStatus === "PACKING") {
-        available = [...available, "PENDING_DELIVERY", "CANCELLED"];
-    } else if (currentStatus === "PENDING_DELIVERY") {
-        available = [...available, "CANCELLED"];
-    } else if (currentStatus === "RETURN_REQUESTED") {
-        available = [...available, "CONFIRMED_RETURN", "CANCELLED"];
-    } else if (currentStatus === "CONFIRMED_RETURN") {
-        available = [...available, "EXCHANGED", "CANCELLED"];
-    } else if (currentStatus === "EXCHANGED" || currentStatus === "CANCELLED" || currentStatus === "DELIVERED") {
-        // Trạng thái cuối cùng, không thể thay đổi, chỉ giữ trạng thái hiện tại
-        return [currentStatus];
+    // =============================================
+    // 2) Luồng chính
+    // =============================================
+    switch (currentStatus) {
+        // ---------- NORMAL ORDER FLOW ----------
+        case "CREATED":
+            available.push("CONFIRMED");
+            break;
+
+        case "CONFIRMED":
+            available.push("PACKING");
+            break;
+
+        case "PACKING":
+            available.push("PENDING_DELIVERY");
+            break;
+
+        case "PENDING_DELIVERY":
+            // chỉ cho cancel
+            break;
+
+        // ---------- RETURN FLOW ----------
+        case "CONFIRMED_RETURN":
+            available.push("PACKING_RETURN");
+            break;
+
+        case "PACKING_RETURN":
+            available.push("PENDING_DELIVERY_RETURN");
+            break;
+
+        case "PENDING_DELIVERY_RETURN":
+            // chỉ cancel return
+            break;
+
+        // ---------- END STATES ----------
+        case "EXCHANGED":
+        case "CANCELLED":
+        case "CANCELLED_RETURN":
+        case "DELIVERED":
+            return [currentStatus];
     }
 
-    // 3. Lọc lại kết quả để chỉ bao gồm các trạng thái được phép và loại bỏ trùng lặp
-    let finalStatuses = Array.from(new Set(available))
-        .filter(s => allowed.includes(s));
+    // =============================================
+    // 3) Lọc bằng AdminAllowedStatuses
+    // =============================================
+    let finalStatuses = Array.from(new Set(available)).filter(s =>
+        allowed.includes(s)
+    );
 
-    // Đảm bảo trạng thái hiện tại luôn là option đầu tiên và có mặt
+    // =============================================
+    // 4) Đưa current lên đầu
+    // =============================================
     if (!finalStatuses.includes(currentStatus)) {
         finalStatuses.unshift(currentStatus);
     } else {
-        // Đặt currentStatus lên đầu danh sách
-        finalStatuses = finalStatuses.sort((a, b) => (a === currentStatus ? -1 : 1));
+        finalStatuses = finalStatuses.sort((a, b) =>
+            a === currentStatus ? -1 : 1
+        );
     }
 
     return finalStatuses;
 };
+
 
 // Hàm tiện ích để định dạng ngày giờ (Đã loại bỏ vì không dùng)
 // const getDateTimeLocalString = (dateInput?: string | null): string => {

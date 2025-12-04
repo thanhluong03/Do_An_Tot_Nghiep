@@ -14,78 +14,104 @@ interface OrderDetailModalProps {
 }
 const statusToVietnamese = (status: string) => {
   switch (status) {
-    case 'CREATED':
-      return 'Chờ xác nhận';
-    case 'CONFIRMED':
-      return 'Đã xác nhận';
-    case 'SHIPPING':
-      return 'Đang vận chuyển';
-    case 'DELIVERED':
-      return 'Đã giao thành công';
-    case 'RETURN_REQUESTED':
-      return 'Đang yêu cầu hoàn trả';
-    case 'EXCHANGED':
-      return 'Đã đổi trả';
-    case 'REJECTED':
-      return 'Đã từ chối';
-    case 'DELIVERY_FAILED':
-      return 'Giao hàng thất bại';
-    case 'PACKING':
-      return 'Đang đóng gói';
-    case 'PENDING_RETURN':
-      return 'Chờ hoàn trả';
-    case 'CONFIRMED_RETURN':
-      return 'Đã xác nhận hoàn trả';
-    case 'PENDING_DELIVERY':
-      return 'Chờ giao hàng';
-    case 'SHIPPING_RETURN':
-      return 'Đang vận chuyển hoàn trả';
-    case 'PENDING_DELIVERY_RETURN':
-      return 'Chờ giao hàng hoàn trả';
-    case 'CANCELLED':
-      return 'Đã hủy';
+    case "CREATED":
+      return "Chờ xác nhận";
+    case "CONFIRMED":
+      return "Xác nhận đơn hàng";
+    case "SHIPPING":
+      return "Đang giao";
+    case "DELIVERED":
+      return "Đã giao thành công";
+    case "EXCHANGED":
+      return "Đã đổi trả";
+    case "RETURN_REQUESTED":
+      return "Đang yêu cầu hoàn trả";
+    case "CANCELLED":
+      return "Hủy đơn hàng";
+    case "CONFIRMED_RETURN":
+      return "Xác nhận hoàn trả";
+    case "PENDING_DELIVERY":
+      return "Chờ giao hàng";
+    case "DELIVERY_FAILED":
+      return "Giao hàng thất bại";
+    case "PACKING":
+      return "Đang đóng gói";
+    case "SHIPPING_RETURN":
+      return "Đang vận chuyển hoàn trả";
+    case "PENDING_DELIVERY_RETURN":
+      return "Chờ giao hàng hoàn trả";
+    case "DELIVERY_FAILED_RETURN":
+      return "Giao hàng hoàn trả thất bại";
+    case "CANCELLED_RETURN":
+      return "Đã hủy hoàn trả";
+    case "PACKING_RETURN":
+      return "Đang đóng gói hoàn trả";
+
     default:
       return status;
   }
 };
 
-const getStatusColor = (status: string) => {
+
+const getStatusColor = (status: string) => { 
   switch (status?.toLowerCase()) {
-    case "created":
-      return "text-orange-700 bg-orange-100";
-    case "confirmed":
+    // --- NORMAL ORDER FLOW ---
+
+    case "created": // Chờ xác nhận
+      return "bg-orange-100 text-orange-700"; // Đã sửa để khớp với cái đầu
+
+    case "confirmed": // Xác nhận đơn hàng
       return "bg-indigo-100 text-indigo-700";
-    case "shipping":
+
+    case "packing": // Đang đóng gói
+      return "bg-cyan-100 text-cyan-700"; // Đã sửa để khớp với cái đầu
+
+    case "pending_delivery": // Chờ giao hàng
+      return "bg-blue-100 text-blue-700"; // Đã sửa để khớp với cái đầu
+
+    case "shipping": // Đang giao
       return "bg-yellow-100 text-yellow-700";
-    case "delivered":
+
+    case "delivered": // Đã giao thành công
       return "bg-green-100 text-green-700";
-    case "cancelled":
-      return "bg-gray-100 text-gray-700";
-    case "rejected":
-      return "bg-gray-200 text-gray-700";
-    case "exchanged":
-      return "bg-purple-100 text-purple-700";
-    case "return_requested":
+
+    case "delivery_failed": // Giao hàng thất bại
+      return "bg-red-200 text-red-800"; // Đã sửa để khớp với cái đầu
+
+    case "cancelled": // Hủy đơn hàng
+      return "bg-red-100 text-red-700"; // Đã sửa để khớp với cái đầu
+
+    // --- RETURN FLOW ---
+
+    case "return_requested": // Đang yêu cầu hoàn trả
       return "bg-pink-100 text-pink-700";
-    case "delivery_failed":
-      return "bg-red-100 text-red-700";
-    case "packing":
-      return "bg-blue-100 text-blue-700";
-    case "pending_return":
-      return "bg-teal-100 text-teal-700";
-    case "confirmed_return":
-      return "bg-cyan-100 text-cyan-700";
-    case "pending_delivery":
-      return "bg-yellow-200 text-yellow-800";
-    case "shipping_return":
-      return "bg-purple-200 text-purple-800";
-    case "pending_delivery_return":
-      return "bg-pink-200 text-pink-800";
-      
+
+    case "confirmed_return": // Xác nhận hoàn trả
+      return "bg-lime-100 text-lime-700"; // Đã sửa để khớp với cái đầu
+
+    case "packing_return": // Đang đóng gói hoàn trả
+      return "bg-cyan-200 text-cyan-800"; // Đã sửa để khớp với cái đầu
+
+    case "pending_delivery_return": // Chờ giao hàng hoàn trả
+      return "bg-teal-100 text-teal-700"; // Đã sửa để khớp với cái đầu
+
+    case "shipping_return": // Đang vận chuyển hoàn trả
+      return "bg-amber-100 text-amber-700"; // Đã sửa để khớp với cái đầu
+
+    case "delivery_failed_return": // Giao hàng hoàn trả thất bại
+      return "bg-red-200 text-red-800"; 
+
+    case "cancelled_return": // Đã hủy hoàn trả
+      return "bg-red-100 text-red-700"; // Đã sửa để khớp với cái đầu
+
+    case "exchanged": // Đã đổi trả
+      return "bg-purple-100 text-purple-700"; 
+
     default:
       return "bg-gray-100 text-gray-700";
   }
 };
+
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 

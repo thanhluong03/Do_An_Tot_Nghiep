@@ -48,75 +48,106 @@ const getTotalAmount = (order: Order): number => {
 };// Màu nền theo trạng thái
 const getStatusColor = (status: OrderStatus | PaymentStatus): string => {
   switch (status) {
-    // --- Order Statuses ---
+
+    // --- NORMAL ORDER FLOW ---
+
     case "CREATED":
-      return "text-orange-700 bg-orange-100"; // Chờ xác nhận
+      return "bg-orange-100 text-orange-700"; // Chờ xác nhận
+
     case "CONFIRMED":
-      return "bg-indigo-100 text-indigo-700"; // Đã xác nhận
+      return "bg-indigo-100 text-indigo-700"; // Xác nhận đơn hàng
+
     case "PACKING":
-      return "bg-cyan-100 text-cyan-700"; // Đang đóng gói (New - Light Blue/Cyan)
+      return "bg-cyan-100 text-cyan-700"; // Đang đóng gói
+
     case "PENDING_DELIVERY":
-      return "bg-blue-100 text-blue-700"; // Chờ giao hàng (New - Blue)
+      return "bg-blue-100 text-blue-700"; // Chờ giao hàng
+
     case "SHIPPING":
       return "bg-yellow-100 text-yellow-700"; // Đang giao
+
     case "DELIVERED":
       return "bg-green-100 text-green-700"; // Đã giao thành công
+
     case "DELIVERY_FAILED":
-      return "bg-red-200 text-red-800"; // Giao hàng thất bại (New - Darker Red for failure)
+      return "bg-red-200 text-red-800"; // Giao hàng thất bại
 
     case "CANCELLED":
-      return "bg-red-100 text-red-700"; // Đã hủy
-    case "REJECTED":
-      return "bg-gray-200 text-gray-700"; // Bị từ chối
+      return "bg-red-100 text-red-700"; // Hủy đơn hàng
 
-    // --- Return/Exchange Statuses ---
+    // --- RETURN FLOW ---
+
     case "RETURN_REQUESTED":
       return "bg-pink-100 text-pink-700"; // Đang yêu cầu hoàn trả
-    case "PENDING_RETURN":
-      return "bg-fuchsia-100 text-fuchsia-700"; // Chờ hoàn trả (New - Fuchsia)
+
     case "CONFIRMED_RETURN":
-      return "bg-lime-100 text-lime-700"; // Đã xác nhận hoàn trả (New - Lime Green)
-    case "SHIPPING_RETURN":
-      return "bg-amber-100 text-amber-700"; // Đang vận chuyển hoàn trả (New - Amber)
+      return "bg-lime-100 text-lime-700"; // Xác nhận hoàn trả
+
+    case "PACKING_RETURN":
+      return "bg-cyan-200 text-cyan-800"; // Đang đóng gói hoàn trả
+
     case "PENDING_DELIVERY_RETURN":
-      return "bg-teal-100 text-teal-700"; // Chờ giao hàng hoàn trả (New - Teal)
+      return "bg-teal-100 text-teal-700"; // Chờ giao hàng hoàn trả
+
+    case "SHIPPING_RETURN":
+      return "bg-amber-100 text-amber-700"; // Đang vận chuyển hoàn trả
+
+    case "DELIVERY_FAILED_RETURN":
+      return "bg-red-200 text-red-800"; // Giao hàng hoàn trả thất bại
+
+    case "CANCELLED_RETURN":
+      return "bg-red-100 text-red-700"; // Đã hủy hoàn trả
+
     case "EXCHANGED":
       return "bg-purple-100 text-purple-700"; // Đã đổi trả
 
-    // --- Payment Statuses (Existing) ---
+    // --- PAYMENT STATUS ---
+
     case "UNPAID":
       return "bg-red-100 text-red-700";
+
     case "PAID":
       return "bg-green-100 text-green-700";
-    case "REFUNDED":
-      return "bg-purple-100 text-purple-700"; // (Can be the same as EXCHANGED if needed)
 
+    case "REFUNDED":
+      return "bg-purple-100 text-purple-700";
+
+    // --- DEFAULT ---
     default:
       return "bg-gray-100 text-gray-700";
   }
 };
+
+
 // ⚙️ Hàm dịch trạng thái sang tiếng Việt
 const translateStatus = (status: OrderStatus | PaymentStatus): string => {
   const translations: Record<string, string> = {
-    // Trạng thái đơn hàng
+
+    // --- NORMAL ORDER STATUS ---
+
     CREATED: "Chờ xác nhận",
-    CONFIRMED: "Đã xác nhận",
-    SHIPPING: "Đang vận chuyển",
-    DELIVERED: "Đã giao thành công",
-    REJECTED: "Bị từ chối",
-    EXCHANGED: "Đã đổi trả",
-    RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
-    PENDING_RETURN: "Chờ hoàn trả",
-    CONFIRMED_RETURN: "Đã xác nhận hoàn trả",
-    PENDING_DELIVERY: "Chờ giao hàng",
-    DELIVERY_FAILED: "Giao hàng thất bại",
+    CONFIRMED: "Xác nhận đơn hàng",
     PACKING: "Đang đóng gói",
+    PENDING_DELIVERY: "Chờ giao hàng",
+    SHIPPING: "Đang giao",
+    DELIVERED: "Đã giao thành công",
+    DELIVERY_FAILED: "Giao hàng thất bại",
+    CANCELLED: "Hủy đơn hàng",
+
+    // --- RETURN STATUS ---
+
+    RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
+    CONFIRMED_RETURN: "Xác nhận hoàn trả",
+    PACKING_RETURN: "Đang đóng gói hoàn trả",
     SHIPPING_RETURN: "Đang vận chuyển hoàn trả",
     PENDING_DELIVERY_RETURN: "Chờ giao hàng hoàn trả",
-    CANCELLED: "Đã hủy",
+    DELIVERY_FAILED_RETURN: "Giao hàng hoàn trả thất bại",
+    CANCELLED_RETURN: "Đã hủy hoàn trả",
 
+    EXCHANGED: "Đã đổi trả",
 
-    // Trạng thái thanh toán
+    // --- PAYMENT ---
+
     UNPAID: "Chưa thanh toán",
     PAID: "Đã thanh toán",
     REFUNDED: "Đã hoàn tiền",
@@ -124,6 +155,7 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
 
   return translations[status] || status;
 };
+
 
 export default function OrderTable({
   orders,
@@ -240,7 +272,7 @@ export default function OrderTable({
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                {order.status !== "CANCELLED" && order.status !== "REJECTED" && (
+                {order.status !== "CANCELLED" && (
                   <button
                     title="Chỉnh sửa trạng thái"
                     onClick={() => onEditStatus(order)}
