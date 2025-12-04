@@ -88,6 +88,24 @@ body {
     transform: translateY(10px);
   }
 }
+/* FIX: ép Leaflet nằm dưới modal và không vượt ra container */
+.leaflet-container {
+  position: relative !important;
+  z-index: 0 !important;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 0 !important;
+}
+
+.leaflet-marker-pane,
+.leaflet-shadow-pane,
+.leaflet-overlay-pane,
+.leaflet-popup-pane {
+  z-index: 1 !important; /* Vẫn hiển thị marker, popup nhưng không vượt modal */
+}
 
 .animate-blob {
   animation: blob 7s infinite;

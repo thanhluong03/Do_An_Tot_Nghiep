@@ -59,50 +59,37 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
   const [proofSaved, setProofSaved] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
-
+  
   const handleCancelOrder = () => {
-    if (!proofSaved) {
-      toast.error('Vui lòng lưu minh chứng trước khi báo cáo thất bại.');
-      return;
-    }
-    setIsCancelModalOpen(true);
-  };
+  setIsCancelModalOpen(true);
+};
 
-  const handleCancelSubmit = async (reason: string, images: File[]) => {
-    if (!driverId) {
-      toast.error('Thiếu thông tin tài xế.');
-      return;
-    }
+const handleCancelSubmit = async (reason: string, images: File[]) => {
+  setCancelLoading(true);
+  try {
+    await orderApi.updateOrder(
+      Number(orderId),
+      {
+        status: 'DELIVERY_FAILED',
+        payment_status: 'PAID',
+        payment_method: 'ONSITE',
+        user_id: Number(driverId),
+        cancel_reason: reason,
+        person_cancel: 'DRIVER',
+      },
+      images,
+      'cancel_reason_images'
+    );
 
-    setCancelLoading(true);
-
-    try {
-      await orderApi.updateOrder(
-        Number(orderId),
-        {
-          status: 'DELIVERY_FAILED',
-          payment_status: 'PAID',
-          payment_method: 'ONSITE',
-          user_id: Number(driverId),
-          cancel_reason: reason,
-          actorType: 'DRIVER',
-        },
-        images,
-        'cancel_reason_images'
-      );
-      toast.success('Đã cập nhật trạng thái giao hàng thất bại!');
-      router.back();
-    } catch (err: any) {
-      console.error(err);
-      const msg = err?.response?.data?.message || 'Cập nhật thất bại!';
-      toast.error(msg);
-    } finally {
-      setCancelLoading(false);
-      setIsCancelModalOpen(false);
-    }
-  };
-
-
+    toast.success('Đã cập nhật trạng thái giao hàng thất bại!');
+    router.back();
+  } catch (err) {
+    toast.error('Cập nhật thất bại!');
+  } finally {
+    setCancelLoading(false);
+    setIsCancelModalOpen(false);
+  }
+};
   // Read driver id from admin login context (stored in localStorage)
   const driverId = typeof window !== 'undefined'
     ? Number(localStorage.getItem('adminID') || 0)
@@ -294,17 +281,19 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
         {/* Map */}
         {(driverLat && driverLon && trackingData.customer_coordinates) && (
           <div className="bg-white rounded-xl border shadow-sm p-4">
-            <TrackingMap
-              driverLat={driverLat}
-              driverLon={driverLon}
-              customerLat={trackingData.customer_coordinates.latitude}
-              customerLon={trackingData.customer_coordinates.longitude}
-              routeCoordinates={routeData}
-              driverName="Vị trí của bạn"
-              customerName="Điểm giao hàng"
-              orderStatus={trackingData.order_status}
-              height="500px"
-            />
+            <div className="w-full h-[500px] overflow-hidden rounded-lg relative">
+              <TrackingMap
+                driverLat={driverLat}
+                driverLon={driverLon}
+                customerLat={trackingData.customer_coordinates.latitude}
+                customerLon={trackingData.customer_coordinates.longitude}
+                routeCoordinates={routeData}
+                driverName="Vị trí của bạn"
+                customerName="Điểm giao hàng"
+                orderStatus={trackingData.order_status}
+                height="100%"
+              />
+            </div>
           </div>
         )}
         {/* Proof and complete actions */}
@@ -385,7 +374,7 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
             </button>
             <button
               onClick={handleCancelOrder}
-              disabled={isSaving || !proofSaved}
+              disabled={isSaving}
               className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
             >
               Giao thất bại
