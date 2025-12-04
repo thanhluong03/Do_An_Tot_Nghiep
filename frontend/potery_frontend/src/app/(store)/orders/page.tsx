@@ -31,7 +31,7 @@ const translateStatus = (status: string | undefined): string => {
       return 'Đang vận chuyển';
     case 'DELIVERED':
       return 'Đã giao thành công';
-    case 'DELIVERED_FAILED':
+    case 'DELIVERY_FAILED':
       return 'Đã giao thất bại';
     case 'CANCELLED':
       return 'Đã hủy';

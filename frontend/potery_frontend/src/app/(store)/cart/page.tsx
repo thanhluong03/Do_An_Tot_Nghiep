@@ -781,10 +781,7 @@ export default function CartPage() {
                           <span>Tạm tính ({Object.values(selectedItems).filter(Boolean).length} sản phẩm):</span>
                           <span>{formatPrice(subTotalOnly)}</span>
                         </div>
-                        <div className={`flex justify-between text-base ${DARK_TEXT}`}>
-                          <span>Phí vận chuyển:</span>
-                          <span>{formatPrice(30000)}</span>
-                        </div>
+                        
                       </div>
 
                       {/* Tổng cộng */}
