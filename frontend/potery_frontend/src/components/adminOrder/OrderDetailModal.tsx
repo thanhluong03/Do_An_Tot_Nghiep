@@ -25,11 +25,11 @@ const statusToVietnamese = (status: string) => {
     case "EXCHANGED":
       return "Đã đổi trả";
     case "RETURN_REQUESTED":
-      return "Đang yêu cầu hoàn trả";
+      return "Đang yêu cầu đổi trả";
     case "CANCELLED":
       return "Hủy đơn hàng";
     case "CONFIRMED_RETURN":
-      return "Xác nhận hoàn trả";
+      return "Xác nhận đổi trả";
     case "PENDING_DELIVERY":
       return "Chờ giao hàng";
     case "DELIVERY_FAILED":
