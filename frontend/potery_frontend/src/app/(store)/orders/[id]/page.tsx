@@ -35,6 +35,8 @@ const translateStatus = (status: string | undefined): string => {
       return 'Đang yêu cầu hoàn trả';
     case 'EXCHANGED':
       return 'Đã đổi trả';
+    case 'CANCELLED_RETURN':
+      return 'Đã hủy hoàn trả';
     default:
       return status;
   }
@@ -277,6 +279,8 @@ function OrderDetailClient({ id }: { id: string }) {
         return "bg-purple-100 text-purple-700";
       case "return_requested":
         return "bg-pink-100 text-pink-700";
+      case "cancelled_return":
+        return "bg-red-100 text-red-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -618,6 +622,7 @@ function OrderDetailClient({ id }: { id: string }) {
                     {translateStatus(order.status)}
                   </div>
                 </div>
+                
                 <div className="text-[15px]">Trạng thái: <span className="font-bold text-gray-900">{translatePaymentStatus(order.payment_status)}</span></div>
                 <div className="text-gray-500 text-[14px] font-medium">
                   Ngày đặt: {new Date(order.order_date).toLocaleString('vi-VN')}
@@ -698,7 +703,26 @@ function OrderDetailClient({ id }: { id: string }) {
                   </div>
                 )}
               </div>
-
+              {['CANCELLED', 'CANCELLED_RETURN'].includes(order.status) && order.cancel_reason && (
+                  
+                    <p className="text-sm font-semibold text-gray-500">
+                      Lý do hủy: <span className="font-normal text-gray-500">{order.cancel_reason}</span>
+                    </p>
+                
+                )}
+                {['DELIVERY_FAILED'].includes(order.status) && order.delivery_fail_reason && (
+                  
+                    <p className="text-sm font-semibold text-gray-500">
+                      Lý do giao thất bại: <span className="font-normal text-gray-500">{order.delivery_fail_reason}</span>
+                    </p>
+                )}
+                {['DELIVERY_FAILED_RETURN'].includes(order.status) && order.delivery_fail_return_reason && (
+                  
+                    <p className="text-sm font-semibold text-gray-500">
+                      Lý do giao thất bại: <span className="font-normal text-gray-500">{order.delivery_fail_return_reason}</span>
+                    </p>
+                
+                )}
               {/* payment */}
               <div>
                 <h2 className="text-[16px] font-bold text-[#A38D64] mb-2">Thanh toán</h2>
