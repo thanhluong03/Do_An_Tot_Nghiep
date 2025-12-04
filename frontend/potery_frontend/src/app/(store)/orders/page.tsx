@@ -23,16 +23,34 @@ const translateStatus = (status: string | undefined): string => {
       return 'Chờ xác nhận';
     case 'CONFIRMED':
       return 'Đã xác nhận';
+    case 'PACKING':
+      return 'Đang đóng gói';
+    case 'PENDING_DELIVERY':
+      return 'Chờ vận chuyển';
     case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
       return 'Đã giao thành công';
-    case 'RETURN_REQUESTED':
-      return 'Đang yêu cầu hoàn trả';
-    case 'EXCHANGED':
-      return 'Đã đổi trả';
+    case 'DELIVERED_FAILED':
+      return 'Đã giao thất bại';
     case 'CANCELLED':
       return 'Đã hủy';
+    case 'RETURN_REQUESTED':
+      return 'Đang yêu cầu đổi trả';
+    case 'CONFIRMED_RETURN':
+      return 'Đã xác nhận đổi trả';
+    case 'PACKING_RETURN':
+      return 'Đang đóng gói đổi trả';
+    case 'PENDING_DELIVERY_RETURN':
+      return 'Chờ giao hàng đổi trả';
+    case 'SHIPPING_RETURN':
+      return 'Đang giao hàng đổi trả';
+    case 'EXCHANGED':
+      return 'Đã đổi trả';
+    case 'DELIVERY_FAILED_RETURN':
+      return 'Đã giao đổi trả thất bại';
+    case 'CANCELLED_RETURN':
+      return 'Không chấp nhận đổi trả';
     default:
       return status;
   }
@@ -117,7 +135,7 @@ export default function MyOrdersPage() {
         {
           status: 'CANCELLED',
           cancel_reason: reason,
-          actorType: 'CUSTOMER',
+          person_cancel: 'CUSTOMER',
         },
         images,
         'cancel_reason_images'

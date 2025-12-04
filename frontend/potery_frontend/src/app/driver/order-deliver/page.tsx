@@ -134,7 +134,8 @@ function OrderDeliverContent() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getOrdersForDriver(Number(driverId), (activeTab === 'DELIVERED') ? undefined : { status: activeTab as DriverStatus });
+      const data = await getOrdersForDriver(Number(driverId), 
+      (activeTab === 'DELIVERED') ? undefined : { status: activeTab as DriverStatus });
       setAssignments(data);
     } catch (err) {
       setError("Không thể tải danh sách đơn hàng. Vui lòng thử lại.");
@@ -324,7 +325,12 @@ function OrderDeliverContent() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {(activeTab === 'DELIVERED'
               ? assignments.filter(a => a.order?.status === 'DELIVERED')
-              : assignments.filter(a => a.order?.status !== 'DELIVERED')
+                : activeTab === DriverStatus.ACCEPTED
+                ? assignments.filter(a =>
+                    a.order?.status === 'SHIPPING' ||
+                    a.order?.status === 'SHIPPING_RETURN'
+                  )
+                : assignments // WAITING_ACCEPT tab vẫn giống cũ
             ).map((assignment) => (
               <OrderCard
                 key={assignment.id}

@@ -234,17 +234,18 @@ function DriverTrackingContent({ orderId }: { orderId: string }) {
         {/* Map */}
         {trackingData.driver_location && trackingData.customer_coordinates && (
           <div className="bg-white rounded-xl border shadow-sm p-4">
-            <TrackingMap
-              driverLat={trackingData.driver_location.latitude}
-              driverLon={trackingData.driver_location.longitude}
-              customerLat={trackingData.customer_coordinates.latitude}
-              customerLon={trackingData.customer_coordinates.longitude}
-              routeCoordinates={routeData}
-              driverName="Vị trí của bạn"
-              customerName="Điểm giao hàng"
-              orderStatus={trackingData.order_status}
-              height="500px"
-            />
+            <div className="relative w-full" style={{ height: "500px" }}>
+              <TrackingMap
+                driverLat={trackingData.driver_location.latitude}
+                driverLon={trackingData.driver_location.longitude}
+                customerLat={trackingData.customer_coordinates.latitude}
+                customerLon={trackingData.customer_coordinates.longitude}
+                routeCoordinates={routeData}
+                driverName="Vị trí của bạn"
+                customerName="Điểm giao hàng"
+                orderStatus={trackingData.order_status}
+              />
+            </div>
           </div>
         )}
       </div>
