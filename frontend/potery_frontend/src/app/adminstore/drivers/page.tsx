@@ -17,19 +17,19 @@ interface DriverStats {
     totalCompleted: number;
 }
 const formatDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        // Sử dụng toLocaleString() để hiển thị chi tiết ngày và giờ
-        // 'vi-VN' là ngôn ngữ Việt Nam, options để hiển thị đầy đủ ngày/giờ/phút
-        return date.toLocaleString('vi-VN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false // Dùng định dạng 24 giờ
-        });
-    };
+    const date = new Date(dateString);
+    // Sử dụng toLocaleString() để hiển thị chi tiết ngày và giờ
+    // 'vi-VN' là ngôn ngữ Việt Nam, options để hiển thị đầy đủ ngày/giờ/phút
+    return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false // Dùng định dạng 24 giờ
+    });
+};
 // --- Hiển thị Badge Trạng thái ---
 export const DriverStatusBadge = ({ status }: { status?: string }) => {
     if (!status) status = "UNKNOWN";
@@ -96,6 +96,16 @@ export const OrderStatusBadge = ({ status }: { status?: string }) => {
             color = "bg-red-100 text-red-800";
             break;
 
+        case "PENDING_DELIVERY_RETURN":
+            text = "Chờ giao hàng đổi trả";
+            color = "bg-purple-100 text-purple-800";
+            break;
+
+        case "PENDING_DELIVERY":
+            text = "Chờ giao hàng";
+            color = "bg-orange-100 text-orange-800";
+            break;
+
         default:
             text = "Không rõ";
             color = "bg-gray-200 text-gray-800";
@@ -113,14 +123,15 @@ export default function DriverOrdersPage() {
     const [orders, setOrders] = useState<DriverLocation[]>([]);
     const [loadingDrivers, setLoadingDrivers] = useState(true);
     const [loadingOrders, setLoadingOrders] = useState(false);
-    const [adminStoreId, setAdminStoreId] = useState<number | undefined>(undefined); // Thêm state này
-    // Filters
+    const [adminStoreId, setAdminStoreId] = useState<number | undefined>(undefined);
     const [filterStatus, setFilterStatus] = useState<string>("ALL");
     const [searchName, setSearchName] = useState("");
     const [dateFilter, setDateFilter] = useState("");
-
     const [fullOrderDetails, setFullOrderDetails] = useState<Order | null>(null);
     const [loadingModal, setLoadingModal] = useState(false);
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
     const getAdminStoreId = async () => {
         const adminId = Number(localStorage.getItem("adminID"));
         if (!adminId) return undefined;
@@ -232,24 +243,22 @@ export default function DriverOrdersPage() {
 
     // --- Lọc Đơn hàng ---
     const filteredOrders = orders.filter(o => {
-        // Lọc theo trạng thái Driver Status
         if (filterStatus !== "ALL") {
-            // Lọc theo Đã giao: Lấy từ order status (COMPLETED)
             if (filterStatus === "DELIVERED") {
                 if (o.order?.status !== "DELIVERED") return false;
             } else {
-                // Lọc theo ACCEPTED/WAITING_ACCEPT (từ driver_status)
                 if (o.driver_status !== filterStatus) return false;
             }
         }
-
-        // Lọc theo Ngày tạo
         if (dateFilter) {
             const day = o.created_at.split("T")[0];
             if (day !== dateFilter) return false;
         }
         return true;
     });
+    // Phân trang
+    const totalPages = Math.ceil(filteredOrders.length / pageSize);
+    const paginatedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
 
     const currentDriverStats = driverStats.find(s => s.driver.id === selectedDriver);
     const handleShowDetails = async (orderLocation: DriverLocation) => {
@@ -289,7 +298,7 @@ export default function DriverOrdersPage() {
 
     return (
         <div className="p-6 bg-white min-h-screen">
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b border-gray-200 pb-2 text-center">Quản Lý Tài Xế Đơn Giao Hàng</h1>
+            <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b border-gray-200 pb-2 text-center">Quản lý tài xế giao hàng</h1>
 
             {/* --- 1. Filter Section --- */}
             <div className="bg-white p-4 rounded-xl shadow-md flex gap-4 mb-8 items-center">
@@ -301,7 +310,7 @@ export default function DriverOrdersPage() {
                     value={searchName}
                 />
 
-                <h3 className="text-gray-500 font-medium ml-4">Lọc Đơn Hàng Chi Tiết:</h3>
+                <h3 className="text-gray-500 font-medium ml-4">Lọc đơn hàng:</h3>
 
                 <select
                     title="status"
@@ -309,9 +318,8 @@ export default function DriverOrdersPage() {
                     onChange={(e) => setFilterStatus(e.target.value)}
                 >
                     <option value="ALL">Tất cả trạng thái</option>
-                    <option value={DriverStatus.ACCEPTED}>Đang giao</option>
-                    <option value={DriverStatus.WAITING_ACCEPT}>Chờ nhận</option>
-                    <option value="COMPLETED">Đã giao</option>
+                    <option value={DriverStatus.ACCEPTED}>Đang giao hàng</option>
+                    <option value={DriverStatus.WAITING_ACCEPT}>Chờ tài xế nhận</option>
                 </select>
 
                 <input
@@ -327,14 +335,14 @@ export default function DriverOrdersPage() {
 
                 {/* A. Driver List (Side Table) */}
                 <div className="md:col-span-4 bg-white p-4 rounded-xl shadow-lg h-fit">
-                    <h2 className="text-xl font-bold mb-4 text-gray-700">Danh Sách Tài Xế</h2>
+                    <h2 className="text-xl font-bold mb-4 text-gray-700">Danh sách tài xế</h2>
                     {loadingDrivers ? (
                         <div className="text-center py-4 text-gray-500">Đang tải tài xế...</div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="table w-full">
                                 <thead>
-                                    <tr className="bg-gray-50 text-xs text-gray-600 text-left uppercase tracking-wider">
+                                    <tr className="bg-gray-50 text-sm text-gray-600 text-left tracking-wider">
                                         <th className="py-3 px-2">STT</th>
                                         <th className="py-3 px-2">Tên Tài Xế</th>
                                         {/* <th className="py-3 px-2">ĐH Đã Gán</th> */}
@@ -408,55 +416,78 @@ export default function DriverOrdersPage() {
                                     <div className="overflow-x-auto">
                                         <table className="table w-full">
                                             <thead>
-                                                <tr className="text-left text-xs text-gray-600 uppercase tracking-wider bg-gray-50">
-                                                    <th className="py-3 px-4">Mã đơn</th>
-                                                    <th className="py-3 px-4">Trạng thái Giao</th>
-                                                    <th className="py-3 px-4">Trạng thái ĐH</th>
-                                                    <th className="py-3 px-4">Ngày Gán</th>
-                                                    {/* <th className="py-3 px-4">Thao tác</th> */}
+                                                <tr className="text-sm text-gray-600 tracking-wider bg-gray-50">
+                                                    <th className="py-3 px-4 text-center">STT</th>
+                                                    <th className="py-3 px-4 text-center">Mã đơn</th>
+                                                    <th className="py-3 px-4 text-center">Trạng thái giao hàng</th>
+                                                    <th className="py-3 px-4 text-center">Trạng thái đơn hàng</th>
+                                                    <th className="py-3 px-4 text-center">Ngày Gán</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filteredOrders.map(o => (
+                                                {paginatedOrders.map((o, idx) => (
                                                     <tr key={o.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                                                        <td className="py-3 px-4 text-sm font-medium text-gray-800">#{o.order_id}</td>
-                                                        <td>
+                                                        <td className="py-3 px-4 text-center text-sm">{(page - 1) * pageSize + idx + 1}</td>
+                                                        <td className="py-3 px-4 text-center text-sm text-gray-800">#{o.order_id}</td>
+                                                        <td className="py-3 px-4 text-center">
                                                             <DriverStatusBadge status={o.driver_status} />
-
                                                         </td>
-                                                        <td className="py-3 px-4">
+                                                        <td className="py-3 px-4 text-center">
                                                             <OrderStatusBadge status={o.order?.status} />
                                                         </td>
-                                                        <td className="py-3 px-4 text-sm text-gray-500">
+                                                        <td className="py-3 px-4 text-center text-sm text-gray-500">
                                                             {formatDateTime(o.created_at)}
                                                         </td>
-                                                        {/* <td className="py-3 px-4 text-sm">
-                                                            <button
-                                                                onClick={() => handleShowDetails(o)}
-                                                                className="text-blue-500 hover:text-blue-700 font-medium transition duration-150"
-                                                                disabled={!o.order || loadingModal}
-                                                            >
-                                                            
-                                                                {loadingModal && fullOrderDetails === null ? "Đang tải..." : (o.order ? "Chi tiết" : "Không có data")}
-                                                            </button>
-                                                        </td> */}
                                                     </tr>
                                                 ))}
-                                                {filteredOrders.length === 0 && (
+                                                {paginatedOrders.length === 0 && (
                                                     <tr>
-                                                        <td colSpan={5} className="text-center py-4 text-gray-500">
+                                                        <td colSpan={6} className="text-center py-4 text-gray-500">
                                                             Không có đơn hàng nào phù hợp.
                                                         </td>
                                                     </tr>
                                                 )}
                                             </tbody>
                                         </table>
+                                        {/* Pagination Controls - styled with arrow icons */}
+                                        <div className="flex justify-center items-center mt-4 gap-2">
+                                            <button
+                                                className={`w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center ${page === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}`}
+                                                onClick={() => setPage(page - 1)}
+                                                disabled={page === 1}
+                                                aria-label="Trang trước"
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M15 6L9 12L15 18" stroke="#A3A3A3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </button>
+                                            {/* Page numbers */}
+                                            {Array.from({ length: totalPages }, (_, i) => (
+                                                <button
+                                                    key={i + 1}
+                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-base font-semibold transition-all duration-150 ${page === i + 1 ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                                    onClick={() => setPage(i + 1)}
+                                                >
+                                                    {i + 1}
+                                                </button>
+                                            ))}
+                                            <button
+                                                className={`w-9 h-9 rounded-xl bg-gray-200 flex items-center justify-center ${page === totalPages || totalPages === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}`}
+                                                onClick={() => setPage(page + 1)}
+                                                disabled={page === totalPages || totalPages === 0}
+                                                aria-label="Trang sau"
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M9 6L15 12L9 18" stroke="#A3A3A3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                                 {fullOrderDetails && (
                                     <OrderDetailModal
-                                        order={fullOrderDetails} // TRUYỀN DỮ LIỆU ĐẦY ĐỦ
-                                        onClose={handleCloseModal} // Sử dụng hàm đóng mới
+                                        order={fullOrderDetails}
+                                        onClose={handleCloseModal}
                                     />
                                 )}
                             </div>

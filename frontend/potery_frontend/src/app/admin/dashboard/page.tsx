@@ -379,16 +379,37 @@ const DashboardPage = () => {
                     'CANCELLED': 'Đã hủy',
                     'REJECTED': 'Bị từ chối',
                     'EXCHANGED': 'Đã đổi trả',
-                    'RETURN_REQUESTED': 'Đang yêu cầu hoàn trả'
+                    'RETURN_REQUESTED': 'Đang yêu cầu hoàn trả',
+                    'PACKING': 'Đang đóng gói',
+                    'PENDING_DELIVERY': 'Chờ vận chuyển',
+                    'DELIVERY_FAILED': 'Giao hàng thất bại',
+                    'CONFIRMED_RETURN': 'Đã xác nhận đổi trả',
+                    'PACKING_RETURN': 'Đang đóng gói đổi trả',
+                    'PENDING_DELIVERY_RETURN': 'Chờ giao hàng đổi trả',
+                    'SHIPPING_RETURN': 'Đang giao hàng đổi trả',
+                    'DELIVERY_FAILED_RETURN': 'Đã giao đổi trả thất bại',
+                    'CANCELLED_RETURN': 'Không chấp nhận đổi trả',
                   }[status] || status;
 
-                  const isPositive = !['CANCELLED', 'REJECTED'].includes(status);
+                  const isPositive = !['CANCELLED', 'REJECTED', 'CANCELLED_RETURN'].includes(status);
+                  const isDeliveryFailed = ['DELIVERY_FAILED', 'DELIVERY_FAILED_RETURN'].includes(status);
+
+                  let cardClass, textClass;
+                  if (isDeliveryFailed) {
+                    cardClass = 'bg-orange-50 border-orange-200';
+                    textClass = 'text-orange-700';
+                  } else if (isPositive) {
+                    cardClass = 'bg-green-50 border-green-200';
+                    textClass = 'text-green-700';
+                  } else {
+                    cardClass = 'bg-red-50 border-red-200';
+                    textClass = 'text-red-700';
+                  }
+
                   return (
-                    <div key={status} className={`p-2 rounded-lg border ${isPositive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                      }`}>
+                    <div key={status} className={`p-2 rounded-lg border ${cardClass}`}>
                       <div className="text-xs text-gray-600">{statusLabel}</div>
-                      <div className={`font-semibold ${isPositive ? 'text-green-700' : 'text-red-700'
-                        }`}>
+                      <div className={`font-semibold ${textClass}`}>
                         {amount.toLocaleString()} ₫
                       </div>
                     </div>
@@ -408,7 +429,6 @@ const DashboardPage = () => {
       <div className="bg-white rounded-2xl shadow p-3 mb-6">
         <div className="flex justify-between items-center mb-2">
           <div className="font-semibold text-lg ml-4">Sản phẩm bán chạy</div>
-          <div className="text-xs text-gray-400">Top 10</div>
         </div>
         <BestSellerChart data={bestSellerData} />
       </div>
