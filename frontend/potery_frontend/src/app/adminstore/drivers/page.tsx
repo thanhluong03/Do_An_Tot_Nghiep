@@ -8,6 +8,7 @@ import { Truck, Package, CheckCircle, Clock } from 'lucide-react';
 import { getOrderDetail, Order } from "@/api/services/orderService";
 //import { OrderDetailModal } from "@/components/adminOrders/OrderDetailModal";
 import OrderDetailModal from "@/components/adminStore/OrderDetailModal";
+import { getUserDetail } from "@/api/services/userService";
 // --- Interface mở rộng cho việc thống kê ---
 interface DriverStats {
     driver: User;
@@ -15,7 +16,20 @@ interface DriverStats {
     totalDelivering: number;
     totalCompleted: number;
 }
-
+const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        // Sử dụng toLocaleString() để hiển thị chi tiết ngày và giờ
+        // 'vi-VN' là ngôn ngữ Việt Nam, options để hiển thị đầy đủ ngày/giờ/phút
+        return date.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false // Dùng định dạng 24 giờ
+        });
+    };
 // --- Hiển thị Badge Trạng thái ---
 export const DriverStatusBadge = ({ status }: { status?: string }) => {
     if (!status) status = "UNKNOWN";
@@ -99,7 +113,7 @@ export default function DriverOrdersPage() {
     const [orders, setOrders] = useState<DriverLocation[]>([]);
     const [loadingDrivers, setLoadingDrivers] = useState(true);
     const [loadingOrders, setLoadingOrders] = useState(false);
-
+    const [adminStoreId, setAdminStoreId] = useState<number | undefined>(undefined); // Thêm state này
     // Filters
     const [filterStatus, setFilterStatus] = useState<string>("ALL");
     const [searchName, setSearchName] = useState("");
@@ -107,15 +121,31 @@ export default function DriverOrdersPage() {
 
     const [fullOrderDetails, setFullOrderDetails] = useState<Order | null>(null);
     const [loadingModal, setLoadingModal] = useState(false);
+    const getAdminStoreId = async () => {
+        const adminId = Number(localStorage.getItem("adminID"));
+        if (!adminId) return undefined;
+        try {
+            const user = await getUserDetail(adminId);
+            return user.store_id ?? undefined;
+        } catch (err) {
+            console.error("Lỗi lấy thông tin admin:", err);
+            return undefined;
+        }
+    };
     // --- Load Drivers ---
     useEffect(() => {
-        const loadDrivers = async () => {
+        const loadContextAndDrivers = async () => {
             setLoadingDrivers(true);
+            const sId = await getAdminStoreId();
+            setAdminStoreId(sId); // Lưu Store ID của Admin
+
+            // 🛑 LẤY TẤT CẢ DRIVERS (Vì giả định không có API lọc)
+            // Cần cập nhật lại getAvailableDrivers để nó không nhận tham số lọc
             const res = await getAvailableDrivers();
-            setDrivers(res);
+            setDrivers(res); // Lưu trữ danh sách TẤT CẢ DRIVERS
             setLoadingDrivers(false);
         };
-        loadDrivers();
+        loadContextAndDrivers();
     }, []);
 
     // --- Load Orders for Selected Driver ---
@@ -175,10 +205,30 @@ export default function DriverOrdersPage() {
 
 
     // --- Lọc Tài xế ---
-    const filteredDrivers = drivers.filter(d =>
-        d.full_name?.toLowerCase().includes(searchName.toLowerCase()) ||
-        d.username?.toLowerCase().includes(searchName.toLowerCase())
-    );
+    const filteredDrivers = useMemo(() => {
+        // 1. Lọc theo Store ID của admin (nếu admin có storeId)
+        let result = drivers;
+
+        if (adminStoreId) {
+            result = drivers.filter(d =>
+                // Tài xế phải có store_id khớp với adminStoreId
+                d.store_id === adminStoreId
+                // HOẶC: Nếu adminStoreId là của cửa hàng chính (0) và driver.store_id là null (tuỳ theo logic quản lý)
+                // Cần điều chỉnh logic này tùy theo cách bạn gán tài xế cho store
+            );
+        }
+
+        // 2. Lọc theo tên tìm kiếm
+        if (searchName) {
+            const lowerCaseSearch = searchName.toLowerCase();
+            result = result.filter(d =>
+                d.full_name?.toLowerCase().includes(lowerCaseSearch) ||
+                d.username?.toLowerCase().includes(lowerCaseSearch)
+            );
+        }
+
+        return result;
+    }, [drivers, adminStoreId, searchName]);
 
     // --- Lọc Đơn hàng ---
     const filteredOrders = orders.filter(o => {
@@ -202,32 +252,32 @@ export default function DriverOrdersPage() {
     });
 
     const currentDriverStats = driverStats.find(s => s.driver.id === selectedDriver);
-const handleShowDetails = async (orderLocation: DriverLocation) => {
-    const orderId = orderLocation.order_id;
+    const handleShowDetails = async (orderLocation: DriverLocation) => {
+        const orderId = orderLocation.order_id;
 
-    if (!orderId) {
-        console.error("Không tìm thấy Order ID!");
-        return;
-    }
-
-    setFullOrderDetails(null); // Đảm bảo đóng modal cũ và reset data
-    setLoadingModal(true); // Bắt đầu loading cho Modal
-
-    try {
-        // Gọi API lấy chi tiết Order
-        const detailedOrder = await getOrderDetail(orderId);
-
-        if (detailedOrder) {
-            setFullOrderDetails(detailedOrder); // Cập nhật dữ liệu để mở modal
-        } else {
-            console.error("API getOrderDetail không trả về dữ liệu đơn hàng chi tiết.");
+        if (!orderId) {
+            console.error("Không tìm thấy Order ID!");
+            return;
         }
-    } catch (error) {
-        console.error("Lỗi khi tải chi tiết đơn hàng:", error);
-    } finally {
-        setLoadingModal(false); // Kết thúc loading
-    }
-};
+
+        setFullOrderDetails(null); // Đảm bảo đóng modal cũ và reset data
+        setLoadingModal(true); // Bắt đầu loading cho Modal
+
+        try {
+            // Gọi API lấy chi tiết Order
+            const detailedOrder = await getOrderDetail(orderId);
+
+            if (detailedOrder) {
+                setFullOrderDetails(detailedOrder); // Cập nhật dữ liệu để mở modal
+            } else {
+                console.error("API getOrderDetail không trả về dữ liệu đơn hàng chi tiết.");
+            }
+        } catch (error) {
+            console.error("Lỗi khi tải chi tiết đơn hàng:", error);
+        } finally {
+            setLoadingModal(false); // Kết thúc loading
+        }
+    };
 
 
 
@@ -284,21 +334,21 @@ const handleShowDetails = async (orderLocation: DriverLocation) => {
                         <div className="overflow-x-auto">
                             <table className="table w-full">
                                 <thead>
-                                    <tr className="bg-gray-50 text-xs text-gray-600 uppercase">
-                                        <th className="py-3 px-2">ID</th>
+                                    <tr className="bg-gray-50 text-xs text-gray-600 text-left uppercase tracking-wider">
+                                        <th className="py-3 px-2">STT</th>
                                         <th className="py-3 px-2">Tên Tài Xế</th>
                                         {/* <th className="py-3 px-2">ĐH Đã Gán</th> */}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredDrivers.map(driver => (
+                                    {filteredDrivers.map((driver, index) => (
                                         <tr
                                             key={driver.id}
-                                            className={`cursor-pointer hover:bg-gray-100 transition duration-150 ${selectedDriver === driver.id ? "bg-blue-50 border-l-4 border-blue-600" : ""}`}
+                                            className={`cursor-pointer hover:bg-gray-100 transition duration-150 ${selectedDriver === driver.id ? "bg-blue-50 mr-2 border-l-4 border-blue-600" : ""}`}
                                             onClick={() => handleSelectDriver(driver.id!)}
                                         >
-                                            <td className="py-3 px-2 text-sm font-medium">{driver.id}</td>
-                                            <td className="py-3 px-2 text-sm">{driver.full_name || driver.username}</td>
+                                            <td className="py-3 px-2 text-sm">{index + 1}</td>
+                                            <td className="py-3 px-2 text-sm ">{driver.full_name || driver.username}</td>
                                             {/* Hiển thị Total Assigned (Cần fetch dữ liệu tổng hợp nếu muốn con số chính xác)
                                             <td className="py-2 px-2 text-sm text-center">
                                                 <span className="font-semibold text-gray-700">
@@ -363,7 +413,7 @@ const handleShowDetails = async (orderLocation: DriverLocation) => {
                                                     <th className="py-3 px-4">Trạng thái Giao</th>
                                                     <th className="py-3 px-4">Trạng thái ĐH</th>
                                                     <th className="py-3 px-4">Ngày Gán</th>
-                                                    <th className="py-3 px-4">Thao tác</th>
+                                                    {/* <th className="py-3 px-4">Thao tác</th> */}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -378,18 +428,18 @@ const handleShowDetails = async (orderLocation: DriverLocation) => {
                                                             <OrderStatusBadge status={o.order?.status} />
                                                         </td>
                                                         <td className="py-3 px-4 text-sm text-gray-500">
-                                                            {new Date(o.created_at).toLocaleDateString()}
+                                                            {formatDateTime(o.created_at)}
                                                         </td>
-                                                       <td className="py-3 px-4 text-sm">
-    <button
-        onClick={() => handleShowDetails(o)}
-        className="text-blue-500 hover:text-blue-700 font-medium transition duration-150"
-        disabled={!o.order || loadingModal}
-    >
-        {/* Chỉ hiển thị Loading khi modal đang cố gắng mở */}
-        {loadingModal && fullOrderDetails === null ? "Đang tải..." : (o.order ? "Chi tiết" : "Không có data")}
-    </button>
-</td>
+                                                        {/* <td className="py-3 px-4 text-sm">
+                                                            <button
+                                                                onClick={() => handleShowDetails(o)}
+                                                                className="text-blue-500 hover:text-blue-700 font-medium transition duration-150"
+                                                                disabled={!o.order || loadingModal}
+                                                            >
+                                                            
+                                                                {loadingModal && fullOrderDetails === null ? "Đang tải..." : (o.order ? "Chi tiết" : "Không có data")}
+                                                            </button>
+                                                        </td> */}
                                                     </tr>
                                                 ))}
                                                 {filteredOrders.length === 0 && (
