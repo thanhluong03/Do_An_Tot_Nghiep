@@ -49,6 +49,12 @@ export interface IUpdateOrder {
     person_cancel?: string;
     delivery_fail_images?: Buffer[];
     delivery_fail_reason?: string;
+    cancel_return_reason?: string;
+    cancel_return_date?: string;
+    person_cancel_return?: string;
+    delivery_fail_return_reason?: string;
+    is_delivery_fail_return?: boolean;
+    is_cancel_return?: boolean;
 }
 
 export interface IListOrder {

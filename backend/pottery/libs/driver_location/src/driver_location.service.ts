@@ -101,6 +101,12 @@ export class DriverLocationService {
         throw new BadRequestException('Driver không khớp với đơn hàng được gán');
       }
 
+      // Lấy thông tin đơn hàng để kiểm tra trạng thái
+      const order = await this.orderRepository.findById(order_id);
+      if (!order) {
+        throw new NotFoundException('Đơn hàng không tồn tại');
+      }
+
             await this.driverLocationRepository.update(driverLocation.id, {
         driver_status: DriverStatus.ACCEPTED,
         latitude,
@@ -108,8 +114,18 @@ export class DriverLocationService {
         timestamp: new Date(),
       });
 
+
+      // Kiểm tra trạng thái đơn hàng và cập nhật tương ứng
+      let newStatus;
+      if (order.status === OrderStatus.PENDING_DELIVERY) {
+        newStatus = OrderStatus.SHIPPING;
+      } else if (order.status === OrderStatus.PENDING_DELIVERY_RETURN) {
+        newStatus = OrderStatus.SHIPPING_RETURN;
+      } else {
+        newStatus = OrderStatus.SHIPPING; // fallback mặc định
+      }
       await this.orderRepository.update(order_id, {
-        status: OrderStatus.SHIPPING,
+        status: newStatus,
       });
 
       return {
@@ -140,9 +156,6 @@ export class DriverLocationService {
 
             await this.driverLocationRepository.softDelete(driverLocation.id);
 
-            await this.orderRepository.update(order_id, {
-                status: OrderStatus.CREATED,
-            });
 
             return {
                 success: true,

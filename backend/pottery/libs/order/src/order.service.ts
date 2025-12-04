@@ -260,24 +260,44 @@ export class OrderService {
       }));
 
 
-    // Lấy lý do hủy và các ảnh hủy
-    const returncancelReason = order.cancel_reason || null;
-    const returnpersonCancel = order.person_cancel || null;
-    const returncancelReasonDate = order.cancel_date || null;
+    // Lấy lý do hủy đơn hàng thường
+    const cancelReason = order.cancel_reason || null;
+    const cancelPersonCancel = order.person_cancel || null;
+    const cancelReasonDate = order.cancel_date || null;
     const reasoncancelImages = await this.cancelReasonImageRepository.findByOrderId(id);
-    const returnCancelReasonImage = reasoncancelImages
-      .filter(img => img.cancel_reason_image)
-      .map(img => ({
+    const cancelReasonImage = reasoncancelImages
+      .filter((img) => img.cancel_reason_image && img.is_cancel_return === false)
+      .map((img) => ({
         id: img.id,
         image: img.cancel_reason_image.toString('base64'),
       }));
 
-    // Lấy lý do hủy và các ảnh hủy
-    const returndeliveryfailReason = order.delivery_fail_reason || null;
+    // Lấy lý do hủy đơn hoàn trả
+    const cancelReturnReason = order.cancel_return_reason || null;
+    const cancelReturnDate = order.cancel_return_date || null;
+    const personCancelReturn = order.person_cancel_return || null;
+    const cancelReturnReasonImage = reasoncancelImages
+      .filter((img) => img.cancel_reason_image && img.is_cancel_return === true)
+      .map((img) => ({
+        id: img.id,
+        image: img.cancel_reason_image.toString('base64'),
+      }));
+
+    // Lấy lý do giao hàng thất bại cho đơn hàng thường
+    const deliveryFailReason = order.delivery_fail_reason || null;
     const reasondeliveryImages = await this.deliveryFailReasonImageRepository.findByOrderId(id);
-    const returnDeliveryFailReasonImage = reasondeliveryImages
-      .filter(img => img.delivery_fail_image)
-      .map(img => ({
+    const deliveryFailReasonImage = reasondeliveryImages
+      .filter((img) => img.delivery_fail_image && img.is_delivery_fail_return === false)
+      .map((img) => ({
+        id: img.id,
+        image: img.delivery_fail_image.toString('base64'),
+      }));
+
+    // Lấy lý do giao hàng thất bại cho đơn hoàn trả
+    const deliveryFailReturnReason = order.delivery_fail_return_reason || null;
+    const deliveryFailReturnReasonImage = reasondeliveryImages
+      .filter((img) => img.delivery_fail_image && img.is_delivery_fail_return === true)
+      .map((img) => ({
         id: img.id,
         image: img.delivery_fail_image.toString('base64'),
       }));
@@ -336,12 +356,26 @@ export class OrderService {
       returnReasonDate,
       returnReasonImage,
       paymentTransactions,
-      returncancelReason,
-      returncancelReasonDate,
-      returnpersonCancel,
-      returnCancelReasonImage,
-      returndeliveryfailReason,
-      returnDeliveryFailReasonImage,
+      returncancelReasons: {
+        reason: cancelReason,
+        date: cancelReasonDate,
+        person: cancelPersonCancel,
+        images: cancelReasonImage,
+      },
+      cancelReturnReasons: {
+        reason: cancelReturnReason,
+        date: cancelReturnDate,
+        person: personCancelReturn,
+        images: cancelReturnReasonImage,
+      },
+      deliveryFailReasons: {
+        reason: deliveryFailReason,
+        images: deliveryFailReasonImage,
+      },
+      deliveryFailReturnReasons: {
+        reason: deliveryFailReturnReason,
+        images: deliveryFailReturnReasonImage,
+      },
     };
   }
 
@@ -407,6 +441,8 @@ export class OrderService {
     if (typeof data.note === 'string') updateData.note = data.note;
     if (data.cancel_reason !== undefined) updateData.cancel_reason = data.cancel_reason;
     if (data.delivery_fail_reason !== undefined) updateData.delivery_fail_reason = data.delivery_fail_reason;
+    if (data.cancel_return_reason !== undefined) updateData.cancel_return_reason = data.cancel_return_reason;
+    if (data.delivery_fail_return_reason !== undefined) updateData.delivery_fail_return_reason = data.delivery_fail_return_reason;
 
     await this.orderRepository.update(id, updateData);
 
@@ -431,35 +467,63 @@ export class OrderService {
       // Xóa các ảnh cũ trước khi thêm ảnh mới
       await this.cancelReasonImageRepository.deleteByOrderId(id);
 
+      // Xác định xem đây có phải là hủy đơn hoàn trả không dựa vào status
+      const isCancelReturn = data.status === OrderStatus.CANCELLED_RETURN;
+
       // Thêm các ảnh mới
       for (const imageBuffer of data.cancel_reason_images) {
         await this.cancelReasonImageRepository.create({
           order_id: id,
           cancel_reason_image: imageBuffer,
+          is_cancel_return: isCancelReturn, // true cho CANCELLED_RETURN, false cho CANCELLED
         });
       }
-      // Lưu ngày hủy vào order
-      const cancelReasonDate = new Date();
-      await this.orderRepository.update(id, {
-        cancel_date: cancelReasonDate,
-        person_cancel: data.person_cancel || ''
-      });
+
+      // Lưu ngày và người hủy dựa vào loại hủy
+      const cancelDate = new Date();
+      if (isCancelReturn) {
+        // Hủy đơn hoàn trả
+        await this.orderRepository.update(id, {
+          cancel_return_date: cancelDate,
+          person_cancel_return: data.person_cancel_return || ''
+        });
+      } else {
+        // Hủy đơn thường
+        await this.orderRepository.update(id, {
+          cancel_date: cancelDate,
+          person_cancel: data.person_cancel || ''
+        });
+      }
     }
 
     if (data.delivery_fail_images && data.delivery_fail_images.length > 0) {
       // Xóa các ảnh cũ trước khi thêm ảnh mới
       await this.deliveryFailReasonImageRepository.deleteByOrderId(id);
 
+      // Xác định xem đây có phải là giao hàng thất bại hoàn trả không dựa vào status
+      const isDeliveryFailReturn = data.status === OrderStatus.DELIVERY_FAILED_RETURN;
+
       // Thêm các ảnh mới
       for (const imageBuffer of data.delivery_fail_images) {
         await this.deliveryFailReasonImageRepository.create({
           order_id: id,
           delivery_fail_image: imageBuffer,
+          is_delivery_fail_return: isDeliveryFailReturn, // true cho DELIVERY_FAILED_RETURN, false cho DELIVERY_FAILED
         });
       }
-      await this.orderRepository.update(id, {
-        delivery_fail_reason: data.delivery_fail_reason || ''
-      });
+
+      // Lưu lý do giao hàng thất bại dựa vào loại
+      if (isDeliveryFailReturn) {
+        // Giao hàng thất bại hoàn trả
+        await this.orderRepository.update(id, {
+          delivery_fail_return_reason: data.delivery_fail_return_reason || data.delivery_fail_reason || ''
+        });
+      } else {
+        // Giao hàng thất bại thường
+        await this.orderRepository.update(id, {
+          delivery_fail_reason: data.delivery_fail_reason || ''
+        });
+      }
     }
 
     if (statusChanged && updateData.status) {
@@ -470,8 +534,11 @@ export class OrderService {
         customer_id
       );
 
-      // Nếu order chuyển thành PACKING thì tự động gán tài xế
-      if (updateData.status === OrderStatus.PACKING) {
+      // Nếu order chuyển thành PENDING_DELIVERY_RETURN hoặc PENDING_DELIVERY thì tự động gán tài xế
+      if (
+        updateData.status === OrderStatus.PENDING_DELIVERY_RETURN ||
+        updateData.status === OrderStatus.PENDING_DELIVERY
+      ) {
         try {
           // Kiểm tra xem order đã có tài xế chưa
           const existingDriver = await this.driverLocationRepository.findByOrderId(id);
@@ -497,7 +564,7 @@ export class OrderService {
             }
           }
         } catch (error) {
-          console.error('Error auto-assigning driver to PACKING order:', error);
+          console.error('Error auto-assigning driver to PENDING_DELIVERY và PENDING_DELIVERY_RETURN order:', error);
         }
       }
     }
@@ -626,14 +693,17 @@ export class OrderService {
     };
   }
 
-  // Tự động gán tài xế cho đơn hàng PACKING
+  // Tự động gán tài xế cho đơn hàng PENDING_DELIVERY_RETURN và PENDING_DELIVERY
   async autoAssignDrivers(): Promise<void> {
     try {
-      // Tìm đơn hàng PACKING chưa có tài xế
-      const packingOrders = await this.orderRepository.findOrdersForAdmin([OrderStatus.PACKING]);
+      // Tìm đơn hàng PENDING_DELIVERY_RETURN hoặc PENDING_DELIVERY chưa có tài xế
+      const deliveryOrders = await this.orderRepository.findOrdersForAdmin([
+        OrderStatus.PENDING_DELIVERY_RETURN,
+        OrderStatus.PENDING_DELIVERY,
+      ]);
       const ordersWithoutDriver: OrderEntity[] = [];
 
-      for (const order of packingOrders) {
+      for (const order of deliveryOrders) {
         const existingDriver = await this.driverLocationRepository.findByOrderId(order.id);
         if (!existingDriver) {
           ordersWithoutDriver.push(order);
@@ -748,9 +818,12 @@ export class OrderService {
         // Xóa assignment cũ
         await this.driverLocationRepository.softDelete(assignment.id);
 
-        // Gán lại cho tài xế khác nếu đơn hàng vẫn ở trạng thái PACKING
+        // Gán lại cho tài xế khác nếu đơn hàng vẫn ở trạng thái PENDING_DELIVERY_RETURN hoặc PENDING_DELIVERY
         const currentOrder = await this.orderRepository.findById(assignment.order_id);
-        if (currentOrder?.status === OrderStatus.PACKING) {
+        if (
+          currentOrder?.status === OrderStatus.PENDING_DELIVERY_RETURN ||
+          currentOrder?.status === OrderStatus.PENDING_DELIVERY
+        ) {
           const orderStoreId = this.getOrderStoreId(currentOrder);
           if (orderStoreId) {
             // Lọn tài xế cùng cửa hàng, loại trừ tài xế đã hết hạn

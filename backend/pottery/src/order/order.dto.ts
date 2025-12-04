@@ -193,6 +193,10 @@ export class UpdateOrderDto {
     @IsOptional()
     @IsString()
     delivery_fail_reason?: string;
+
+    @Expose()
+    @IsOptional()
+    person_cancel_return?: string;
 }
 export class OrderResponseDto {
     @Expose()

@@ -13,19 +13,21 @@ import { DeliveryFailImageEntity } from './delivery_fail_image.entity';
 export enum OrderStatus {
     CREATED = 'CREATED',
     CONFIRMED = 'CONFIRMED',
+    PACKING = 'PACKING',
+    PENDING_DELIVERY = 'PENDING_DELIVERY',
     SHIPPING = 'SHIPPING',
     DELIVERED = 'DELIVERED',
-    CANCELLED = 'CANCELLED',
-    REJECTED = 'REJECTED',
-    RETURN_REQUESTED = 'RETURN_REQUESTED',
-    EXCHANGED = 'EXCHANGED',
-    PENDING_RETURN = 'PENDING_RETURN',
-    CONFIRMED_RETURN = 'CONFIRMED_RETURN',
-    PENDING_DELIVERY = 'PENDING_DELIVERY',
     DELIVERY_FAILED = 'DELIVERY_FAILED',
-    PACKING = 'PACKING',
-    SHIPPING_RETURN = 'SHIPPING_RETURN',
+    CANCELLED = 'CANCELLED',
+
+    RETURN_REQUESTED = 'RETURN_REQUESTED',
+    CONFIRMED_RETURN = 'CONFIRMED_RETURN',
+    PACKING_RETURN = 'PACKING_RETURN',
     PENDING_DELIVERY_RETURN = 'PENDING_DELIVERY_RETURN',
+    SHIPPING_RETURN = 'SHIPPING_RETURN',
+    EXCHANGED = 'EXCHANGED',
+    DELIVERY_FAILED_RETURN = 'DELIVERY_FAILED_RETURN',
+    CANCELLED_RETURN = 'CANCELLED_RETURN'
 }
 
 export enum PaymentStatus {
@@ -101,6 +103,18 @@ export class OrderEntity extends BaseEntity {
 
     @Column({ type: 'text', nullable: true })
     delivery_fail_reason: string
+
+    @Column({ type: 'text', nullable: true })
+    cancel_return_reason: string
+
+    @Column({ type: 'timestamptz', nullable: true })
+    cancel_return_date: Date
+
+    @Column({ type: 'text', nullable: true })
+    person_cancel_return: string
+
+    @Column({ type: 'text', nullable: true })
+    delivery_fail_return_reason: string
 
     @OneToMany(() => PaymentTransactionEntity, (paymentTransaction) => paymentTransaction.order)
     paymentTransactions: PaymentTransactionEntity[];
