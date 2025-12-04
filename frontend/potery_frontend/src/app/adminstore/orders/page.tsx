@@ -161,17 +161,20 @@ export default function AdminOrderPage() {
     // 5. HÀM TẢI TẤT CẢ DỮ LIỆU (KHÔNG LỌC)
     async function fetchAllOrders() {
         if (customers.length === 0) return; // Chờ tải customers xong
-
+        // Nếu không có selectedStoreId, không hiển thị đơn hàng nào
+        if (!selectedStoreId) {
+            setAllOrders([]);
+            setTotalOrders(0);
+            setOrders([]);
+            return;
+        }
         try {
             setLoading(true); 
             const params: any = {
                 size: 10000, // Tải tối đa 10000 đơn hàng
                 page: 1,
+                store_id: selectedStoreId,
             };
-            if (selectedStoreId) {
-                params.store_id = selectedStoreId;
-            }
-
             const response = await listOrders(params);
             const data = response.data;
 
@@ -369,9 +372,6 @@ export default function AdminOrderPage() {
             await updateOrder(orderId, updateData);
             toast.success("Cập nhật đơn hàng thành công!");
 
-            // ✅ Cập nhật local state allOrders thay vì tải lại toàn bộ
-            setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updateData } : o));
-
             // Tìm order trong allOrders để lấy email (đảm bảo đơn hàng ngoài trang hiện tại vẫn gửi được mail)
             const order = allOrders.find(o => o.id === orderId); 
             const customerEmail = order?.customer_email;
@@ -382,6 +382,8 @@ export default function AdminOrderPage() {
             }
 
             setEditingOrder(null);
+            // ✅ Luôn reload lại dữ liệu từ server để đảm bảo đồng bộ trạng thái
+            await fetchAllOrders();
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Không thể cập nhật đơn hàng!");
         } finally {
