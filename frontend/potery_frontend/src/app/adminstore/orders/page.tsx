@@ -52,12 +52,16 @@ interface FullOrderDetails extends Omit<Order, "total_amount" | "items"> {
   items: OrderItem[];
   customer_name?: string;
   customer_email?: string;
+  cancel_reason?: string | null;
+  person_cancel?: string | null;
 }
 
 export default function AdminOrderPage() {
   const [orders, setOrders] = useState<FullOrderDetails[]>([]);
+  
   // ⭐️ allOrders lưu trữ TẤT CẢ dữ liệu gốc (đã gán tên khách hàng)
   const [allOrders, setAllOrders] = useState<FullOrderDetails[]>([]);
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [drivers, setDrivers] = useState<User[]>([]);
   // Thêm state này vào đầu component AdminOrderPage
@@ -378,6 +382,8 @@ async function fetchOrders() {
         ...detail,
         items: detail.current_order?.items || detail.items || [],
         total_amount: parseFloat(detail.total_amount as string),
+        cancel_reason: detail.cancel_reason ?? "",
+        person_cancel: detail.person_cancel ?? "",
       };
       setEditingOrder(fullOrder);
     } catch {
@@ -614,6 +620,8 @@ async function fetchOrders() {
           currentStatus={editingOrder.status}
           currentPaymentStatus={editingOrder.payment_status}
           currentPaymentMethod={editingOrder.payment_method}
+          initialCancelReason={editingOrder.cancel_reason}
+          initialPersonCancel={editingOrder.person_cancel}
           onClose={() => setEditingOrder(null)}
           onUpdated={handleOrderUpdated}
         />

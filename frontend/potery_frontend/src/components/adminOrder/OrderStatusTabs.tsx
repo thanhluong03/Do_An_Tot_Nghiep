@@ -83,13 +83,36 @@ export default function OrderStatusTabs({
   return (
     // Container chính bao gồm hai hàng (Tabs và Thanh toán)
     <div className="flex flex-col gap-4">
-      
       {/* --- HÀNG 1: Tabs Trạng thái Đơn hàng và Dropdown Nâng cao --- */}
       <div className="flex flex-wrap items-end justify-between border-b border-gray-200 pb-2">
         
         {/* Nhóm Tabs Chính */}
-        <div className="flex flex-wrap items-center text-sm font-medium">
+        <div className="flex flex-wrap items-center text-sm font-medium border-b border-gray-200">
           {MAIN_TABS.map((tab) => {
+            const isActive = currentOrderStatus === tab.value;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => onSelectOrderStatus(tab.value)}
+                className={`relative px-4 py-2.5 whitespace-nowrap transition-all group ${
+                  isActive && isMainTabSelected 
+                  ? "text-orange-600 font-semibold" 
+                  : "text-gray-600 hover:text-orange-600"
+                }`}
+              >
+                {tab.label}
+                <span className="ml-1 text-xs text-gray-500">
+                  ({orderCounts[tab.value] || 0})
+                </span>
+                {isActive && isMainTabSelected && (
+                  <span className="absolute left-0 bottom-0 w-full h-0.5 bg-orange-500" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap items-center text-sm font-medium">
+          {ADVANCED_STATUS_OPTIONS.map((tab) => {
             const isActive = currentOrderStatus === tab.value;
             return (
               <button
@@ -114,7 +137,7 @@ export default function OrderStatusTabs({
         </div>
 
         {/* Dropdown Trạng thái Nâng cao (Đặt ở bên phải hàng 1) */}
-        <div className="relative inline-block mt-2 md:mt-0">
+        {/* <div className="relative inline-block mt-2 md:mt-0">
           <select
             title="Advanced Status"
             value={isMainTabSelected ? "" : currentOrderStatus} 
@@ -142,17 +165,16 @@ export default function OrderStatusTabs({
               </option>
             ))}
           </select>
-          {/* Custom Arrow */}
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
             <ChevronDown className="h-4 w-4" />
           </div>
-        </div>
+        </div> */}
       </div> {/* Kết thúc HÀNG 1 */}
 
       {/* --- HÀNG 2: Dropdown Trạng thái Thanh toán --- */}
-      <div className="flex items-end gap-2">
-        <label htmlFor="paymentStatus" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-          Thanh toán:
+      <div className="items-end gap-2">
+        <label htmlFor="paymentStatus" className="text-sm font-medium text-gray-700 whitespace-nowrap mr-2">
+          Trạng thái thanh toán:
         </label>
         <select
           id="paymentStatus"

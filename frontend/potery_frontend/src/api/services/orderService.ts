@@ -77,6 +77,7 @@ export interface Order {
   cancel_reason?: string | null;
   cancel_date?: string | null;
   person_cancel?: string | null;
+  reason_change_date?: string | null;
   driverLocations?: DriverLocation[];
 }
 
