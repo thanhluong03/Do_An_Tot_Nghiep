@@ -42,32 +42,58 @@ interface MenuItem {
 
 // --- LOGIC KIỂM TRA QUYỀN HẠN ---
 // Cache để lưu trữ quyền sau khi load lần đầu, tránh đọc localStorage nhiều lần.
+// --- LOGIC KIỂM TRA QUYỀN HẠN ---
+// Cache để lưu trữ quyền sau khi load lần đầu, tránh đọc localStorage nhiều lần.
 const permissionsCache: string[] = [];
+// Thêm cache cho Role ID để tránh đọc localStorage nhiều lần
+let adminRoleIdCache: string | null = null; 
 
 /**
  * Lấy danh sách quyền hạn từ Local Storage.
  * @returns Mảng các chuỗi quyền hạn.
  */
 const getAdminPermissions = (): string[] => {
-    if (typeof window !== 'undefined' && permissionsCache.length === 0) {
-        const permissionsJson = localStorage.getItem('adminPermissions_1'); 
-        try {
-            const permissions = permissionsJson ? JSON.parse(permissionsJson) : [];
-            // Lưu vào cache
-            if (Array.isArray(permissions)) {
-                permissionsCache.push(...permissions);
-            }
-        } catch (error) {
-            console.error("Error parsing admin permissions from localStorage:", error);
-        }
+    if (typeof window === 'undefined') return [];
+    
+    // Nếu cache đã có quyền, trả về ngay
+    if (permissionsCache.length > 0) {
+        return permissionsCache;
     }
+
+    // 1. Lấy Admin Role ID
+    if (!adminRoleIdCache) {
+        adminRoleIdCache = localStorage.getItem('adminRoleId');
+    }
+
+    // Nếu không có Role ID, không thể xác định key quyền hạn
+    if (!adminRoleIdCache) {
+        console.warn("adminRoleId not found in localStorage. Cannot load permissions.");
+        return [];
+    }
+
+    // 2. Xây dựng key dựa trên Role ID: adminPermissions_<ID>
+    const permissionKey = `adminPermissions_${adminRoleIdCache}`;
+
+    const permissionsJson = localStorage.getItem(permissionKey); 
+
+    try {
+        const permissions = permissionsJson ? JSON.parse(permissionsJson) : [];
+        
+        // Lưu vào cache
+        if (Array.isArray(permissions)) {
+            permissionsCache.length = 0; // Xóa cache cũ
+            permissionsCache.push(...permissions);
+        }
+    } catch (error) {
+        console.error(`Error parsing admin permissions from localStorage for key ${permissionKey}:`, error);
+    }
+    
     return permissionsCache;
 };
 
 /**
  * Kiểm tra xem người dùng có quyền truy cập vào một đường dẫn cụ thể không.
- * @param href Đường dẫn cần kiểm tra (ví dụ: '/admin/dashboard').
- * @returns true nếu người dùng có quyền, ngược lại là false.
+ * (Không cần thay đổi hàm này, nó sử dụng permissionsCache đã được cập nhật)
  */
 const isPermitted = (href: string): boolean => {
     // Đảm bảo cache đã được load
