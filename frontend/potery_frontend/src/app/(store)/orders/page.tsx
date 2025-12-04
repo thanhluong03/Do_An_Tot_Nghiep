@@ -13,6 +13,7 @@ import { useRouter } from 'next/dist/client/components/navigation';
 import { ArrowLeft, Bot, Gift, MessageSquare, Search, User } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal, ReturnOrderModal, CancelOrderModal } from '@/components/feature';
+import { voucherApi } from '@/api/modules/voucher';
 
 const translateStatus = (status: string | undefined): string => {
   if (!status) return 'Không rõ';
@@ -195,40 +196,187 @@ export default function MyOrdersPage() {
     if (paymentStatus === 'success' && orderId) {
       (async () => {
         try {
-          // Cập nhật order đầu tiên (đã được backend callback cập nhật, nhưng đảm bảo chắc chắn)
-          await orderApi.updateOrder(Number(orderId), {
-            status: 'CONFIRMED',
-            payment_status: 'PAID',
-          });
+          // Kiểm tra payment_method của order đầu tiên để đảm bảo đây là đơn MOMO
+          let firstOrderDetail;
+          let firstOrderPaymentMethod: string | undefined;
+          try {
+            firstOrderDetail = await orderApi.getOrderDetail(Number(orderId));
+            firstOrderPaymentMethod = firstOrderDetail?.payment_method || firstOrderDetail?.data?.payment_method || firstOrderDetail?.current_order?.payment_method;
+            console.log('🔍 Payment method của order đầu tiên:', firstOrderPaymentMethod);
+            console.log('🔍 Full order detail:', firstOrderDetail);
+            
+            // QUAN TRỌNG: Chỉ xử lý nếu là đơn MOMO (CARD), KHÔNG xử lý đơn COD (ONSITE)
+            if (firstOrderPaymentMethod !== 'CARD' && firstOrderPaymentMethod !== 'MOMO') {
+              console.log('⚠️ Order đầu tiên không phải MOMO, bỏ qua tất cả xử lý:', firstOrderPaymentMethod);
+              // Nếu không phải MOMO, không làm gì cả và return sớm
+              // Backend có thể đã cập nhật nhầm, nhưng frontend sẽ không cập nhật thêm
+              clearCart();
+              toast.success('🎉 Thanh toán thành công!');
+              window.history.replaceState({}, '', '/orders');
+              return;
+            }
+            
+            // Chỉ cập nhật nếu là đơn MOMO (CARD)
+            console.log('✅ Order đầu tiên là MOMO, tiếp tục xử lý...');
+            // Backend đã cập nhật rồi, không cần cập nhật lại ở đây
+            // Chỉ log để confirm
+            console.log('✅ Order đầu tiên đã được backend cập nhật (MOMO)');
+            
+            // 🔥 QUAN TRỌNG: Rollback các order COD nếu backend đã cập nhật nhầm
+            // Lấy tất cả orders của customer để kiểm tra
+            if (user?.id) {
+              try {
+                console.log('🔄 Bắt đầu rollback các đơn COD trong orders page...');
+                const allCustomerOrders = await orderApi.getOrdersByCustomer(user.id as string, 1, 100);
+                const ordersList = allCustomerOrders?.data || allCustomerOrders || [];
+                console.log('🔍 Tổng số orders của customer:', ordersList.length);
+                
+                // Lấy danh sách order IDs MOMO từ sessionStorage hoặc URL
+                let momoOrderIds: number[] = [Number(orderId)];
+                const momoOrderIdsStr = sessionStorage.getItem('momo_order_ids');
+                if (momoOrderIdsStr) {
+                  try {
+                    const parsed = JSON.parse(momoOrderIdsStr);
+                    momoOrderIds = Array.isArray(parsed) ? parsed.map(Number) : [Number(parsed)];
+                  } catch {
+                    // Ignore parse error
+                  }
+                }
+                
+                // Tìm các order COD đã bị cập nhật nhầm thành PAID
+                const codOrdersToRollback = ordersList.filter((order: any) => {
+                  const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
+                  const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+                  const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
+                  const isPaid = paymentStatus === 'PAID';
+                  // Loại trừ các order MOMO
+                  const isNotMomoOrder = !momoOrderIds.includes(order.id);
+                  return isCOD && isPaid && isNotMomoOrder;
+                });
+                
+                if (codOrdersToRollback.length > 0) {
+                  console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
+                  
+                  // Rollback lại payment_status = UNPAID cho các order COD
+                  await Promise.all(
+                    codOrdersToRollback.map((order: any) =>
+                      orderApi.updateOrder(order.id, {
+                        payment_status: 'UNPAID',
+                      }).catch(err => {
+                        console.error(`❌ Lỗi rollback đơn COD #${order.id}:`, err);
+                      })
+                    )
+                  );
+                  
+                  console.log('✅ Đã rollback payment_status cho các đơn COD trong orders page');
+                  
+                  // Reload orders để hiển thị đúng
+                  window.location.reload();
+                } else {
+                  console.log('✅ Không có đơn COD nào bị cập nhật nhầm trong orders page');
+                }
+              } catch (rollbackError) {
+                console.error('❌ Lỗi khi rollback đơn COD trong orders page:', rollbackError);
+                // Không throw error, chỉ log
+              }
+            }
+          } catch (detailError) {
+            console.error('❌ Lỗi lấy thông tin order:', detailError);
+            // KHÔNG cập nhật nếu không lấy được thông tin - để tránh cập nhật nhầm đơn COD
+            console.warn('⚠️ Không thể lấy thông tin order, bỏ qua tất cả xử lý để tránh cập nhật nhầm đơn COD');
+            clearCart();
+            toast.success('🎉 Thanh toán thành công!');
+            window.history.replaceState({}, '', '/orders');
+            return;
+          }
 
           // Kiểm tra xem có danh sách order IDs khác từ sessionStorage không (nhiều đơn từ nhiều cửa hàng)
+          // QUAN TRỌNG: Chỉ xử lý các order từ sessionStorage nếu order đầu tiên là MOMO
+          // Nếu order đầu tiên không phải MOMO, đã return ở trên rồi
           const momoOrderIdsStr = sessionStorage.getItem('momo_order_ids');
           if (momoOrderIdsStr) {
             try {
               const allOrderIds: number[] = JSON.parse(momoOrderIdsStr);
               console.log('💾 Tìm thấy danh sách order IDs từ sessionStorage:', allOrderIds);
+              console.log('💾 Order đầu tiên từ URL:', orderId);
+              console.log('💾 Tất cả order IDs từ sessionStorage:', allOrderIds);
 
               // Cập nhật payment_status cho tất cả các order còn lại (trừ order đầu tiên đã cập nhật)
+              // NHƯNG chỉ cập nhật các order có payment_method = 'CARD' (MOMO)
               const remainingOrderIds = allOrderIds.filter(id => id !== Number(orderId));
               if (remainingOrderIds.length > 0) {
-                console.log(`🔄 Cập nhật payment_status cho ${remainingOrderIds.length} đơn hàng còn lại:`, remainingOrderIds);
+                console.log(`🔄 Kiểm tra và cập nhật payment_status cho ${remainingOrderIds.length} đơn hàng còn lại:`, remainingOrderIds);
+                
+                // Lấy thông tin từng order để kiểm tra payment_method
+                const ordersToUpdate: number[] = [];
                 await Promise.all(
-                  remainingOrderIds.map(orderId =>
-                    orderApi.updateOrder(orderId, {
-                      status: 'CONFIRMED',
-                      payment_status: 'PAID',
-                    }).catch(err => {
-                      console.error(`❌ Lỗi cập nhật đơn #${orderId}:`, err);
-                    })
-                  )
+                  remainingOrderIds.map(async (orderId) => {
+                    try {
+                      const orderDetail = await orderApi.getOrderDetail(orderId);
+                      const paymentMethod = orderDetail?.payment_method || orderDetail?.data?.payment_method || orderDetail?.current_order?.payment_method;
+                      console.log(`🔍 Order #${orderId} - Payment method:`, paymentMethod);
+                      console.log(`🔍 Order #${orderId} - Full detail:`, orderDetail);
+                      
+                      // QUAN TRỌNG: Chỉ thêm vào danh sách cập nhật nếu là MOMO
+                      // KHÔNG cập nhật đơn COD (ONSITE)
+                      if (paymentMethod === 'CARD' || paymentMethod === 'MOMO') {
+                        ordersToUpdate.push(orderId);
+                        console.log(`✅ Order #${orderId} là MOMO, sẽ được cập nhật`);
+                      } else {
+                        console.log(`⚠️ Order #${orderId} không phải MOMO (${paymentMethod}), bỏ qua - KHÔNG cập nhật`);
+                        console.log(`⚠️ Đây có thể là đơn COD, sẽ KHÔNG được cập nhật`);
+                      }
+                    } catch (err) {
+                      console.error(`❌ Lỗi lấy thông tin order #${orderId}:`, err);
+                      // KHÔNG thêm vào danh sách cập nhật nếu không lấy được thông tin
+                      console.warn(`⚠️ Bỏ qua order #${orderId} vì không lấy được thông tin - để tránh cập nhật nhầm`);
+                    }
+                  })
                 );
-                console.log('✅ Đã cập nhật payment_status cho tất cả các đơn hàng');
+
+                // Chỉ cập nhật các order MOMO
+                if (ordersToUpdate.length > 0) {
+                  console.log(`🔄 Cập nhật payment_status cho ${ordersToUpdate.length} đơn MOMO:`, ordersToUpdate);
+                  console.log(`⚠️ Các đơn COD sẽ KHÔNG được cập nhật`);
+                  await Promise.all(
+                    ordersToUpdate.map(orderId =>
+                      orderApi.updateOrder(orderId, {
+                        status: 'CONFIRMED',
+                        payment_status: 'PAID',
+                      }).catch(err => {
+                        console.error(`❌ Lỗi cập nhật đơn #${orderId}:`, err);
+                      })
+                    )
+                  );
+                  console.log('✅ Đã cập nhật payment_status cho tất cả các đơn MOMO');
+                } else {
+                  console.log('⚠️ Không có đơn MOMO nào cần cập nhật từ sessionStorage');
+                }
+              } else {
+                console.log('ℹ️ Không có đơn hàng nào khác cần cập nhật');
               }
 
               // Xóa sessionStorage sau khi xử lý xong
               sessionStorage.removeItem('momo_order_ids');
             } catch (parseErr) {
               console.error('❌ Lỗi parse momo_order_ids:', parseErr);
+            }
+          } else {
+            console.log('ℹ️ Không có momo_order_ids trong sessionStorage');
+          }
+
+          // Cập nhật voucher status (nếu có) sau khi thanh toán MOMO thành công
+          const voucherCustomerIdStr = sessionStorage.getItem('selected_voucher_customer_id');
+          if (voucherCustomerIdStr && user?.id) {
+            try {
+              const voucherCustomerId = Number(voucherCustomerIdStr);
+              console.log(`✨ Cập nhật voucher ${voucherCustomerId} cho user ${user.id} sau khi thanh toán MOMO`);
+              await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
+              console.log('✅ Đã cập nhật voucher status thành USED');
+            } catch (voucherError) {
+              console.error('Lỗi cập nhật trạng thái voucher sau khi thanh toán MOMO:', voucherError);
+            } finally {
+              sessionStorage.removeItem('selected_voucher_customer_id');
             }
           }
 
@@ -243,6 +391,7 @@ export default function MyOrdersPage() {
     } else if (paymentStatus === 'failed') {
       // Xóa sessionStorage nếu thanh toán thất bại
       sessionStorage.removeItem('momo_order_ids');
+      sessionStorage.removeItem('selected_voucher_customer_id');
       toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
       window.history.replaceState({}, '', '/orders');
     }
@@ -288,6 +437,81 @@ export default function MyOrdersPage() {
           return true;
         });
         setOrders(Array.isArray(unique) ? unique : []);
+        
+        // 🔥 QUAN TRỌNG: Kiểm tra và rollback đơn COD bị cập nhật nhầm mỗi khi load orders
+        if (isMounted && list.length > 0) {
+          (async () => {
+            try {
+              console.log('🔄 Kiểm tra đơn COD bị cập nhật nhầm khi load orders page...');
+              
+              // Lấy danh sách order IDs MOMO từ sessionStorage (nếu có)
+              let momoOrderIds: number[] = [];
+              const momoOrderIdsStr = sessionStorage.getItem('momo_order_ids');
+              if (momoOrderIdsStr) {
+                try {
+                  const parsed = JSON.parse(momoOrderIdsStr);
+                  momoOrderIds = Array.isArray(parsed) ? parsed.map(Number) : [Number(parsed)];
+                } catch {
+                  // Ignore parse error
+                }
+              }
+              
+              // Nếu không có momo_order_ids, tìm tất cả đơn MOMO từ danh sách orders
+              if (momoOrderIds.length === 0) {
+                momoOrderIds = list
+                  .filter((o: any) => {
+                    const paymentMethod = o?.payment_method || o?.current_order?.payment_method;
+                    return paymentMethod === 'CARD' || paymentMethod === 'MOMO';
+                  })
+                  .map((o: any) => o.id || o._id)
+                  .filter(Boolean);
+              }
+              
+              console.log('🔍 MOMO Order IDs:', momoOrderIds);
+              
+              // Tìm các order COD đã bị cập nhật nhầm thành PAID
+              const codOrdersToRollback = list.filter((order: any) => {
+                const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
+                const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+                const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
+                const isPaid = paymentStatus === 'PAID';
+                // Loại trừ các order MOMO
+                const orderId = order.id || order._id;
+                const isNotMomoOrder = !momoOrderIds.includes(orderId);
+                return isCOD && isPaid && isNotMomoOrder;
+              });
+              
+              if (codOrdersToRollback.length > 0) {
+                console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id || o._id, payment_method: o.payment_method, payment_status: o.payment_status })));
+                
+                // Rollback lại payment_status = UNPAID cho các order COD
+                await Promise.all(
+                  codOrdersToRollback.map((order: any) => {
+                    const orderId = order.id || order._id;
+                    return orderApi.updateOrder(orderId, {
+                      payment_status: 'UNPAID',
+                    }).then(() => {
+                      console.log(`✅ Đã rollback đơn COD #${orderId}`);
+                    }).catch(err => {
+                      console.error(`❌ Lỗi rollback đơn COD #${orderId}:`, err);
+                    });
+                  })
+                );
+                
+                console.log('✅ Đã rollback payment_status cho các đơn COD trong orders page');
+                
+                // Reload orders để hiển thị đúng
+                if (isMounted) {
+                  window.location.reload();
+                }
+              } else {
+                console.log('✅ Không có đơn COD nào bị cập nhật nhầm trong orders page');
+              }
+            } catch (rollbackError) {
+              console.error('❌ Lỗi khi rollback đơn COD trong orders page:', rollbackError);
+            }
+          })();
+        }
       } catch (e: any) {
         if (isMounted) {
           setError(e?.message || 'Không thể tải đơn hàng');

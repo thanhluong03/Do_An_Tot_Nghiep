@@ -21,6 +21,7 @@ api.interceptors.request.use(
 
 export interface Voucher {
   id?: string | number;
+  voucher_customer_id?: number;
   _id?: string;
   code?: string;
   name?: string;
@@ -41,6 +42,7 @@ export interface Voucher {
   effective_period_ends?: string;
   is_active?: boolean;
   isClaimed?: boolean;
+  status?: 'CREATED' | 'PENDING' | 'USED';
 }
 
 export const voucherApi = {
@@ -64,6 +66,11 @@ export const voucherApi = {
       
       return vouchers;
     } catch (error: any) {
+      // Bỏ qua lỗi "Request aborted" - đây là behavior bình thường khi component unmount
+      if (error.message === 'Request aborted' || error.code === 'ERR_CANCELED') {
+        console.log('⚠️ Request aborted (component unmounted)');
+        return [];
+      }
       console.error('❌ fetchAvailableVouchers error:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || 'Không thể tải danh sách voucher');
     }
@@ -117,8 +124,10 @@ export const voucherApi = {
    */
   async fetchCustomerVouchers(customerId: string | number): Promise<Voucher[]> {
     try {
-      const res = await api.get(`/vouchers/customer/${customerId}`);
-      console.log('✅ Customer vouchers:', res.data);
+      const res = await api.get(`/vouchers/customer/${customerId}`, {
+        params: { _: new Date().getTime() } // Cache-busting
+      });
+      console.log('✅ Customer vouchers raw response:', res.data);
       
       let vouchers: any[] = [];
       if (Array.isArray(res.data)) {
@@ -129,10 +138,54 @@ export const voucherApi = {
         vouchers = res.data.data;
       }
       
-      return vouchers;
+      // Map thêm voucher_customer_id nếu response có
+      // Backend có thể trả về voucher_customer_id trong response hoặc cần map từ voucher_id
+      const mappedVouchers = vouchers.map((v: any) => {
+        // Nếu response có voucher_customer_id, sử dụng nó
+        // Nếu không, thử lấy từ các field khác
+        const voucherCustomerId = v.voucher_customer_id || v.voucherCustomerId || v.id; // Có thể id là voucher_customer_id
+        return {
+          ...v,
+          voucher_customer_id: voucherCustomerId,
+        };
+      });
+      
+      console.log('✅ Mapped vouchers with voucher_customer_id:', mappedVouchers);
+      return mappedVouchers;
     } catch (error: any) {
+      // Bỏ qua lỗi "Request aborted" - đây là behavior bình thường khi component unmount
+      if (error.message === 'Request aborted' || error.code === 'ERR_CANCELED') {
+        console.log('⚠️ Request aborted (component unmounted)');
+        return [];
+      }
       console.error('❌ fetchCustomerVouchers error:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || 'Không thể tải voucher của bạn');
+    }
+  },
+
+  /**
+   * Cập nhật trạng thái voucher của khách hàng sau khi sử dụng
+   */
+  async updateVoucherCustomerStatus(voucherCustomerId: string | number) {
+    try {
+      const payload = { status: 'USED' };
+      const url = `/vouchers/updatevouchercustomerstatus/${voucherCustomerId}`;
+      console.log('📤 Calling updateVoucherCustomerStatus:', { url, payload, voucherCustomerId });
+      
+      const res = await api.put(url, payload);
+      console.log('✅ Update voucher status response:', res.data);
+      console.log('✅ Voucher customer status updated successfully:', res.data?.voucherCustomer?.status);
+      
+      return res.data;
+    } catch (error: any) {
+      console.error('❌ updateVoucherCustomerStatus error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        voucherCustomerId,
+      });
+      throw new Error(error.response?.data?.message || 'Không thể cập nhật trạng thái voucher');
     }
   },
 };
