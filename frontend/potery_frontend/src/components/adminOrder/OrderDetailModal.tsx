@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Order } from "@/api/services/orderService";
-import { X, CreditCard, ShoppingBag, Truck, RotateCcw } from "lucide-react";
+import { X, CreditCard, ShoppingBag, Truck, RotateCcw, XCircle } from "lucide-react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import { useRef } from 'react';
@@ -26,6 +26,22 @@ const statusToVietnamese = (status: string) => {
       return 'Đang yêu cầu hoàn trả';
     case 'EXCHANGED':
       return 'Đã đổi trả';
+    case 'REJECTED':
+      return 'Đã từ chối';
+    case 'DELIVERY_FAILED':
+      return 'Giao hàng thất bại';
+    case 'PACKING':
+      return 'Đang đóng gói';
+    case 'PENDING_RETURN':
+      return 'Chờ hoàn trả';
+    case 'CONFIRMED_RETURN':
+      return 'Đã xác nhận hoàn trả';
+    case 'PENDING_DELIVERY':
+      return 'Chờ giao hàng';
+    case 'SHIPPING_RETURN':
+      return 'Đang vận chuyển hoàn trả';
+    case 'PENDING_DELIVERY_RETURN':
+      return 'Chờ giao hàng hoàn trả';
     case 'CANCELLED':
       return 'Đã hủy';
     default:
@@ -51,6 +67,21 @@ const getStatusColor = (status: string) => {
       return "bg-purple-100 text-purple-700";
     case "return_requested":
       return "bg-pink-100 text-pink-700";
+    case "delivery_failed":
+      return "bg-red-100 text-red-700";
+    case "packing":
+      return "bg-blue-100 text-blue-700";
+    case "pending_return":
+      return "bg-teal-100 text-teal-700";
+    case "confirmed_return":
+      return "bg-cyan-100 text-cyan-700";
+    case "pending_delivery":
+      return "bg-yellow-200 text-yellow-800";
+    case "shipping_return":
+      return "bg-purple-200 text-purple-800";
+    case "pending_delivery_return":
+      return "bg-pink-200 text-pink-800";
+      
     default:
       return "bg-gray-100 text-gray-700";
   }
@@ -76,6 +107,28 @@ const bufferToDataURL = (bufferData: { data: number[] } | undefined, mimeType: s
     console.error("Error converting buffer to base64:", e);
     return undefined;
   }
+};
+// Hàm chuyển đổi định dạng ngày tháng/ngày giờ
+const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "N/A";
+    try {
+        const date = new Date(dateString);
+        // Kiểm tra xem date có hợp lệ không
+        if (isNaN(date.getTime())) return "Ngày không hợp lệ";
+
+        // Định dạng đầy đủ (Ví dụ: 18:30:00 04/12/2025)
+        return date.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (e) {
+        console.error("Lỗi định dạng ngày:", e);
+        return dateString; // Trả về chuỗi gốc nếu có lỗi
+    }
 };
 
 export default function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
@@ -115,6 +168,8 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   console.log('Admin Order Shipping Fee:', displayShippingFee);
   console.log('Admin Order Full Data:', order);
 
+// Kiểm tra trạng thái hủy đơn
+  const isCancelled = order.status === 'REJECTED';
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
@@ -173,7 +228,8 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 </div>
               )}
             </section>
-
+           
+              
             {/* Thông tin hoàn trả */}
             {order.returnReason && (
               <section className="bg-white rounded-xl p-5 border border-red-200 shadow-sm">
@@ -324,6 +380,40 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 )}
               </div>
             </section>
+             {/* THÔNG TIN HỦY ĐƠN HÀNG */}
+            {isCancelled && order.cancel_reason && (
+              <section className="bg-red-50 rounded-xl p-5 border border-red-300 shadow-sm">
+                <h3 className="flex items-center text-lg font-semibold text-red-800 mb-4 border-b border-red-200 pb-2">
+                  <XCircle className="w-5 h-5 mr-2 text-red-600" />
+                  Thông tin từ chối đơn hàng
+                </h3>
+
+                <div className="space-y-3">
+                  <div className="py-2 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Lý do từ chối:
+                    </span>
+                    <p className="text-sm font-semibold text-red-700 bg-red-100 p-2 rounded">
+                      {order.cancel_reason}
+                    </p>
+                  </div>
+
+                  {order.person_cancel && (
+                    <InfoRow 
+                        label="Người hủy" 
+                        value={order.person_cancel} 
+                    />
+                  )}
+
+                  {order.cancel_date && (
+                    <InfoRow 
+                        label="Ngày giờ hủy" 
+                        value={formatDate(order.cancel_date)} 
+                    />
+                  )}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Sản phẩm */}
