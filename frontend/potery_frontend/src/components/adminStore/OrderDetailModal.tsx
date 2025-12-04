@@ -26,6 +26,22 @@ const statusToVietnamese = (status: string) => {
       return 'Đang yêu cầu hoàn trả';
     case 'EXCHANGED':
       return 'Đã đổi trả';
+    case 'REJECTED':
+      return 'Đã từ chối';
+    case 'DELIVERY_FAILED':
+      return 'Giao hàng thất bại';
+    case 'PACKING':
+      return 'Đang đóng gói';
+    case 'PENDING_RETURN':
+      return 'Chờ hoàn trả';
+    case 'CONFIRMED_RETURN':
+      return 'Đã xác nhận hoàn trả';
+    case 'PENDING_DELIVERY':
+      return 'Chờ giao hàng';
+    case 'SHIPPING_RETURN':
+      return 'Đang vận chuyển hoàn trả';
+    case 'PENDING_DELIVERY_RETURN':
+      return 'Chờ giao hàng hoàn trả';
     case 'CANCELLED':
       return 'Đã hủy';
     default:
@@ -51,6 +67,21 @@ const getStatusColor = (status: string) => {
       return "bg-purple-100 text-purple-700";
     case "return_requested":
       return "bg-pink-100 text-pink-700";
+    case "delivery_failed":
+      return "bg-red-100 text-red-700";
+    case "packing":
+      return "bg-blue-100 text-blue-700";
+    case "pending_return":
+      return "bg-teal-100 text-teal-700";
+    case "confirmed_return":
+      return "bg-cyan-100 text-cyan-700";
+    case "pending_delivery":
+      return "bg-yellow-200 text-yellow-800";
+    case "shipping_return":
+      return "bg-purple-200 text-purple-800";
+    case "pending_delivery_return":
+      return "bg-pink-200 text-pink-800";
+      
     default:
       return "bg-gray-100 text-gray-700";
   }

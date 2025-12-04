@@ -74,6 +74,9 @@ export interface Order {
   returnReason?: string;
   returnReasonImage?: { id: number; image: string }[];
   note?: string;
+  cancel_reason?: string | null;
+  cancel_date?: string | null;
+  person_cancel?: string | null;
   driverLocations?: DriverLocation[];
 }
 
@@ -93,6 +96,9 @@ export interface ListOrderParams {
   shipping_address?: string;
   payment_method?: PaymentMethod;
   user_id?: number;
+  cancel_reason?: string | null;
+  cancel_date?: string | null;
+  person_cancel?: string | null;
 }
 export interface Store {
   id: number;
