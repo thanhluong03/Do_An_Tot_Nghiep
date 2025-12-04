@@ -40,8 +40,6 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
 
   const driverMenuItems = [
     { name: 'Đơn hàng mới', href: '/driver/order-deliver', icon: <Package className="w-5 h-5" /> },
-    { name: 'Lịch sử giao', href: '/driver/history', icon: <History className="w-5 h-5" /> },
-    { name: 'Tài khoản', href: '/profile', icon: <User className="w-5 h-5" /> },
   ];
 
   return (

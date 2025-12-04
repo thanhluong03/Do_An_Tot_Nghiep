@@ -129,31 +129,39 @@ export default function MoMoReturnPage() {
                             const codOrdersToRollback = ordersList.filter((order: any) => {
                                 const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
                                 const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+                                const orderStatus = order?.status || order?.current_order?.status;
                                 const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
                                 const isPaid = paymentStatus === 'PAID';
+                                const isConfirmed = orderStatus === 'CONFIRMED';
                                 // Loại trừ các order MOMO
                                 const isNotMomoOrder = !momoOrderIds.includes(order.id);
-                                console.log(`🔍 Order #${order.id}: paymentMethod=${paymentMethod}, paymentStatus=${paymentStatus}, isCOD=${isCOD}, isPaid=${isPaid}, isNotMomoOrder=${isNotMomoOrder}`);
-                                return isCOD && isPaid && isNotMomoOrder;
+                                console.log(`🔍 Order #${order.id}: paymentMethod=${paymentMethod}, paymentStatus=${paymentStatus}, orderStatus=${orderStatus}, isCOD=${isCOD}, isPaid=${isPaid}, isConfirmed=${isConfirmed}, isNotMomoOrder=${isNotMomoOrder}`);
+                                // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
+                                return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
                             });
                             
                             if (codOrdersToRollback.length > 0) {
                                 console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
                                 
-                                // Rollback lại payment_status = UNPAID cho các order COD
+                                // Rollback lại cả status và payment_status cho các order COD
                                 await Promise.all(
-                                    codOrdersToRollback.map((order: any) =>
-                                        orderApi.updateOrder(order.id, {
-                                            payment_status: 'UNPAID',
+                                    codOrdersToRollback.map((order: any) => {
+                                        const currentStatus = order?.status || order?.current_order?.status;
+                                        // Chỉ rollback nếu status là CONFIRMED (đã bị cập nhật nhầm)
+                                        const shouldRollbackStatus = currentStatus === 'CONFIRMED';
+                                        
+                                        return orderApi.updateOrder(order.id, {
+                                            ...(shouldRollbackStatus && { status: 'CREATED' }), // Rollback status về CREATED nếu bị cập nhật nhầm
+                                            payment_status: 'UNPAID', // Rollback payment_status về UNPAID
                                         }).then(() => {
-                                            console.log(`✅ Đã rollback đơn COD #${order.id}`);
+                                            console.log(`✅ Đã rollback đơn COD #${order.id} về CREATED và UNPAID`);
                                         }).catch(err => {
                                             console.error(`❌ Lỗi rollback đơn COD #${order.id}:`, err);
-                                        })
-                                    )
+                                        });
+                                    })
                                 );
                                 
-                                console.log('✅ Đã rollback payment_status cho các đơn COD trong momo-return page');
+                                console.log('✅ Đã rollback status và payment_status cho các đơn COD trong momo-return page');
                                 
                                 // Retry thêm 2 lần nữa sau 5 giây mỗi lần để đảm bảo
                                 if (retryCount < 2) {

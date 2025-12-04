@@ -1,4 +1,4 @@
-import { PaymentStatus, OrderStatus } from '../../libs/database/src/entities/order.entity';
+import { PaymentStatus, OrderStatus, PaymentMethod } from '../../libs/database/src/entities/order.entity';
 import {
     Controller,
     Post,
@@ -119,10 +119,17 @@ export class PaymentTransactionController {
                 const orderPaymentData = await this.calculatePaymentDistribution(ordersToUpdate, amount);
 
                 // Update all related orders with proper payment amounts
+                // QUAN TRỌNG: Chỉ cập nhật đơn MOMO (CARD), KHÔNG cập nhật đơn COD (ONSITE)
                 for (const orderPayment of orderPaymentData) {
                     try {
                         const order = await this.orderRepository.findById(orderPayment.orderId);
                         if (order) {
+                            // Kiểm tra payment_method trước khi cập nhật - CHỈ cập nhật đơn MOMO
+                            if (order.payment_method !== PaymentMethod.CARD) {
+                                console.log(`[MOMO] ⚠️ Bỏ qua order #${orderPayment.orderId} - không phải đơn MOMO (payment_method: ${order.payment_method})`);
+                                continue; // Bỏ qua đơn COD (ONSITE)
+                            }
+                            
                             order.payment_status = PaymentStatus.PAID;
                             order.status = OrderStatus.CONFIRMED;
                             order.current_order = order.current_order
@@ -133,6 +140,8 @@ export class PaymentTransactionController {
                             console.log(`[MOMO] ✅ Updated order #${orderPayment.orderId} with amount ${orderPayment.amount}`);
 
                             // Create/Update transaction record for each order with calculated amounts
+                            // LƯU Ý: Chỉ tạo transaction cho đơn MOMO (CARD), không tạo cho đơn COD (ONSITE)
+                            // Vì đã có check payment_method ở trên, nên đây chỉ là đơn MOMO
                             if (orderPayment.orderId === orderId) {
                                 // Create additional transaction for main order with correct calculated amount
                                 await this.paymentTransactionRepo.create({
@@ -213,9 +222,16 @@ export class PaymentTransactionController {
                     console.log(`[MOMO RETURN] 🔄 Ensuring ${ordersToUpdate.length} orders are updated: ${ordersToUpdate.join(', ')}`);
 
                     // Double-check all orders are properly updated
+                    // QUAN TRỌNG: Chỉ cập nhật đơn MOMO (CARD), KHÔNG cập nhật đơn COD (ONSITE)
                     for (const orderIdToUpdate of ordersToUpdate) {
                         try {
                             const order = await this.orderRepository.findById(orderIdToUpdate);
+                            // Kiểm tra payment_method trước khi cập nhật - CHỈ cập nhật đơn MOMO
+                            if (order && order.payment_method !== PaymentMethod.CARD) {
+                                console.log(`[MOMO RETURN] ⚠️ Bỏ qua order #${orderIdToUpdate} - không phải đơn MOMO (payment_method: ${order.payment_method})`);
+                                continue; // Bỏ qua đơn COD (ONSITE)
+                            }
+                            
                             if (order && order.payment_status !== PaymentStatus.PAID) {
                                 order.payment_status = PaymentStatus.PAID;
                                 order.status = OrderStatus.CONFIRMED;
@@ -271,12 +287,14 @@ export class PaymentTransactionController {
             });
 
             // Filter orders created around the same time and not yet paid
+            // QUAN TRỌNG: Chỉ lấy đơn MOMO (CARD), KHÔNG lấy đơn COD (ONSITE)
             const relatedOrders = recentOrders.orders.filter(order => {
                 const orderTime = new Date(order.created_at);
                 return order.id !== mainOrderId &&
                     orderTime >= tenMinutesAgo &&
                     order.payment_status === PaymentStatus.UNPAID &&
-                    order.status === OrderStatus.CREATED;
+                    order.status === OrderStatus.CREATED &&
+                    order.payment_method === PaymentMethod.CARD; // CHỈ lấy đơn MOMO (CARD), bỏ qua COD (ONSITE)
             });
 
             // Sort by creation time to ensure consistent ordering
