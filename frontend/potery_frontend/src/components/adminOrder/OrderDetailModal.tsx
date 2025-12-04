@@ -431,18 +431,43 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                     </p>
                   </div>
 
-                  {order.person_cancel && (
-                    <InfoRow 
-                        label="Người hủy" 
-                        value={order.person_cancel} 
-                    />
-                  )}
+                  {order.cancel_reason_image && order.cancel_reason_image.length > 0 && (
+                    <div>
+                      <div className="border-t border-gray-200 mb-2"></div>
+                      <span className="text-sm font-medium text-gray-600 block mb-2">
+                        Ảnh lý do hủy:
+                      </span>
+                      <div className="py-2">
+                        <div className="grid grid-cols-4 gap-2">
+                          {order.cancel_reason_image.map((imgObj, idx) => {
+                            if (!imgObj.image) return null;
 
-                  {order.cancel_date && (
-                    <InfoRow 
-                        label="Ngày giờ hủy" 
-                        value={formatDate(order.cancel_date)} 
-                    />
+                            const imageUrl = `data:image/jpeg;base64,${imgObj.image}`;
+                            const allImages = (order.cancel_reason_image || [])
+                              .filter(img => img.image)
+                              .map(img => `data:image/jpeg;base64,${img.image}`);
+
+                            return (
+                              <button
+                                title="oepn"
+                                key={imgObj.id || idx}
+                                type="button"
+                                className="focus:outline-none"
+                                onClick={() => handleOpenImage(allImages, allImages.indexOf(imageUrl))}
+                              >
+                                <Image
+                                  src={imageUrl}
+                                  alt={`Return ${idx + 1}`}
+                                  width={80}
+                                  height={80}
+                                  className="w-20 h-20 object-cover rounded border border-gray-300 hover:ring-2 hover:ring-orange-400 transition-all"
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </section>
