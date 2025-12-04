@@ -30,8 +30,9 @@ const ADVANCED_STATUS_OPTIONS: { value: OrderStatus | ""; label: string }[] = [
   { value: "RETURN_REQUESTED", label: "Đang yêu cầu đổi trả" },
   { value: "CONFIRMED_RETURN", label: "Đã xác nhận đổi trả" },
   { value: "PACKING_RETURN", label: "Đang đóng gói đổi trả" },
-  { value: "SHIPPING_RETURN", label: "Đang vận chuyển đổi trả" },
-  { value: "PENDING_DELIVERY_RETURN", label: "Chờ giao hàng đổi trả" },
+   { value: "PENDING_DELIVERY_RETURN", label: "Chờ giao hàng đổi trả" },
+    { value: "SHIPPING_RETURN", label: "Đang vận chuyển đổi trả" },
+ 
   { value: "DELIVERY_FAILED_RETURN", label: "Giao hàng đổi trả thất bại" },
   { value: "CANCELLED_RETURN", label: "Đã hủy đổi trả" },
   

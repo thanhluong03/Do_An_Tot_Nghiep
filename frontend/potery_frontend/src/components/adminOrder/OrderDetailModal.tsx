@@ -194,7 +194,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   console.log('Admin Order Full Data:', order);
 
 // Kiểm tra trạng thái hủy đơn
-  const isCancelled = order.status === 'CANCELLED';
+  const isCancelled = order.status === 'CANCELLED' || order.status === 'CANCELLED_RETURN';
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
@@ -417,7 +417,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
               <section className="bg-red-50 rounded-xl p-5 border border-red-300 shadow-sm">
                 <h3 className="flex items-center text-lg font-semibold text-red-800 mb-4 border-b border-red-200 pb-2">
                   <XCircle className="w-5 h-5 mr-2 text-red-600" />
-                  Thông tin từ chối đơn hàng
+                  Thông tin từ chối
                 </h3>
 
                 <div className="space-y-3">
