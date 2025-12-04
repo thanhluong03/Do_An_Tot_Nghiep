@@ -138,6 +138,9 @@ export class VoucherResponseDto {
     @Expose()
     is_active?: boolean;
 
+    @Expose()
+    voucher_customer_id?: number;
+
     created_at: Date;
 
     @Expose()

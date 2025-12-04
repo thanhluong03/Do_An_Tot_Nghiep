@@ -159,13 +159,16 @@ export class VoucherService {
                 return { message: `Đã xóa mềm ${count} voucher hết hạn!`, count };
         }
 
-        async findAvailableVouchersByCustomer(customerId: number): Promise<VoucherEntity[]> {
+        async findAvailableVouchersByCustomer(customerId: number): Promise<Array<VoucherEntity & { voucher_customer_id?: number }>> {
                 const voucherCustomers = await this.voucherCustomerRepository.findAll({
                         customerId,
                 });
                 return voucherCustomers
                         .filter(vc => vc.status === VoucherCustomerStatus.CREATED && vc.voucher)
-                        .map(vc => vc.voucher);
+                        .map(vc => ({
+                                ...vc.voucher,
+                                voucher_customer_id: vc.id,
+                        }));
         }
         async updateVoucherCustomerStatus(voucherCustomerId: number, status: VoucherCustomerStatus): Promise<{ message: string, voucherCustomer?: VoucherCustomerEntity }> {
                 const voucherCustomer = await this.voucherCustomerRepository.findById(voucherCustomerId);

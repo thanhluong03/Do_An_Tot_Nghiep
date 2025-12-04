@@ -217,7 +217,7 @@ export default function CheckoutPage() {
                                 try {
                                     vouchers = await voucherApi.fetchCustomerVouchers(user.id);
                                     console.log('✅ Loaded vouchers from API (checkout_items):', vouchers.length, 'vouchers');
-                                    console.log('✅ Vouchers details:', vouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id, name: v.name })));
+                                    console.log('✅ Vouchers details:', vouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id, name: v.name, status: v.status })));
                                 } catch (err) {
                                     console.error('❌ Lỗi khi tải voucher người dùng:', err);
                                 }
@@ -227,7 +227,9 @@ export default function CheckoutPage() {
                                 } catch { }
                             }
                             if (mounted) {
-                                setAvailableVouchers(vouchers);
+                                // Filter chỉ lấy voucher có status khác USED (để chắc chắn)
+                                const validVouchers = vouchers.filter(v => !v.status || v.status !== 'USED');
+                                setAvailableVouchers(validVouchers);
                                 setLoadingVouchers(false);
                             }
 
@@ -407,7 +409,7 @@ export default function CheckoutPage() {
                     try {
                         vouchers = await voucherApi.fetchCustomerVouchers(user.id);
                         console.log('✅ Loaded vouchers from API (fallback):', vouchers.length, 'vouchers');
-                        console.log('✅ Vouchers details:', vouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id, name: v.name })));
+                        console.log('✅ Vouchers details:', vouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id, name: v.name, status: v.status })));
                     } catch (err) {
                         console.error('❌ Lỗi khi tải voucher người dùng:', err);
                     }
@@ -417,7 +419,11 @@ export default function CheckoutPage() {
                         vouchers = await voucherApi.fetchAvailableVouchers();
                     } catch { }
                 }
-                if (mounted) setAvailableVouchers(vouchers);
+                if (mounted) {
+                    // Filter chỉ lấy voucher có status khác USED (để chắc chắn)
+                    const validVouchers = vouchers.filter(v => !v.status || v.status !== 'USED');
+                    setAvailableVouchers(validVouchers);
+                }
 
             } catch (e) {
                 console.error('Lỗi tải giỏ hàng:', e);
@@ -525,6 +531,16 @@ export default function CheckoutPage() {
 
     /** ===================== CHỌN VOUCHER ===================== */
     const handleSelectVoucher = (voucher: Voucher) => {
+        console.log('🔍 [SELECT VOUCHER] Chọn voucher:', { 
+            voucherId: voucher.id, 
+            voucherCustomerId: voucher.voucher_customer_id,
+            voucherName: voucher.name || voucher.code,
+            currentSelected: selectedVoucher ? {
+                id: selectedVoucher.id,
+                voucher_customer_id: selectedVoucher.voucher_customer_id
+            } : null
+        });
+        
         const minOrder = Number(voucher.min_order_value ?? voucher.order_conditions ?? 0);
         if (total < minOrder) {
             setError(`❌ Đơn hàng phải đạt ${formatPrice(minOrder)} để áp dụng mã này.`);
@@ -532,10 +548,16 @@ export default function CheckoutPage() {
             return;
         }
         setError(null);
+        
         // So sánh bằng voucher_customer_id hoặc id
-        const isSameVoucher = selectedVoucher?.voucher_customer_id === voucher.voucher_customer_id || 
-                              (selectedVoucher?.voucher_customer_id === undefined && selectedVoucher?.id === voucher.id);
+        const isSameVoucher = (selectedVoucher?.voucher_customer_id && voucher.voucher_customer_id && 
+                               selectedVoucher.voucher_customer_id === voucher.voucher_customer_id) ||
+                              (selectedVoucher?.id && voucher.id && 
+                               Number(selectedVoucher.id) === Number(voucher.id));
+        
+        console.log('🔍 [SELECT VOUCHER] isSameVoucher:', isSameVoucher);
         setSelectedVoucher(isSameVoucher ? null : voucher);
+        console.log('✅ [SELECT VOUCHER] Đã set selectedVoucher:', isSameVoucher ? null : voucher);
     };
 
     const handlePayment = async (orderId: number, amount: number) => {
@@ -868,6 +890,153 @@ export default function CheckoutPage() {
             // Cộng phí ship một lần cho tất cả đơn hàng
             totalAmountForPayment += SHIPPING_FEE;
 
+            // 🔥 Cập nhật trạng thái voucher đã sử dụng SAU KHI TẠO ĐƠN HÀNG THÀNH CÔNG (cho cả COD và MOMO)
+            if (isAuthenticated && user?.id && selectedVoucher && selectedVoucher.id) {
+                console.log('🔍 [VOUCHER UPDATE] Kiểm tra điều kiện cập nhật voucher:', {
+                    isAuthenticated,
+                    userId: user?.id,
+                    voucherId: selectedVoucher.id,
+                    voucherCustomerId: selectedVoucher.voucher_customer_id,
+                    voucherName: selectedVoucher.name,
+                });
+                
+                // Lấy voucher_customer_id từ selectedVoucher (backend đã trả về)
+                let voucherCustomerId: number | undefined = undefined;
+                
+                // Ưu tiên lấy từ selectedVoucher trước (backend đã trả về)
+                if (selectedVoucher.voucher_customer_id) {
+                    voucherCustomerId = Number(selectedVoucher.voucher_customer_id);
+                    console.log('✅ [VOUCHER UPDATE] Lấy voucher_customer_id từ selectedVoucher:', voucherCustomerId);
+                } else {
+                    // Nếu không có, query lại từ API helper
+                    console.log(`⚠️ [VOUCHER UPDATE] Không có voucher_customer_id trong selectedVoucher, query lại từ voucher_id=${selectedVoucher.id} và customer_id=${user.id}`);
+                    try {
+                        const queriedId = await voucherApi.getVoucherCustomerIdByVoucherAndCustomer(user.id, selectedVoucher.id);
+                        if (queriedId) {
+                            voucherCustomerId = queriedId;
+                            console.log('✅ [VOUCHER UPDATE] Lấy voucher_customer_id sau khi query lại:', voucherCustomerId);
+                        } else {
+                            console.warn('⚠️ [VOUCHER UPDATE] Không tìm thấy voucher_customer_id');
+                        }
+                    } catch (queryError) {
+                        console.error('❌ [VOUCHER UPDATE] Lỗi query voucher_customer_id:', queryError);
+                    }
+                }
+                
+                console.log('🔍 [VOUCHER UPDATE] voucher_customer_id cuối cùng:', voucherCustomerId);
+                
+                if (voucherCustomerId) {
+                    try {
+                        console.log(`✨ [VOUCHER UPDATE] Bắt đầu cập nhật voucher_customer_id=${voucherCustomerId} cho user_id=${user.id}`);
+                        
+                        // Cập nhật status voucher trên server thành USED TRƯỚC
+                        console.log(`📤 [VOUCHER UPDATE] Gọi API: PUT /vouchers/updatevouchercustomerstatus/${voucherCustomerId} với payload: { status: 'USED' }`);
+                        const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
+                        console.log('✅ [VOUCHER UPDATE] Kết quả cập nhật voucher:', result);
+                        console.log('✅ [VOUCHER UPDATE] Status trong response:', result?.voucherCustomer?.status);
+                        
+                        if (result?.voucherCustomer?.status === 'USED') {
+                            console.log('✅ [VOUCHER UPDATE] Voucher đã được cập nhật status thành USED trong DB');
+                            
+                            // Xóa voucher khỏi UI sau khi cập nhật thành công
+                            setAvailableVouchers(prev => prev.filter(v => {
+                                const vId = v.voucher_customer_id || v.id;
+                                const selectedId = voucherCustomerId;
+                                const shouldKeep = vId !== selectedId;
+                                if (!shouldKeep) {
+                                    console.log(`🗑️ [VOUCHER UPDATE] Xóa voucher khỏi UI: voucher_customer_id=${vId}`);
+                                }
+                                return shouldKeep;
+                            }));
+                            setSelectedVoucher(null);
+                            
+                            // Reload lại danh sách vouchers từ server để đảm bảo đồng bộ
+                            try {
+                                console.log('🔄 [VOUCHER UPDATE] Reloading vouchers after update...');
+                                const updatedVouchers = await voucherApi.fetchCustomerVouchers(user.id);
+                                console.log('📥 [VOUCHER UPDATE] Số lượng voucher sau khi reload:', updatedVouchers.length);
+                                // Filter lại để chỉ hiển thị voucher có status khác USED
+                                const validVouchers = updatedVouchers.filter(v => {
+                                    const isValid = !v.status || v.status !== 'USED';
+                                    if (!isValid) {
+                                        console.log(`🚫 [VOUCHER UPDATE] Filter voucher USED: id=${v.id}, voucher_customer_id=${v.voucher_customer_id}, status=${v.status}`);
+                                    }
+                                    return isValid;
+                                });
+                                setAvailableVouchers(validVouchers);
+                                console.log('✅ [VOUCHER UPDATE] Đã reload lại danh sách vouchers, số lượng hợp lệ:', validVouchers.length);
+                                toast.success('✅ Voucher đã được sử dụng thành công!');
+                            } catch (reloadError) {
+                                console.error('❌ [VOUCHER UPDATE] Lỗi reload vouchers:', reloadError);
+                                toast.success('✅ Voucher đã được sử dụng!');
+                            }
+                        } else {
+                            console.warn('⚠️ [VOUCHER UPDATE] Status không phải USED sau khi cập nhật:', result?.voucherCustomer?.status);
+                        }
+                    } catch (voucherError: any) {
+                        console.error('❌ [VOUCHER UPDATE] Lỗi cập nhật trạng thái voucher:', {
+                            error: voucherError,
+                            message: voucherError?.message,
+                            response: voucherError?.response?.data,
+                            status: voucherError?.response?.status,
+                            voucherCustomerId,
+                        });
+                        toast.error(`Không thể cập nhật trạng thái voucher: ${voucherError?.message || 'Lỗi không xác định'}`);
+                        // Nếu lỗi, thử reload lại danh sách từ server
+                        try {
+                            const updatedVouchers = await voucherApi.fetchCustomerVouchers(user.id);
+                            const validVouchers = updatedVouchers.filter(v => !v.status || v.status !== 'USED');
+                            setAvailableVouchers(validVouchers);
+                        } catch (reloadError) {
+                            console.error('❌ [VOUCHER UPDATE] Lỗi reload vouchers sau khi có lỗi:', reloadError);
+                        }
+                    }
+                } else {
+                    console.error('❌ [VOUCHER UPDATE] Không tìm thấy voucher_customer_id cho voucher:', {
+                        selectedVoucher: {
+                            id: selectedVoucher.id,
+                            voucher_customer_id: selectedVoucher.voucher_customer_id,
+                            name: selectedVoucher.name,
+                        },
+                        availableVouchers: availableVouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id })),
+                    });
+                    toast.error('Không tìm thấy thông tin voucher. Vui lòng thử lại.');
+                    // Vẫn xóa voucher khỏi UI nếu không có voucher_customer_id
+                    setAvailableVouchers(prev => prev.filter(v => v.id !== selectedVoucher.id));
+                    setSelectedVoucher(null);
+                }
+            } else {
+                console.warn('⚠️ [VOUCHER UPDATE] Điều kiện không đúng để cập nhật voucher:', {
+                    isAuthenticated,
+                    hasUserId: !!user?.id,
+                    hasSelectedVoucher: !!selectedVoucher,
+                });
+            }
+
+            // 🔥 Lưu voucher_customer_id vào sessionStorage cho MOMO để cập nhật sau khi thanh toán thành công
+            if (paymentMethod === 'MOMO' && isAuthenticated && user?.id && selectedVoucher) {
+                // Lấy voucher_customer_id từ selectedVoucher (backend đã trả về)
+                let voucherCustomerIdForMomo: number | undefined = undefined;
+                
+                if (selectedVoucher.voucher_customer_id) {
+                    voucherCustomerIdForMomo = Number(selectedVoucher.voucher_customer_id);
+                    console.log('✅ [VOUCHER UPDATE MOMO] Lấy voucher_customer_id từ selectedVoucher:', voucherCustomerIdForMomo);
+                } else if (selectedVoucher.id) {
+                    // Nếu không có, lưu voucher_id và customer_id để query lại
+                    sessionStorage.setItem('selected_voucher_id', String(selectedVoucher.id));
+                    sessionStorage.setItem('selected_customer_id', String(user.id));
+                    console.log('💾 [VOUCHER UPDATE MOMO] Đã lưu voucher_id và customer_id cho thanh toán MOMO (sẽ query lại sau):', {
+                        voucherId: selectedVoucher.id,
+                        customerId: user.id,
+                    });
+                }
+                
+                if (voucherCustomerIdForMomo) {
+                    sessionStorage.setItem('selected_voucher_customer_id', String(voucherCustomerIdForMomo));
+                    console.log('💾 [VOUCHER UPDATE MOMO] Đã lưu voucher_customer_id cho thanh toán MOMO:', voucherCustomerIdForMomo);
+                }
+            }
+
             if (paymentMethod === 'MOMO') {
                 // 🔥 QUAN TRỌNG: Rollback các đơn COD ngay sau khi tạo đơn MOMO
                 // Backend callback có thể đã cập nhật nhầm các đơn COD, cần rollback ngay
@@ -935,19 +1104,7 @@ export default function CheckoutPage() {
                     console.log('💾 Đã lưu danh sách order IDs cho thanh toán MOMO:', createdOrderIds);
                 }
 
-                // Lưu voucher_customer_id vào sessionStorage để cập nhật sau khi thanh toán thành công
-                if (isAuthenticated && user?.id && selectedVoucher) {
-                    // Lấy voucher_customer_id từ selectedVoucher hoặc từ availableVouchers
-                    const voucherCustomerId = selectedVoucher.voucher_customer_id || 
-                                             availableVouchers.find(v => v.id === selectedVoucher.id)?.voucher_customer_id;
-                    
-                    if (voucherCustomerId) {
-                        sessionStorage.setItem('selected_voucher_customer_id', String(voucherCustomerId));
-                        console.log('💾 Đã lưu voucher_customer_id cho thanh toán MOMO:', voucherCustomerId);
-                    } else {
-                        console.warn('⚠️ Không tìm thấy voucher_customer_id cho voucher MOMO:', selectedVoucher);
-                    }
-                }
+                // Voucher đã được cập nhật ở trên, không cần lưu vào sessionStorage nữa
 
                 if (!isAuthenticated) clearGuestData();
 
@@ -996,74 +1153,6 @@ export default function CheckoutPage() {
 
             // Nếu COD (Tất cả đơn hàng đã được tạo thành công)
             if (paymentMethod === 'COD') {
-
-                // 🔥 Cập nhật trạng thái voucher đã sử dụng
-                if (isAuthenticated && user?.id && selectedVoucher) {
-                    console.log('🔍 Checking voucher for update:', {
-                        selectedVoucher,
-                        availableVouchers: availableVouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id, name: v.name })),
-                    });
-                    
-                    // Lấy voucher_customer_id từ selectedVoucher hoặc từ availableVouchers
-                    const voucherCustomerId = selectedVoucher.voucher_customer_id || 
-                                             availableVouchers.find(v => v.id === selectedVoucher.id)?.voucher_customer_id;
-                    
-                    console.log('🔍 Found voucher_customer_id:', voucherCustomerId, {
-                        fromSelected: selectedVoucher.voucher_customer_id,
-                        fromAvailable: availableVouchers.find(v => v.id === selectedVoucher.id)?.voucher_customer_id,
-                    });
-                    
-                    if (voucherCustomerId) {
-                        try {
-                            console.log(`✨ Bắt đầu cập nhật voucher ${voucherCustomerId} cho user ${user.id}`);
-                            const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
-                            console.log('✅ Kết quả cập nhật voucher:', result);
-                            
-                            // Reload lại danh sách vouchers từ server để đảm bảo đồng bộ
-                            try {
-                                console.log('🔄 Reloading vouchers after update...');
-                                const updatedVouchers = await voucherApi.fetchCustomerVouchers(user.id);
-                                setAvailableVouchers(updatedVouchers);
-                                console.log('✅ Đã reload lại danh sách vouchers sau khi cập nhật status, số lượng:', updatedVouchers.length);
-                                toast.success('✅ Voucher đã được sử dụng thành công!');
-                            } catch (reloadError) {
-                                console.error('❌ Lỗi reload vouchers:', reloadError);
-                                // Fallback: Cập nhật UI ngay lập tức - xóa voucher đã sử dụng
-                                setAvailableVouchers(prev => prev.filter(v => {
-                                    const vId = v.voucher_customer_id || v.id;
-                                    const selectedId = voucherCustomerId;
-                                    return vId !== selectedId;
-                                }));
-                                toast.success('✅ Voucher đã được sử dụng!');
-                            }
-                            setSelectedVoucher(null);
-                        } catch (voucherError: any) {
-                            console.error('❌ Lỗi cập nhật trạng thái voucher:', {
-                                error: voucherError,
-                                message: voucherError?.message,
-                                response: voucherError?.response?.data,
-                                voucherCustomerId,
-                            });
-                            toast.error(`Không thể cập nhật trạng thái voucher: ${voucherError?.message || 'Lỗi không xác định'}`);
-                        }
-                    } else {
-                        console.error('❌ Không tìm thấy voucher_customer_id cho voucher:', {
-                            selectedVoucher,
-                            availableVouchers: availableVouchers.map(v => ({ id: v.id, voucher_customer_id: v.voucher_customer_id })),
-                        });
-                        toast.error('Không tìm thấy thông tin voucher. Vui lòng thử lại.');
-                        // Vẫn xóa voucher khỏi UI nếu không có voucher_customer_id
-                        setAvailableVouchers(prev => prev.filter(v => v.id !== selectedVoucher.id));
-                        setSelectedVoucher(null);
-                    }
-                } else {
-                    console.log('⚠️ Không có selectedVoucher hoặc user không đăng nhập:', {
-                        isAuthenticated,
-                        userId: user?.id,
-                        selectedVoucher,
-                    });
-                }
-
                 // 🔥 Xóa Server Cart Item cho user đã login
                 if (isAuthenticated && serverCartItemIdsToDelete.length > 0) {
                     console.log('🗑️ Deleting server cart items after successful COD orders...');
@@ -1361,48 +1450,74 @@ export default function CheckoutPage() {
                                 </h2>
                                 {loadingVouchers ? (
                                     <div className="text-center text-[#65604E] py-4 text-sm">Đang tải...</div>
-                                ) : availableVouchers.length > 0 ? (
-                                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                                        {availableVouchers.map((v, index) => {
-                                            const minOrder = Number(v.min_order_value ?? v.order_conditions ?? 0);
-                                            const eligible = total >= minOrder;
-                                            const selected = selectedVoucher?.voucher_customer_id === v.voucher_customer_id || selectedVoucher?.id === v.id;
-                                            const discountVal = Number(v.discount_value ?? v.voucher_percentage ?? 0);
-                                            const type = String(v.discount_type ?? 'PERCENT').toUpperCase();
+                                ) : (() => {
+                                    // Filter chỉ hiển thị voucher có status khác USED
+                                    const validVouchers = availableVouchers.filter(v => {
+                                        // Nếu có status, chỉ hiển thị status CREATED hoặc PENDING
+                                        if (v.status) {
+                                            return v.status !== 'USED';
+                                        }
+                                        // Nếu không có status, hiển thị (backend đã filter nhưng để chắc chắn)
+                                        return true;
+                                    });
+                                    return validVouchers.length > 0 ? (
+                                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                            {validVouchers.map((v, index) => {
+                                                const minOrder = Number(v.min_order_value ?? v.order_conditions ?? 0);
+                                                const eligible = total >= minOrder;
+                                                // So sánh bằng voucher_customer_id hoặc id để xác định voucher đã chọn
+                                                const selected = (selectedVoucher?.voucher_customer_id && v.voucher_customer_id && 
+                                                                  Number(selectedVoucher.voucher_customer_id) === Number(v.voucher_customer_id)) ||
+                                                                 (selectedVoucher?.id && v.id && 
+                                                                  Number(selectedVoucher.id) === Number(v.id));
+                                                const discountVal = Number(v.discount_value ?? v.voucher_percentage ?? 0);
+                                                const type = String(v.discount_type ?? 'PERCENT').toUpperCase();
 
-                                            // Tạo key unique: ưu tiên voucher_customer_id, sau đó id, cuối cùng là index
-                                            const uniqueKey = String(v.voucher_customer_id ?? v.id ?? `voucher-${index}`);
+                                                // Tạo key unique: ưu tiên voucher_customer_id, sau đó id, cuối cùng là index
+                                                const uniqueKey = String(v.voucher_customer_id ?? v.id ?? `voucher-${index}`);
 
-                                            return (
-                                                <div
-                                                    key={uniqueKey}
-                                                    onClick={() => handleSelectVoucher(v)}
-                                                    className={`p-3 rounded-md transition border-2 cursor-pointer ${selected ? 'bg-[#D6C5A9] border-[#A38D64] shadow-md' : eligible ? 'bg-white border-[#D4C3A3]/50 hover:bg-[#F9F7F3]' : 'bg-[#F3F1ED] border-[#E0DCCA] opacity-70'}`}
-                                                >
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-sm text-[#2C2A24] truncate">
-                                                                {v.code}
+                                                return (
+                                                    <div
+                                                        key={uniqueKey}
+                                                        onClick={() => handleSelectVoucher(v)}
+                                                        className={`p-3 rounded-md transition border-2 cursor-pointer relative ${
+                                                            selected 
+                                                                ? 'bg-[#D6C5A9] border-[#A38D64] shadow-md ring-2 ring-[#A38D64] ring-offset-2' 
+                                                                : eligible 
+                                                                    ? 'bg-white border-[#D4C3A3]/50 hover:bg-[#F9F7F3] hover:border-[#A38D64]' 
+                                                                    : 'bg-[#F3F1ED] border-[#E0DCCA] opacity-70 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        {selected && (
+                                                            <div className="absolute top-2 right-2">
+                                                                <CheckCircle className="w-5 h-5 text-[#A38D64]" />
                                                             </div>
-                                                            <p className="text-xs text-[#7C7768] mt-0.5 truncate">{v.description || 'Ưu đãi đặc biệt'}</p>
-                                                        </div>
-                                                        <div className="text-right flex flex-col items-end pl-2">
-                                                            <p className="font-bold text-base text-[#A38D64]">
-                                                                {type === 'PERCENT' || type === 'PERCENTAGE' ? `${discountVal}%` : formatPrice(discountVal)}
-                                                            </p>
-                                                            <p className={`text-xs mt-0.5 ${eligible ? 'text-[#3D6647]' : 'text-red-600'}`}>
-                                                                {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5' /> : <X className='w-3 h-3 inline-block mr-0.5' />}
-                                                                {eligible ? 'Đủ ĐK' : `Giá tổng đơn hàng phải đạt: ${formatPrice(minOrder)}`}
-                                                            </p>
+                                                        )}
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex-1">
+                                                                <div className="font-bold text-sm text-[#2C2A24] truncate">
+                                                                    {v.code || v.name || `Voucher #${v.id}`}
+                                                                </div>
+                                                                <p className="text-xs text-[#7C7768] mt-0.5 truncate">{v.description || v.desc || v.name || 'Ưu đãi đặc biệt'}</p>
+                                                            </div>
+                                                            <div className="text-right flex flex-col items-end pl-2">
+                                                                <p className="font-bold text-base text-[#A38D64]">
+                                                                    {type === 'PERCENT' || type === 'PERCENTAGE' ? `${discountVal}%` : formatPrice(discountVal)}
+                                                                </p>
+                                                                <p className={`text-xs mt-0.5 ${eligible ? 'text-[#3D6647]' : 'text-red-600'}`}>
+                                                                    {eligible ? <CheckCircle className='w-3 h-3 inline-block mr-0.5' /> : <X className='w-3 h-3 inline-block mr-0.5' />}
+                                                                    {eligible ? 'Đủ ĐK' : `Giá tổng đơn hàng phải đạt: ${formatPrice(minOrder)}`}
+                                                                </p>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-[#65604E] py-4 text-sm">Bạn chưa có mã ưu đãi nào.</div>
-                                )}
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-[#65604E] py-4 text-sm">Bạn chưa có mã ưu đãi nào.</div>
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>

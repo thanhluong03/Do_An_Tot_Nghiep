@@ -365,19 +365,65 @@ export default function MyOrdersPage() {
             console.log('ℹ️ Không có momo_order_ids trong sessionStorage');
           }
 
-          // Cập nhật voucher status (nếu có) sau khi thanh toán MOMO thành công
+          // 🔥 Cập nhật trạng thái voucher cho MOMO sau khi thanh toán thành công
           const voucherCustomerIdStr = sessionStorage.getItem('selected_voucher_customer_id');
+          const voucherIdStr = sessionStorage.getItem('selected_voucher_id');
+          const customerIdStr = sessionStorage.getItem('selected_customer_id');
+          
           if (voucherCustomerIdStr && user?.id) {
             try {
               const voucherCustomerId = Number(voucherCustomerIdStr);
-              console.log(`✨ Cập nhật voucher ${voucherCustomerId} cho user ${user.id} sau khi thanh toán MOMO`);
-              await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
-              console.log('✅ Đã cập nhật voucher status thành USED');
+              console.log(`✨ [VOUCHER UPDATE MOMO] Cập nhật voucher_customer_id=${voucherCustomerId} cho user ${user.id} sau khi thanh toán MOMO thành công`);
+              
+              // Cập nhật status voucher trên server thành USED
+              const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
+              console.log('✅ [VOUCHER UPDATE MOMO] Kết quả cập nhật voucher:', result);
+              console.log('✅ [VOUCHER UPDATE MOMO] Voucher đã được cập nhật status thành USED trong DB');
+              
+              toast.success('✅ Voucher đã được sử dụng thành công!');
+              
+              // Xóa khỏi sessionStorage sau khi xử lý xong
+              sessionStorage.removeItem('selected_voucher_customer_id');
+              console.log('🗑️ [VOUCHER UPDATE MOMO] Đã xóa voucher_customer_id khỏi sessionStorage');
             } catch (voucherError) {
-              console.error('Lỗi cập nhật trạng thái voucher sau khi thanh toán MOMO:', voucherError);
-            } finally {
+              console.error('❌ [VOUCHER UPDATE MOMO] Lỗi cập nhật trạng thái voucher sau khi thanh toán MOMO:', voucherError);
               sessionStorage.removeItem('selected_voucher_customer_id');
             }
+          } else if (voucherIdStr && customerIdStr && user?.id) {
+            // Fallback: Query lại nếu không có voucher_customer_id
+            try {
+              const voucherId = Number(voucherIdStr);
+              const customerId = Number(customerIdStr);
+              console.log(`✨ [VOUCHER UPDATE MOMO] Query voucher_customer_id từ voucher_id=${voucherId} và customer_id=${customerId}`);
+              
+              // Query voucher_customer_id từ voucher_id và customer_id
+              const voucherCustomerId = await voucherApi.getVoucherCustomerIdByVoucherAndCustomer(customerId, voucherId);
+              
+              if (voucherCustomerId) {
+                console.log(`✨ [VOUCHER UPDATE MOMO] Cập nhật voucher_customer_id=${voucherCustomerId} cho user ${user.id} sau khi thanh toán MOMO thành công`);
+                
+                // Cập nhật status voucher trên server thành USED
+                const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
+                console.log('✅ [VOUCHER UPDATE MOMO] Kết quả cập nhật voucher:', result);
+                console.log('✅ [VOUCHER UPDATE MOMO] Voucher đã được cập nhật status thành USED trong DB');
+                
+                toast.success('✅ Voucher đã được sử dụng thành công!');
+              } else {
+                console.warn('⚠️ [VOUCHER UPDATE MOMO] Không tìm thấy voucher_customer_id');
+              }
+              
+              // Xóa khỏi sessionStorage sau khi xử lý xong
+              sessionStorage.removeItem('selected_voucher_id');
+              sessionStorage.removeItem('selected_customer_id');
+              console.log('🗑️ [VOUCHER UPDATE MOMO] Đã xóa voucher_id và customer_id khỏi sessionStorage');
+            } catch (voucherError) {
+              console.error('❌ [VOUCHER UPDATE MOMO] Lỗi cập nhật trạng thái voucher sau khi thanh toán MOMO:', voucherError);
+              // Vẫn xóa sessionStorage để tránh lặp lại
+              sessionStorage.removeItem('selected_voucher_id');
+              sessionStorage.removeItem('selected_customer_id');
+            }
+          } else {
+            console.log('ℹ️ [VOUCHER UPDATE MOMO] Không có voucher_id hoặc customer_id trong sessionStorage hoặc user chưa đăng nhập');
           }
 
           clearCart();
@@ -391,7 +437,11 @@ export default function MyOrdersPage() {
     } else if (paymentStatus === 'failed') {
       // Xóa sessionStorage nếu thanh toán thất bại
       sessionStorage.removeItem('momo_order_ids');
-      sessionStorage.removeItem('selected_voucher_customer_id');
+      // Voucher đã được cập nhật khi tạo đơn, nhưng nếu thanh toán thất bại thì có thể cần rollback
+      // Tạm thời chỉ xóa sessionStorage
+      if (sessionStorage.getItem('selected_voucher_customer_id')) {
+        sessionStorage.removeItem('selected_voucher_customer_id');
+      }
       toast.error('❌ Thanh toán thất bại, vui lòng thử lại!');
       window.history.replaceState({}, '', '/orders');
     }
