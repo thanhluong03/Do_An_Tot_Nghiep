@@ -11,6 +11,9 @@ export class DeliveryFailImageEntity extends BaseEntity {
     @Column({ type: 'bytea', nullable: true })
     delivery_fail_image: Buffer
 
+    @Column({ type: 'boolean', nullable: true })
+    is_delivery_fail_return: boolean
+
     @ManyToOne(() => OrderEntity, (order) => order.deliveryFailImages)
     @JoinColumn({ name: 'order_id' })
     order: OrderEntity;

@@ -11,6 +11,9 @@ export class CancelReasonImageEntity extends BaseEntity {
     @Column({ type: 'bytea', nullable: true })
     cancel_reason_image: Buffer
 
+    @Column({ type: 'boolean', nullable: true })
+    is_cancel_return: boolean
+    
     @ManyToOne(() => OrderEntity, (order) => order.cancelReasonImages)
     @JoinColumn({ name: 'order_id' })
     order: OrderEntity;
