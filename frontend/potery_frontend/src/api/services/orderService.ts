@@ -72,6 +72,7 @@ export interface Order {
   is_login_customer?: boolean;
   returnReason?: string;
   returnReasonImage?: { id: number; image: string }[];
+  cancel_reason_image?: { id: number; image: string }[];
   note?: string;
   cancel_reason?: string | null;
   cancel_date?: string | null;
