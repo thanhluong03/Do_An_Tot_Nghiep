@@ -29,18 +29,18 @@ const statusTranslations: Record<OrderStatus, string> = {
     SHIPPING: "Đang giao",
     DELIVERED: "Đã giao thành công",
     EXCHANGED: "Đã đổi trả",
-    RETURN_REQUESTED: "Đang yêu cầu hoàn trả",
+    RETURN_REQUESTED: "Đang yêu cầu đổi trả",
     CANCELLED: "Hủy đơn hàng",
 
-    CONFIRMED_RETURN: "Xác nhận hoàn trả",
+    CONFIRMED_RETURN: "Xác nhận đổi trả",
     PENDING_DELIVERY: "Chờ giao hàng",
     DELIVERY_FAILED: "Giao hàng thất bại",
     PACKING: "Đang đóng gói",
-    SHIPPING_RETURN: "Đang vận chuyển hoàn trả",
-    PENDING_DELIVERY_RETURN: "Chờ giao hàng hoàn trả",
-    DELIVERY_FAILED_RETURN: "Giao hàng hoàn trả thất bại",
-    CANCELLED_RETURN: "Đã hủy hoàn trả",
-    PACKING_RETURN: "Đang đóng gói hoàn trả",
+    SHIPPING_RETURN: "Đang vận chuyển đổi trả",
+    PENDING_DELIVERY_RETURN: "Chờ giao hàng đổi trả",
+    DELIVERY_FAILED_RETURN: "Giao hàng đổi trả thất bại",
+    CANCELLED_RETURN: "Đã hủy đổi trả",
+    PACKING_RETURN: "Đang đóng gói đổi trả",
 };
 
 // Danh sách CÁC TRẠNG THÁI MÀ ADMIN ĐƯỢC PHÉP SỬA qua modal này

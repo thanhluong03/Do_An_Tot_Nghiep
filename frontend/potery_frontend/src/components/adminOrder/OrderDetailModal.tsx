@@ -25,11 +25,11 @@ const statusToVietnamese = (status: string) => {
     case "EXCHANGED":
       return "Đã đổi trả";
     case "RETURN_REQUESTED":
-      return "Đang yêu cầu hoàn trả";
+      return "Đang yêu cầu đổi trả";
     case "CANCELLED":
       return "Hủy đơn hàng";
     case "CONFIRMED_RETURN":
-      return "Xác nhận hoàn trả";
+      return "Xác nhận đổi trả";
     case "PENDING_DELIVERY":
       return "Chờ giao hàng";
     case "DELIVERY_FAILED":
@@ -37,16 +37,15 @@ const statusToVietnamese = (status: string) => {
     case "PACKING":
       return "Đang đóng gói";
     case "SHIPPING_RETURN":
-      return "Đang vận chuyển hoàn trả";
+      return "Đang vận chuyển đổi trả";
     case "PENDING_DELIVERY_RETURN":
-      return "Chờ giao hàng hoàn trả";
+      return "Chờ giao hàng đổi trả";
     case "DELIVERY_FAILED_RETURN":
-      return "Giao hàng hoàn trả thất bại";
+      return "Giao hàng đổi trả thất bại";
     case "CANCELLED_RETURN":
-      return "Đã hủy hoàn trả";
+      return "Đã hủy đổi trả";
     case "PACKING_RETURN":
-      return "Đang đóng gói hoàn trả";
-
+      return "Đang đóng gói đổi trả";
     default:
       return status;
   }
