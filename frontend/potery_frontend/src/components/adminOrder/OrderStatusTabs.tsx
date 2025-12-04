@@ -20,19 +20,21 @@ const MAIN_TABS: { value: OrderStatus | ""; label: string }[] = [
   { value: "PENDING_DELIVERY", label: "Chờ giao hàng" },
   { value: "SHIPPING", label: "Đang vận chuyển" }, 
   { value: "DELIVERED", label: "Đã giao thành công" }, 
+  { value: "DELIVERY_FAILED", label: "Giao hàng thất bại" },
   { value: "CANCELLED", label: "Đã hủy" }, 
+  { value: "EXCHANGED", label: "Đã đổi trả" },
 ];
 
 // --- 2. Trạng thái Nâng cao/Chi tiết (Gom vào Dropdown) ---
 const ADVANCED_STATUS_OPTIONS: { value: OrderStatus | ""; label: string }[] = [
-  { value: "DELIVERY_FAILED", label: "Giao hàng thất bại" },
-  { value: "REJECTED", label: "Đã từ chối" },
   { value: "RETURN_REQUESTED", label: "Đang yêu cầu hoàn trả" },
-  { value: "PENDING_RETURN", label: "Chờ hoàn trả" },
   { value: "CONFIRMED_RETURN", label: "Đã xác nhận hoàn trả" },
+  { value: "PACKING_RETURN", label: "Đang đóng gói hoàn trả" },
   { value: "SHIPPING_RETURN", label: "Đang vận chuyển hoàn trả" },
   { value: "PENDING_DELIVERY_RETURN", label: "Chờ giao hàng hoàn trả" },
-  { value: "EXCHANGED", label: "Đã đổi trả" },
+  { value: "DELIVERY_FAILED_RETURN", label: "Giao hàng hoàn trả thất bại" },
+  { value: "CANCELLED_RETURN", label: "Đã hủy hoàn trả" },
+  
 ];
 
 // --- 3. Tổng hợp tất cả (Dùng để tìm kiếm Label) ---
