@@ -169,7 +169,7 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   console.log('Admin Order Full Data:', order);
 
 // Kiểm tra trạng thái hủy đơn
-  const isCancelled = order.status === 'REJECTED';
+  const isCancelled = order.status === 'CANCELLED';
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
@@ -247,7 +247,14 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                       {order.returnReason}
                     </p>
                   </div>
-
+                  <div>
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Thời gian yêu cầu hoàn trả:
+                    </span>
+                    <p className="text-sm font-text rounded bg-white">
+                      {order.reason_change_date ? formatDate(order.reason_change_date) : "N/A"}
+                    </p>
+                  </div>
                   {order.returnReasonImage && order.returnReasonImage.length > 0 && (
                     <div>
                       <div className="border-t border-gray-200 mb-2"></div>

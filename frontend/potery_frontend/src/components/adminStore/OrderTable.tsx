@@ -192,7 +192,7 @@ export default function OrderTable({
               </td>
 
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                {order.status === 'CONFIRMED' ? (
+                {order.status === 'PENDING_DELIVERY'|| order.status === 'PENDING_DELIVERY_RETURN' ? (
                   <div className="flex items-center space-x-2 min-w-[250px]">
                     {order.driverLocations && order.driverLocations.length > 0 ? (
                       <select
