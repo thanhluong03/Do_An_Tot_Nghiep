@@ -32,14 +32,14 @@ const statusTranslations: Record<OrderStatus, string> = {
     RETURN_REQUESTED: "Đang yêu cầu đổi trả",
     CANCELLED: "Hủy đơn hàng",
 
-    CONFIRMED_RETURN: "Xác nhận đổi trả",
-    PENDING_DELIVERY: "Chờ giao hàng",
+    CONFIRMED_RETURN: "Xác nhận yêu cầu đổi trả",
+    PENDING_DELIVERY: "Chờ người giao hàng",
     DELIVERY_FAILED: "Giao hàng thất bại",
     PACKING: "Đang đóng gói",
     SHIPPING_RETURN: "Đang vận chuyển đổi trả",
     PENDING_DELIVERY_RETURN: "Chờ giao hàng đổi trả",
     DELIVERY_FAILED_RETURN: "Giao hàng đổi trả thất bại",
-    CANCELLED_RETURN: "Đã hủy đổi trả",
+    CANCELLED_RETURN: "Hủy đổi trả đối với đơn hàng",
     PACKING_RETURN: "Đang đóng gói đổi trả",
 };
 
@@ -65,10 +65,6 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
     const allowed = AdminAllowedStatuses;
 
     const available: OrderStatus[] = [currentStatus];
-
-    // =============================================
-    // 1) Cho phép hủy nếu chưa kết thúc
-    // =============================================
     const isFinal =
         currentStatus === "CANCELLED" ||
         currentStatus === "CANCELLED_RETURN" ||
@@ -80,10 +76,6 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
             currentStatus.includes("RETURN") ? "CANCELLED_RETURN" : "CANCELLED"
         );
     }
-
-    // =============================================
-    // 2) Luồng chính
-    // =============================================
     switch (currentStatus) {
         // ---------- NORMAL ORDER FLOW ----------
         case "CREATED":
@@ -101,7 +93,9 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
         case "PENDING_DELIVERY":
             // chỉ cho cancel
             break;
-
+        case "RETURN_REQUESTED":
+            available.push("CONFIRMED_RETURN");
+            break;
         // ---------- RETURN FLOW ----------
         case "CONFIRMED_RETURN":
             available.push("PACKING_RETURN");
@@ -122,10 +116,6 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
         case "DELIVERED":
             return [currentStatus];
     }
-
-    // =============================================
-    // 3) Lọc bằng AdminAllowedStatuses
-    // =============================================
     let finalStatuses = Array.from(new Set(available)).filter(s =>
         allowed.includes(s)
     );
@@ -180,7 +170,7 @@ export default function OrderStatusModal({
 
 
     const availableStatuses = getAvailableStatuses(currentStatus);
-    const isCancelledStatus = status === "CANCELLED";
+    const isCancelledStatus = status === "CANCELLED" || status === "CANCELLED_RETURN";
 
     const executeSave = async () => {
         setIsConfirmingSave(false);
@@ -269,7 +259,7 @@ export default function OrderStatusModal({
         <>
             {/* Overlay và Modal chính */}
             <div className="fixed inset-0 bg-black/30 z-[1100] flex justify-center items-center p-4">
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+                <div className="bg-white rounded-xl shadow-xl w-full max-w-[700px] p-8 relative">
                     <button
                         title="close"
                         onClick={onClose}
@@ -281,42 +271,66 @@ export default function OrderStatusModal({
                     <h2 className="text-2xl font-semibold mb-5 text-gray-900">Cập nhật Trạng thái Đơn hàng</h2>
 
                     <div className="space-y-4">
+                        
+                        {/* ⭐️ PHẦN CẬP NHẬT TRẠNG THÁI MỚI (Dùng Buttons) ⭐️ */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái đơn hàng</label>
-                            <select
-                                title="change order status"
-                                value={status}
-                                onChange={(e) => {
-                                    const newStatus = e.target.value as OrderStatus;
-                                    setStatus(newStatus);
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái đơn hàng</label>
 
-                                    if (newStatus !== "CANCELLED") {
-                                        // Reset hoàn toàn khi KHÔNG phải là CANCELLED
-                                        setCancelReason(initialCancelReason || "");
-                                        setPersonCancel(initialPersonCancel || DEFAULT_PERSON_CANCEL);
-                                        // Đã loại bỏ setCancelDate
-                                        return;
+                            <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                {availableStatuses.map((s) => {
+                                    const isCurrent = s === currentStatus;
+                                    const isSelected = s === status;
+                                    const isCancel = s.includes("CANCELLED");
+                                    
+                                    // 1. CSS cho trạng thái hiện tại (Current Status - Không bấm được)
+                                    if (isCurrent && s === status) {
+                                        return (
+                                            <div
+                                                key={s}
+                                                className="px-4 py-2 font-semibold text-white bg-indigo-600 rounded-full cursor-default shadow-md"
+                                                title={`Trạng thái hiện tại: ${translateOrderStatus(s)}`}
+                                            >
+                                                <CheckCircle className="inline w-4 h-4 mr-1" />
+                                                {translateOrderStatus(s)} (Hiện tại)
+                                            </div>
+                                        );
                                     }
 
-                                    // Nếu chuyển từ trạng thái khác sang CANCELLED → đặt Person Cancel mặc định
-                                    if (currentStatus !== "CANCELLED") {
-                                        setPersonCancel(DEFAULT_PERSON_CANCEL);
-                                    }
-                                    // Nếu đang CANCELLED và vẫn giữ CANCELLED → giữ nguyên dữ liệu cũ
-                                }}
-
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
-                            >
-                                {/* HIỂN THỊ CÁC TRẠNG THÁI ĐÃ LỌC */}
-                                {availableStatuses.map((s) => (
-                                    <option key={s} value={s}>
-                                        {translateOrderStatus(s)}
-                                    </option>
-                                ))}
-                            </select>
+                                    // 2. CSS cho trạng thái chuyển tiếp (Selectable Status)
+                                    return (
+                                        <button
+                                            key={s}
+                                            onClick={() => {
+                                                const newStatus = s as OrderStatus;
+                                                setStatus(newStatus);
+                                                
+                                                // Reset/Set mặc định logic tương tự như trong dropdown
+                                                if (newStatus !== "CANCELLED") {
+                                                    setCancelReason(initialCancelReason || "");
+                                                    setPersonCancel(initialPersonCancel || DEFAULT_PERSON_CANCEL);
+                                                } else if (currentStatus !== "CANCELLED") {
+                                                    setPersonCancel(DEFAULT_PERSON_CANCEL);
+                                                }
+                                            }}
+                                            className={`px-4 py-2 font-medium rounded-full transition-all border 
+                                                ${isSelected // Nếu trạng thái này được chọn (nhưng không phải là currentStatus)
+                                                    ? 'bg-orange-100 border-orange-600 text-orange-700 shadow-sm'
+                                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
+                                                }
+                                                ${isCancel && !isSelected ? 'text-red-600 border-red-300 hover:bg-red-50' : ''}
+                                            `}
+                                            title={`Chuyển sang: ${translateOrderStatus(s)}`}
+                                        >
+                                            {translateOrderStatus(s)}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
+                        {/* ⭐️ KẾT THÚC PHẦN CẬP NHẬT TRẠNG THÁI MỚI ⭐️ */}
 
-                        {/* FORM ĐIỀN THÔNG TIN HỦY */}
+
+                        {/* FORM ĐIỀN THÔNG TIN HỦY (Giữ nguyên) */}
                         {isCancelledStatus && (
                             <div className="space-y-4 p-4 border border-red-300 rounded-lg bg-red-50">
                                 <h3 className="text-lg font-semibold text-red-600">Thông tin hủy Đơn hàng</h3>
@@ -343,22 +357,10 @@ export default function OrderStatusModal({
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
                                     />
                                 </div>
-
-                                {/* ĐÃ LOẠI BỎ INPUT NGÀY GIỜ HỦY */}
-                                {/* <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ngày giờ hủy đơn hàng</label>
-                                    <input
-                                        type="datetime-local"
-                                        title="cancellation date"
-                                        value={cancelDate}
-                                        onChange={(e) => setCancelDate(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
-                                    />
-                                </div> */}
                             </div>
                         )}
 
-                        {/* Các trường Payment Status & Payment Method (Giữ nguyên) */}
+                        {/* Các trường Payment Status & Payment Method (Bạn có thể thêm vào đây) */}
                     </div>
 
                     <div className="mt-6 flex justify-end gap-3">
@@ -383,7 +385,7 @@ export default function OrderStatusModal({
                 </div>
             </div>
 
-            {/* Modal Xác nhận Lưu */}
+            {/* Modal Xác nhận Lưu (Giữ nguyên) */}
             {isConfirmingSave && (
                 <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/20 p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative border-t-4 border-orange-500">
