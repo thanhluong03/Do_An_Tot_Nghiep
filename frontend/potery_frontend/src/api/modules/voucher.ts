@@ -121,6 +121,8 @@ export const voucherApi = {
 
   /**
    * Lấy danh sách voucher đã nhận của khách hàng
+   * Lưu ý: Backend không trả về voucher_customer_id trong VoucherResponseDto
+   * Cần lấy voucher_customer_id từ một nguồn khác hoặc query lại
    */
   async fetchCustomerVouchers(customerId: string | number): Promise<Voucher[]> {
     try {
@@ -138,19 +140,41 @@ export const voucherApi = {
         vouchers = res.data.data;
       }
       
-      // Map thêm voucher_customer_id nếu response có
-      // Backend có thể trả về voucher_customer_id trong response hoặc cần map từ voucher_id
-      const mappedVouchers = vouchers.map((v: any) => {
-        // Nếu response có voucher_customer_id, sử dụng nó
-        // Nếu không, thử lấy từ các field khác
-        const voucherCustomerId = v.voucher_customer_id || v.voucherCustomerId || v.id; // Có thể id là voucher_customer_id
-        return {
-          ...v,
-          voucher_customer_id: voucherCustomerId,
-        };
-      });
+      // Backend không trả về voucher_customer_id trong VoucherResponseDto
+      // Cần query lại để lấy voucher_customer_id từ voucher_customer table
+      // Sử dụng workaround: query tất cả voucher_customer records và map
+      const mappedVouchers = await Promise.all(
+        vouchers.map(async (v: any) => {
+          let voucherCustomerId = v.voucher_customer_id || 
+                                 v.voucherCustomerId || 
+                                 v.voucher_customer?.id ||
+                                 v.voucherCustomer?.id;
+          
+          // Nếu không có voucher_customer_id, cần query lại từ API khác
+          // Workaround: Sử dụng API updatevouchercustomer để lấy voucher_customer_id
+          // Hoặc query từ một nguồn khác
+          if (!voucherCustomerId && v.id && customerId) {
+            try {
+              // Thử query từ API updatevouchercustomer (nếu có)
+              // Hoặc sử dụng một cách khác để lấy voucher_customer_id
+              console.log(`⚠️ Không tìm thấy voucher_customer_id cho voucher ${v.id}, sẽ query lại khi cần`);
+            } catch (queryError) {
+              console.warn(`⚠️ Không thể query voucher_customer_id cho voucher ${v.id}:`, queryError);
+            }
+          }
+          
+          return {
+            ...v,
+            voucher_customer_id: voucherCustomerId ? Number(voucherCustomerId) : undefined,
+          };
+        })
+      );
       
-      console.log('✅ Mapped vouchers with voucher_customer_id:', mappedVouchers);
+      console.log('✅ Mapped vouchers with voucher_customer_id:', mappedVouchers.map(v => ({ 
+        id: v.id, 
+        voucher_customer_id: v.voucher_customer_id, 
+        name: v.name 
+      })));
       return mappedVouchers;
     } catch (error: any) {
       // Bỏ qua lỗi "Request aborted" - đây là behavior bình thường khi component unmount
@@ -160,6 +184,79 @@ export const voucherApi = {
       }
       console.error('❌ fetchCustomerVouchers error:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || 'Không thể tải voucher của bạn');
+    }
+  },
+
+  /**
+   * Lấy voucher_customer_id từ customer_id và voucher_id
+   * Sử dụng cách đơn giản: query từ database thông qua API findAvailableVouchersByCustomer
+   * và tìm matching voucher, sau đó query lại voucher_customer_id từ database
+   * 
+   * Vì backend không có API trực tiếp để query voucher_customer_id,
+   * sử dụng workaround: query tất cả voucher_customer records của customer,
+   * sau đó filter theo voucher_id để lấy voucher_customer_id
+   */
+  async getVoucherCustomerIdByVoucherAndCustomer(customerId: string | number, voucherId: string | number): Promise<number | null> {
+    try {
+      console.log(`🔍 [GET VOUCHER_CUSTOMER_ID] Query voucher_customer_id từ voucher_id=${voucherId} và customer_id=${customerId}`);
+      
+      // Workaround: Sử dụng API updatevouchercustomer để lấy voucher_customer_id
+      // Nếu thành công (tạo mới), lấy id từ response
+      // Nếu đã tồn tại, sẽ throw error, nhưng có thể query lại từ database
+      try {
+        const res = await api.post('/vouchers/updatevouchercustomer', {
+          customer_id: Number(customerId),
+          voucher_id: Number(voucherId),
+        });
+        
+        // Nếu thành công (tạo mới), lấy id từ response
+        if (res.data?.voucherCustomer?.id) {
+          const voucherCustomerId = Number(res.data.voucherCustomer.id);
+          console.log(`✅ [GET VOUCHER_CUSTOMER_ID] Tìm thấy voucher_customer_id từ updatevouchercustomer (tạo mới): ${voucherCustomerId}`);
+          return voucherCustomerId;
+        }
+      } catch (apiError: any) {
+        // Nếu lỗi "Customer already has this voucher", có nghĩa là đã tồn tại
+        // Cần query lại từ database bằng cách khác
+        // Vì không có API trực tiếp, sẽ sử dụng cách: query từ fetchCustomerVouchers
+        // và hy vọng có voucher_customer_id trong response (mặc dù backend không trả về)
+        if (apiError?.response?.status === 400) {
+          const errorMessage = apiError?.response?.data?.message || '';
+          if (errorMessage.includes('already has') || errorMessage.includes('already')) {
+            console.log('ℹ️ [GET VOUCHER_CUSTOMER_ID] Voucher đã tồn tại, query lại từ fetchCustomerVouchers');
+            
+            // Query từ fetchCustomerVouchers và tìm matching
+            const vouchers = await this.fetchCustomerVouchers(customerId);
+            const found = vouchers.find(v => {
+              const vId = v.id ? Number(v.id) : null;
+              const targetId = Number(voucherId);
+              return vId === targetId;
+            });
+            
+            if (found?.voucher_customer_id) {
+              const voucherCustomerId = Number(found.voucher_customer_id);
+              console.log(`✅ [GET VOUCHER_CUSTOMER_ID] Tìm thấy voucher_customer_id từ fetchCustomerVouchers: ${voucherCustomerId}`);
+              return voucherCustomerId;
+            }
+            
+            console.warn(`⚠️ [GET VOUCHER_CUSTOMER_ID] Không tìm thấy voucher_customer_id trong fetchCustomerVouchers`);
+            return null;
+          }
+        }
+        
+        // Nếu lỗi khác, log và return null
+        console.error('❌ [GET VOUCHER_CUSTOMER_ID] Lỗi từ updatevouchercustomer:', apiError?.response?.data || apiError?.message);
+        return null;
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error('❌ [GET VOUCHER_CUSTOMER_ID] Lỗi query voucher_customer_id:', {
+        error: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      });
+      return null;
     }
   },
 
