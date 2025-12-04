@@ -243,32 +243,36 @@ export default function MyOrdersPage() {
                   }
                 }
                 
-                // Tìm các order COD đã bị cập nhật nhầm thành PAID
+                // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
                 const codOrdersToRollback = ordersList.filter((order: any) => {
                   const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
                   const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+                  const orderStatus = order?.status || order?.current_order?.status;
                   const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
                   const isPaid = paymentStatus === 'PAID';
+                  const isConfirmed = orderStatus === 'CONFIRMED';
                   // Loại trừ các order MOMO
                   const isNotMomoOrder = !momoOrderIds.includes(order.id);
-                  return isCOD && isPaid && isNotMomoOrder;
+                  // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
+                  return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
                 });
                 
                 if (codOrdersToRollback.length > 0) {
                   console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
                   
-                  // Rollback lại payment_status = UNPAID cho các order COD
+                  // Rollback lại cả status và payment_status cho các order COD
                   await Promise.all(
                     codOrdersToRollback.map((order: any) =>
                       orderApi.updateOrder(order.id, {
-                        payment_status: 'UNPAID',
+                        status: 'CREATED', // Rollback status về CREATED (chưa xác nhận)
+                        payment_status: 'UNPAID', // Rollback payment_status về UNPAID (chưa thanh toán)
                       }).catch(err => {
                         console.error(`❌ Lỗi rollback đơn COD #${order.id}:`, err);
                       })
                     )
                   );
                   
-                  console.log('✅ Đã rollback payment_status cho các đơn COD trong orders page');
+                  console.log('✅ Đã rollback status và payment_status cho các đơn COD trong orders page');
                   
                   // Reload orders để hiển thị đúng
                   window.location.reload();
@@ -519,36 +523,44 @@ export default function MyOrdersPage() {
               
               console.log('🔍 MOMO Order IDs:', momoOrderIds);
               
-              // Tìm các order COD đã bị cập nhật nhầm thành PAID
+              // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
               const codOrdersToRollback = list.filter((order: any) => {
                 const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
                 const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+                const orderStatus = order?.status || order?.current_order?.status;
                 const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
                 const isPaid = paymentStatus === 'PAID';
+                const isConfirmed = orderStatus === 'CONFIRMED';
                 // Loại trừ các order MOMO
                 const orderId = order.id || order._id;
                 const isNotMomoOrder = !momoOrderIds.includes(orderId);
-                return isCOD && isPaid && isNotMomoOrder;
+                // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
+                return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
               });
               
               if (codOrdersToRollback.length > 0) {
                 console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id || o._id, payment_method: o.payment_method, payment_status: o.payment_status })));
                 
-                // Rollback lại payment_status = UNPAID cho các order COD
+                // Rollback lại cả status và payment_status cho các order COD
                 await Promise.all(
                   codOrdersToRollback.map((order: any) => {
                     const orderId = order.id || order._id;
+                    const currentStatus = order?.status || order?.current_order?.status;
+                    // Chỉ rollback nếu status là CONFIRMED (đã bị cập nhật nhầm)
+                    const shouldRollbackStatus = currentStatus === 'CONFIRMED';
+                    
                     return orderApi.updateOrder(orderId, {
-                      payment_status: 'UNPAID',
+                      ...(shouldRollbackStatus && { status: 'CREATED' }), // Rollback status về CREATED nếu bị cập nhật nhầm
+                      payment_status: 'UNPAID', // Rollback payment_status về UNPAID
                     }).then(() => {
-                      console.log(`✅ Đã rollback đơn COD #${orderId}`);
+                      console.log(`✅ Đã rollback đơn COD #${orderId} về CREATED và UNPAID`);
                     }).catch(err => {
                       console.error(`❌ Lỗi rollback đơn COD #${orderId}:`, err);
                     });
                   })
                 );
                 
-                console.log('✅ Đã rollback payment_status cho các đơn COD trong orders page');
+                console.log('✅ Đã rollback status và payment_status cho các đơn COD trong orders page');
                 
                 // Reload orders để hiển thị đúng
                 if (isMounted) {
@@ -925,7 +937,7 @@ export default function MyOrdersPage() {
                           {translateStatus(order.status)}
                         </span>
                         <span className='text-xs font-medium text-gray-500'>
-                          ({translatePaymentStatus(info.payment_status)})
+                          ({translatePaymentStatus(order.payment_status)})
                         </span>
                       </div>
                     </div>

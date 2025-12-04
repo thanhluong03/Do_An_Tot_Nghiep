@@ -867,6 +867,8 @@ export default function CheckoutPage() {
                     shipping_address: `${address.trim()}, ${city.trim()}`,
                     voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
                     payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD', // Tất cả đơn đều dùng CARD nếu MOMO
+                    status: 'CREATED', // Đảm bảo đơn COD luôn là CREATED (chưa xác nhận)
+                    payment_status: paymentMethod === 'COD' ? 'UNPAID' : undefined, // Đơn COD luôn là UNPAID (chưa thanh toán)
                     items: storeItems,
                     note,
                 };
@@ -1061,34 +1063,38 @@ export default function CheckoutPage() {
                             ordersList = allCustomerOrders.orders;
                         }
                         
-                        // Tìm các order COD đã bị cập nhật nhầm thành PAID
+                        // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
                         const codOrdersToRollback = ordersList.filter((order: any) => {
                             const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
                             const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
+                            const orderStatus = order?.status || order?.current_order?.status;
                             const isCOD = paymentMethod === 'ONSITE' || paymentMethod === 'COD';
                             const isPaid = paymentStatus === 'PAID';
+                            const isConfirmed = orderStatus === 'CONFIRMED';
                             // Loại trừ các order MOMO vừa tạo
                             const isNotMomoOrder = !createdOrderIds.includes(order.id);
-                            return isCOD && isPaid && isNotMomoOrder;
+                            // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
+                            return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
                         });
                         
                         if (codOrdersToRollback.length > 0) {
                             console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback ngay...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
                             
-                            // Rollback lại payment_status = UNPAID cho các order COD
+                            // Rollback lại cả status và payment_status cho các order COD
                             await Promise.all(
                                 codOrdersToRollback.map((order: any) =>
                                     orderApi.updateOrder(order.id, {
-                                        payment_status: 'UNPAID',
+                                        status: 'CREATED', // Rollback status về CREATED (chưa xác nhận)
+                                        payment_status: 'UNPAID', // Rollback payment_status về UNPAID (chưa thanh toán)
                                     }).then(() => {
-                                        console.log(`✅ Đã rollback đơn COD #${order.id} ngay sau khi tạo đơn MOMO`);
+                                        console.log(`✅ Đã rollback đơn COD #${order.id} về CREATED và UNPAID ngay sau khi tạo đơn MOMO`);
                                     }).catch(err => {
                                         console.error(`❌ Lỗi rollback đơn COD #${order.id}:`, err);
                                     })
                                 )
                             );
                             
-                            console.log('✅ Đã rollback payment_status cho các đơn COD ngay sau khi tạo đơn MOMO');
+                            console.log('✅ Đã rollback status và payment_status cho các đơn COD ngay sau khi tạo đơn MOMO');
                         } else {
                             console.log('✅ Không có đơn COD nào bị cập nhật nhầm ngay sau khi tạo đơn MOMO');
                         }
