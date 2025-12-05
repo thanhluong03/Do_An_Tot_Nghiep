@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 // Giả định các types và service imports từ file của bạn
 import { updateOrder, OrderStatus, PaymentStatus, PaymentMethod, Order } from "@/api/services/orderService";
 import { X, CheckCircle, Save } from "lucide-react";
@@ -167,6 +167,13 @@ export default function OrderStatusModal({
     const [cancelReason, setCancelReason] = useState<string>(initialCancelReason || "");
     const [personCancel, setPersonCancel] = useState<string>(initialPersonCancel || DEFAULT_PERSON_CANCEL);
     // const [cancelDate, setCancelDate] = useState<string>(...);
+
+    // Khi chọn trạng thái "DELIVERED", tự động đặt thanh toán thành "PAID"
+    useEffect(() => {
+        if (status === "DELIVERED" && paymentStatus !== "PAID") {
+            setPaymentStatus("PAID");
+        }
+    }, [status, paymentStatus]);
 
 
     const availableStatuses = getAvailableStatuses(currentStatus);

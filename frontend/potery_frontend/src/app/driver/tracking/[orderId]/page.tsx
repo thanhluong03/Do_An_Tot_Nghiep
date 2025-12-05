@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Navigation, Upload, Check } from 'lucide-react';
 import { createDeliveryProof } from '@/api/services/deliveryService';
 import { orderApi } from '@/api/modules/orders';
+import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { CancelOrderModal } from '@/components/feature';
 
@@ -350,17 +351,26 @@ const handleCancelSubmit = async (reason: string, images: File[]) => {
                 }
                 try {
                   setIsSaving(true);
-                  await orderApi.updateOrder(Number(orderId), {
+                  // Sử dụng orderApi.updateOrder với FormData format (backend yêu cầu FormData)
+                  const updateData = {
                     status: 'DELIVERED',
                     payment_status: 'PAID',
                     payment_method: 'ONSITE',
                     user_id: Number(driverId),
-                  } as any);
+                  };
+                  
+                  console.log('🔄 Đang cập nhật đơn hàng:', { orderId, updateData });
+                  
+                  // Gọi API với FormData format (không có files)
+                  await orderApi.updateOrder(Number(orderId), updateData, undefined);
+                  
+                  console.log('✅ Đã cập nhật đơn hàng thành công');
+                  
                   toast.success('Đã hoàn tất đơn hàng!');
                   router.back();
                 } catch (err: any) {
-                  console.error(err);
-                  const msg = err?.response?.data?.message || 'Hoàn tất đơn hàng thất bại!';
+                  console.error('❌ Lỗi cập nhật đơn hàng:', err);
+                  const msg = err?.response?.data?.message || err?.message || 'Hoàn tất đơn hàng thất bại!';
                   toast.error(msg);
                 } finally {
                   setIsSaving(false);
