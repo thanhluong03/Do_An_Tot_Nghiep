@@ -77,6 +77,10 @@ export class UpdateImportRequestDto {
     @ValidateNested({ each: true })
     @Type(() => UpdateImportRequestDetailDto)
     importRequestDetails?: UpdateImportRequestDetailDto[];
+
+    @IsOptional()
+    @IsString()
+    reject_reason?: string;
 }
 
 export class AcceptImportRequestDetailDto {

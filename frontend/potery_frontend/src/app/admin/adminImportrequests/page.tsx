@@ -8,6 +8,7 @@ import {
     getImportRequestDetail,
     acceptImportRequest,
     deleteImportRequest,
+    updateImportRequest,
 } from "@/api/services/importRequestService";
 import {
     Check,
@@ -16,13 +17,15 @@ import {
     X,
     ChevronLeft,
     ChevronRight,
-    AlertTriangle, // Đảm bảo đã import icon này nếu dùng trong ConfirmDialog.tsx
+    AlertTriangle,
+    XCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Import component ConfirmDialog và ImportRequestDetailModal
 import ImportRequestDetailModal from "@/components/adminRequestImport/ImportRequestDetailModal";
-import ConfirmDialog from "@/components/common/ConfirmDialog"; // Giả định path là "@/components/common/ConfirmDialog"
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import RejectDialog from "@/components/common/RejectDialog";
 import { getProducts, Product } from "@/api/services/productApi";
 
 const ITEMS_PER_PAGE = 10;
@@ -36,6 +39,8 @@ const getStatusClasses = (status: ImportRequest['import_request_status']) => {
             return "bg-yellow-100 text-yellow-800";
         case "ACCEPTED":
             return "bg-green-100 text-green-800";
+        case "REJECTED":
+            return "bg-red-100 text-red-800";
         default:
             return "bg-gray-100 text-gray-800";
     }
@@ -50,13 +55,15 @@ const getVietnameseStatusName = (status: Status) => {
             return "Đang chờ";
         case "ACCEPTED":
             return "Đã duyệt";
+        case "REJECTED":
+            return "Đã từ chối";
         default:
             return status;
     }
 };
 
 // ⭐ KHAI BÁO TYPE CHO MODAL XÁC NHẬN
-type ConfirmationAction = "APPROVE" | "DELETE";
+type ConfirmationAction = "APPROVE" | "DELETE" | "REJECT";
 
 export default function ImportRequestListAdmin() {
     const [activeStatus, setActiveStatus] = useState<Status>("ALL");
@@ -88,7 +95,16 @@ export default function ImportRequestListAdmin() {
         message: "",
     });
 
-    const statusTabs: Status[] = ["ALL", "PENDING", "ACCEPTED"];
+    // ⭐ STATE CHO REJECT DIALOG
+    const [rejectDialog, setRejectDialog] = useState<{
+        isOpen: boolean;
+        requestId: number | null;
+    }>({
+        isOpen: false,
+        requestId: null,
+    });
+
+    const statusTabs: Status[] = ["ALL", "PENDING", "ACCEPTED", "REJECTED"];
 
     const fetchAllProducts = useCallback(async () => {
         try {
@@ -166,6 +182,14 @@ export default function ImportRequestListAdmin() {
             action: "DELETE",
             title: "Xác nhận Hủy/Xóa Yêu cầu",
             message: `Bạn có chắc chắn muốn **XÓA (HỦY)** yêu cầu ID ${requestId} này? Hành động này không thể hoàn tác.`,
+        });
+    };
+
+    // ⭐ MỚI: Mở Reject Dialog cho hành động Từ chối
+    const handleReject = (requestId: number) => {
+        setRejectDialog({
+            isOpen: true,
+            requestId,
         });
     };
 
@@ -265,6 +289,36 @@ export default function ImportRequestListAdmin() {
         });
     };
 
+    // ⭐ MỚI: Xử lý từ chối với lý do
+    const handleConfirmReject = async (reason: string) => {
+        if (!rejectDialog.requestId) return;
+
+        const requestId = rejectDialog.requestId;
+
+        // Đóng dialog ngay lập tức
+        setRejectDialog({ isOpen: false, requestId: null });
+
+        const toastLoading = toast.loading(`Đang từ chối yêu cầu ID ${requestId}...`);
+
+        try {
+            await updateImportRequest(requestId, {
+                import_request_status: "REJECTED",
+                reject_reason: reason,
+            });
+
+            toast.success(`Yêu cầu ID ${requestId} đã được từ chối thành công!`, { id: toastLoading });
+            fetchRequests(page);
+        } catch (error: any) {
+            console.error("Lỗi từ chối yêu cầu:", error);
+            toast.error(`Lỗi khi từ chối yêu cầu: ${error.response?.data?.message || error.message || 'Lỗi không xác định'}`, { id: toastLoading });
+        }
+    };
+
+    // Hàm hủy bỏ reject dialog
+    const handleCancelReject = () => {
+        setRejectDialog({ isOpen: false, requestId: null });
+    };
+
     const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
     const filteredRequests = requests.filter((req) => {
@@ -299,11 +353,10 @@ export default function ImportRequestListAdmin() {
                                 <button
                                     key={status}
                                     onClick={() => handleStatusChange(status)}
-                                    className={`px-4 py-1.5 text-sm font-semibold rounded-md whitespace-nowrap transition duration-200 ${
-                                        activeStatus === status
-                                            ? "bg-orange-600 text-white shadow-md"
-                                            : "text-gray-700 hover:bg-gray-100"
-                                    }`}
+                                    className={`px-4 py-1.5 text-sm font-semibold rounded-md whitespace-nowrap transition duration-200 ${activeStatus === status
+                                        ? "bg-orange-600 text-white shadow-md"
+                                        : "text-gray-700 hover:bg-gray-100"
+                                        }`}
                                 >
                                     {getVietnameseStatusName(status)}
                                 </button>
@@ -358,6 +411,7 @@ export default function ImportRequestListAdmin() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">Trạng thái</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">Ngày tạo</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ghi chú</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lý do hủy(nếu có)</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-xl w-[220px]">Thao tác</th>
                             </tr>
                         </thead>
@@ -381,6 +435,16 @@ export default function ImportRequestListAdmin() {
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                                         {request.note || "—"}
                                     </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                        {request.reject_reason && (
+                                            <span
+                                                className="block text-sm text-gray-500 mt-1 break-words whitespace-pre-line"
+                                                style={{ wordBreak: 'break-word', whiteSpace: 'pre-line' }}
+                                            >
+                                                {request.reject_reason}
+                                            </span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                                         <div className="flex justify-center space-x-2">
                                             {/* Nút Chi tiết */}
@@ -403,11 +467,21 @@ export default function ImportRequestListAdmin() {
                                                         <Check size={14} />
                                                     </button>
 
-                                                    {/* CẬP NHẬT: Thay window.confirm bằng handleDelete */}
+                                                    {/* ⭐ MỚI: Nút Từ chối */}
+                                                    <button
+                                                        title="Từ chối yêu cầu"
+                                                        onClick={() => handleReject(request.id)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                                                    >
+                                                        <XCircle size={14} />
+                                                        Từ chối
+                                                    </button>
+
+                                                    {/* Nút Xóa */}
                                                     <button
                                                         title="Xóa/Hủy yêu cầu"
                                                         onClick={() => handleDelete(request.id)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
@@ -445,11 +519,10 @@ export default function ImportRequestListAdmin() {
                             <button
                                 key={index + 1}
                                 onClick={() => setPage(index + 1)}
-                                className={`px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium transition ${
-                                    page === index + 1
-                                        ? "bg-orange-600 text-white"
-                                        : "bg-white text-gray-700 hover:bg-gray-100"
-                                }`}
+                                className={`px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium transition ${page === index + 1
+                                    ? "bg-orange-600 text-white"
+                                    : "bg-white text-gray-700 hover:bg-gray-100"
+                                    }`}
                             >
                                 {index + 1}
                             </button>
@@ -490,6 +563,18 @@ export default function ImportRequestListAdmin() {
                     cancelText="Hủy bỏ"
                     onConfirm={handleConfirmAction}
                     onCancel={handleCancelConfirmation}
+                />
+            )}
+
+            {/* ⭐ MỚI: REJECT DIALOG */}
+            {rejectDialog.isOpen && (
+                <RejectDialog
+                    title={`Từ chối yêu cầu`}
+                    message="Vui lòng nhập lý do từ chối yêu cầu nhập hàng này:"
+                    confirmText="Xác nhận từ chối"
+                    cancelText="Hủy bỏ"
+                    onConfirm={handleConfirmReject}
+                    onCancel={handleCancelReject}
                 />
             )}
         </div>
