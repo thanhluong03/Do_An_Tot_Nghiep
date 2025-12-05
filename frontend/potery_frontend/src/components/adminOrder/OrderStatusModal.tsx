@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 // Giả định các types và service imports từ file của bạn
 import { updateOrder, OrderStatus, PaymentStatus, PaymentMethod, Order } from "@/api/services/orderService";
-import { X, CheckCircle, Save } from "lucide-react";
+import { X, CheckCircle } from "lucide-react";
 
 interface Props {
     orderId: number;
@@ -10,7 +10,7 @@ interface Props {
     currentPaymentStatus: PaymentStatus;
     currentPaymentMethod: PaymentMethod;
     onClose: () => void;
-    onUpdated: (id: number, data: any) => void;
+    onUpdated: (id: number, data: Record<string, unknown>) => void;
     // Giả định thêm các prop cho dữ liệu hủy ban đầu nếu có
     initialCancelReason?: string | null;
     // Đã loại bỏ initialCancelDate khỏi Props
@@ -26,7 +26,7 @@ interface Props {
 const statusTranslations: Record<OrderStatus, string> = {
     CREATED: "Chờ xác nhận",
     CONFIRMED: "Xác nhận đơn hàng",
-    SHIPPING: "Đang giao",
+    SHIPPING: "Đang vận chuyển",
     DELIVERED: "Đã giao thành công",
     EXCHANGED: "Đã đổi trả",
     RETURN_REQUESTED: "Đang yêu cầu đổi trả",
@@ -56,6 +56,58 @@ const AdminAllowedStatuses: OrderStatus[] = [
     "EXCHANGED",
     "CANCELLED",
 ];
+
+// Hàm màu trạng thái giống OrderTable
+const getStatusColor = (status: OrderStatus | PaymentStatus): string => {
+    switch (status) {
+        // --- NORMAL ORDER FLOW ---
+        case "CREATED":
+            return "bg-orange-100 text-orange-700"; // Chờ xác nhận
+        case "CONFIRMED":
+            return "bg-indigo-100 text-indigo-700"; // Xác nhận đơn hàng
+        case "PACKING":
+            return "bg-cyan-100 text-cyan-700"; // Đang đóng gói
+        case "PENDING_DELIVERY":
+            return "bg-blue-100 text-blue-700"; // Chờ giao hàng
+        case "SHIPPING":
+            return "bg-yellow-100 text-yellow-700"; // Đang giao
+        case "DELIVERED":
+            return "bg-green-100 text-green-700"; // Đã giao thành công
+        case "DELIVERY_FAILED":
+            return "bg-red-200 text-red-800"; // Giao hàng thất bại
+        case "CANCELLED":
+            return "bg-red-100 text-red-700"; // Hủy đơn hàng
+        // --- RETURN FLOW ---
+        case "RETURN_REQUESTED":
+            return "bg-pink-100 text-pink-700"; // Đang yêu cầu hoàn trả
+        case "CONFIRMED_RETURN":
+            return "bg-lime-100 text-lime-700"; // Xác nhận hoàn trả
+        case "PACKING_RETURN":
+            return "bg-cyan-200 text-cyan-800"; // Đang đóng gói hoàn trả
+        case "PENDING_DELIVERY_RETURN":
+            return "bg-teal-100 text-teal-700"; // Chờ giao hàng hoàn trả
+        case "SHIPPING_RETURN":
+            return "bg-amber-100 text-amber-700"; // Đang vận chuyển hoàn trả
+        case "DELIVERY_FAILED_RETURN":
+            return "bg-red-200 text-red-800"; // Giao hàng hoàn trả thất bại
+        case "CANCELLED_RETURN":
+            return "bg-red-100 text-red-700"; // Đã hủy hoàn trả
+        case "EXCHANGED":
+            return "bg-purple-100 text-purple-700"; // Đã đổi trả
+        // --- PAYMENT STATUS ---
+        case "UNPAID":
+            return "bg-red-100 text-red-700";
+        case "PAID":
+            return "bg-green-100 text-green-700";
+        case "REFUNDED":
+            return "bg-purple-100 text-purple-700";
+        case "PENDING_REFUND":
+            return "bg-blue-100 text-blue-700";
+        // --- DEFAULT ---
+        default:
+            return "bg-gray-100 text-gray-700";
+    }
+};
 
 const translateOrderStatus = (status: OrderStatus): string => {
     return statusTranslations[status] || status;
@@ -161,11 +213,13 @@ export default function OrderStatusModal({
     const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(currentPaymentStatus);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(currentPaymentMethod);
     const [loading, setLoading] = useState(false);
-    const [isConfirmingSave, setIsConfirmingSave] = useState(false);
 
     // KHỞI TẠO CÁC STATE CHO THÔNG TIN HỦY (Đã loại bỏ cancelDate state)
     const [cancelReason, setCancelReason] = useState<string>(initialCancelReason || "");
     const [personCancel, setPersonCancel] = useState<string>(initialPersonCancel || DEFAULT_PERSON_CANCEL);
+
+    // State để theo dõi trạng thái hoàn tiền khi hủy đơn hàng đã thanh toán
+    const [refundStatus, setRefundStatus] = useState<PaymentStatus | null>(null);
     // const [cancelDate, setCancelDate] = useState<string>(...);
 
     // Khi chọn trạng thái "DELIVERED", tự động đặt thanh toán thành "PAID"
@@ -173,37 +227,65 @@ export default function OrderStatusModal({
         if (status === "DELIVERED" && paymentStatus !== "PAID") {
             setPaymentStatus("PAID");
         }
+
+        // Reset refundStatus khi chuyển khỏi trạng thái CANCELLED
+        if (status !== "CANCELLED" && status !== "CANCELLED_RETURN") {
+            setRefundStatus(null);
+        }
     }, [status, paymentStatus]);
 
 
     const availableStatuses = getAvailableStatuses(currentStatus);
     const isCancelledStatus = status === "CANCELLED" || status === "CANCELLED_RETURN";
 
+    // Kiểm tra xem đơn hàng đã bị hủy từ trước chưa
+    const isAlreadyCancelled = currentStatus === "CANCELLED" || currentStatus === "CANCELLED_RETURN";
+
+    // Kiểm tra xem có đang hủy đơn mới không (chuyển từ trạng thái khác sang CANCELLED)
+    const isCancellingNow = isCancelledStatus && !isAlreadyCancelled;
+
+    // Kiểm tra đơn cần hoàn tiền
+    const needsRefund = currentPaymentStatus === "PAID" || currentPaymentStatus === "PENDING_REFUND";
+
     const executeSave = async () => {
-        setIsConfirmingSave(false);
         setLoading(true);
         try {
-            let updateData: any = {
+            let updateData: Record<string, unknown> = {
                 status,
                 payment_status: paymentStatus,
                 payment_method: paymentMethod,
             };
-            
-            if (isCancelledStatus) {
-                // Kiểm tra xem lý do có được điền không
+
+            if (isCancellingNow) {
+                // Đang hủy đơn mới - yêu cầu lý do hủy
                 if (!cancelReason.trim()) {
                     alert("Vui lòng điền Lý do hủy.");
                     setLoading(false);
                     return;
                 }
 
+                // Nếu đơn hàng đã thanh toán và đã chọn trạng thái hoàn tiền
+                if (needsRefund && refundStatus) {
+                    updateData = {
+                        ...updateData,
+                        payment_status: refundStatus, // REFUNDED hoặc PENDING_REFUND
+                        cancel_reason: cancelReason.trim() || null,
+                        person_cancel: personCancel.trim() || null,
+                        actorType: 'ADMIN',
+                    };
+                } else {
+                    updateData = {
+                        ...updateData,
+                        cancel_reason: cancelReason.trim() || null,
+                        person_cancel: personCancel.trim() || null,
+                        actorType: 'ADMIN',
+                    };
+                }
+            } else if (isAlreadyCancelled && refundStatus) {
+                // Đơn đã hủy, chỉ cập nhật trạng thái thanh toán
                 updateData = {
                     ...updateData,
-                    cancel_reason: cancelReason.trim() || null, 
-                    // ĐÃ LOẠI BỎ cancel_date
-                    // cancel_date: cancelDate,
-                    person_cancel: personCancel.trim() || null,
-                    actorType: 'ADMIN', // Thêm actorType cho việc hủy từ phía Admin
+                    payment_status: refundStatus,
                 };
             } else {
                 // Đảm bảo các trường hủy được reset/gửi null nếu không phải là "CANCELLED"
@@ -228,16 +310,25 @@ export default function OrderStatusModal({
     };
 
     const handleSaveClick = () => {
-        // Thêm kiểm tra validation trước khi xác nhận lưu
-        if (isCancelledStatus && !cancelReason.trim()) {
+        // Nếu đang hủy đơn mới (không phải đơn đã hủy), yêu cầu lý do
+        if (isCancellingNow && !cancelReason.trim()) {
             alert("Vui lòng điền Lý do hủy.");
             return;
         }
-        setIsConfirmingSave(true);
-    };
 
-    const handleCancelSave = () => {
-        setIsConfirmingSave(false);
+        // Nếu hủy đơn hàng đã thanh toán, bắt buộc chọn trạng thái hoàn tiền
+        if (isCancellingNow && needsRefund && !refundStatus) {
+            alert("Vui lòng chọn trạng thái hoàn tiền.");
+            return;
+        }
+
+        // Nếu đơn đã hủy và đang cập nhật trạng thái thanh toán, yêu cầu chọn
+        if (isAlreadyCancelled && currentPaymentStatus === "PENDING_REFUND" && !refundStatus) {
+            alert("Vui lòng chọn trạng thái hoàn tiền.");
+            return;
+        }
+
+        executeSave();
     };
 
     // Lấy ra giá trị so sánh ban đầu để xử lý trường hợp null/undefined
@@ -251,12 +342,15 @@ export default function OrderStatusModal({
         paymentStatus !== currentPaymentStatus ||
         paymentMethod !== currentPaymentMethod ||
 
-        // Kiểm tra 2 trường khi đang ở trạng thái CANCELLED
-        (isCancelledStatus && (
+        // Kiểm tra khi đang hủy đơn mới
+        (isCancellingNow && (
             cancelReason !== initialCancelReasonValue ||
-            personCancel !== initialPersonCancelValue 
-            // Đã loại bỏ kiểm tra cancelDate
+            personCancel !== initialPersonCancelValue ||
+            (needsRefund && refundStatus !== null)
         )) ||
+
+        // Kiểm tra khi đơn đã hủy và cập nhật trạng thái thanh toán
+        (isAlreadyCancelled && refundStatus !== null) ||
 
         // Nếu chuyển từ CANCELLED sang trạng thái khác (cần lưu updateData reset fields thành null)
         (!isCancelledStatus && currentStatus === "CANCELLED")
@@ -278,7 +372,7 @@ export default function OrderStatusModal({
                     <h2 className="text-2xl font-semibold mb-5 text-gray-900">Cập nhật Trạng thái Đơn hàng</h2>
 
                     <div className="space-y-4">
-                        
+
                         {/* ⭐️ PHẦN CẬP NHẬT TRẠNG THÁI MỚI (Dùng Buttons) ⭐️ */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái đơn hàng</label>
@@ -288,17 +382,17 @@ export default function OrderStatusModal({
                                     const isCurrent = s === currentStatus;
                                     const isSelected = s === status;
                                     const isCancel = s.includes("CANCELLED");
-                                    
+
                                     // 1. CSS cho trạng thái hiện tại (Current Status - Không bấm được)
                                     if (isCurrent && s === status) {
                                         return (
                                             <div
                                                 key={s}
-                                                className="px-4 py-2 font-semibold text-white bg-indigo-600 rounded-full cursor-default shadow-md"
+                                                className={`px-4 py-2 font-semibold rounded-full cursor-default shadow-md ${getStatusColor(s as OrderStatus)}`}
                                                 title={`Trạng thái hiện tại: ${translateOrderStatus(s)}`}
                                             >
                                                 <CheckCircle className="inline w-4 h-4 mr-1" />
-                                                {translateOrderStatus(s)} (Hiện tại)
+                                                {translateOrderStatus(s)}
                                             </div>
                                         );
                                     }
@@ -310,7 +404,7 @@ export default function OrderStatusModal({
                                             onClick={() => {
                                                 const newStatus = s as OrderStatus;
                                                 setStatus(newStatus);
-                                                
+
                                                 // Reset/Set mặc định logic tương tự như trong dropdown
                                                 if (newStatus !== "CANCELLED") {
                                                     setCancelReason(initialCancelReason || "");
@@ -337,8 +431,8 @@ export default function OrderStatusModal({
                         {/* ⭐️ KẾT THÚC PHẦN CẬP NHẬT TRẠNG THÁI MỚI ⭐️ */}
 
 
-                        {/* FORM ĐIỀN THÔNG TIN HỦY (Giữ nguyên) */}
-                        {isCancelledStatus && (
+                        {/* FORM ĐIỀN THÔNG TIN HỦY - Chỉ hiện khi đang hủy đơn mới */}
+                        {isCancellingNow && (
                             <div className="space-y-4 p-4 border border-red-300 rounded-lg bg-red-50">
                                 <h3 className="text-lg font-semibold text-red-600">Thông tin hủy Đơn hàng</h3>
 
@@ -354,7 +448,7 @@ export default function OrderStatusModal({
                                     />
                                 </div>
 
-                                <div>
+                                {/* <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Người hủy đơn hàng</label>
                                     <input
                                         type="text"
@@ -363,11 +457,63 @@ export default function OrderStatusModal({
                                         onChange={(e) => setPersonCancel(e.target.value)}
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
                                     />
-                                </div>
+                                </div> */}
+
+                                {/* Hiển thị select trạng thái hoàn tiền nếu đơn hàng cần hoàn tiền */}
+                                {needsRefund && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Trạng thái hoàn tiền <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            title="refund status"
+                                            value={refundStatus || ""}
+                                            onChange={(e) => {
+                                                const selectedRefundStatus = e.target.value as PaymentStatus;
+                                                setRefundStatus(selectedRefundStatus);
+                                            }}
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
+                                        >
+                                            <option value="">-- Chọn trạng thái hoàn tiền --</option>
+                                            <option value="REFUNDED">Đã hoàn trả</option>
+                                            <option value="PENDING_REFUND">Chưa hoàn trả</option>
+                                        </select>
+
+                                        {refundStatus === ("PENDING_REFUND" as PaymentStatus) && (
+                                            <p className="mt-2 text-sm text-amber-600">
+                                                Đơn hàng sẽ được đánh dấu &quot;Chưa hoàn trả&quot;. Bạn có thể cập nhật sau.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {/* Các trường Payment Status & Payment Method (Bạn có thể thêm vào đây) */}
+                        {/* FORM CẬP NHẬT TRẠNG THÁI HOÀN TIỀN CHO ĐơN ĐÃ HỦY */}
+                        {isAlreadyCancelled && currentPaymentStatus === "PENDING_REFUND" && (
+                            <div className="space-y-4 p-4 border border-blue-300 rounded-lg bg-blue-50">
+                                <h3 className="text-lg font-semibold text-blue-600">Cập nhật trạng thái hoàn tiền</h3>
+                                <p className="text-sm text-gray-600">Đơn hàng đã bị hủy. Vui lòng cập nhật trạng thái hoàn tiền.</p>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Trạng thái hoàn tiền <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        title="refund status"
+                                        value={refundStatus || ""}
+                                        onChange={(e) => {
+                                            const selectedRefundStatus = e.target.value as PaymentStatus;
+                                            setRefundStatus(selectedRefundStatus);
+                                        }}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">-- Chọn trạng thái hoàn tiền --</option>
+                                        <option value="REFUNDED">Đã hoàn trả</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6 flex justify-end gap-3">
@@ -391,37 +537,6 @@ export default function OrderStatusModal({
                     </div>
                 </div>
             </div>
-
-            {/* Modal Xác nhận Lưu (Giữ nguyên) */}
-            {isConfirmingSave && (
-                <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/20 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative border-t-4 border-orange-500">
-                        <h3 className="text-xl font-bold text-orange-700 mb-3 flex items-center">
-                            <Save className="w-5 h-5 mr-2" /> Xác Nhận Lưu Thay Đổi
-                        </h3>
-                        <p className="text-gray-700 mb-6">
-                            Bạn có chắc chắn muốn cập nhật trạng thái đơn hàng #{orderId} từ <span className="font-semibold text-indigo-600">{translateOrderStatus(currentStatus)}</span> thành <span className="font-semibold text-green-600">{translateOrderStatus(status)}</span> không?
-                            {isCancelledStatus && (
-                                <span className="block mt-2 text-sm text-red-500 font-medium">Lưu ý: Đơn hàng sẽ bị hủy với lý do: {cancelReason}.</span>
-                            )}
-                        </p>
-                        <div className="flex justify-end space-x-3">
-                            <button
-                                onClick={handleCancelSave}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                            >
-                                Hủy bỏ
-                            </button>
-                            <button
-                                onClick={executeSave}
-                                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors"
-                            >
-                                Đồng ý Lưu
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 }

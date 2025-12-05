@@ -463,6 +463,24 @@ export class OrderService {
       await this.orderRepository.update(id, { reason_change_date: reasonChangeDate });
     }
 
+    // Xử lý cancel_date và person_cancel khi trạng thái là CANCELLED hoặc CANCELLED_RETURN
+    if (data.status === OrderStatus.CANCELLED || data.status === OrderStatus.CANCELLED_RETURN) {
+      const cancelDate = new Date();
+      const isCancelReturn = data.status === OrderStatus.CANCELLED_RETURN;
+
+      if (isCancelReturn) {
+        await this.orderRepository.update(id, {
+          cancel_return_date: cancelDate,
+          person_cancel_return: data.person_cancel_return || data.person_cancel || ''
+        });
+      } else {
+        await this.orderRepository.update(id, {
+          cancel_date: cancelDate,
+          person_cancel: data.person_cancel || ''
+        });
+      }
+    }
+
     if (data.cancel_reason_images && data.cancel_reason_images.length > 0) {
       // Xóa các ảnh cũ trước khi thêm ảnh mới
       await this.cancelReasonImageRepository.deleteByOrderId(id);
@@ -479,21 +497,7 @@ export class OrderService {
         });
       }
 
-      // Lưu ngày và người hủy dựa vào loại hủy
-      const cancelDate = new Date();
-      if (isCancelReturn) {
-        // Hủy đơn hoàn trả
-        await this.orderRepository.update(id, {
-          cancel_return_date: cancelDate,
-          person_cancel_return: data.person_cancel_return || ''
-        });
-      } else {
-        // Hủy đơn thường
-        await this.orderRepository.update(id, {
-          cancel_date: cancelDate,
-          person_cancel: data.person_cancel || ''
-        });
-      }
+      // Không cần cập nhật lại cancel_date và person_cancel vì đã xử lý ở trên
     }
 
     if (data.delivery_fail_images && data.delivery_fail_images.length > 0) {

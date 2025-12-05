@@ -27,7 +27,7 @@ const statusToVietnamese = (status: string) => {
     case "RETURN_REQUESTED":
       return "Đang yêu cầu đổi trả";
     case "CANCELLED":
-      return "Hủy đơn hàng";
+      return "Đã hủy";
     case "CONFIRMED_RETURN":
       return "Xác nhận đổi trả";
     case "PENDING_DELIVERY":
@@ -52,7 +52,7 @@ const statusToVietnamese = (status: string) => {
 };
 
 
-const getStatusColor = (status: string) => { 
+const getStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {
     // --- NORMAL ORDER FLOW ---
 
@@ -98,13 +98,13 @@ const getStatusColor = (status: string) => {
       return "bg-amber-100 text-amber-700"; // Đã sửa để khớp với cái đầu
 
     case "delivery_failed_return": // Giao hàng hoàn trả thất bại
-      return "bg-red-200 text-red-800"; 
+      return "bg-red-200 text-red-800";
 
     case "cancelled_return": // Đã hủy hoàn trả
       return "bg-red-100 text-red-700"; // Đã sửa để khớp với cái đầu
 
     case "exchanged": // Đã đổi trả
-      return "bg-purple-100 text-purple-700"; 
+      return "bg-purple-100 text-purple-700";
 
     default:
       return "bg-gray-100 text-gray-700";
@@ -135,25 +135,25 @@ const bufferToDataURL = (bufferData: { data: number[] } | undefined, mimeType: s
 };
 // Hàm chuyển đổi định dạng ngày tháng/ngày giờ
 const formatDate = (dateString: string | undefined | null) => {
-    if (!dateString) return "N/A";
-    try {
-        const date = new Date(dateString);
-        // Kiểm tra xem date có hợp lệ không
-        if (isNaN(date.getTime())) return "Ngày không hợp lệ";
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    // Kiểm tra xem date có hợp lệ không
+    if (isNaN(date.getTime())) return "Ngày không hợp lệ";
 
-        // Định dạng đầy đủ (Ví dụ: 18:30:00 04/12/2025)
-        return date.toLocaleString('vi-VN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-    } catch (e) {
-        console.error("Lỗi định dạng ngày:", e);
-        return dateString; // Trả về chuỗi gốc nếu có lỗi
-    }
+    // Định dạng đầy đủ (Ví dụ: 18:30:00 04/12/2025)
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (e) {
+    console.error("Lỗi định dạng ngày:", e);
+    return dateString; // Trả về chuỗi gốc nếu có lỗi
+  }
 };
 
 export default function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
@@ -177,13 +177,13 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   const paymentMethod = String(order.payment_method);
   const displayTotalAmount =
     typeof order.total_amount === "string" ? parseFloat(order.total_amount) : order.total_amount;
-// Shipping fee from item(s)
-const items = order.items || [];
-const totalShippingFee = items.reduce((sum, item: any) => {
-  return sum + (item.shipping_fee || 0);
-}, 0);
+  // Shipping fee from item(s)
+  const items = order.items || [];
+  const totalShippingFee = items.reduce((sum, item: any) => {
+    return sum + (item.shipping_fee || 0);
+  }, 0);
 
-const finalTotal = displayTotalAmount + totalShippingFee;
+  const finalTotal = displayTotalAmount + totalShippingFee;
 
   // Lấy thông tin giao dịch chính
   const paymentTransactions = (order as any)?.paymentTransactions || [];
@@ -200,7 +200,7 @@ const finalTotal = displayTotalAmount + totalShippingFee;
   console.log('Admin Order Shipping Fee:', displayShippingFee);
   console.log('Admin Order Full Data:', order);
 
-// Kiểm tra trạng thái hủy đơn
+  // Kiểm tra trạng thái hủy đơn
   const isCancelled = order.status === 'CANCELLED' || order.status === 'CANCELLED_RETURN';
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
@@ -260,8 +260,8 @@ const finalTotal = displayTotalAmount + totalShippingFee;
                 </div>
               )}
             </section>
-           
-              
+
+
             {/* Thông tin hoàn trả */}
             {order.returnReason && (
               <section className="bg-white rounded-xl p-5 border border-red-200 shadow-sm">
@@ -284,7 +284,7 @@ const finalTotal = displayTotalAmount + totalShippingFee;
                       Thời gian yêu cầu hoàn trả:
                     </span>
                     <p className="text-sm font-text rounded bg-white">
-                      {order.reason_change_date ? formatDate(order.reason_change_date) : "N/A"}
+                      {order.reason_change_date ? formatDate(order.reason_change_date) : ""}
                     </p>
                   </div>
                   {order.returnReasonImage && order.returnReasonImage.length > 0 && (
@@ -418,7 +418,7 @@ const finalTotal = displayTotalAmount + totalShippingFee;
                 )}
               </div>
             </section>
-             {/* THÔNG TIN HỦY ĐƠN HÀNG */}
+            {/* THÔNG TIN HỦY ĐƠN HÀNG */}
             {isCancelled && order.cancel_reason && (
               <section className="bg-red-50 rounded-xl p-5 border border-red-300 shadow-sm">
                 <h3 className="flex items-center text-lg font-semibold text-red-800 mb-4 border-b border-red-200 pb-2">
@@ -440,7 +440,19 @@ const finalTotal = displayTotalAmount + totalShippingFee;
                       Ngày hủy:
                     </span>
                     <p className="text-sm font-semibold text-red-700 bg-red-100 p-2 rounded">
-                      {order.cancel_date ? formatDate(order.cancel_date) : "N/A"}
+                      {order.cancel_date ? formatDate(order.cancel_date) : ""}
+                    </p>
+                  </div>
+                  <div className="py-2 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Người hủy:
+                    </span>
+                    <p className="text-sm font-semibold text-red-700 bg-red-100 p-2 rounded">
+                      {!order.person_cancel
+                        ? ""
+                        : order.person_cancel === "ADMIN"
+                          ? "Chủ cửa hàng"
+                          : "Khách hàng"}
                     </p>
                   </div>
 

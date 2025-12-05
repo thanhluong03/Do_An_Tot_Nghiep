@@ -29,7 +29,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'EXCHANGED' | 'RETURN_REQUESTED' | 'CONFIRMED_RETURN' | 'PENDING_DELIVERY' | 'DELIVERY_FAILED' | 'PACKING' | 'SHIPPING_RETURN' | 'PENDING_DELIVERY_RETURN' | 'DELIVERY_FAILED_RETURN' | 'CANCELLED_RETURN' | 'PACKING_RETURN';
-export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED';
+export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED' | 'PENDING_REFUND';
 export type PaymentMethod = 'COD' | 'MOMO';
 
 export interface CurrentOrderDetails {
