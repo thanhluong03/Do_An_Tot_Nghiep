@@ -22,21 +22,37 @@ const translateStatus = (status: string | undefined): string => {
   const s = status.toUpperCase();
   switch (s) {
     case 'CREATED':
-      return 'Đang xác nhận';
+      return 'Chờ xác nhận';
     case 'CONFIRMED':
       return 'Đã xác nhận';
+    case 'PACKING':
+      return 'Đang đóng gói';
+    case 'PENDING_DELIVERY':
+      return 'Chờ vận chuyển';
     case 'SHIPPING':
       return 'Đang vận chuyển';
     case 'DELIVERED':
       return 'Đã giao thành công';
+    case 'DELIVERY_FAILED':
+      return 'Đã giao thất bại';
     case 'CANCELLED':
       return 'Đã hủy';
     case 'RETURN_REQUESTED':
-      return 'Đang yêu cầu hoàn trả';
+      return 'Đang yêu cầu đổi trả';
+    case 'CONFIRMED_RETURN':
+      return 'Đã xác nhận đổi trả';
+    case 'PACKING_RETURN':
+      return 'Đang đóng gói đổi trả';
+    case 'PENDING_DELIVERY_RETURN':
+      return 'Chờ giao hàng đổi trả';
+    case 'SHIPPING_RETURN':
+      return 'Đang giao hàng đổi trả';
     case 'EXCHANGED':
       return 'Đã đổi trả';
+    case 'DELIVERY_FAILED_RETURN':
+      return 'Đã giao đổi trả thất bại';
     case 'CANCELLED_RETURN':
-      return 'Đã hủy hoàn trả';
+      return 'Không chấp nhận đổi trả';
     default:
       return status;
   }
@@ -702,7 +718,14 @@ function OrderDetailClient({ id }: { id: string }) {
                 <p className="text-sm font-semibold text-gray-500">
                   Lý do hủy: <span className="font-normal text-gray-500">{order.cancel_reason}</span>
                 </p>
+                    
+              )}
+              {['CANCELLED', 'CANCELLED_RETURN'].includes(order.status) && order.person_cancel && (
 
+                <p className="text-sm font-semibold text-gray-500">
+                  Người hủy: <span className="font-normal text-gray-500">{order.person_cancel}</span>
+                </p>
+                    
               )}
               {['DELIVERY_FAILED'].includes(order.status) && order.delivery_fail_reason && (
 
