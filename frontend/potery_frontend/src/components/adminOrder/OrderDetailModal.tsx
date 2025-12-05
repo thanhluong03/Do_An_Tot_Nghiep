@@ -379,6 +379,14 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                 label="Phí vận chuyển"
                 value={<span className="text-green-600">{formatCurrency(totalShippingFee)}</span>}
               />
+              {/* Hiển thị shipping_message của từng item dưới phí vận chuyển */}
+              {(order.items || []).map((item: any, idx: number) => (
+                item.shipping_message ? (
+                  <div key={idx} className="text-xs text-blue-600 mt-1 pl-2">
+                    <span className="font-medium">•</span> {item.shipping_message}
+                  </div>
+                ) : null
+              ))}
               <div className="pt-4 mt-4 border-t-2 border-indigo-300">
                 <InfoRow
                   label="Tổng thanh toán"

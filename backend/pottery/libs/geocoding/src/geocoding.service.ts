@@ -274,7 +274,7 @@ export class GeocodingService {
       if (!isHanoi) {
         console.log('❌ Not in Hanoi, returning partner fee');
         return {
-          fee: 30000,
+          fee: 0,
           distance: 0,
           isHanoi: false,
           message: 'Phí vận chuyển phụ thuộc vào đối tác vận chuyển',

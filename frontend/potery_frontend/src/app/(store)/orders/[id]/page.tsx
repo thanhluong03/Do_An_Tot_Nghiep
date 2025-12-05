@@ -254,6 +254,14 @@ function OrderDetailClient({ id }: { id: string }) {
     }, 0) || 0;
   };
 
+  // Hàm lấy shipping messages từ order items
+  const getShippingMessages = () => {
+    const messages = items
+      .map((item: any) => item.shipping_message)
+      .filter((msg: string) => msg && msg.trim() !== '');
+    return messages.length > 0 ? messages : null;
+  };
+
   // Đồng bộ màu trạng thái với danh sách đơn hàng
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -740,7 +748,16 @@ function OrderDetailClient({ id }: { id: string }) {
                     </div>
                   )}
                   <div>Tổng tiền hàng: <span className="font-bold">{formatPrice(order.total_amount)}</span></div>
-                  <div>Phí vận chuyển: <span className="font-bold">{formatPrice(getShippingFee())}</span></div>
+                  <div>
+                    Phí vận chuyển: <span className="font-bold">{formatPrice(getShippingFee())}</span>
+                    {getShippingMessages() && getShippingMessages()!.length > 0 && (
+                      <div className="text-xs text-blue-600 mt-1 pl-2">
+                        {getShippingMessages()!.map((msg: string, index: number) => (
+                          <div key={index}>• {msg}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="font-bold text-[16px] text-[#A38D64]">
                     Tổng thanh toán: {formatPrice(Number(order.total_amount || 0) + getShippingFee())}
                     {mainTxn && (

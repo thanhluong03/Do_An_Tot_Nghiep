@@ -26,6 +26,9 @@ export class OrderItemEntity extends BaseEntity {
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: 0 })
     shipping_fee: number;
 
+    @Column({ type: 'text', nullable: true })
+    shipping_message: string;
+
     @Column({ type: 'integer', nullable: true })
     classification_attribute_relationship_id: number;
 
