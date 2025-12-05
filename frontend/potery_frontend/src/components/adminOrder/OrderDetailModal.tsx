@@ -295,7 +295,6 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                             const allImages = (order.returnReasonImage || [])
                               .filter(img => img.image)
                               .map(img => `data:image/jpeg;base64,${img.image}`);
-
                             return (
                               <button
                                 key={imgObj.id || idx}
@@ -429,6 +428,14 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                       {order.cancel_reason}
                     </p>
                   </div>
+                  <div className="py-2 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Ngày hủy:
+                    </span>
+                    <p className="text-sm font-semibold text-red-700 bg-red-100 p-2 rounded">
+                      {order.cancel_date ? formatDate(order.cancel_date) : "N/A"}
+                    </p>
+                  </div>
 
                   {order.cancel_reason_image && order.cancel_reason_image.length > 0 && (
                     <div>
@@ -440,12 +447,10 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                         <div className="grid grid-cols-4 gap-2">
                           {order.cancel_reason_image.map((imgObj, idx) => {
                             if (!imgObj.image) return null;
-
                             const imageUrl = `data:image/jpeg;base64,${imgObj.image}`;
                             const allImages = (order.cancel_reason_image || [])
                               .filter(img => img.image)
                               .map(img => `data:image/jpeg;base64,${img.image}`);
-
                             return (
                               <button
                                 title="oepn"

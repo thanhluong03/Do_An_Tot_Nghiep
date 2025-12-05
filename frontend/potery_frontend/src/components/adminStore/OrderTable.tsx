@@ -272,7 +272,7 @@ export default function OrderTable({
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                {order.status !== "CANCELLED" && (
+                {order.status !== "CANCELLED" && order.status !== "CANCELLED_RETURN" && (
                   <button
                     title="Chỉnh sửa trạng thái"
                     onClick={() => onEditStatus(order)}
