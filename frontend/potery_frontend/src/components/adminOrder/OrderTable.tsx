@@ -102,6 +102,9 @@ const getStatusColor = (status: OrderStatus | PaymentStatus): string => {
     case "REFUNDED":
       return "bg-purple-100 text-purple-700";
 
+    case "PENDING_REFUND":
+      return "bg-blue-100 text-blue-700";
+
     // --- DEFAULT ---
     default:
       return "bg-gray-100 text-gray-700";
@@ -140,6 +143,7 @@ const translateStatus = (status: OrderStatus | PaymentStatus): string => {
     UNPAID: "Chưa thanh toán",
     PAID: "Đã thanh toán",
     REFUNDED: "Đã hoàn tiền",
+    PENDING_REFUND: "Chưa hoàn tiền"
   };
 
   return translations[status] || status;
@@ -263,7 +267,11 @@ export default function OrderTable({
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                {order.status !== "CANCELLED" && order.status !== "CANCELLED_RETURN" && (
+                {/* Cho phép chỉnh sửa nếu:
+                    - Đơn chưa hủy HOẶC
+                    - Đơn đã hủy nhưng chưa hoàn trả (để cập nhật sang đã hoàn trả) */}
+                {(order.status !== "CANCELLED" && order.status !== "CANCELLED_RETURN") || 
+                 (order.status === "CANCELLED" && order.payment_status === "PENDING_REFUND") ? (
                   <button
                     title="Chỉnh sửa trạng thái"
                     onClick={() => onEditStatus(order)}
@@ -271,7 +279,7 @@ export default function OrderTable({
                   >
                     <Package className="w-4 h-4" />
                   </button>
-                )}
+                ) : null}
 
                 {(order.status === 'SHIPPING' || order.status === 'CONFIRMED') && onViewTracking && (
                   <button
