@@ -8,11 +8,54 @@ interface DriverLayoutProps {
   children: React.ReactNode;
 }
 const deleteCookie = (name: string) => {
-  // Đặt Expires về ngày trong quá khứ và Max-Age=0 để trình duyệt xóa cookie ngay lập tức.
-  document.cookie = name + '=; Max-Age=0; path=/;';
-  // Hoặc dùng Expires:
-  // document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  const hostname = window.location.hostname;
+  const domainParts = hostname.split('.');
+  
+  // Danh sách các cách xóa cookie với các thuộc tính khác nhau
+  const deleteAttempts = [
+    // Xóa với path root (không có domain)
+    `${name}=; Max-Age=0; path=/;`,
+    `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`,
+    
+    // Xóa với path root và domain hiện tại
+    `${name}=; Max-Age=0; path=/; domain=${hostname};`,
+    `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${hostname};`,
+    
+    // Xóa không có path và domain
+    `${name}=; Max-Age=0;`,
+    `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC;`,
+  ];
+  
+  // Nếu có domain (không phải localhost), thử xóa với domain cha
+  if (domainParts.length > 1 && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    const parentDomain = '.' + domainParts.slice(-2).join('.');
+    deleteAttempts.push(
+      `${name}=; Max-Age=0; path=/; domain=${parentDomain};`,
+      `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${parentDomain};`,
+      `${name}=; Max-Age=0; domain=${parentDomain};`,
+      `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${parentDomain};`
+    );
+  }
+  
+  // Thử với localhost domain
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    deleteAttempts.push(
+      `${name}=; Max-Age=0; path=/; domain=localhost;`,
+      `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=localhost;`
+    );
+  }
+  
+  // Thử tất cả các cách xóa
+  deleteAttempts.forEach(attempt => {
+    try {
+      document.cookie = attempt;
+    } catch (e) {
+      console.warn(`Không thể xóa cookie ${name} với: ${attempt}`, e);
+    }
+  });
 };
+
+
 export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [driverName, setDriverName] = useState('Tài xế');
@@ -24,17 +67,54 @@ export const DriverLayout: React.FC<DriverLayoutProps> = ({ children }) => {
     setDriverName(name);
   }, []);
 
-  // Function logout đơn giản
-  const handleLogout = () => {
+  // Function logout - xóa tất cả localStorage, sessionStorage và cookies
+  const handleLogout = async () => {
+    console.log('🚪 Bắt đầu đăng xuất...');
+    
+    try {
+      // Gọi API logout từ server để xóa cookie adminToken (HttpOnly)
+      // Cookie HttpOnly chỉ có thể xóa từ server-side
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      await fetch(`${API_BASE_URL}/admin/logout`, {
+        method: 'POST',
+        credentials: 'include', // Quan trọng: gửi cookie cùng request
+      });
+      console.log('✅ Đã gọi API logout từ server');
+    } catch (err) {
+      console.error('❌ Lỗi khi gọi API logout:', err);
+      // Tiếp tục xóa localStorage/sessionStorage ngay cả khi API lỗi
+    }
+    
+    // Xóa localStorage
     localStorage.removeItem('adminID');
     localStorage.removeItem('adminName');
     localStorage.removeItem('adminRole');
     localStorage.removeItem('adminRoleId');
     localStorage.removeItem('adminPermissions');
+    console.log('✅ Đã xóa localStorage');
 
+    // Xóa sessionStorage
     sessionStorage.clear();
-    deleteCookie('adminToken');
+    console.log('✅ Đã xóa sessionStorage');
 
+    // Xóa các cookie khác (không phải HttpOnly) từ client-side
+    const authCookies = [
+      'token',
+      'access_token',
+      'refresh_token',
+      'authToken',
+      'jwt',
+      'session',
+      'sessionId',
+      'connect.sid', // Express session cookie
+    ];
+    
+    authCookies.forEach(cookieName => {
+      deleteCookie(cookieName);
+    });
+    console.log('✅ Đã xóa các cookie authentication khác');
+
+    // Redirect đến trang login
     window.location.href = '/admin/login';
   };
 
