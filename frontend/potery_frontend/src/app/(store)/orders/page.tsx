@@ -622,7 +622,38 @@ export default function MyOrdersPage() {
       return sum + itemShippingFee;
     }, 0) || 0;
   };
+  // Định dạng thời gian còn lại: X ngày Y giờ Z phút
+  const formatRemainingTime = (ms: number) => {
+    const totalMinutes = Math.floor(ms / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
 
+    const parts = [];
+    if (days > 0) parts.push(`${days} ngày`);
+    if (hours > 0 || days > 0) parts.push(`${hours} giờ`);
+    parts.push(`${minutes} phút`);
+
+    return parts.join(' ');
+  };
+  // Trả về thông tin hiển thị nút đổi trả và chuỗi đếm ngược còn lại
+  const getReturnInfo = (order: any) => {
+    const isDelivered = order.status?.toUpperCase() === 'DELIVERED';
+    const deliveredAt = order.delivery_date || order.delivered_at || order.updated_at;
+    if (!isDelivered || !deliveredAt) return { show: false, tooltip: '' };
+
+    const deliveredDate = new Date(deliveredAt);
+    const expireAt = deliveredDate.getTime() + 7 * 24 * 60 * 60 * 1000;
+    const remainingMs = expireAt - Date.now();
+    if (Number.isNaN(expireAt) || remainingMs <= 0) return { show: false, tooltip: '' };
+
+    const remainingText = formatRemainingTime(remainingMs);
+    const expireDateText = new Date(expireAt).toLocaleString('vi-VN');
+    return {
+      show: true,
+      tooltip: `Còn ${remainingText} để yêu cầu đổi trả (hạn: ${expireDateText})`,
+    };
+  };
   const filteredOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
     const normalizedStatus = order.status?.toUpperCase();
 
@@ -1030,25 +1061,14 @@ export default function MyOrdersPage() {
                         </button>
                       )}
                       {(() => {
-                        const isDelivered = order.status?.toUpperCase() === 'DELIVERED';
-
-                        // Lấy ngày giao hàng (tùy API bạn)
-                        const deliveredAt = order.delivery_date || order.delivered_at || order.updated_at;
-
-                        if (!deliveredAt) return null;
-
-                        const diffDays =
-                          (new Date().getTime() - new Date(deliveredAt).getTime()) /
-                          (1000 * 60 * 60 * 24);
-
-                        const within7Days = diffDays <= 7;
-
-                        return isDelivered && within7Days ? (
+                        const { show, tooltip } = getReturnInfo(order);
+                        return show ? (
                           <button
                             onClick={() => handleReturnOrder(id)}
                             disabled={isProcessing}
                             className={`px-6 py-2 cursor-pointer text-sm font-semibold border border-blue-500 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all shadow-md flex items-center gap-2 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
+                            title={tooltip}
                           >
                             {isProcessing && returnLoading && (
                               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>

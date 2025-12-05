@@ -120,7 +120,6 @@ function OrderDeliverContent() {
   type TabType = DriverStatus | 'DELIVERED';
   const [activeTab, setActiveTab] = useState<TabType>(DriverStatus.WAITING_ACCEPT);
   
-  // ✅ Lấy driver_id từ localStorage (admin login) thay vì useAuth
   const driverId = typeof window !== 'undefined' 
     ? Number(localStorage.getItem('adminID')) 
     : null;
@@ -134,16 +133,26 @@ function OrderDeliverContent() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getOrdersForDriver(Number(driverId), 
-      (activeTab === 'DELIVERED') ? undefined : { status: activeTab as DriverStatus });
-      setAssignments(data);
+      // Fetch all assignments for the driver, filtering will be done on the frontend
+      const data = await getOrdersForDriver(Number(driverId));
+
+      // Chuẩn hóa driver_status: đơn ở trạng thái chờ giao phải là WAITING_ACCEPT
+      const normalized = (data || []).map((assignment) => {
+        const status = assignment?.order?.status;
+        const isPending =
+          status === 'PENDING_DELIVERY' || status === 'PENDING_DELIVERY_RETURN';
+        const driverStatus = isPending ? DriverStatus.WAITING_ACCEPT : assignment.driver_status;
+        return { ...assignment, driver_status: driverStatus };
+      });
+
+      setAssignments(normalized);
     } catch (err) {
       setError("Không thể tải danh sách đơn hàng. Vui lòng thử lại.");
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [driverId, activeTab]);
+  }, [driverId]);
 
   useEffect(() => {
     fetchDriverOrders();
@@ -167,10 +176,16 @@ function OrderDeliverContent() {
       toast.error('Không thể xác thực tài xế. Vui lòng đăng nhập lại.');
       return;
     }
+
+    const assignment = assignments.find(a => a.order?.id === orderId);
+    if (!assignment || !assignment.order) {
+      toast.error('Không thể tìm thấy đơn hàng để cập nhật trạng thái.');
+      return;
+    }
     
     setIsProcessing(true);
+    const toastId = toast.loading('Đang xử lý nhận đơn...');
     
-    // Get current GPS location
     let latitude: number | undefined;
     let longitude: number | undefined;
     
@@ -186,42 +201,58 @@ function OrderDeliverContent() {
         longitude = position.coords.longitude;
       } catch (geoError) {
         console.warn('Geolocation error:', geoError);
-        toast.error('Không thể lấy vị trí GPS. Nhận đơn mà không có vị trí.');
+        toast.error('Không thể lấy vị trí GPS. Nhận đơn mà không có vị trí.', { id: toastId });
       }
     }
 
-    const promise = acceptOrder({ 
-      order_id: orderId,
-      driver_id: driverId,
-      latitude,
-      longitude,
-    });
+    try {
+      // Step 1: Driver accepts the assignment
+      await acceptOrder({ 
+        order_id: orderId,
+        driver_id: driverId,
+        latitude,
+        longitude,
+      });
 
-    toast.promise(promise, {
-      loading: 'Đang xử lý nhận đơn...',
-      success: () => {
-        // Tải lại danh sách sau khi thành công
-        setAssignments(prev => prev.filter(a => a.order_id !== orderId));
-        return 'Nhận đơn thành công!';
-      },
-      error: (err) => err.response?.data?.message || 'Nhận đơn thất bại!',
-    }).finally(() => setIsProcessing(false));
+      // Step 2: Determine next order status
+      const currentStatus = assignment.order.status;
+      let nextStatus: string | null = null;
+
+      if (currentStatus === 'PENDING_DELIVERY') {
+        nextStatus = 'SHIPPING';
+      } else if (currentStatus === 'PENDING_DELIVERY_RETURN') {
+        nextStatus = 'SHIPPING_RETURN';
+      }
+      
+      // Step 3: Update order status if applicable
+
+      toast.success('Nhận đơn thành công!', { id: toastId });
+      fetchDriverOrders(); // Refetch data
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Nhận đơn thất bại!', { id: toastId });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleRejectOrder = async (orderId: number) => {
-    if (!driverId) return;
+    if (!driverId) {
+      toast.error('Không thể xác thực tài xế.');
+      return;
+    }
+    
     setIsProcessing(true);
-    const promise = rejectOrder({ order_id: orderId });
+    const toastId = toast.loading('Đang từ chối đơn hàng...');
 
-    toast.promise(promise, {
-      loading: 'Đang từ chối đơn hàng...',
-      success: () => {
-        // Tải lại danh sách sau khi thành công
-        setAssignments(prev => prev.filter(a => a.order_id !== orderId));
-        return 'Đã từ chối đơn hàng.';
-      },
-      error: (err) => err.response?.data?.message || 'Từ chối đơn hàng thất bại!',
-    }).finally(() => setIsProcessing(false));
+    try {
+        await rejectOrder({ order_id: orderId });
+        toast.success('Đã từ chối đơn hàng.', { id: toastId });
+        fetchDriverOrders(); // Refetch data
+    } catch (err: any) {
+        toast.error(err.response?.data?.message || 'Từ chối đơn hàng thất bại!', { id: toastId });
+    } finally {
+        setIsProcessing(false);
+    }
   };
 
   const handleUploadProof = async (orderId: number, file: File) => {
@@ -253,13 +284,32 @@ function OrderDeliverContent() {
     toast.promise(promise, {
       loading: 'Đang hoàn tất đơn hàng...',
       success: () => {
-        // Sau khi hoàn tất, làm mới danh sách hiện tại
-        setAssignments(prev => prev.filter(a => a.order_id !== orderId));
+        fetchDriverOrders(); // Refetch data
         return 'Đã cập nhật trạng thái đơn hàng!';
       },
       error: 'Cập nhật đơn hàng thất bại!',
     }).finally(() => setIsProcessing(false));
   };
+  
+  const filteredAssignments = assignments.filter(assignment => {
+    if (!assignment.order) {
+      return false;
+    }
+    const status = assignment.order.status;
+    const driverStatus = assignment.driver_status;
+    switch (activeTab) {
+      case DriverStatus.WAITING_ACCEPT:
+        return driverStatus === DriverStatus.WAITING_ACCEPT ||
+          status === 'PENDING_DELIVERY' || status === 'PENDING_DELIVERY_RETURN';
+      case DriverStatus.ACCEPTED:
+        return driverStatus === DriverStatus.ACCEPTED ||
+          status === 'SHIPPING' || status === 'SHIPPING_RETURN';
+      case 'DELIVERED':
+        return status === 'DELIVERED' || status === 'EXCHANGED';
+      default:
+        return false;
+    }
+  });
 
   return (
     <>
@@ -321,17 +371,9 @@ function OrderDeliverContent() {
       {error && <p className="text-center text-red-600 py-10">{error}</p>}
 
       {!loading && !error && (
-        assignments.length > 0 ? (
+        filteredAssignments.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {(activeTab === 'DELIVERED'
-              ? assignments.filter(a => a.order?.status === 'DELIVERED')
-                : activeTab === DriverStatus.ACCEPTED
-                ? assignments.filter(a =>
-                    a.order?.status === 'SHIPPING' ||
-                    a.order?.status === 'SHIPPING_RETURN'
-                  )
-                : assignments // WAITING_ACCEPT tab vẫn giống cũ
-            ).map((assignment) => (
+            {filteredAssignments.map((assignment) => (
               <OrderCard
                 key={assignment.id}
                 assignment={assignment}
@@ -340,7 +382,7 @@ function OrderDeliverContent() {
                 onUploadProof={handleUploadProof}
                 onComplete={handleCompleteOrder}
                 isProcessing={isProcessing}
-                mode={activeTab === 'DELIVERED' ? 'DELIVERED' : (assignment.driver_status === DriverStatus.WAITING_ACCEPT ? 'WAITING' : 'SHIPPING')}
+                mode={activeTab === 'DELIVERED' ? 'DELIVERED' : (activeTab === DriverStatus.WAITING_ACCEPT ? 'WAITING' : 'SHIPPING')}
               />
             ))}
           </div>
