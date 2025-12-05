@@ -1,21 +1,20 @@
 "use client";
 import React, { useEffect, useState } from "react";
 // Giả định các types và service imports từ file của bạn
-import { updateOrder, OrderStatus, PaymentStatus, PaymentMethod, Order } from "@/api/services/orderService";
+import { updateOrder, OrderStatus, PaymentStatus } from "@/api/services/orderService";
 import { X, CheckCircle } from "lucide-react";
 
 interface Props {
     orderId: number;
     currentStatus: OrderStatus;
     currentPaymentStatus: PaymentStatus;
-    currentPaymentMethod: PaymentMethod;
     onClose: () => void;
     onUpdated: (id: number, data: Record<string, unknown>) => void;
-    // Giả định thêm các prop cho dữ liệu hủy ban đầu nếu có
+    // Các prop cho dữ liệu hủy đơn hàng thông thường
     initialCancelReason?: string | null;
-    // Đã loại bỏ initialCancelDate khỏi Props
-    initialCancelDate?: string | null;
     initialPersonCancel?: string | null;
+    // Các prop cho dữ liệu hủy đổi trả
+    initialCancelReturnReason?: string | null;
 }
 
 // =========================================================================
@@ -178,7 +177,7 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
     if (!finalStatuses.includes(currentStatus)) {
         finalStatuses.unshift(currentStatus);
     } else {
-        finalStatuses = finalStatuses.sort((a, b) =>
+        finalStatuses = finalStatuses.sort((a) =>
             a === currentStatus ? -1 : 1
         );
     }
@@ -201,22 +200,22 @@ export default function OrderStatusModal({
     orderId,
     currentStatus,
     currentPaymentStatus,
-    currentPaymentMethod,
     onClose,
     onUpdated,
     initialCancelReason,
-    // Đã loại bỏ initialCancelDate khỏi destructuring
-    // initialCancelDate, 
     initialPersonCancel,
+    initialCancelReturnReason,
 }: Props) {
     const [status, setStatus] = useState<OrderStatus>(currentStatus);
     const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(currentPaymentStatus);
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(currentPaymentMethod);
     const [loading, setLoading] = useState(false);
 
-    // KHỞI TẠO CÁC STATE CHO THÔNG TIN HỦY (Đã loại bỏ cancelDate state)
+    // KHỚI TẠO CÁC STATE CHO THÔNG TIN HỦY ĐƠN HÀNG THƯỜNG
     const [cancelReason, setCancelReason] = useState<string>(initialCancelReason || "");
     const [personCancel, setPersonCancel] = useState<string>(initialPersonCancel || DEFAULT_PERSON_CANCEL);
+
+    // KHỚI TẠO CÁC STATE CHO THÔNG TIN HỦY ĐỔI TRẢ
+    const [cancelReturnReason, setCancelReturnReason] = useState<string>(initialCancelReturnReason || "");
 
     // State để theo dõi trạng thái hoàn tiền khi hủy đơn hàng đã thanh toán
     const [refundStatus, setRefundStatus] = useState<PaymentStatus | null>(null);
@@ -229,7 +228,7 @@ export default function OrderStatusModal({
         }
 
         // Reset refundStatus khi chuyển khỏi trạng thái CANCELLED
-        if (status !== "CANCELLED" && status !== "CANCELLED_RETURN") {
+        if (status !== "CANCELLED") {
             setRefundStatus(null);
         }
     }, [status, paymentStatus]);
@@ -239,13 +238,13 @@ export default function OrderStatusModal({
     const isCancelledStatus = status === "CANCELLED" || status === "CANCELLED_RETURN";
 
     // Kiểm tra xem đơn hàng đã bị hủy từ trước chưa
-    const isAlreadyCancelled = currentStatus === "CANCELLED" || currentStatus === "CANCELLED_RETURN";
+    const isAlreadyCancelled = currentStatus === "CANCELLED";
 
-    // Kiểm tra xem có đang hủy đơn mới không (chuyển từ trạng thái khác sang CANCELLED)
-    const isCancellingNow = isCancelledStatus && !isAlreadyCancelled;
+    // Kiểm tra xem có đang hủy đơn mới không (chỉ áp dụng cho CANCELLED)
+    const isCancellingNow = status === "CANCELLED" && currentStatus !== "CANCELLED";
 
-    // Kiểm tra đơn cần hoàn tiền
-    const needsRefund = currentPaymentStatus === "PAID" || currentPaymentStatus === "PENDING_REFUND";
+    // Kiểm tra đơn cần hoàn tiền - chỉ áp dụng cho CANCELLED, không áp dụng cho CANCELLED_RETURN
+    const needsRefund = (currentPaymentStatus === "PAID" || currentPaymentStatus === "PENDING_REFUND") && status === "CANCELLED";
 
     const executeSave = async () => {
         setLoading(true);
@@ -253,10 +252,9 @@ export default function OrderStatusModal({
             let updateData: Record<string, unknown> = {
                 status,
                 payment_status: paymentStatus,
-                payment_method: paymentMethod,
             };
 
-            if (isCancellingNow) {
+            if (isCancellingNow && status === "CANCELLED") {
                 // Đang hủy đơn mới - yêu cầu lý do hủy
                 if (!cancelReason.trim()) {
                     alert("Vui lòng điền Lý do hủy.");
@@ -281,6 +279,21 @@ export default function OrderStatusModal({
                         actorType: 'ADMIN',
                     };
                 }
+            } else if (status === "CANCELLED_RETURN") {
+                // Đang hủy yêu cầu đổi trả - sử dụng các trường riêng cho cancel_return
+                if (!cancelReturnReason.trim()) {
+                    alert("Vui lòng điền Lý do hủy yêu cầu đổi trả.");
+                    setLoading(false);
+                    return;
+                }
+
+                updateData = {
+                    ...updateData,
+                    cancel_return_reason: cancelReturnReason.trim() || null,
+                    cancel_return_date: new Date().toISOString(),
+                    person_cancel_return: DEFAULT_PERSON_CANCEL,
+                    actorType: 'ADMIN',
+                };
             } else if (isAlreadyCancelled && refundStatus) {
                 // Đơn đã hủy, chỉ cập nhật trạng thái thanh toán
                 updateData = {
@@ -288,13 +301,16 @@ export default function OrderStatusModal({
                     payment_status: refundStatus,
                 };
             } else {
-                // Đảm bảo các trường hủy được reset/gửi null nếu không phải là "CANCELLED"
+                // Đảm bảo các trường hủy được reset/gửi null nếu không phải là "CANCELLED" hoặc "CANCELLED_RETURN"
                 updateData = {
                     ...updateData,
                     cancel_reason: null,
-                    cancel_date: null, // Vẫn gửi null cho backend để xóa/reset trường này
+                    cancel_date: null,
                     person_cancel: null,
-                    actorType: null, // Gửi null để backend reset actorType
+                    cancel_return_reason: null,
+                    cancel_return_date: null,
+                    person_cancel_return: null,
+                    actorType: null,
                 };
             }
 
@@ -310,14 +326,18 @@ export default function OrderStatusModal({
     };
 
     const handleSaveClick = () => {
-        // Nếu đang hủy đơn mới (không phải đơn đã hủy), yêu cầu lý do
-        if (isCancellingNow && !cancelReason.trim()) {
+        // Nếu đang hủy đơn mới, yêu cầu lý do
+        if (status === "CANCELLED" && currentStatus !== "CANCELLED" && !cancelReason.trim()) {
             alert("Vui lòng điền Lý do hủy.");
             return;
         }
 
-        // Nếu hủy đơn hàng đã thanh toán, bắt buộc chọn trạng thái hoàn tiền
-        if (isCancellingNow && needsRefund && !refundStatus) {
+        // Nếu đang hủy yêu cầu đổi trả, yêu cầu lý do
+        if (status === "CANCELLED_RETURN" && currentStatus !== "CANCELLED_RETURN" && !cancelReturnReason.trim()) {
+            alert("Vui lòng điền Lý do hủy yêu cầu đổi trả.");
+            return;
+        }        // Nếu hủy đơn hàng đã thanh toán (chỉ áp dụng cho CANCELLED), bắt buộc chọn trạng thái hoàn tiền
+        if (isCancellingNow && needsRefund && status === "CANCELLED" && !refundStatus) {
             alert("Vui lòng chọn trạng thái hoàn tiền.");
             return;
         }
@@ -334,22 +354,24 @@ export default function OrderStatusModal({
     // Lấy ra giá trị so sánh ban đầu để xử lý trường hợp null/undefined
     const initialCancelReasonValue = initialCancelReason || "";
     const initialPersonCancelValue = initialPersonCancel || DEFAULT_PERSON_CANCEL;
-    // const initialCancelDateValue = getDateTimeLocalString(initialCancelDate); // Đã loại bỏ
+    const initialCancelReturnReasonValue = initialCancelReturnReason || "";
 
     // Kiểm tra xem có thay đổi nào được thực hiện không
     const hasChanges = (
         status !== currentStatus ||
         paymentStatus !== currentPaymentStatus ||
-        paymentMethod !== currentPaymentMethod ||
 
         // Kiểm tra khi đang hủy đơn mới
-        (isCancellingNow && (
+        (status === "CANCELLED" && currentStatus !== "CANCELLED" && (
             cancelReason !== initialCancelReasonValue ||
             personCancel !== initialPersonCancelValue ||
             (needsRefund && refundStatus !== null)
         )) ||
 
-        // Kiểm tra khi đơn đã hủy và cập nhật trạng thái thanh toán
+        // Kiểm tra khi đang hủy yêu cầu đổi trả
+        (status === "CANCELLED_RETURN" && currentStatus !== "CANCELLED_RETURN" && (
+            cancelReturnReason !== initialCancelReturnReasonValue
+        )) ||        // Kiểm tra khi đơn đã hủy và cập nhật trạng thái thanh toán
         (isAlreadyCancelled && refundStatus !== null) ||
 
         // Nếu chuyển từ CANCELLED sang trạng thái khác (cần lưu updateData reset fields thành null)
@@ -405,12 +427,20 @@ export default function OrderStatusModal({
                                                 const newStatus = s as OrderStatus;
                                                 setStatus(newStatus);
 
-                                                // Reset/Set mặc định logic tương tự như trong dropdown
-                                                if (newStatus !== "CANCELLED") {
+                                                // Reset/Set mặc định logic cho CANCELLED
+                                                if (newStatus === "CANCELLED" && currentStatus !== "CANCELLED") {
+                                                    setCancelReason("");
+                                                    setPersonCancel(DEFAULT_PERSON_CANCEL);
+                                                }
+                                                // Reset/Set mặc định logic cho CANCELLED_RETURN
+                                                else if (newStatus === "CANCELLED_RETURN" && currentStatus !== "CANCELLED_RETURN") {
+                                                    setCancelReturnReason("");
+                                                }
+                                                // Reset khi chuyển khỏi trạng thái hủy
+                                                else if (newStatus !== "CANCELLED" && newStatus !== "CANCELLED_RETURN") {
                                                     setCancelReason(initialCancelReason || "");
                                                     setPersonCancel(initialPersonCancel || DEFAULT_PERSON_CANCEL);
-                                                } else if (currentStatus !== "CANCELLED") {
-                                                    setPersonCancel(DEFAULT_PERSON_CANCEL);
+                                                    setCancelReturnReason(initialCancelReturnReason || "");
                                                 }
                                             }}
                                             className={`px-4 py-2 font-medium rounded-full transition-all border 
@@ -431,8 +461,8 @@ export default function OrderStatusModal({
                         {/* ⭐️ KẾT THÚC PHẦN CẬP NHẬT TRẠNG THÁI MỚI ⭐️ */}
 
 
-                        {/* FORM ĐIỀN THÔNG TIN HỦY - Chỉ hiện khi đang hủy đơn mới */}
-                        {isCancellingNow && (
+                        {/* FORM ĐIỀN THÔNG TIN HỦY - Hiện khi đang hủy đơn mới */}
+                        {status === "CANCELLED" && currentStatus !== "CANCELLED" && (
                             <div className="space-y-4 p-4 border border-red-300 rounded-lg bg-red-50">
                                 <h3 className="text-lg font-semibold text-red-600">Thông tin hủy Đơn hàng</h3>
 
@@ -448,18 +478,7 @@ export default function OrderStatusModal({
                                     />
                                 </div>
 
-                                {/* <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Người hủy đơn hàng</label>
-                                    <input
-                                        type="text"
-                                        title="person cancelled"
-                                        value={personCancel}
-                                        onChange={(e) => setPersonCancel(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
-                                    />
-                                </div> */}
-
-                                {/* Hiển thị select trạng thái hoàn tiền nếu đơn hàng cần hoàn tiền */}
+                                {/* Hiển thị select trạng thái hoàn tiền cho CANCELLED */}
                                 {needsRefund && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -489,7 +508,24 @@ export default function OrderStatusModal({
                             </div>
                         )}
 
-                        {/* FORM CẬP NHẬT TRẠNG THÁI HOÀN TIỀN CHO ĐơN ĐÃ HỦY */}
+                        {/* FORM ĐIỀN THÔNG TIN HỦY ĐỔI TRẢ - Hiện khi đang hủy yêu cầu đổi trả */}
+                        {status === "CANCELLED_RETURN" && currentStatus !== "CANCELLED_RETURN" && (
+                            <div className="space-y-4 p-4 border border-orange-300 rounded-lg bg-orange-50">
+                                <h3 className="text-lg font-semibold text-orange-600">Thông tin hủy yêu cầu đổi trả</h3>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lý do hủy yêu cầu đổi trả <span className="text-red-500">*</span></label>
+                                    <textarea
+                                        title="cancel return reason"
+                                        value={cancelReturnReason}
+                                        onChange={(e) => setCancelReturnReason(e.target.value)}
+                                        rows={3}
+                                        className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500"
+                                        placeholder="Nhập lý do hủy yêu cầu đổi trả..."
+                                    />
+                                </div>
+                            </div>
+                        )}                        {/* FORM CẬP NHẬT TRẠNG THÁI HOÀN TIỀN CHO ĐơN ĐÃ HỦY */}
                         {isAlreadyCancelled && currentPaymentStatus === "PENDING_REFUND" && (
                             <div className="space-y-4 p-4 border border-blue-300 rounded-lg bg-blue-50">
                                 <h3 className="text-lg font-semibold text-blue-600">Cập nhật trạng thái hoàn tiền</h3>
