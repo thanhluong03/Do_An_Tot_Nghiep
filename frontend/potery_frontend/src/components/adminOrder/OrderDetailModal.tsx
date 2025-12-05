@@ -177,6 +177,13 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   const paymentMethod = String(order.payment_method);
   const displayTotalAmount =
     typeof order.total_amount === "string" ? parseFloat(order.total_amount) : order.total_amount;
+// Shipping fee from item(s)
+const items = order.items || [];
+const totalShippingFee = items.reduce((sum, item: any) => {
+  return sum + (item.shipping_fee || 0);
+}, 0);
+
+const finalTotal = displayTotalAmount + totalShippingFee;
 
   // Lấy thông tin giao dịch chính
   const paymentTransactions = (order as any)?.paymentTransactions || [];
@@ -370,12 +377,12 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
               <InfoRow label="Tổng tiền sản phẩm" value={formatCurrency(displayTotalAmount)} />
               <InfoRow
                 label="Phí vận chuyển"
-                value={<span className="text-green-600">{formatCurrency(displayShippingFee)}</span>}
+                value={<span className="text-green-600">{formatCurrency(totalShippingFee)}</span>}
               />
               <div className="pt-4 mt-4 border-t-2 border-indigo-300">
                 <InfoRow
                   label="Tổng thanh toán"
-                  value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(displayTotalAmount + displayShippingFee)}</span>}
+                  value={<span className="text-xl font-bold text-indigo-900">{formatCurrency(finalTotal)}</span>}
                 />
 
                 {/* Tiền giao dịch */}
