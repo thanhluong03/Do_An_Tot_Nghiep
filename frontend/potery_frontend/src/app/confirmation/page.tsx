@@ -92,6 +92,7 @@ export default function ConfirmationPage() {
             }
 
             // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
+            // NHƯNG KHÔNG rollback các đơn đã hoàn thành (DELIVERED, EXCHANGED, v.v.)
             const codOrdersToRollback = ordersList.filter((order: any) => {
               const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
               const paymentStatus = order?.payment_status || order?.current_order?.payment_status;
@@ -101,8 +102,14 @@ export default function ConfirmationPage() {
               const isConfirmed = orderStatus === 'CONFIRMED';
               // Loại trừ các order MOMO hiện tại
               const isNotMomoOrder = !momoOrderIds.includes(order.id);
+
+              // 🔥 QUAN TRỌNG: KHÔNG rollback các đơn đã hoàn thành giao hàng
+              const completedStatuses = ['DELIVERED', 'EXCHANGED', 'DELIVERY_FAILED', 'DELIVERY_FAILED_RETURN'];
+              const isNotCompleted = !completedStatuses.includes(orderStatus);
+
               // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
-              return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
+              // VÀ chưa hoàn thành giao hàng
+              return isCOD && (isPaid || isConfirmed) && isNotMomoOrder && isNotCompleted;
             });
 
             if (codOrdersToRollback.length > 0) {
