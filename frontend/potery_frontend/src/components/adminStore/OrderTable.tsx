@@ -20,32 +20,22 @@ const formatCurrency = (amount: number) => {
 };
 
 // Hàm tính tổng tiền đơn hàng theo logic của OrderDetailModal
+
 const getTotalAmount = (order: Order): number => {
-  // Tổng tiền sản phẩm (đã có từ backend)
   const displayTotalAmount = typeof order.total_amount === "string"
     ? parseFloat(order.total_amount)
     : order.total_amount;
 
-  // Lấy thông tin giao dịch chính (giống OrderDetailModal)
-  const orderWithTransactions = order as Order & {
-    paymentTransactions?: Array<{
-      amount?: number | string;
-      gateway_txn_ref?: string;
-      created_at?: string;
-      txn_status?: string;
-    }>
-  };
-  const paymentTransactions = orderWithTransactions.paymentTransactions || [];
-  const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
+  // Lấy shipping từ items
+  const items = order.current_order?.items || [];
 
-  // Tính phí vận chuyển từ transaction data (giống OrderDetailModal)
-  const shippingFeeFromTransaction = mainTxn && mainTxn.amount ?
-    Math.max(0, Number(mainTxn.amount) - displayTotalAmount) : 30000;
-  const displayShippingFee = shippingFeeFromTransaction > 0 ? shippingFeeFromTransaction : 30000;
+  const totalShippingFee = items.reduce((sum, item: any) => {
+    return sum + (item.shipping_fee || 0);
+  }, 0);
 
-  // Tổng cuối cùng = tổng sản phẩm + phí vận chuyển
-  return displayTotalAmount + displayShippingFee;
-};// Màu nền theo trạng thái
+  return displayTotalAmount + totalShippingFee;
+};
+
 const getStatusColor = (status: OrderStatus | PaymentStatus): string => {
   switch (status) {
 
