@@ -80,6 +80,11 @@ export class OrderItemDto {
     @IsOptional()
     @IsString()
     attribute2_name?: string;
+
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    shipping_fee?: number;
 }
 
 export class CreateOrderDto {
@@ -97,7 +102,6 @@ export class CreateOrderDto {
     @IsOptional()
     @IsString()
     shipping_address?: string;
-
 
     @Expose()
     @IsOptional()

@@ -34,12 +34,12 @@ export default function ConfirmationPage() {
         // Hàm rollback với retry
         const rollbackCODOrders = async (retryCount = 0) => {
           try {
-            // Đợi một chút để đảm bảo backend đã cập nhật xong (tăng delay)
-            await new Promise(resolve => setTimeout(resolve, 4000 + retryCount * 2000));
+            // Đợi một chút để đảm bảo backend đã cập nhật xong
+            await new Promise(resolve => setTimeout(resolve, 1000 + retryCount * 1000));
             console.log(`🔄 Bắt đầu rollback các đơn COD trong confirmation page (lần thử ${retryCount + 1})...`);
             const allCustomerOrders = await orderApi.getOrdersByCustomer(user.id as string, 1, 100);
             console.log('🔍 Raw response từ getOrdersByCustomer:', allCustomerOrders);
-            
+
             // Xử lý nhiều cấu trúc response có thể có
             let ordersList: any[] = [];
             if (Array.isArray(allCustomerOrders)) {
@@ -55,9 +55,9 @@ export default function ConfirmationPage() {
             } else if (allCustomerOrders?.orders && Array.isArray(allCustomerOrders.orders)) {
               ordersList = allCustomerOrders.orders;
             }
-            
+
             console.log('🔍 Tổng số orders của customer:', ordersList.length);
-            
+
             // Lấy danh sách order IDs MOMO từ URL hoặc sessionStorage
             let momoOrderIds: number[] = [];
             if (orderIds) {
@@ -82,15 +82,15 @@ export default function ConfirmationPage() {
                 momoOrderIds = [Number(orderId)];
               }
             }
-            
+
             console.log('🔍 MOMO Order IDs:', momoOrderIds);
-            
+
             // Đảm bảo ordersList là array trước khi filter
             if (!Array.isArray(ordersList)) {
               console.warn('⚠️ ordersList không phải array, bỏ qua rollback');
               return;
             }
-            
+
             // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
             const codOrdersToRollback = ordersList.filter((order: any) => {
               const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
@@ -104,17 +104,17 @@ export default function ConfirmationPage() {
               // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
               return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
             });
-            
+
             if (codOrdersToRollback.length > 0) {
               console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
-              
+
               // Rollback lại cả status và payment_status cho các order COD
               await Promise.all(
                 codOrdersToRollback.map((order: any) => {
                   const currentStatus = order?.status || order?.current_order?.status;
                   // Chỉ rollback nếu status là CONFIRMED (đã bị cập nhật nhầm)
                   const shouldRollbackStatus = currentStatus === 'CONFIRMED';
-                  
+
                   return orderApi.updateOrder(order.id, {
                     ...(shouldRollbackStatus && { status: 'CREATED' }), // Rollback status về CREATED nếu bị cập nhật nhầm
                     payment_status: 'UNPAID', // Rollback payment_status về UNPAID
@@ -125,9 +125,9 @@ export default function ConfirmationPage() {
                   });
                 })
               );
-              
+
               console.log('✅ Đã rollback status và payment_status cho các đơn COD trong confirmation page');
-              
+
               // Retry thêm 2 lần nữa sau 5 giây mỗi lần để đảm bảo
               if (retryCount < 2) {
                 setTimeout(() => rollbackCODOrders(retryCount + 1), 5000);
@@ -143,7 +143,7 @@ export default function ConfirmationPage() {
             }
           }
         };
-        
+
         rollbackCODOrders();
       })();
     }
@@ -221,17 +221,26 @@ export default function ConfirmationPage() {
         const validOrders = fetchedOrders.filter(order => order !== null) as Order[];
 
         console.log('✅ Fetched orders (trước khi filter):', validOrders);
-        
-        // 🔥 QUAN TRỌNG: Chỉ hiển thị các đơn MOMO, KHÔNG hiển thị đơn COD
-        const momoOrdersOnly = validOrders.filter((order: Order) => {
-          const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
-          const isMOMO = paymentMethod === 'CARD' || paymentMethod === 'MOMO';
-          console.log(`🔍 Order #${order.id}: paymentMethod=${paymentMethod}, isMOMO=${isMOMO}`);
-          return isMOMO;
-        });
-        
-        console.log('✅ Fetched orders (sau khi filter chỉ MOMO):', momoOrdersOnly);
-        setOrders(momoOrdersOnly);
+
+        // Nếu là guest checkout (COD) hoặc thanh toán thất bại, hiển thị tất cả đơn
+        // Nếu là thanh toán MOMO thành công, chỉ hiển thị đơn MOMO
+        let finalOrders = validOrders;
+
+        if (paymentStatus === 'success') {
+          // Chỉ filter khi thanh toán thành công - loại bỏ đơn COD
+          finalOrders = validOrders.filter((order: Order) => {
+            const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
+            const isMOMO = paymentMethod === 'CARD' || paymentMethod === 'MOMO';
+            console.log(`🔍 Order #${order.id}: paymentMethod=${paymentMethod}, isMOMO=${isMOMO}`);
+            return isMOMO;
+          });
+          console.log('✅ Filtered MOMO orders only:', finalOrders);
+        } else {
+          // Guest COD hoặc failed payment - hiển thị tất cả
+          console.log('✅ Showing all orders (COD/Guest or payment failed)');
+        }
+
+        setOrders(finalOrders);
       } catch (err) {
         console.error('❌ Lỗi tổng thể:', err);
         toast.error('Không thể tải thông tin đơn hàng.');
@@ -241,7 +250,7 @@ export default function ConfirmationPage() {
     };
 
     fetchOrders();
-  }, [orderId, orderIds]);
+  }, [orderId, orderIds, paymentStatus]);
 
   // --- Helper để lấy ảnh chính ---
   const getMainImage = (images: any) => {
@@ -287,7 +296,16 @@ export default function ConfirmationPage() {
 
   // --- Tính toán tổng cho tất cả đơn hàng ---
   const totalAmount = orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-  const shippingFee = 30000; // Phí vận chuyển cố định 30k cho tất cả đơn hàng
+
+  // Tính tổng phí vận chuyển từ tất cả order items
+  const shippingFee = orders.reduce((sum, order) => {
+    const items = order.orderItems || order.current_order?.items || order.items || [];
+    const orderShippingFee = items.reduce((itemSum: number, item: any) => {
+      return itemSum + (item.shipping_fee ? Number(item.shipping_fee) : 0);
+    }, 0);
+    return sum + orderShippingFee;
+  }, 0);
+
   const firstOrder = orders[0]; // Lấy thông tin từ đơn hàng đầu tiên cho địa chỉ, khách hàng
 
   // --- Định dạng các trường dữ liệu từ đơn hàng đầu tiên ---

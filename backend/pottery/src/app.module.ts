@@ -52,6 +52,8 @@ import { AuthModule } from '@app/auth';
 import { AuthController } from './auth/auth.controller';
 import { ImportRequestController } from './import_request/import_request.controller';
 import { ImportRequestModule } from '@app/import_request';
+import { ShippingController } from './shipping/shipping.controller';
+import { GeocodingModule } from '@app/geocoding';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -83,6 +85,7 @@ import { ImportRequestModule } from '@app/import_request';
     TrackingModule,
     AuthModule,
     ImportRequestModule,
+    GeocodingModule,
   ],
   controllers: [
     AppController,
@@ -110,6 +113,7 @@ import { ImportRequestModule } from '@app/import_request';
     MailController,
     AuthController,
     ImportRequestController,
+    ShippingController,
   ],
   providers: [AppService],
 })

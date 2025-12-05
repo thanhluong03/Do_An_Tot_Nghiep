@@ -245,19 +245,13 @@ function OrderDetailClient({ id }: { id: string }) {
   );
 
   // ---------------- Helper ----------------
-  // Hàm tính phí vận chuyển dựa trên transaction data (giống logic admin)
+  // Hàm lấy phí vận chuyển từ order items
   const getShippingFee = () => {
-    // Kiểm tra paymentTransactions cả từ order trực tiếp và từ current_order
-    const paymentTransactions = order?.paymentTransactions || [];
-    const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
-
-    if (mainTxn && mainTxn.amount) {
-      const shippingFee = Math.max(0, Number(mainTxn.amount) - Number(order.total_amount));
-      console.log(`Order Detail ${order?.id} - Calculated Shipping Fee:`, shippingFee);
-      return shippingFee > 0 ? shippingFee : 30000;
-    }
-    console.log(`Order Detail ${order?.id} - Using default shipping fee: 30000`);
-    return 30000; // Mặc định 30k nếu không có transaction
+    // Tính tổng shipping fee từ các order items
+    return items.reduce((sum: number, item: any) => {
+      const itemShippingFee = item.shipping_fee ? Number(item.shipping_fee) : 0;
+      return sum + itemShippingFee;
+    }, 0) || 0;
   };
 
   // Đồng bộ màu trạng thái với danh sách đơn hàng
@@ -622,7 +616,7 @@ function OrderDetailClient({ id }: { id: string }) {
                     {translateStatus(order.status)}
                   </div>
                 </div>
-                
+
                 <div className="text-[15px]">Trạng thái: <span className="font-bold text-gray-900">{translatePaymentStatus(order.payment_status)}</span></div>
                 <div className="text-gray-500 text-[14px] font-medium">
                   Ngày đặt: {new Date(order.order_date).toLocaleString('vi-VN')}
@@ -704,25 +698,25 @@ function OrderDetailClient({ id }: { id: string }) {
                 )}
               </div>
               {['CANCELLED', 'CANCELLED_RETURN'].includes(order.status) && order.cancel_reason && (
-                  
-                    <p className="text-sm font-semibold text-gray-500">
-                      Lý do hủy: <span className="font-normal text-gray-500">{order.cancel_reason}</span>
-                    </p>
-                
-                )}
-                {['DELIVERY_FAILED'].includes(order.status) && order.delivery_fail_reason && (
-                  
-                    <p className="text-sm font-semibold text-gray-500">
-                      Lý do giao thất bại: <span className="font-normal text-gray-500">{order.delivery_fail_reason}</span>
-                    </p>
-                )}
-                {['DELIVERY_FAILED_RETURN'].includes(order.status) && order.delivery_fail_return_reason && (
-                  
-                    <p className="text-sm font-semibold text-gray-500">
-                      Lý do giao thất bại: <span className="font-normal text-gray-500">{order.delivery_fail_return_reason}</span>
-                    </p>
-                
-                )}
+
+                <p className="text-sm font-semibold text-gray-500">
+                  Lý do hủy: <span className="font-normal text-gray-500">{order.cancel_reason}</span>
+                </p>
+
+              )}
+              {['DELIVERY_FAILED'].includes(order.status) && order.delivery_fail_reason && (
+
+                <p className="text-sm font-semibold text-gray-500">
+                  Lý do giao thất bại: <span className="font-normal text-gray-500">{order.delivery_fail_reason}</span>
+                </p>
+              )}
+              {['DELIVERY_FAILED_RETURN'].includes(order.status) && order.delivery_fail_return_reason && (
+
+                <p className="text-sm font-semibold text-gray-500">
+                  Lý do giao thất bại: <span className="font-normal text-gray-500">{order.delivery_fail_return_reason}</span>
+                </p>
+
+              )}
               {/* payment */}
               <div>
                 <h2 className="text-[16px] font-bold text-[#A38D64] mb-2">Thanh toán</h2>

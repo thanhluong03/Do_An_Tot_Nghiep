@@ -19,13 +19,23 @@ import Cookies from 'js-cookie';
 import { ShoppingBag, Tag, MapPin, CreditCard, Wallet, User, Phone, Mail, CheckCircle, X, Clock, Bot, Gift, MessageSquare, FileText } from 'lucide-react';
 import { conversationApi } from '@/api/modules/conversation';
 import { VoucherModal, ChatModal, AIChatModal } from '@/components/feature';
+import { shippingApi } from '@/api/modules/shipping';
 
 export default function CheckoutPage() {
     const { user, isAuthenticated } = useAuth();
     const { items, clear: clearCart } = useCart();
 
-    // Constants
-    const SHIPPING_FEE = 30000; // Phí vận chuyển cố định 30.000đ
+    // Tự động điền địa chỉ giao hàng nếu user đã đăng nhập và có địa chỉ
+    useEffect(() => {
+        if (isAuthenticated && user?.address) {
+            setAddress(user.address);
+        }
+    }, [isAuthenticated, user?.address]);
+
+    // Shipping fee states
+    const [shippingFee, setShippingFee] = useState(30000); // Default 30k
+    const [shippingMessage, setShippingMessage] = useState('Phí vận chuyển mặc định');
+    const [calculatingShipping, setCalculatingShipping] = useState(false);
     const [address, setAddress] = useState('');
     const [city, setCity] = useState('');
     const [creating, setCreating] = useState(false);
@@ -524,15 +534,15 @@ export default function CheckoutPage() {
         }
 
         const afterDiscount = Math.max(0, initialTotal - discount);
-        const withShipping = afterDiscount + SHIPPING_FEE;
+        const withShipping = afterDiscount + shippingFee;
 
         return { total: initialTotal, discountAmount: discount, finalTotal: afterDiscount, totalWithShipping: withShipping };
-    }, [items, serverItems, serverProducts, selectedVoucher, SHIPPING_FEE]);
+    }, [items, serverItems, serverProducts, selectedVoucher, shippingFee]);
 
     /** ===================== CHỌN VOUCHER ===================== */
     const handleSelectVoucher = (voucher: Voucher) => {
-        console.log('🔍 [SELECT VOUCHER] Chọn voucher:', { 
-            voucherId: voucher.id, 
+        console.log('🔍 [SELECT VOUCHER] Chọn voucher:', {
+            voucherId: voucher.id,
             voucherCustomerId: voucher.voucher_customer_id,
             voucherName: voucher.name || voucher.code,
             currentSelected: selectedVoucher ? {
@@ -540,7 +550,7 @@ export default function CheckoutPage() {
                 voucher_customer_id: selectedVoucher.voucher_customer_id
             } : null
         });
-        
+
         const minOrder = Number(voucher.min_order_value ?? voucher.order_conditions ?? 0);
         if (total < minOrder) {
             setError(`❌ Đơn hàng phải đạt ${formatPrice(minOrder)} để áp dụng mã này.`);
@@ -548,13 +558,13 @@ export default function CheckoutPage() {
             return;
         }
         setError(null);
-        
+
         // So sánh bằng voucher_customer_id hoặc id
-        const isSameVoucher = (selectedVoucher?.voucher_customer_id && voucher.voucher_customer_id && 
-                               selectedVoucher.voucher_customer_id === voucher.voucher_customer_id) ||
-                              (selectedVoucher?.id && voucher.id && 
-                               Number(selectedVoucher.id) === Number(voucher.id));
-        
+        const isSameVoucher = (selectedVoucher?.voucher_customer_id && voucher.voucher_customer_id &&
+            selectedVoucher.voucher_customer_id === voucher.voucher_customer_id) ||
+            (selectedVoucher?.id && voucher.id &&
+                Number(selectedVoucher.id) === Number(voucher.id));
+
         console.log('🔍 [SELECT VOUCHER] isSameVoucher:', isSameVoucher);
         setSelectedVoucher(isSameVoucher ? null : voucher);
         console.log('✅ [SELECT VOUCHER] Đã set selectedVoucher:', isSameVoucher ? null : voucher);
@@ -586,7 +596,7 @@ export default function CheckoutPage() {
         } catch (e: unknown) {
             console.error('❌ Chi tiết lỗi thanh toán MoMo:', e);
             const error = e as Error & { response?: { data?: { message?: string; error?: string }; status?: number } };
-            
+
             // Lấy thông báo lỗi từ response
             let message = 'Lỗi không xác định';
             if (error.response?.data) {
@@ -601,12 +611,12 @@ export default function CheckoutPage() {
             }
 
             // Hiển thị thông báo lỗi chi tiết hơn
-            const errorMessage = error.response?.status === 500 
+            const errorMessage = error.response?.status === 500
                 ? 'Lỗi server khi tạo thanh toán MOMO. Vui lòng kiểm tra backend logs hoặc thử lại sau.'
                 : `Không thể khởi tạo thanh toán MoMo: ${message}`;
-            
+
             toast.error(errorMessage);
-            
+
             // Không set creating = false ở đây vì đã return ở trên
             // Nhưng cần đảm bảo state được reset nếu có lỗi
             setCreating(false);
@@ -721,6 +731,96 @@ export default function CheckoutPage() {
 
         fetchStoreNames();
     }, [serverItems, items]);
+
+    /** ===================== TÍNH PHÍ VẬN CHUYỂN DỰA TRÊN KHOẢNG CÁCH ===================== */
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        const calculateShipping = async () => {
+            // Only calculate if both address and city are provided
+            if (!address.trim() || !city.trim()) {
+                setShippingFee(30000);
+                setShippingMessage('Vui lòng nhập địa chỉ để tính phí vận chuyển');
+                return;
+            }
+
+            setCalculatingShipping(true);
+            console.log('🚚 Starting shipping fee calculation for all stores...');
+
+            try {
+                // Lấy danh sách tất cả các cửa hàng từ items
+                const allItems = serverItems.length > 0 ? serverItems : items;
+                const storeIds = [...new Set(allItems.map(item =>
+                    serverItems.length > 0 ? item.store_id : (item.storeId || item.product?.store?.id)
+                ))];
+
+                console.log('📍 Found stores:', storeIds);
+
+                // Tính phí vận chuyển cho từng cửa hàng
+                let totalShippingFee = 0;
+                const shippingResults = [];
+
+                for (const storeId of storeIds) {
+                    if (!storeId) continue;
+
+                    let storeAddress = 'Nam Từ Liêm, Hà Nội'; // Default
+
+                    try {
+                        const storeData = await getStoreById(Number(storeId));
+                        if (storeData.address) {
+                            storeAddress = storeData.address;
+                        }
+                        console.log(`📍 Store ${storeId} address:`, storeAddress);
+                    } catch (err) {
+                        console.warn(`⚠️ Could not fetch store ${storeId} address, using default`);
+                    }
+
+                    try {
+                        const result = await shippingApi.calculateFee({
+                            storeAddress,
+                            deliveryAddress: address.trim(),
+                            city: city.trim(),
+                        });
+
+                        console.log(`✅ Store ${storeId} shipping:`, result.fee);
+                        totalShippingFee += result.fee;
+                        shippingResults.push({ storeId, fee: result.fee, message: result.message });
+                    } catch (err) {
+                        console.warn(`⚠️ Error calculating shipping for store ${storeId}, using default 30k`);
+                        totalShippingFee += 30000;
+                        shippingResults.push({ storeId, fee: 30000, message: 'Phí mặc định' });
+                    }
+                }
+
+                console.log('✅ Total shipping fee from all stores:', totalShippingFee);
+                setShippingFee(totalShippingFee);
+
+                // Tạo message tổng hợp
+                if (storeIds.length > 1) {
+                    setShippingMessage(`Phí vận chuyển ${storeIds.length} cửa hàng`);
+                } else {
+                    setShippingMessage(shippingResults[0]?.message || 'Đã tính phí vận chuyển');
+                }
+
+                if (totalShippingFee === 0) {
+                    toast.success(`🎉 Miễn phí vận chuyển cho tất cả ${storeIds.length} cửa hàng!`, { duration: 3000 });
+                }
+            } catch (error: any) {
+                console.error('❌ Error calculating shipping fee:', error);
+                const errorMsg = error?.response?.data?.message || error?.message || 'Không thể tính phí vận chuyển';
+                setShippingFee(30000);
+                setShippingMessage(`Áp dụng phí mặc định - ${errorMsg}`);
+                toast.error(`⚠️ ${errorMsg}`, { duration: 4000 });
+            } finally {
+                setCalculatingShipping(false);
+            }
+        };
+
+        // Debounce calculation to avoid too many API calls
+        timeoutId = setTimeout(calculateShipping, 1200);
+
+        return () => clearTimeout(timeoutId);
+    }, [address, city, serverItems, items]);
 
     /** ===================== TẠO ĐƠN HÀNG VÀ XÓA SẢN PHẨM ĐÃ CHỌN ===================== */
     const handleCreate = async () => {
@@ -854,22 +954,49 @@ export default function CheckoutPage() {
             const storeIds = Object.keys(itemsByStore).map(Number);
             const createdOrderIds: number[] = [];
             let totalAmountForPayment = 0; // Tổng tiền của tất cả các đơn
+            let totalShippingFee = 0; // Tổng phí ship của tất cả các đơn
 
             for (const storeId of storeIds) {
                 const storeItems = itemsByStore[storeId];
                 const storeTotalBeforeDiscount = storeItems.reduce((sum, i) => sum + i.price_at_order * i.quantity, 0);
                 const storeDiscount = total > 0 ? storeItems.reduce((sum, i) => sum + ((i.price_at_order * i.quantity) / total) * discountAmount, 0) : 0;
                 const storeFinalTotal = Math.max(0, storeTotalBeforeDiscount - storeDiscount);
-                // Không cộng phí ship vào từng đơn hàng riêng lẻ
+
+                // Calculate shipping fee for this specific store
+                let storeShippingFee = 30000; // Default fee
+                try {
+                    const storeData = await getStoreById(Number(storeId));
+                    const storeAddress = storeData.address || 'Nam Từ Liêm, Hà Nội';
+                    console.log(`🚚 Calculating shipping for store ${storeId}:`, { storeAddress, deliveryAddress: address, city });
+
+                    const result = await shippingApi.calculateFee({
+                        storeAddress,
+                        deliveryAddress: address.trim(),
+                        city: city.trim(),
+                    });
+
+                    storeShippingFee = result.fee;
+                    console.log(`✅ Shipping fee for store ${storeId}: ${storeShippingFee}đ`);
+                } catch (err) {
+                    console.warn(`⚠️ Could not calculate shipping for store ${storeId}, using default:`, err);
+                }
+
+                totalShippingFee += storeShippingFee;
+
+                // Add shipping fee to each item from this store
+                const itemsWithShipping = storeItems.map(item => ({
+                    ...item,
+                    shipping_fee: Math.round(storeShippingFee / storeItems.length), // Divide shipping fee among items from same store
+                }));
 
                 const payloadPerStore = {
                     customer_id: customerId,
                     shipping_address: `${address.trim()}, ${city.trim()}`,
                     voucher_id: selectedVoucher ? Number(selectedVoucher.id) : null,
-                    payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD', // Tất cả đơn đều dùng CARD nếu MOMO
-                    status: 'CREATED', // Đảm bảo đơn COD luôn là CREATED (chưa xác nhận)
-                    payment_status: paymentMethod === 'COD' ? 'UNPAID' : undefined, // Đơn COD luôn là UNPAID (chưa thanh toán)
-                    items: storeItems,
+                    payment_method: paymentMethod === 'COD' ? 'ONSITE' : 'CARD',
+                    status: 'CREATED',
+                    payment_status: paymentMethod === 'COD' ? 'UNPAID' : undefined,
+                    items: itemsWithShipping,
                     note,
                 };
 
@@ -889,8 +1016,8 @@ export default function CheckoutPage() {
             }
 
             // Sau khi tạo TẤT CẢ các đơn, xử lý thanh toán
-            // Cộng phí ship một lần cho tất cả đơn hàng
-            totalAmountForPayment += SHIPPING_FEE;
+            // Cộng phí ship đã tính cho từng cửa hàng
+            totalAmountForPayment += totalShippingFee;
 
             // 🔥 Cập nhật trạng thái voucher đã sử dụng SAU KHI TẠO ĐƠN HÀNG THÀNH CÔNG (cho cả COD và MOMO)
             if (isAuthenticated && user?.id && selectedVoucher && selectedVoucher.id) {
@@ -901,10 +1028,10 @@ export default function CheckoutPage() {
                     voucherCustomerId: selectedVoucher.voucher_customer_id,
                     voucherName: selectedVoucher.name,
                 });
-                
+
                 // Lấy voucher_customer_id từ selectedVoucher (backend đã trả về)
                 let voucherCustomerId: number | undefined = undefined;
-                
+
                 // Ưu tiên lấy từ selectedVoucher trước (backend đã trả về)
                 if (selectedVoucher.voucher_customer_id) {
                     voucherCustomerId = Number(selectedVoucher.voucher_customer_id);
@@ -924,22 +1051,22 @@ export default function CheckoutPage() {
                         console.error('❌ [VOUCHER UPDATE] Lỗi query voucher_customer_id:', queryError);
                     }
                 }
-                
+
                 console.log('🔍 [VOUCHER UPDATE] voucher_customer_id cuối cùng:', voucherCustomerId);
-                
+
                 if (voucherCustomerId) {
                     try {
                         console.log(`✨ [VOUCHER UPDATE] Bắt đầu cập nhật voucher_customer_id=${voucherCustomerId} cho user_id=${user.id}`);
-                        
+
                         // Cập nhật status voucher trên server thành USED TRƯỚC
                         console.log(`📤 [VOUCHER UPDATE] Gọi API: PUT /vouchers/updatevouchercustomerstatus/${voucherCustomerId} với payload: { status: 'USED' }`);
                         const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
                         console.log('✅ [VOUCHER UPDATE] Kết quả cập nhật voucher:', result);
                         console.log('✅ [VOUCHER UPDATE] Status trong response:', result?.voucherCustomer?.status);
-                        
+
                         if (result?.voucherCustomer?.status === 'USED') {
                             console.log('✅ [VOUCHER UPDATE] Voucher đã được cập nhật status thành USED trong DB');
-                            
+
                             // Xóa voucher khỏi UI sau khi cập nhật thành công
                             setAvailableVouchers(prev => prev.filter(v => {
                                 const vId = v.voucher_customer_id || v.id;
@@ -951,7 +1078,7 @@ export default function CheckoutPage() {
                                 return shouldKeep;
                             }));
                             setSelectedVoucher(null);
-                            
+
                             // Reload lại danh sách vouchers từ server để đảm bảo đồng bộ
                             try {
                                 console.log('🔄 [VOUCHER UPDATE] Reloading vouchers after update...');
@@ -1019,7 +1146,7 @@ export default function CheckoutPage() {
             if (paymentMethod === 'MOMO' && isAuthenticated && user?.id && selectedVoucher) {
                 // Lấy voucher_customer_id từ selectedVoucher (backend đã trả về)
                 let voucherCustomerIdForMomo: number | undefined = undefined;
-                
+
                 if (selectedVoucher.voucher_customer_id) {
                     voucherCustomerIdForMomo = Number(selectedVoucher.voucher_customer_id);
                     console.log('✅ [VOUCHER UPDATE MOMO] Lấy voucher_customer_id từ selectedVoucher:', voucherCustomerIdForMomo);
@@ -1032,7 +1159,7 @@ export default function CheckoutPage() {
                         customerId: user.id,
                     });
                 }
-                
+
                 if (voucherCustomerIdForMomo) {
                     sessionStorage.setItem('selected_voucher_customer_id', String(voucherCustomerIdForMomo));
                     console.log('💾 [VOUCHER UPDATE MOMO] Đã lưu voucher_customer_id cho thanh toán MOMO:', voucherCustomerIdForMomo);
@@ -1046,7 +1173,7 @@ export default function CheckoutPage() {
                     try {
                         console.log('🔄 Bắt đầu rollback các đơn COD ngay sau khi tạo đơn MOMO...');
                         const allCustomerOrders = await orderApi.getOrdersByCustomer(user.id as string, 1, 100);
-                        
+
                         // Xử lý nhiều cấu trúc response có thể có
                         let ordersList: any[] = [];
                         if (Array.isArray(allCustomerOrders)) {
@@ -1062,7 +1189,7 @@ export default function CheckoutPage() {
                         } else if (allCustomerOrders?.orders && Array.isArray(allCustomerOrders.orders)) {
                             ordersList = allCustomerOrders.orders;
                         }
-                        
+
                         // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
                         const codOrdersToRollback = ordersList.filter((order: any) => {
                             const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
@@ -1076,10 +1203,10 @@ export default function CheckoutPage() {
                             // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
                             return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
                         });
-                        
+
                         if (codOrdersToRollback.length > 0) {
                             console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback ngay...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
-                            
+
                             // Rollback lại cả status và payment_status cho các order COD
                             await Promise.all(
                                 codOrdersToRollback.map((order: any) =>
@@ -1093,7 +1220,7 @@ export default function CheckoutPage() {
                                     })
                                 )
                             );
-                            
+
                             console.log('✅ Đã rollback status và payment_status cho các đơn COD ngay sau khi tạo đơn MOMO');
                         } else {
                             console.log('✅ Không có đơn COD nào bị cập nhật nhầm ngay sau khi tạo đơn MOMO');
@@ -1103,7 +1230,7 @@ export default function CheckoutPage() {
                         // Không throw error, chỉ log - vẫn tiếp tục thanh toán
                     }
                 }
-                
+
                 // Lưu danh sách order IDs vào sessionStorage để xử lý sau khi thanh toán thành công
                 if (createdOrderIds.length > 1) {
                     sessionStorage.setItem('momo_order_ids', JSON.stringify(createdOrderIds));
@@ -1128,7 +1255,7 @@ export default function CheckoutPage() {
                 console.log(`💳 Redirecting to MoMo payment: Order #${firstOrderId}, Total Amount: ${formatPrice(totalAmountForPayment)}`);
                 console.log('🔍 Created order IDs:', createdOrderIds);
                 console.log('🔍 Total amount for payment:', totalAmountForPayment);
-                
+
                 // Kiểm tra order có tồn tại không trước khi thanh toán
                 try {
                     const orderDetail = await orderApi.getOrderDetail(firstOrderId);
@@ -1140,11 +1267,11 @@ export default function CheckoutPage() {
                     setCreating(false);
                     return;
                 }
-                
+
                 // Làm tròn amount thành số nguyên trước khi gửi
                 const roundedAmount = Math.round(totalAmountForPayment);
                 console.log('🔢 Total amount rounded for payment:', { original: totalAmountForPayment, rounded: roundedAmount });
-                
+
                 try {
                     await handlePayment(firstOrderId, roundedAmount);
                     // Nếu thành công, handlePayment sẽ redirect, không cần return
@@ -1176,6 +1303,12 @@ export default function CheckoutPage() {
                 } catch { }
 
                 if (!isAuthenticated) clearGuestData();
+
+                // Hiển thị thông báo trước khi redirect
+                toast.success('✅ Đặt hàng thành công!', { duration: 2000 });
+
+                // Đợi một chút trước khi redirect để toast hiển thị
+                await new Promise(resolve => setTimeout(resolve, 500));
 
                 // Tạo URL redirect phù hợp
                 if (createdOrderIds.length > 1) {
@@ -1472,10 +1605,10 @@ export default function CheckoutPage() {
                                                 const minOrder = Number(v.min_order_value ?? v.order_conditions ?? 0);
                                                 const eligible = total >= minOrder;
                                                 // So sánh bằng voucher_customer_id hoặc id để xác định voucher đã chọn
-                                                const selected = (selectedVoucher?.voucher_customer_id && v.voucher_customer_id && 
-                                                                  Number(selectedVoucher.voucher_customer_id) === Number(v.voucher_customer_id)) ||
-                                                                 (selectedVoucher?.id && v.id && 
-                                                                  Number(selectedVoucher.id) === Number(v.id));
+                                                const selected = (selectedVoucher?.voucher_customer_id && v.voucher_customer_id &&
+                                                    Number(selectedVoucher.voucher_customer_id) === Number(v.voucher_customer_id)) ||
+                                                    (selectedVoucher?.id && v.id &&
+                                                        Number(selectedVoucher.id) === Number(v.id));
                                                 const discountVal = Number(v.discount_value ?? v.voucher_percentage ?? 0);
                                                 const type = String(v.discount_type ?? 'PERCENT').toUpperCase();
 
@@ -1486,13 +1619,12 @@ export default function CheckoutPage() {
                                                     <div
                                                         key={uniqueKey}
                                                         onClick={() => handleSelectVoucher(v)}
-                                                        className={`p-3 rounded-md transition border-2 cursor-pointer relative ${
-                                                            selected 
-                                                                ? 'bg-[#D6C5A9] border-[#A38D64] shadow-md ring-2 ring-[#A38D64] ring-offset-2' 
-                                                                : eligible 
-                                                                    ? 'bg-white border-[#D4C3A3]/50 hover:bg-[#F9F7F3] hover:border-[#A38D64]' 
-                                                                    : 'bg-[#F3F1ED] border-[#E0DCCA] opacity-70 cursor-not-allowed'
-                                                        }`}
+                                                        className={`p-3 rounded-md transition border-2 cursor-pointer relative ${selected
+                                                            ? 'bg-[#D6C5A9] border-[#A38D64] shadow-md ring-2 ring-[#A38D64] ring-offset-2'
+                                                            : eligible
+                                                                ? 'bg-white border-[#D4C3A3]/50 hover:bg-[#F9F7F3] hover:border-[#A38D64]'
+                                                                : 'bg-[#F3F1ED] border-[#E0DCCA] opacity-70 cursor-not-allowed'
+                                                            }`}
                                                     >
                                                         {selected && (
                                                             <div className="absolute top-2 right-2">
@@ -1543,8 +1675,20 @@ export default function CheckoutPage() {
                                 </div>
                                 <div className="flex justify-between text-sm text-[#5A5547]">
                                     <span>Phí vận chuyển</span>
-                                    <span className="font-medium">{formatPrice(SHIPPING_FEE)}</span>
+                                    <span className="font-medium">
+                                        {calculatingShipping ? (
+                                            <span className="text-xs text-gray-400">Đang tính...</span>
+                                        ) : (
+                                            <>
+                                                {formatPrice(shippingFee)}
+                                                {shippingFee === 0 && <span className="ml-1 text-green-600 text-xs">Miễn phí!</span>}
+                                            </>
+                                        )}
+                                    </span>
                                 </div>
+                                {shippingMessage && shippingMessage !== 'Phí vận chuyển mặc định' && (
+                                    <div className="text-xs text-gray-500 -mt-1 text-right">{shippingMessage}</div>
+                                )}
                                 {discountAmount > 0 && (
                                     <div className="flex justify-between text-[#3D6647] text-sm font-semibold border-t border-dashed border-gray-200 pt-2">
                                         <span>Mã giảm giá</span>
@@ -1555,7 +1699,7 @@ export default function CheckoutPage() {
                                 <div className="flex justify-between border-t border-gray-300 pt-3 items-center">
                                     <span className="text-base font-bold text-[#2C2A24]">Thành tiền</span>
                                     <div className="text-right">
-                                        {discountAmount > 0 && <div className="text-xs text-gray-400 line-through">{formatPrice(total + SHIPPING_FEE)}</div>}
+                                        {discountAmount > 0 && <div className="text-xs text-gray-400 line-through">{formatPrice(total + shippingFee)}</div>}
                                         <span className="text-xl font-bold text-[#A38D64]">{formatPrice(totalWithShipping)}</span>
                                         {/* Font 2xl -> xl */}
                                     </div>

@@ -222,7 +222,7 @@ export default function MyOrdersPage() {
             firstOrderPaymentMethod = firstOrderDetail?.payment_method || firstOrderDetail?.data?.payment_method || firstOrderDetail?.current_order?.payment_method;
             console.log('🔍 Payment method của order đầu tiên:', firstOrderPaymentMethod);
             console.log('🔍 Full order detail:', firstOrderDetail);
-            
+
             // QUAN TRỌNG: Chỉ xử lý nếu là đơn MOMO (CARD), KHÔNG xử lý đơn COD (ONSITE)
             if (firstOrderPaymentMethod !== 'CARD' && firstOrderPaymentMethod !== 'MOMO') {
               console.log('⚠️ Order đầu tiên không phải MOMO, bỏ qua tất cả xử lý:', firstOrderPaymentMethod);
@@ -233,13 +233,13 @@ export default function MyOrdersPage() {
               window.history.replaceState({}, '', '/orders');
               return;
             }
-            
+
             // Chỉ cập nhật nếu là đơn MOMO (CARD)
             console.log('✅ Order đầu tiên là MOMO, tiếp tục xử lý...');
             // Backend đã cập nhật rồi, không cần cập nhật lại ở đây
             // Chỉ log để confirm
             console.log('✅ Order đầu tiên đã được backend cập nhật (MOMO)');
-            
+
             // 🔥 QUAN TRỌNG: Rollback các order COD nếu backend đã cập nhật nhầm
             // Lấy tất cả orders của customer để kiểm tra
             if (user?.id) {
@@ -248,7 +248,7 @@ export default function MyOrdersPage() {
                 const allCustomerOrders = await orderApi.getOrdersByCustomer(user.id as string, 1, 100);
                 const ordersList = allCustomerOrders?.data || allCustomerOrders || [];
                 console.log('🔍 Tổng số orders của customer:', ordersList.length);
-                
+
                 // Lấy danh sách order IDs MOMO từ sessionStorage hoặc URL
                 let momoOrderIds: number[] = [Number(orderId)];
                 const momoOrderIdsStr = sessionStorage.getItem('momo_order_ids');
@@ -260,7 +260,7 @@ export default function MyOrdersPage() {
                     // Ignore parse error
                   }
                 }
-                
+
                 // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
                 const codOrdersToRollback = ordersList.filter((order: any) => {
                   const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
@@ -274,10 +274,10 @@ export default function MyOrdersPage() {
                   // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
                   return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
                 });
-                
+
                 if (codOrdersToRollback.length > 0) {
                   console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id, payment_method: o.payment_method, payment_status: o.payment_status })));
-                  
+
                   // Rollback lại cả status và payment_status cho các order COD
                   await Promise.all(
                     codOrdersToRollback.map((order: any) =>
@@ -289,9 +289,9 @@ export default function MyOrdersPage() {
                       })
                     )
                   );
-                  
+
                   console.log('✅ Đã rollback status và payment_status cho các đơn COD trong orders page');
-                  
+
                   // Reload orders để hiển thị đúng
                   window.location.reload();
                 } else {
@@ -328,7 +328,7 @@ export default function MyOrdersPage() {
               const remainingOrderIds = allOrderIds.filter(id => id !== Number(orderId));
               if (remainingOrderIds.length > 0) {
                 console.log(`🔄 Kiểm tra và cập nhật payment_status cho ${remainingOrderIds.length} đơn hàng còn lại:`, remainingOrderIds);
-                
+
                 // Lấy thông tin từng order để kiểm tra payment_method
                 const ordersToUpdate: number[] = [];
                 await Promise.all(
@@ -338,7 +338,7 @@ export default function MyOrdersPage() {
                       const paymentMethod = orderDetail?.payment_method || orderDetail?.data?.payment_method || orderDetail?.current_order?.payment_method;
                       console.log(`🔍 Order #${orderId} - Payment method:`, paymentMethod);
                       console.log(`🔍 Order #${orderId} - Full detail:`, orderDetail);
-                      
+
                       // QUAN TRỌNG: Chỉ thêm vào danh sách cập nhật nếu là MOMO
                       // KHÔNG cập nhật đơn COD (ONSITE)
                       if (paymentMethod === 'CARD' || paymentMethod === 'MOMO') {
@@ -391,19 +391,19 @@ export default function MyOrdersPage() {
           const voucherCustomerIdStr = sessionStorage.getItem('selected_voucher_customer_id');
           const voucherIdStr = sessionStorage.getItem('selected_voucher_id');
           const customerIdStr = sessionStorage.getItem('selected_customer_id');
-          
+
           if (voucherCustomerIdStr && user?.id) {
             try {
               const voucherCustomerId = Number(voucherCustomerIdStr);
               console.log(`✨ [VOUCHER UPDATE MOMO] Cập nhật voucher_customer_id=${voucherCustomerId} cho user ${user.id} sau khi thanh toán MOMO thành công`);
-              
+
               // Cập nhật status voucher trên server thành USED
               const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
               console.log('✅ [VOUCHER UPDATE MOMO] Kết quả cập nhật voucher:', result);
               console.log('✅ [VOUCHER UPDATE MOMO] Voucher đã được cập nhật status thành USED trong DB');
-              
+
               toast.success('✅ Voucher đã được sử dụng thành công!');
-              
+
               // Xóa khỏi sessionStorage sau khi xử lý xong
               sessionStorage.removeItem('selected_voucher_customer_id');
               console.log('🗑️ [VOUCHER UPDATE MOMO] Đã xóa voucher_customer_id khỏi sessionStorage');
@@ -417,23 +417,23 @@ export default function MyOrdersPage() {
               const voucherId = Number(voucherIdStr);
               const customerId = Number(customerIdStr);
               console.log(`✨ [VOUCHER UPDATE MOMO] Query voucher_customer_id từ voucher_id=${voucherId} và customer_id=${customerId}`);
-              
+
               // Query voucher_customer_id từ voucher_id và customer_id
               const voucherCustomerId = await voucherApi.getVoucherCustomerIdByVoucherAndCustomer(customerId, voucherId);
-              
+
               if (voucherCustomerId) {
                 console.log(`✨ [VOUCHER UPDATE MOMO] Cập nhật voucher_customer_id=${voucherCustomerId} cho user ${user.id} sau khi thanh toán MOMO thành công`);
-                
+
                 // Cập nhật status voucher trên server thành USED
                 const result = await voucherApi.updateVoucherCustomerStatus(voucherCustomerId);
                 console.log('✅ [VOUCHER UPDATE MOMO] Kết quả cập nhật voucher:', result);
                 console.log('✅ [VOUCHER UPDATE MOMO] Voucher đã được cập nhật status thành USED trong DB');
-                
+
                 toast.success('✅ Voucher đã được sử dụng thành công!');
               } else {
                 console.warn('⚠️ [VOUCHER UPDATE MOMO] Không tìm thấy voucher_customer_id');
               }
-              
+
               // Xóa khỏi sessionStorage sau khi xử lý xong
               sessionStorage.removeItem('selected_voucher_id');
               sessionStorage.removeItem('selected_customer_id');
@@ -509,13 +509,13 @@ export default function MyOrdersPage() {
           return true;
         });
         setOrders(Array.isArray(unique) ? unique : []);
-        
+
         // 🔥 QUAN TRỌNG: Kiểm tra và rollback đơn COD bị cập nhật nhầm mỗi khi load orders
         if (isMounted && list.length > 0) {
           (async () => {
             try {
               console.log('🔄 Kiểm tra đơn COD bị cập nhật nhầm khi load orders page...');
-              
+
               // Lấy danh sách order IDs MOMO từ sessionStorage (nếu có)
               let momoOrderIds: number[] = [];
               const momoOrderIdsStr = sessionStorage.getItem('momo_order_ids');
@@ -527,7 +527,7 @@ export default function MyOrdersPage() {
                   // Ignore parse error
                 }
               }
-              
+
               // Nếu không có momo_order_ids, tìm tất cả đơn MOMO từ danh sách orders
               if (momoOrderIds.length === 0) {
                 momoOrderIds = list
@@ -538,9 +538,9 @@ export default function MyOrdersPage() {
                   .map((o: any) => o.id || o._id)
                   .filter(Boolean);
               }
-              
+
               console.log('🔍 MOMO Order IDs:', momoOrderIds);
-              
+
               // Tìm các order COD đã bị cập nhật nhầm (PAID hoặc CONFIRMED)
               const codOrdersToRollback = list.filter((order: any) => {
                 const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
@@ -555,10 +555,10 @@ export default function MyOrdersPage() {
                 // Rollback nếu đơn COD bị cập nhật nhầm (PAID hoặc CONFIRMED)
                 return isCOD && (isPaid || isConfirmed) && isNotMomoOrder;
               });
-              
+
               if (codOrdersToRollback.length > 0) {
                 console.log(`⚠️ Phát hiện ${codOrdersToRollback.length} đơn COD đã bị cập nhật nhầm, đang rollback...`, codOrdersToRollback.map((o: any) => ({ id: o.id || o._id, payment_method: o.payment_method, payment_status: o.payment_status })));
-                
+
                 // Rollback lại cả status và payment_status cho các order COD
                 await Promise.all(
                   codOrdersToRollback.map((order: any) => {
@@ -566,7 +566,7 @@ export default function MyOrdersPage() {
                     const currentStatus = order?.status || order?.current_order?.status;
                     // Chỉ rollback nếu status là CONFIRMED (đã bị cập nhật nhầm)
                     const shouldRollbackStatus = currentStatus === 'CONFIRMED';
-                    
+
                     return orderApi.updateOrder(orderId, {
                       ...(shouldRollbackStatus && { status: 'CREATED' }), // Rollback status về CREATED nếu bị cập nhật nhầm
                       payment_status: 'UNPAID', // Rollback payment_status về UNPAID
@@ -577,9 +577,9 @@ export default function MyOrdersPage() {
                     });
                   })
                 );
-                
+
                 console.log('✅ Đã rollback status và payment_status cho các đơn COD trong orders page');
-                
+
                 // Reload orders để hiển thị đúng
                 if (isMounted) {
                   window.location.reload();
@@ -613,26 +613,16 @@ export default function MyOrdersPage() {
     return num.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
 
-  // Hàm tính phí vận chuyển dựa trên transaction data (giống logic admin)
+  // Hàm lấy phí vận chuyển từ order items
   const getShippingFee = (order: any) => {
-    const info = order.current_order || order;
-    // Kiểm tra paymentTransactions cả trong current_order và order trực tiếp
-    const paymentTransactions = order.paymentTransactions || info?.paymentTransactions || [];
-    const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
-
-    // Debug log
-    console.log(`Order ${order.id} - Payment Transactions:`, paymentTransactions);
-    console.log(`Order ${order.id} - Main Transaction:`, mainTxn);
-    console.log(`Order ${order.id} - Total Amount:`, info.total_amount);
-
-    if (mainTxn && mainTxn.amount) {
-      const shippingFee = Math.max(0, Number(mainTxn.amount) - Number(info.total_amount));
-      console.log(`Order ${order.id} - Calculated Shipping Fee:`, shippingFee);
-      return shippingFee > 0 ? shippingFee : 30000;
-    }
-    console.log(`Order ${order.id} - Using default shipping fee: 30000`);
-    return 30000; // Mặc định 30k nếu không có transaction
+    // Tính tổng shipping fee từ các order items
+    const items = order.orderItems || order.current_order?.items || [];
+    return items.reduce((sum: number, item: any) => {
+      const itemShippingFee = item.shipping_fee ? Number(item.shipping_fee) : 0;
+      return sum + itemShippingFee;
+    }, 0) || 0;
   };
+
   const filteredOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
     const normalizedStatus = order.status?.toUpperCase();
 
