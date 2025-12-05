@@ -39,7 +39,8 @@ export interface ImportRequest {
     id: number;
     store_id: number;
     note?: string;
-    import_request_status: "PENDING" | "ACCEPTED";
+    import_request_status: "PENDING" | "ACCEPTED" | "REJECTED";
+    reject_reason?: string;
     created_at: string;
     updated_at: string;
     store_name?: string;
@@ -65,6 +66,8 @@ export interface ImportRequestDetail {
 export interface CreateImportRequestDto {
   store_id: number;
   note?: string;
+  reject_reason?: string;
+  import_request_status?: "PENDING" | "ACCEPTED" | "REJECTED";
   importRequestDetails: {
     product_id: number;
     classification_attribute_relationship_id?: number;

@@ -6,16 +6,41 @@ import {
   CreateImportRequestDto
 } from "@/api/services/importRequestService";
 
-import { getProductImageUrl, Product, ProductRelationship } from "@/api/services/inventoryService";
-import { getProducts } from "@/api/services/productApi";
+import { getProductImageUrl, Product as InventoryProduct } from "@/api/services/inventoryService";
+import { productApi } from "@/api/modules/products";
+import { Product as ApiProduct } from "@/types/product";
 import { getUserDetail } from "@/api/services/userService";
 
 import toast, { Toaster } from "react-hot-toast";
+import Image from "next/image";
 import CheckboxList from "@/components/common/CheckBoxList";
 
 import ImportRequestList from "@/components/adminStore/ImportRequestList";
-import { getStoreById, Store } from "@/api/services/storeService";
+import { getStoreById } from "@/api/services/storeService";
 import { Category, getCategories } from "@/api/services/categoryService";
+
+// Function to map ApiProduct to InventoryProduct
+const mapApiProductToInventory = (apiProduct: ApiProduct): InventoryProduct => {
+  return {
+    id: Number(apiProduct.id),
+    name: apiProduct.name,
+    price: apiProduct.price,
+    quantity: apiProduct.stock,
+    total_quantity_divided: apiProduct.stock,
+    images: apiProduct.images.map(img => ({ image_data: img })),
+    main_image: apiProduct.images[0] || undefined,
+    relationships: apiProduct.relationships?.map(rel => ({
+      id: rel.id || 0,
+      product_attribute_id_1: rel.product_attribute_id_1,
+      product_attribute_id_2: rel.product_attribute_id_2,
+      price: rel.price || 0,
+      quantity: rel.quantity || 0,
+      attribute1_name: rel.attribute1_name || '',
+      attribute2_name: rel.attribute2_name || '',
+    })) || [],
+    classifications: apiProduct.classifications || [],
+  };
+};
 
 interface SelectedProduct {
   product_id: number;
@@ -24,9 +49,9 @@ interface SelectedProduct {
 }
 
 export default function CreateImportRequestPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  
+
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [note, setNote] = useState("");
   const [storeId, setStoreId] = useState<number | null>(null);
@@ -36,9 +61,9 @@ export default function CreateImportRequestPage() {
   // 👇 NEW: ẨN/HIỆN FORM
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const findProduct = (id: number, list: Product[]) => list.find(p => p.id === id);
+  const findProduct = (id: number, list: InventoryProduct[]) => list.find(p => p.id === id);
 
-  const findProductImage = (id: number, list: Product[]) => {
+  const findProductImage = (id: number, list: InventoryProduct[]) => {
     const product = findProduct(id, list);
     return product ? getProductImageUrl(product) : "/no-image.jpg";
   };
@@ -67,22 +92,24 @@ export default function CreateImportRequestPage() {
           toast.error(`Không tải được tên cửa hàng ID ${currentStoreId}`);
         }
 
-        // 4️⃣ Lấy danh sách sản phẩm
+        // 4️⃣ Lấy danh sách sản phẩm theo cửa hàng
         try {
-          const res = await getProducts();
-          setProducts(res);
+          const res = await productApi.getProductsByStore(currentStoreId);
+          const mappedProducts = res.products.map(mapApiProductToInventory);
+          setProducts(mappedProducts);
         } catch {
-          toast.error("Không tải được danh sách sản phẩm");
+          toast.error("Không tải được danh sách sản phẩm theo cửa hàng");
         }
         try {
-            const catRes = await getCategories(); // GỌI API LẤY DANH MỤC
-            setCategories(catRes);
+          const catRes = await getCategories(); // GỌI API LẤY DANH MỤC
+          setCategories(catRes);
         } catch {
-            toast.error("Không tải được danh sách danh mục");
+          toast.error("Không tải được danh sách danh mục");
         }
 
-      } catch (err: any) {
-        toast.error(err.message || "Lỗi khi khởi tạo dữ liệu");
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Lỗi khi khởi tạo dữ liệu";
+        toast.error(message);
       } finally {
         setIsLoading(false);
       }
@@ -135,53 +162,13 @@ export default function CreateImportRequestPage() {
       )
     );
   };
-  const handleRemoveSelection = (
-    productId: number,
-    classificationId: number | undefined
-  ) => {
-    setSelectedProducts(prev =>
-      prev.filter(
-        p => !(p.product_id === productId && p.classification_id === classificationId)
-      )
-    );
-  };
+
   const handleSubmit = async () => {
     const valid = selectedProducts.filter(p => p.quantity > 0);
 
     if (!storeId || valid.length === 0)
       return toast.error("Chọn sản phẩm và nhập số lượng hợp lệ");
-    for (const selection of valid) {
-      const product = products.find(p => p.id === selection.product_id);
-      if (!product) continue;
 
-      let stock = product.quantity || 0;
-      let variantName = "Không phân loại";
-
-      // Nếu có phân loại, lấy tồn kho của phân loại đó
-      if (selection.classification_id) {
-        const rel = product.relationships?.find(r => r.id === selection.classification_id);
-        if (rel) {
-          stock = rel.quantity || 0;
-          // Tạo tên biến thể để hiển thị lỗi
-          const attr1 = rel.attribute1_name ? rel.attribute1_name.trim() : "";
-          const attr2 = rel.attribute2_name ? rel.attribute2_name.trim() : "";
-          if (attr1 && attr2) variantName = `${attr1} | ${attr2}`;
-          else if (attr1) variantName = attr1;
-        }
-      } else {
-        // Sản phẩm không có biến thể, lấy tồn kho tổng của sản phẩm
-        stock = product.total_quantity_divided || 0;
-      }
-
-      if (selection.quantity > stock) {
-        const displayVariant = variantName !== "Không phân loại" ? ` (${variantName})` : '';
-        return toast.error(
-          `Số lượng yêu cầu cho sản phẩm "${product.name}${displayVariant}" (${selection.quantity}) không được lớn hơn tồn kho hiện tại (${stock.toLocaleString("vi-VN")}).`
-        );
-      }
-      
-    }
-    
     const payload: CreateImportRequestDto = {
       store_id: storeId,
       note,
@@ -190,9 +177,7 @@ export default function CreateImportRequestPage() {
         classification_attribute_relationship_id: p.classification_id,
         requested_quantity: p.quantity
       }))
-    };
-
-    try {
+    }; try {
       await createImportRequest(payload);
       toast.success("Tạo yêu cầu thành công!");
 
@@ -203,7 +188,8 @@ export default function CreateImportRequestPage() {
       // 👇 Tự đóng form sau khi tạo
       setShowCreateForm(false);
 
-    } catch (err) {
+    } catch (error) {
+      console.error("Error creating import request:", error);
       toast.error("Lỗi khi tạo yêu cầu");
     }
   };
@@ -217,13 +203,13 @@ export default function CreateImportRequestPage() {
 
     acc[sp.product_id].selections.push(sp);
     return acc;
-  }, {} as Record<number, { product: Product; selections: SelectedProduct[] }>);
+  }, {} as Record<number, { product: InventoryProduct; selections: SelectedProduct[] }>);
 
   if (isLoading) return <p className="text-center p-6">Đang tải dữ liệu...</p>;
 
   return (
     <div className="p-6 max-w-full bg-white rounded-xl shadow-md mt-1">
-        <Toaster position="top-right" />
+      <Toaster position="top-right" />
       {/* BUTTON SHOW FORM */}
       {!showCreateForm && (
         <button
@@ -284,9 +270,12 @@ export default function CreateImportRequestPage() {
 
                   {/* Product header */}
                   <div className="flex items-center gap-4 border-b border-gray-200 pb-4 mb-4">
-                    <img
+                    <Image
                       src={findProductImage(product.id, products)}
-                      className="w-14 h-14 rounded-lg"
+                      alt={product.name}
+                      width={56}
+                      height={56}
+                      className="w-14 h-14 rounded-lg object-cover"
                     />
                     <div>
                       <h4 className="text-lg font-bold">{product.name}</h4>

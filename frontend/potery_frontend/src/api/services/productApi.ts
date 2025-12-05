@@ -42,6 +42,12 @@ export const getProducts = async (params?: { start_date?: string; end_date?: str
     return res.data;
 };
 
+// Lấy danh sách sản phẩm theo cửa hàng
+export const getProductsByStore = async (storeId: number): Promise<Product[]> => {
+    const res = await axios.get(`${API_URL}/listproduct-by-store/${storeId}`);
+    return res.data;
+};
+
 // Lấy chi tiết sản phẩm
 export const getProductDetail = async (id: number): Promise<Product> => {
     const res = await axios.get(`${API_URL}/productdetail/${id}`);

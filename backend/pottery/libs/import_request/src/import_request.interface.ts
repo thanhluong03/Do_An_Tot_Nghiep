@@ -15,6 +15,7 @@ export interface UpdateImportRequestInput {
     import_request_status?: importRequestStatus;
     note?: string;
     importRequestDetails?: UpdateImportRequestDetailInput[];
+    reject_reason?: string;
 }
 
 export interface UpdateImportRequestDetailInput {

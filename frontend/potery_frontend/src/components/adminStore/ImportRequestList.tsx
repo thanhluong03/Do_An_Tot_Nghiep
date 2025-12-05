@@ -7,12 +7,12 @@ import {
     ImportRequest
 } from "@/api/services/importRequestService";
 import toast from "react-hot-toast";
-import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight, Filter, X } from "lucide-react"; 
+import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 import ModalEditImportRequest from "@/components/adminStore/ModalEditImportRequest";
-import ConfirmDialog from "@/components/common/ConfirmDialog"; 
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 // Định nghĩa các trạng thái
-type Status = "ALL" | "PENDING" | "ACCEPTED" | string; // Thêm 'ALL' cho tab Tất cả
+type Status = "ALL" | "PENDING" | "ACCEPTED" | "REJECTED" | string; // Thêm 'ALL' cho tab Tất cả
 
 interface StatusInfo {
     name: string;
@@ -22,13 +22,13 @@ interface StatusInfo {
 const getVietnameseStatusInfo = (status: string): StatusInfo => {
     switch (status) {
         case "PENDING":
-            return { 
-                name: "Đang Chờ Xử Lý", 
+            return {
+                name: "Đang Chờ Xử Lý",
                 className: "text-yellow-600 font-bold"
             };
         case "ACCEPTED":
-            return { 
-                name: "Đã Chấp Nhận", 
+            return {
+                name: "Đã Chấp Nhận",
                 className: "text-green-600 font-bold"
             };
         case "COMPLETED": // Ví dụ thêm trạng thái
@@ -36,15 +36,15 @@ const getVietnameseStatusInfo = (status: string): StatusInfo => {
                 name: "Đã Hoàn Thành",
                 className: "text-blue-600 font-bold"
             };
-        case "CANCELLED": // Ví dụ thêm trạng thái
+        case "REJECTED": // Ví dụ thêm trạng thái
             return {
-                name: "Đã Hủy",
+                name: "Đã từ chối",
                 className: "text-red-600 font-bold"
             };
         default:
-            return { 
-                name: status, 
-                className: "text-gray-700 font-medium" 
+            return {
+                name: status,
+                className: "text-gray-700 font-medium"
             };
     }
 };
@@ -56,18 +56,18 @@ interface FilteredRequests {
 }
 
 export default function ImportRequestList({ storeId }: { storeId: number }) {
-    const [allRequests, setAllRequests] = useState<ImportRequest[]>([]); 
+    const [allRequests, setAllRequests] = useState<ImportRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    
+
     // Logic phân trang 
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10); 
-    
+    const [itemsPerPage] = useState(10);
+
     // Edit modal state
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<ImportRequest | null>(null);
     const [modalMode, setModalMode] = useState<"view" | "edit">("edit");
-    
+
     // States cho Confirm Dialog
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [requestToDelete, setRequestToDelete] = useState<{ id: number, status: string } | null>(null);
@@ -77,20 +77,20 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
     const [startDate, setStartDate] = useState(""); // YYYY-MM-DD
     const [endDate, setEndDate] = useState(""); // YYYY-MM-DD
 
-    const statusTabs: Status[] = ["ALL", "PENDING", "ACCEPTED"];
-    
+    const statusTabs: Status[] = ["ALL", "PENDING", "ACCEPTED", "REJECTED"];
+
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const data = await listImportRequestsByStore(storeId);
-            setAllRequests(data); 
-            setCurrentPage(1); 
+            setAllRequests(data);
+            setCurrentPage(1);
         } catch (err) {
             toast.error("Không tải được danh sách yêu cầu");
         }
         setLoading(false);
     }, [storeId]);
-    
+
     useEffect(() => {
         if (storeId) loadData();
     }, [storeId, loadData]); // Thêm loadData vào dependency array
@@ -108,8 +108,8 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
         if (startDate || endDate) {
             const start = startDate ? new Date(startDate).getTime() : 0;
             // Thêm 1 ngày vào endDate để bao gồm cả ngày đó
-            const end = endDate ? new Date(endDate).getTime() + 86400000 : Infinity; 
-            
+            const end = endDate ? new Date(endDate).getTime() + 86400000 : Infinity;
+
             finalFiltered = filteredByStatus.filter(req => {
                 const reqDate = new Date(req.created_at).getTime();
                 return reqDate >= start && reqDate < end;
@@ -118,7 +118,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
 
         const filteredCount = finalFiltered.length;
         const totalPages = Math.ceil(filteredCount / itemsPerPage);
-        
+
         // 3. Phân trang
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
@@ -135,7 +135,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
             setCurrentPage(1);
         }
     }, [totalPages, currentPage]);
-    
+
     const handlePageChange = (page: number) => {
         if (page > 0 && page <= totalPages) {
             setCurrentPage(page);
@@ -155,19 +155,19 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
         if (status !== 'PENDING') { // Bỏ 'DRAFT' nếu không có trong API status
             return toast.error("Chỉ có thể xóa yêu cầu ở trạng thái Đang Chờ Xử Lý.");
         }
-        
+
         setRequestToDelete({ id, status });
         setIsConfirmOpen(true);
     };
 
     const executeDelete = async () => {
         if (!requestToDelete) return;
-        setIsConfirmOpen(false); 
+        setIsConfirmOpen(false);
 
         try {
             await deleteImportRequest(requestToDelete.id);
             toast.success("Đã xóa!");
-            loadData(); 
+            loadData();
         } catch (err) {
             toast.error("Xóa thất bại!");
         } finally {
@@ -178,7 +178,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
 
     const openView = (req: ImportRequest) => {
         setSelectedRequest(req);
-        setModalMode("view"); 
+        setModalMode("view");
         setEditModalOpen(true);
     };
 
@@ -187,19 +187,19 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
             return toast.error("Chỉ có thể sửa yêu cầu ở trạng thái Đang Chờ Xử Lý.");
         }
         setSelectedRequest(req);
-        setModalMode("edit"); 
+        setModalMode("edit");
         setEditModalOpen(true);
     };
 
 
     if (loading) return <p className="mt-6 text-gray-500 text-center">Đang tải danh sách...</p>;
-    
+
     return (
         <div className="mt-10">
             <div className="text-xl font-bold mb-5 text-gray-800 pb-3">
                 Danh sách yêu cầu nhập hàng
             </div>
-            
+
             {/* 👇 THANH LỌC: DATE FILTER VÀ STATUS TABS */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
                 {/* STATUS TABS */}
@@ -211,11 +211,10 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                                 setActiveStatusTab(status);
                                 setCurrentPage(1);
                             }}
-                            className={`px-4 py-2 text-sm font-semibold rounded-lg whitespace-nowrap transition duration-200 ${
-                                activeStatusTab === status
+                            className={`px-4 py-2 text-sm font-semibold rounded-lg whitespace-nowrap transition duration-200 ${activeStatusTab === status
                                     ? "bg-orange-600 text-white shadow-md"
                                     : "text-gray-700 hover:bg-white"
-                            }`}
+                                }`}
                         >
                             {status === "ALL" ? "Tất cả" : getVietnameseStatusInfo(status).name}
                         </button>
@@ -251,7 +250,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                         />
                     </div>
                     {(startDate || endDate || activeStatusTab !== "ALL") && (
-                        <button 
+                        <button
                             onClick={handleClearFilters}
                             className="p-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition flex items-center gap-1 ml-2"
                             title="Xóa bộ lọc"
@@ -262,17 +261,18 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                     )}
                 </div>
 
-                
+
             </div>
             {/* 👆 KẾT THÚC THANH LỌC */}
 
             <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-100">
                 <table className="min-w-full border-collapse bg-white table-fixed">
                     <thead>
-                        <tr className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider font-bold border-b border-gray-200">
+                        <tr className="bg-gray-100 text-gray-600 text-[10px] tracking-wider font-bold border-b border-gray-200">
                             <th className="px-4 py-3 text-left w-[60px] rounded-tl-xl">Stt</th>
                             <th className="px-4 py-3 text-left w-[160px]">Ngày tạo</th>
                             <th className="px-4 py-3 text-left">Ghi chú</th>
+                            <th className="px-4 py-3 text-left max-w-xs">Lý do từ chối</th>
                             <th className="px-4 py-3 text-center w-[200px]">Trạng thái</th>
                             <th className="px-4 py-3 text-center w-[200px] rounded-tr-xl">Hành động</th>
                         </tr>
@@ -301,10 +301,21 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                                 </td>
 
                                 <td className="px-4 py-3 text-sm break-words max-w-[350px]">
-                                    {req.note || "(không)"}
+                                    {req.note || "_"}
                                 </td>
 
-                                <td className={`px-4 py-3 text-center font-bold uppercase text-xs ${getVietnameseStatusInfo(req.import_request_status).className}`}>
+                                <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                    {req.reject_reason && (
+                                        <span
+                                            className="block text-sm text-gray-500 mt-1 break-words whitespace-pre-line"
+                                            style={{ wordBreak: 'break-word', whiteSpace: 'pre-line' }}
+                                        >
+                                            {req.reject_reason}
+                                        </span>
+                                    )}
+                                </td>
+
+                                <td className={`px-4 py-3 text-center font-bold text-xs ${getVietnameseStatusInfo(req.import_request_status).className}`}>
                                     {getVietnameseStatusInfo(req.import_request_status).name}
                                 </td>
 
@@ -313,7 +324,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                                     <button
                                         title="Xem chi tiết"
                                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                                        onClick={() => openView(req)} 
+                                        onClick={() => openView(req)}
                                     >
                                         <Eye size={15} />
                                     </button>
@@ -324,7 +335,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                                             <button
                                                 title="Sửa"
                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition"
-                                                onClick={() => openEdit(req)} 
+                                                onClick={() => openEdit(req)}
                                             >
                                                 <Pencil size={15} />
                                             </button>
@@ -343,7 +354,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                         ))}
                     </tbody>
                 </table>
-                
+
                 {/* PHẦN PHÂN TRANG */}
                 {filteredCount > itemsPerPage && (
                     <div className="flex justify-between items-center p-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
@@ -368,11 +379,10 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                                 <button
                                     key={index + 1}
                                     onClick={() => handlePageChange(index + 1)}
-                                    className={`px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium transition ${
-                                        currentPage === index + 1
+                                    className={`px-3 py-1 border border-gray-200 rounded-lg text-sm font-medium transition ${currentPage === index + 1
                                             ? "bg-orange-600 text-white"
                                             : "bg-white text-gray-700 hover:bg-gray-100"
-                                    }`}
+                                        }`}
                                 >
                                     {index + 1}
                                 </button>
@@ -399,7 +409,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                         loadData();
                     }}
                     request={selectedRequest}
-                    mode={modalMode} 
+                    mode={modalMode}
                 />
 
                 {isConfirmOpen && (
@@ -409,7 +419,7 @@ export default function ImportRequestList({ storeId }: { storeId: number }) {
                         onConfirm={executeDelete}
                         onCancel={() => {
                             setIsConfirmOpen(false);
-                            setRequestToDelete(null); 
+                            setRequestToDelete(null);
                         }}
                         confirmText="Xác nhận Xóa"
                     />

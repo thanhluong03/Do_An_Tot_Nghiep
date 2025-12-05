@@ -6,6 +6,7 @@ import { ImportRequestDetailEntity } from './import_request_detail.entity';
 export enum importRequestStatus {
     PENDING = 'PENDING',
     ACCEPTED = 'ACCEPTED',
+    REJECTED = 'REJECTED',
 }
 
 @Entity('import_requests')
@@ -22,6 +23,9 @@ export class ImportRequestEntity extends BaseEntity {
 
     @Column({ type: 'varchar', nullable: true })
     note: string;
+
+    @Column({ type: 'varchar', nullable: true })
+    reject_reason: string;
 
     @ManyToOne(() => StoreEntity, { eager: true })
     @JoinColumn({ name: 'store_id' })

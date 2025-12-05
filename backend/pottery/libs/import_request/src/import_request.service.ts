@@ -78,6 +78,7 @@ export class ImportRequestService {
             await this.importRequestRepository.update(id, {
                 import_request_status: data.import_request_status,
                 note: data.note,
+                reject_reason: data.reject_reason,
             });
         }
 
