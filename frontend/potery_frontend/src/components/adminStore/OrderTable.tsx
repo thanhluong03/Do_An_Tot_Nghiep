@@ -267,7 +267,8 @@ export default function OrderTable({
                 </button>
                 {/* Cho phép chỉnh sửa nếu:
                     - Đơn chưa hủy HOẶC
-                    - Đơn đã hủy nhưng chưa hoàn trả (để cập nhật sang đã hoàn trả) */}
+                    - Đơn đã hủy nhưng chưa hoàn trả (để cập nhật sang đã hoàn trả)
+                    - KHÔNG cho phép chỉnh sửa đơn CANCELLED_RETURN (đã hủy yêu cầu đổi trả) */}
                 {(order.status !== "CANCELLED" && order.status !== "CANCELLED_RETURN") ||
                   (order.status === "CANCELLED" && order.payment_status === "PENDING_REFUND") ? (
                   <button

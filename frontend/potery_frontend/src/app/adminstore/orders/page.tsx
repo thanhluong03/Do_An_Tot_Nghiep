@@ -64,7 +64,7 @@ export default function AdminOrderPage() {
 
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [drivers, setDrivers] = useState<User[]>([]);
-    
+
     // State này được tính toán trong fetchOrders để dùng cho OrderStatusTabs
     const [keyAndDateFilteredOrders, setKeyAndDateFilteredOrders] = useState<FullOrderDetails[]>([]);
 
@@ -169,7 +169,7 @@ export default function AdminOrderPage() {
             return;
         }
         try {
-            setLoading(true); 
+            setLoading(true);
             const params: any = {
                 size: 10000, // Tải tối đa 10000 đơn hàng
                 page: 1,
@@ -286,7 +286,7 @@ export default function AdminOrderPage() {
     useEffect(() => {
         fetchOrders; // Kích hoạt useMemo/logic lọc
     }, [
-        allOrders, 
+        allOrders,
         pagination.page,
         pagination.size,
         orderStatusFilter,
@@ -373,7 +373,7 @@ export default function AdminOrderPage() {
             toast.success("Cập nhật đơn hàng thành công!");
 
             // Tìm order trong allOrders để lấy email (đảm bảo đơn hàng ngoài trang hiện tại vẫn gửi được mail)
-            const order = allOrders.find(o => o.id === orderId); 
+            const order = allOrders.find(o => o.id === orderId);
             const customerEmail = order?.customer_email;
 
             if (customerEmail && order?.is_login_customer === false) {
@@ -402,7 +402,7 @@ export default function AdminOrderPage() {
             await assignDriverToOrder({ order_id: orderId, driver_id: driverId });
             toast.success(`Gán tài xế cho đơn hàng #${orderId} thành công!`);
             // Vẫn gọi fetchAllOrders() vì việc gán driver thường có side-effect trên server (ví dụ: cập nhật trạng thái)
-            await fetchAllOrders(); 
+            await fetchAllOrders();
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || "Gán tài xế thất bại!";
             toast.error(errorMessage);
@@ -410,7 +410,7 @@ export default function AdminOrderPage() {
             setLoading(false);
         }
     };
-    
+
     // ... (Giữ nguyên renderPageNumbers và handleExportExcel)
 
     const handleExportExcel = async () => {
@@ -635,6 +635,9 @@ export default function AdminOrderPage() {
                     currentPaymentMethod={editingOrder.payment_method}
                     initialCancelReason={editingOrder.cancel_reason}
                     initialPersonCancel={editingOrder.person_cancel}
+                    initialCancelReturnReason={
+                        (editingOrder as any).cancelReturnReasons?.reason || null
+                    }
                     onClose={() => setEditingOrder(null)}
                     onUpdated={handleOrderUpdated}
                 />

@@ -27,7 +27,7 @@ const statusToVietnamese = (status: string) => {
     case "RETURN_REQUESTED":
       return "Đang yêu cầu đổi trả";
     case "CANCELLED":
-      return "Đã hủy";
+      return "Hủy đơn hàng";
     case "CONFIRMED_RETURN":
       return "Xác nhận đổi trả";
     case "PENDING_DELIVERY":
@@ -201,7 +201,8 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   console.log('Admin Order Full Data:', order);
 
   // Kiểm tra trạng thái hủy đơn
-  const isCancelled = order.status === 'CANCELLED' || order.status === 'CANCELLED_RETURN';
+  const isCancelled = order.status === 'CANCELLED';
+  const isCancelledReturn = order.status === 'CANCELLED_RETURN';
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto border border-gray-100 animate-fadeIn">
@@ -489,6 +490,84 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
                                 <Image
                                   src={imageUrl}
                                   alt={`Return ${idx + 1}`}
+                                  width={80}
+                                  height={80}
+                                  className="w-20 h-20 object-cover rounded border border-gray-300 hover:ring-2 hover:ring-orange-400 transition-all"
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* THÔNG TIN HỦY ĐỔI TRẢ */}
+            {isCancelledReturn && (order as any).cancelReturnReasons && (order as any).cancelReturnReasons.reason && (
+              <section className="bg-orange-50 rounded-xl p-5 border border-orange-300 shadow-sm">
+                <h3 className="flex items-center text-lg font-semibold text-orange-800 mb-4 border-b border-orange-200 pb-2">
+                  <XCircle className="w-5 h-5 mr-2 text-orange-600" />
+                  Thông tin hủy đổi trả
+                </h3>
+
+                <div className="space-y-3">
+                  <div className="py-2 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Lý do hủy yêu cầu đổi trả:
+                    </span>
+                    <p className="text-sm font-semibold text-orange-700 bg-orange-100 p-2 rounded">
+                      {(order as any).cancelReturnReasons?.reason || 'Không có lý do'}
+                    </p>
+                  </div>
+                  <div className="py-2 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Ngày hủy:
+                    </span>
+                    <p className="text-sm font-semibold text-orange-700 bg-orange-100 p-2 rounded">
+                      {(order as any).cancelReturnReasons?.date ? formatDate((order as any).cancelReturnReasons.date) : ""}
+                    </p>
+                  </div>
+                  <div className="py-2 border-b border-gray-200">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">
+                      Người hủy:
+                    </span>
+                    <p className="text-sm font-semibold text-orange-700 bg-orange-100 p-2 rounded">
+                      {!(order as any).cancelReturnReasons?.person
+                        ? ""
+                        : (order as any).cancelReturnReasons.person === "ADMIN"
+                          ? "Chủ cửa hàng"
+                          : "Khách hàng"}
+                    </p>
+                  </div>
+
+                  {(order as any).cancelReturnReasons?.images && (order as any).cancelReturnReasons.images.length > 0 && (
+                    <div>
+                      <div className="border-t border-gray-200 mb-2"></div>
+                      <span className="text-sm font-medium text-gray-600 block mb-2">
+                        Ảnh lý do hủy đổi trả:
+                      </span>
+                      <div className="py-2">
+                        <div className="grid grid-cols-4 gap-2">
+                          {(order as any).cancelReturnReasons.images.map((imgObj: any, idx: number) => {
+                            if (!imgObj.image) return null;
+                            const imageUrl = `data:image/jpeg;base64,${imgObj.image}`;
+                            const allImages = ((order as any).cancelReturnReasons.images || [])
+                              .filter((img: any) => img.image)
+                              .map((img: any) => `data:image/jpeg;base64,${img.image}`);
+                            return (
+                              <button
+                                title="open"
+                                key={imgObj.id || idx}
+                                type="button"
+                                className="focus:outline-none"
+                                onClick={() => handleOpenImage(allImages, allImages.indexOf(imageUrl))}
+                              >
+                                <Image
+                                  src={imageUrl}
+                                  alt={`Cancel Return ${idx + 1}`}
                                   width={80}
                                   height={80}
                                   className="w-20 h-20 object-cover rounded border border-gray-300 hover:ring-2 hover:ring-orange-400 transition-all"

@@ -268,10 +268,11 @@ export default function OrderTable({
                   <Eye className="w-4 h-4" />
                 </button>
                 {/* Cho phép chỉnh sửa nếu:
-                    - Đơn chưa hủy HOẶC
-                    - Đơn đã hủy nhưng chưa hoàn trả (để cập nhật sang đã hoàn trả) */}
-                {(order.status !== "CANCELLED" && order.status !== "CANCELLED_RETURN") || 
-                 (order.status === "CANCELLED" && order.payment_status === "PENDING_REFUND") ? (
+                    - Đơn chưa hủy (không phải CANCELLED và CANCELLED_RETURN) HOẶC
+                    - Đơn đã hủy nhưng chưa hoàn trả (để cập nhật sang đã hoàn trả)
+                    - KHÔNG cho phép chỉnh sửa CANCELLED_RETURN (đã hủy yêu cầu đổi trả) */}
+                {(order.status !== "CANCELLED" && order.status !== "CANCELLED_RETURN") ||
+                  (order.status === "CANCELLED" && order.payment_status === "PENDING_REFUND") ? (
                   <button
                     title="Chỉnh sửa trạng thái"
                     onClick={() => onEditStatus(order)}
