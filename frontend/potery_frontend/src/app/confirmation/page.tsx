@@ -237,7 +237,7 @@ export default function ConfirmationPage() {
           // Chỉ filter khi thanh toán thành công - loại bỏ đơn COD
           finalOrders = validOrders.filter((order: Order) => {
             const paymentMethod = order?.payment_method || order?.current_order?.payment_method;
-            const isMOMO = paymentMethod === 'CARD' || paymentMethod === 'MOMO';
+            const isMOMO =   paymentMethod === 'MOMO';
             console.log(`🔍 Order #${order.id}: paymentMethod=${paymentMethod}, isMOMO=${isMOMO}`);
             return isMOMO;
           });
