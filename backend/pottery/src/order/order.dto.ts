@@ -85,6 +85,11 @@ export class OrderItemDto {
     @IsOptional()
     @IsNumber()
     shipping_fee?: number;
+
+    @Expose()
+    @IsOptional()
+    @IsString()
+    shipping_message?: string;
 }
 
 export class CreateOrderDto {

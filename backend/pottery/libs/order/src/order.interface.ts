@@ -6,6 +6,8 @@ export interface IOrderItem {
     classification_attribute_relationship_id?: number;
     attribute1_name?: string;
     attribute2_name?: string;
+    shipping_fee?: number;
+    shipping_message?: string;
     product_name?: string;
     product_images?: {
         id?: number;

@@ -33,8 +33,8 @@ export default function CheckoutPage() {
     }, [isAuthenticated, user?.address]);
 
     // Shipping fee states
-    const [shippingFee, setShippingFee] = useState(30000); // Default 30k
-    const [shippingMessage, setShippingMessage] = useState('Phí vận chuyển mặc định');
+    const [shippingFee, setShippingFee] = useState(0); // Default 0 khi chưa nhập địa chỉ
+    const [shippingMessage, setShippingMessage] = useState('Vui lòng nhập địa chỉ để tính phí vận chuyển');
     const [calculatingShipping, setCalculatingShipping] = useState(false);
     const [address, setAddress] = useState('');
     const [city, setCity] = useState('');
@@ -739,12 +739,12 @@ export default function CheckoutPage() {
         const calculateShipping = async () => {
             // Only calculate if both address and city are provided
             if (!address.trim() || !city.trim()) {
-                setShippingFee(30000);
+                setShippingFee(0);
                 setShippingMessage('Vui lòng nhập địa chỉ để tính phí vận chuyển');
+                setCalculatingShipping(false);
                 return;
             }
 
-            setCalculatingShipping(true);
             console.log('🚚 Starting shipping fee calculation for all stores...');
 
             try {
@@ -815,6 +815,11 @@ export default function CheckoutPage() {
                 setCalculatingShipping(false);
             }
         };
+
+        // Set calculating ngay khi bắt đầu thay đổi địa chỉ (nếu đủ thông tin)
+        if (address.trim() && city.trim()) {
+            setCalculatingShipping(true);
+        }
 
         // Debounce calculation to avoid too many API calls
         timeoutId = setTimeout(calculateShipping, 1200);
@@ -964,6 +969,7 @@ export default function CheckoutPage() {
 
                 // Calculate shipping fee for this specific store
                 let storeShippingFee = 30000; // Default fee
+                let storeShippingMessage = 'Phí vận chuyển mặc định'; // Default message
                 try {
                     const storeData = await getStoreById(Number(storeId));
                     const storeAddress = storeData.address || 'Nam Từ Liêm, Hà Nội';
@@ -976,17 +982,19 @@ export default function CheckoutPage() {
                     });
 
                     storeShippingFee = result.fee;
-                    console.log(`✅ Shipping fee for store ${storeId}: ${storeShippingFee}đ`);
+                    storeShippingMessage = result.message || 'Đã tính phí vận chuyển';
+                    console.log(`✅ Shipping fee for store ${storeId}: ${storeShippingFee}đ - ${storeShippingMessage}`);
                 } catch (err) {
                     console.warn(`⚠️ Could not calculate shipping for store ${storeId}, using default:`, err);
                 }
 
                 totalShippingFee += storeShippingFee;
 
-                // Add shipping fee to each item from this store
+                // Add shipping fee and message to each item from this store
                 const itemsWithShipping = storeItems.map(item => ({
                     ...item,
                     shipping_fee: Math.round(storeShippingFee / storeItems.length), // Divide shipping fee among items from same store
+                    shipping_message: storeShippingMessage, // Add shipping message
                 }));
 
                 const payloadPerStore = {
@@ -1870,15 +1878,17 @@ export default function CheckoutPage() {
 
                             {/* Submit Button */}
                             <button
-                                disabled={creating || loadingCart || totalWithShipping === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
+                                disabled={creating || loadingCart || calculatingShipping || totalWithShipping === 0 || !address.trim() || !city.trim() || (!isAuthenticated && (!guestName.trim() || !guestPhone.trim()))}
                                 onClick={handleCreate}
                                 className="w-full bg-[#A38D64] text-white px-6 py-3 rounded-md text-base font-bold disabled:opacity-50 hover:bg-[#8D7A58] transition shadow-md hover:shadow-lg"
                             >
                                 {creating
                                     ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang xử lý...</span>
-                                    : paymentMethod === 'MOMO'
-                                        ? `THANH TOÁN ${formatPrice(totalWithShipping)}`
-                                        : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
+                                    : calculatingShipping
+                                        ? <span className='flex items-center justify-center gap-2'><Clock className='w-4 h-4 animate-spin' /> Đang tính phí vận chuyển...</span>
+                                        : paymentMethod === 'MOMO'
+                                            ? `THANH TOÁN ${formatPrice(totalWithShipping)}`
+                                            : `ĐẶT HÀNG COD ${formatPrice(totalWithShipping)}`}
                             </button>
 
                             <p className="text-center text-xs text-gray-500 pt-1">

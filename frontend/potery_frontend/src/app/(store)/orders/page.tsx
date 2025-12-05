@@ -1049,6 +1049,14 @@ export default function MyOrdersPage() {
                         </div>
                         <div className="text-sm text-gray-600">
                           Phí vận chuyển: <span className="font-semibold text-[#2C2A24]">{formatPrice(getShippingFee(order))}</span>
+                          {/* Hiển thị shipping_message của từng item dưới phí vận chuyển */}
+                          {(info.items || []).map((item: any, idx: number) => (
+                            item.shipping_message ? (
+                              <div key={idx} className="text-xs text-blue-600 mt-1 pl-2">
+                                <span className="font-medium">•</span> {item.shipping_message}
+                              </div>
+                            ) : null
+                          ))}
                         </div>
                       </div>
 
