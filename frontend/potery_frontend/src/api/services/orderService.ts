@@ -14,6 +14,7 @@ export interface OrderItem {
   store_id?: number;
   quantity: number;
   price_at_order: number;
+  shipping_fee?: number; // Phí vận chuyển cho item này
   product_name?: string;
   description?: string;
   price?: string;
@@ -27,7 +28,7 @@ export interface OrderItem {
 
 }
 
-export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'EXCHANGED' | 'RETURN_REQUESTED' | 'CONFIRMED_RETURN' | 'PENDING_DELIVERY' | 'DELIVERY_FAILED' | 'PACKING' | 'SHIPPING_RETURN' | 'PENDING_DELIVERY_RETURN' | 'DELIVERY_FAILED_RETURN' | 'CANCELLED_RETURN' | 'PACKING_RETURN'; 
+export type OrderStatus = 'CREATED' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'EXCHANGED' | 'RETURN_REQUESTED' | 'CONFIRMED_RETURN' | 'PENDING_DELIVERY' | 'DELIVERY_FAILED' | 'PACKING' | 'SHIPPING_RETURN' | 'PENDING_DELIVERY_RETURN' | 'DELIVERY_FAILED_RETURN' | 'CANCELLED_RETURN' | 'PACKING_RETURN';
 export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'REFUNDED';
 export type PaymentMethod = 'COD' | 'MOMO';
 
@@ -61,6 +62,7 @@ export interface Order {
   customer_full_name?: string;
   order_date: string;
   total_amount: string | number;
+  // shipping_fee moved to OrderItem level - sum from orderItems to get total
   customer_name?: string;
   status: OrderStatus;
   shipping_address?: string;
@@ -68,6 +70,7 @@ export interface Order {
   payment_status: PaymentStatus;
   current_order?: CurrentOrderDetails;
   items?: OrderItem[];
+  orderItems?: OrderItem[]; // Alias for items - some components use this name
   customer_email?: string;
   is_login_customer?: boolean;
   returnReason?: string;
@@ -79,6 +82,7 @@ export interface Order {
   person_cancel?: string | null;
   reason_change_date?: string | null;
   driverLocations?: DriverLocation[];
+  paymentTransactions?: any[]; // Payment transaction records
 }
 
 export interface ListOrderParams {

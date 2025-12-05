@@ -8,6 +8,7 @@ export interface OrderItemPayload {
   quantity: number;
   price_at_order: number;
   store_id?: number;
+  shipping_fee?: number; // Phí vận chuyển cho item này
   classification_attribute_relationship_id?: number | null;
   // Optional fields for display purposes
   attribute1_name?: string;
@@ -17,9 +18,13 @@ export interface OrderItemPayload {
 export interface CreateOrderPayload {
   customer_id: number;
   shipping_address?: string;
+  // shipping_fee removed - now stored per item in OrderItemPayload
   payment_method?: string; // backend enum, e.g. 'VNPAY'
   items: OrderItemPayload[];
   note?: string;
+  voucher_id?: number | null;
+  status?: string;
+  payment_status?: string;
 }
 
 export const orderApi = {
@@ -30,6 +35,11 @@ export const orderApi = {
   },
   async getOrderDetail(id: number | string) {
     const res = await api.get(`/orders/orderdetail/${id}`);
+    const order = res.data?.data || res.data;
+    // Map current_order.items to orderItems for components that use this naming
+    if (order?.current_order?.items) {
+      order.orderItems = order.current_order.items;
+    }
     return res.data;
   },
   async getOrdersByCustomer(customerId: number | string, page = 1, size = 10) {

@@ -81,7 +81,7 @@ const getStatusColor = (status: string) => {
       return "bg-purple-200 text-purple-800";
     case "pending_delivery_return":
       return "bg-pink-200 text-pink-800";
-      
+
     default:
       return "bg-gray-100 text-gray-700";
   }
@@ -131,20 +131,12 @@ export default function OrderDetailModal({ order, onClose }: OrderDetailModalPro
   const displayTotalAmount =
     typeof order.total_amount === "string" ? parseFloat(order.total_amount) : order.total_amount;
 
-  // Lấy thông tin giao dịch chính
-  const paymentTransactions = (order as any)?.paymentTransactions || [];
-  const mainTxn = paymentTransactions.length > 0 ? paymentTransactions[0] : null;
-
-  // Tính phí vận chuyển từ transaction data
-  const shippingFeeFromTransaction = mainTxn && mainTxn.amount ?
-    Math.max(0, Number(mainTxn.amount) - displayTotalAmount) : 30000;
-  const displayShippingFee = shippingFeeFromTransaction > 0 ? shippingFeeFromTransaction : 30000;
-
-  // Debug: Log payment transaction data  
-  console.log('Admin Order Payment Transactions:', paymentTransactions);
-  console.log('Admin Order Main Transaction:', mainTxn);
-  console.log('Admin Order Shipping Fee:', displayShippingFee);
-  console.log('Admin Order Full Data:', order);
+  // Tính tổng shipping fee từ các order items
+  const items = order.orderItems || (order as any).current_order?.items || [];
+  const displayShippingFee = items.reduce((sum: number, item: any) => {
+    const itemShippingFee = item.shipping_fee ? Number(item.shipping_fee) : 0;
+    return sum + itemShippingFee;
+  }, 0) || 0;
 
   return (
     <div className="fixed inset-0  bg-black/20 z-[1000] flex justify-center items-center p-4">
