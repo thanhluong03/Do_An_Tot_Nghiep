@@ -296,15 +296,15 @@ function OrderDeliverContent() {
       return false;
     }
     const status = assignment.order.status;
-    const driverStatus = assignment.driver_status;
     switch (activeTab) {
       case DriverStatus.WAITING_ACCEPT:
-        return driverStatus === DriverStatus.WAITING_ACCEPT ||
-          status === 'PENDING_DELIVERY' || status === 'PENDING_DELIVERY_RETURN';
+        // Tab "Đơn hàng mới": chỉ hiển thị PENDING_DELIVERY và PENDING_DELIVERY_RETURN
+        return status === 'PENDING_DELIVERY' || status === 'PENDING_DELIVERY_RETURN';
       case DriverStatus.ACCEPTED:
-        return driverStatus === DriverStatus.ACCEPTED ||
-          status === 'SHIPPING' || status === 'SHIPPING_RETURN';
+        // Tab "Đang giao": chỉ hiển thị SHIPPING và SHIPPING_RETURN
+        return status === 'SHIPPING' || status === 'SHIPPING_RETURN';
       case 'DELIVERED':
+        // Tab "Đã giao": chỉ hiển thị DELIVERED và EXCHANGED
         return status === 'DELIVERED' || status === 'EXCHANGED';
       default:
         return false;
