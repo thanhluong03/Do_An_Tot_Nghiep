@@ -85,26 +85,26 @@ export default function OrderStatusTabs({
 
   return (
     // Container chính bao gồm hai hàng (Tabs và Thanh toán)
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       {/* --- HÀNG 1: Tabs Trạng thái Đơn hàng và Dropdown Nâng cao --- */}
-      <div className="flex flex-wrap items-end justify-between border-b border-gray-200 pb-2">
+      <div className="flex flex-wrap items-end justify-between border-b border-gray-200 pb-1">
         
         {/* Nhóm Tabs Chính */}
-        <div className="flex flex-wrap items-center text-sm font-medium border-b border-gray-200">
+        <div className="flex flex-wrap items-center text-xs font-medium border-b border-gray-200">
           {MAIN_TABS.map((tab) => {
             const isActive = currentOrderStatus === tab.value;
             return (
               <button
                 key={tab.value}
                 onClick={() => onSelectOrderStatus(tab.value)}
-                className={`relative px-4 py-2.5 whitespace-nowrap transition-all group ${
+                className={`relative px-3 py-2 whitespace-nowrap transition-all group ${
                   isActive && isMainTabSelected 
                   ? "text-orange-600 font-semibold" 
                   : "text-gray-600 hover:text-orange-600"
                 }`}
               >
                 {tab.label}
-                <span className="ml-1 text-xs text-gray-500">
+                <span className="ml-[2px] text-xs text-gray-500">
                   ({orderCounts[tab.value] || 0})
                 </span>
                 {isActive && ( 
@@ -121,7 +121,7 @@ export default function OrderStatusTabs({
               <button
                 key={tab.value}
                 onClick={() => onSelectOrderStatus(tab.value)}
-                className={`relative px-4 py-2.5 whitespace-nowrap transition-all group ${
+                className={`relative px-3 py-2.5 text-xs whitespace-nowrap transition-all group ${
                   isActive && isMainTabSelected 
                   ? "text-orange-600 font-semibold" 
                   : "text-gray-600 hover:text-orange-600"
@@ -176,14 +176,14 @@ export default function OrderStatusTabs({
 
       {/* --- HÀNG 2: Dropdown Trạng thái Thanh toán --- */}
       <div className="items-end gap-2">
-        <label htmlFor="paymentStatus" className="text-sm font-medium text-gray-700 whitespace-nowrap mr-2">
+        <label htmlFor="paymentStatus" className="text-xs font-medium text-gray-700 whitespace-nowrap mr-2">
           Trạng thái thanh toán:
         </label>
         <select
           id="paymentStatus"
           value={currentPaymentStatus}
           onChange={(e) => onSelectPaymentStatus(e.target.value as PaymentStatus | "")}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 text-sm cursor-pointer"
+          className="border border-gray-300 rounded-lg px-3 text-xs py-2 focus:ring-orange-500 focus:border-orange-500 cursor-pointer"
         >
           {PAYMENT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
