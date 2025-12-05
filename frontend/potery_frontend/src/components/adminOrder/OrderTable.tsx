@@ -171,14 +171,14 @@ export default function OrderTable({
     <div className="overflow-x-auto bg-white border border-gray-200 rounded-2xl shadow-lg">
       <table className="min-w-full text-sm text-left text-gray-700">
         <thead className="bg-indigo-50 text-indigo-800 border-b border-indigo-200">
-          <tr><th className="px-4 py-3 font-semibold">Mã đơn</th>
-            <th className="px-4 py-3 font-semibold">Khách hàng</th>
-            <th className="px-4 py-3 font-semibold">Tổng tiền</th>
-            <th className="px-4 py-3 text-center font-semibold">Trạng thái đơn hàng</th>
-            <th className="px-4 py-3 text-center font-semibold">Trạng thái thanh toán</th>
-            <th className="px-4 py-3 font-semibold">Ngày đặt</th>
+          <tr><th className="px-4 py-3 font-semibold text-xs">Mã đơn</th>
+            <th className="px-4 py-3 font-semibold text-xs">Khách hàng</th>
+            <th className="px-4 py-3 font-semibold text-xs">Tổng tiền</th>
+            <th className="px-4 py-3 text-center font-semibold text-xs">Trạng thái đơn hàng</th>
+            <th className="px-4 py-3 text-center font-semibold text-xs">Trạng thái thanh toán</th>
+            <th className="px-4 py-3 font-semibold text-xs">Ngày đặt</th>
             {/* <th className="px-4 py-3 text-center font-semibold">Gán tài xế</th> */}
-            <th className="px-4 py-3 text-center font-semibold">Thao tác</th>
+            <th className="px-4 py-3 text-center font-semibold text-xs">Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -186,12 +186,12 @@ export default function OrderTable({
             orders.map((order) => (<tr
               key={order.id}
               className="border-t border-gray-100 hover:bg-indigo-50 transition-colors duration-100">
-              <td className="px-4 py-3 font-semibold text-indigo-600">#{order.id}</td>
-              <td className="px-4 py-3">{order.customer_name || `Khách #${order.customer_id}`}</td>
-              <td className="px-4 py-3 font-medium text-gray-900">
+              <td className="px-4 py-3 font-semibold text-indigo-600 text-xs">#{order.id}</td>
+              <td className="px-4 py-3 text-xs">{order.customer_name || `Khách #${order.customer_id}`}</td>
+              <td className="px-4 py-3 font-medium text-gray-900 text-xs">
                 {formatCurrency(getTotalAmount(order))}
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className="px-4 py-3 text-center text-xs">
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                     order.status
@@ -200,7 +200,7 @@ export default function OrderTable({
                   {translateStatus(order.status)}
                 </span>
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className="px-4 py-3 text-center text-xs">
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                     order.payment_status
@@ -209,7 +209,7 @@ export default function OrderTable({
                   {translateStatus(order.payment_status)}
                 </span>
               </td>
-              <td className="px-4 py-3 text-gray-600">
+              <td className="px-4 py-3 text-gray-600 text-xs">
                 {order.order_date
                   ? new Date(order.order_date).toLocaleString("vi-VN", {
                     day: "2-digit",
@@ -265,7 +265,7 @@ export default function OrderTable({
                 )}
               </td> */}
 
-              <td className="px-4 py-3 text-center space-x-2">
+              <td className="px-4 py-3 text-center text-xs space-x-2">
                 <button
                   title="Xem chi tiết"
                   onClick={() => onView(order)}

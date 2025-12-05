@@ -486,9 +486,9 @@ export default function AdminOrderPage() {
         return pages;
     };
 
-
+    console.log("Rendered orders:", orders);
     return (
-        <div className="p-6 bg-white min-h-screen shadow-md border border-gray-200">
+        <div className="p-1 bg-white min-h-screen shadow-md border border-gray-200">
             <Toaster position="top-right" />
             <div className="mx-auto bg-white rounded-2x overflow-hidden">
                 <div className="py-6 border-b border-gray-200 text-center bg-white">
@@ -498,10 +498,10 @@ export default function AdminOrderPage() {
                 </div>
 
                 {/* Thanh công cụ lọc đầy đủ */}
-                <div className="p-4 border-b border-gray-200 flex flex-col gap-4">
+                <div className="p-2 border-b border-gray-200 flex flex-col gap-2">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         {/* Bên trái: Ô tìm kiếm + Ngày tháng */}
-                        <div className="flex flex-wrap items-center gap-3 flex-1">
+                        <div className="flex flex-wrap text-xs items-center gap-3 flex-1">
                             {/* Ô tìm kiếm */}
                             <div className="relative w-full md:w-80">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -512,20 +512,20 @@ export default function AdminOrderPage() {
                                     placeholder="Tìm tên khách, mã đơn..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                                    className="pl-10 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-orange-500 focus:border-orange-500 text-xs"
                                 />
                             </div>
 
                             {/* Bộ lọc ngày tháng */}
-                            <div className="flex items-center gap-2 w-full md:w-auto">
+                            <div className="flex items-center gap-2 w-full text-xs md:w-auto">
                                 <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2 bg-white">
                                     <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                                    <span className="text-sm text-gray-500 mr-2 hidden lg:inline">Thời gian:</span>
+                                    <span className="text-xs text-gray-500 mr-2 hidden lg:inline">Thời gian:</span>
                                     <input
                                         type="date"
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
-                                        className="text-sm outline-none text-gray-600 w-full md:w-auto cursor-pointer"
+                                        className="text-xs outline-none text-gray-600 w-full md:w-auto cursor-pointer"
                                         title="Từ ngày"
                                     />
                                     <span className="mx-2 text-gray-400">-</span>
@@ -533,7 +533,7 @@ export default function AdminOrderPage() {
                                         type="date"
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
-                                        className="text-sm outline-none text-gray-600 w-full md:w-auto cursor-pointer"
+                                        className="text-xs outline-none text-gray-600 w-full md:w-auto cursor-pointer"
                                         title="Đến ngày"
                                         min={startDate}
                                     />
@@ -563,7 +563,7 @@ export default function AdminOrderPage() {
                     </div>
                 </div>
 
-                <div className="p-4 border-gray-200">
+                <div className="p-3 border-gray-200">
                     <OrderStatusTabs
                         allOrders={keyAndDateFilteredOrders}
                         currentOrderStatus={orderStatusFilter}
@@ -571,12 +571,12 @@ export default function AdminOrderPage() {
                         currentPaymentStatus={paymentStatusFilter}
                         onSelectPaymentStatus={setPaymentStatusFilter}
                     />
-                    <div className="text-right text-sm text-gray-500 mt-1">
+                    <div className="text-right text-xs text-gray-500 mt-1">
                         Tổng: {totalOrders} kết quả phù hợp
                     </div>
                 </div>
 
-                <div className="p-4">
+                <div className="p-2">
                     {loading && <p className="text-center text-indigo-600 py-6 font-medium">Đang tải danh sách đơn hàng...</p>}
                     {error && <p className="text-center text-red-600 py-6 font-medium">Lỗi: {error}</p>}
                     {!loading && !error && (
