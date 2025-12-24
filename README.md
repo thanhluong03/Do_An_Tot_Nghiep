@@ -7,12 +7,19 @@ Hệ thống được xây dựng theo mô hình đa vai trò, bao gồm các gi
 Dưới đây là một vài giao diện của dự án:
 # Customer (Khách hàng)
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/homeuser.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/chatAIuser.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/chatstoreuser.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/listproduct.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/listproduct1.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/buynowuser.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/25b9d33cfb0702d94b6c705d09cc50f50e210237/frontend/potery_frontend/public/image/productdetailuser.png)
+
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/25b9d33cfb0702d94b6c705d09cc50f50e210237/frontend/potery_frontend/public/image/productdetailuser1.png)
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/25b9d33cfb0702d94b6c705d09cc50f50e210237/frontend/potery_frontend/public/image/productdetailuser2.png)
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/cartuser.png)
