@@ -1,10 +1,10 @@
 The system is built based on a multi-role architecture, including the following main interfaces:
 
-Customer: View products, place orders, make payments via MoMo, track orders, manage personal information, receive product recommendations through AI, and chat with the store.
-System Owner: Manage the entire system, configure settings and user permissions, manage news/content, and monitor overall operations across the entire chain of stores.
-Store Manager: Manage products, orders, and business activities at each individual store within the chain.
-Central Warehouse Manager: Manage centralized inventory and coordinate the import/export of goods between the main warehouse and individual stores.
-Delivery Staff: Receive and update the status of orders during the delivery process.
+- Customer: View products, place orders, make payments via MoMo, track orders, manage personal information, receive product recommendations through AI, and chat with the store.
+- System Owner: Manage the entire system, configure settings and user permissions, manage news/content, and monitor overall operations across the entire chain of stores.
+- Store Manager: Manage products, orders, and business activities at each individual store within the chain.
+- Central Warehouse Manager: Manage centralized inventory and coordinate the import/export of goods between the main warehouse and individual stores.
+- Delivery Staff: Receive and update the status of orders during the delivery process.
 
 Additionally, the System Owner has the authority to restrict user access by removing specific permissions in the permissions management page. These changes take effect immediately after the permissions are revoked. Users whose permissions have been removed will not be able to access restricted pages until the permissions are granted again by the System Owner.
 
