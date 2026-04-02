@@ -1,13 +1,14 @@
-Hệ thống được xây dựng theo mô hình đa vai trò, bao gồm các giao diện chính sau:
-- Customer (Khách hàng): Xem sản phẩm, đặt hàng, thanh toán momo, theo dõi đơn hàng và quản lý thông tin cá nhân, tư vấn sản phẩm qua AI và chat với cửa hàng...
-- System Owner (Chủ hệ thống): Quản lý toàn bộ hệ thống, cấu hình và phân quyền người dùng, tin tức, theo dõi hoạt động tổng thể của toàn bộ chuỗi cửa hàng...
-- Store Manager (Quản lý cửa hàng): Quản lý sản phẩm, đơn hàng và hoạt động kinh doanh tại từng cửa hàng trong chuỗi...
-- Central Warehouse Manager (Quản lý kho tổng hệ thống): Quản lý tồn kho tập trung, điều phối nhập – xuất hàng hóa giữa kho tổng và các cửa hàng...
-- Delivery Staff (Nhân viên vận chuyển): Tiếp nhận và cập nhật trạng thái đơn hàng trong quá trình giao nhận...
-  
-Ngoài ra Chủ hệ thống có thể chặn quyền người dùng bằng việc xóa bỏ bớt quyền hạn của người đó trong trang quyền hạn và nó sẽ được áp dụng luôn ngay sau khi bỏ quyền. Người dùng có quyền bị xóa bỏ sẽ không thể truy cập vào các trang không có quyền cho đến khi được Chủ hệ thống thêm lại.
+The system is built based on a multi-role architecture, including the following main interfaces:
 
-Dưới đây là một vài giao diện của dự án:
+Customer: View products, place orders, make payments via MoMo, track orders, manage personal information, receive product recommendations through AI, and chat with the store.
+System Owner: Manage the entire system, configure settings and user permissions, manage news/content, and monitor overall operations across the entire chain of stores.
+Store Manager: Manage products, orders, and business activities at each individual store within the chain.
+Central Warehouse Manager: Manage centralized inventory and coordinate the import/export of goods between the main warehouse and individual stores.
+Delivery Staff: Receive and update the status of orders during the delivery process.
+
+Additionally, the System Owner has the authority to restrict user access by removing specific permissions in the permissions management page. These changes take effect immediately after the permissions are revoked. Users whose permissions have been removed will not be able to access restricted pages until the permissions are granted again by the System Owner.
+
+Below are some interface screenshots of the project:
 # Customer (Khách hàng)
 ![image alt](https://github.com/thanhluong03/Do_An_Tot_Nghiep/blob/a523a7a977d688641cef1cb605eddda20f433868/frontend/potery_frontend/public/image/homeuser.png)
 
